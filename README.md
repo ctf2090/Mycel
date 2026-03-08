@@ -42,6 +42,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [DESIGN-NOTES.qa-minimal-schema.zh-TW.md](./DESIGN-NOTES.qa-minimal-schema.zh-TW.md): Traditional Chinese minimal schema draft for the same Q&A app
 - [DESIGN-NOTES.donation-app-layer.en.md](./DESIGN-NOTES.donation-app-layer.en.md): Design draft for a donation-oriented app carried by Mycel
 - [DESIGN-NOTES.donation-app-layer.zh-TW.md](./DESIGN-NOTES.donation-app-layer.zh-TW.md): Traditional Chinese design draft for the same donation app model
+- [DESIGN-NOTES.neuro-triggered-donation.en.md](./DESIGN-NOTES.neuro-triggered-donation.en.md): Design draft for a neuro-triggered donation flow
+- [DESIGN-NOTES.neuro-triggered-donation.zh-TW.md](./DESIGN-NOTES.neuro-triggered-donation.zh-TW.md): Traditional Chinese design draft for the same flow
 - [AGENTS.md](./AGENTS.md): Repository collaboration rules
 
 ## Near-Term Priorities
