@@ -47,6 +47,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [DESIGN-NOTES.qa-minimal-schema.zh-TW.md](./DESIGN-NOTES.qa-minimal-schema.zh-TW.md): Traditional Chinese minimal schema draft for the same Q&A app
 - [DESIGN-NOTES.donation-app-layer.en.md](./DESIGN-NOTES.donation-app-layer.en.md): Design draft for a donation-oriented app carried by Mycel
 - [DESIGN-NOTES.donation-app-layer.zh-TW.md](./DESIGN-NOTES.donation-app-layer.zh-TW.md): Traditional Chinese design draft for the same donation app model
+- [DESIGN-NOTES.auto-signer-consent-model.en.md](./DESIGN-NOTES.auto-signer-consent-model.en.md): Design draft for enrollment and consent boundaries in automatic signer systems
+- [DESIGN-NOTES.auto-signer-consent-model.zh-TW.md](./DESIGN-NOTES.auto-signer-consent-model.zh-TW.md): Traditional Chinese design draft for the same consent model
 - [DESIGN-NOTES.policy-driven-threshold-custody.en.md](./DESIGN-NOTES.policy-driven-threshold-custody.en.md): Design draft for policy-authorized automatic threshold custody
 - [DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md](./DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md): Traditional Chinese design draft for the same custody model
 - [DESIGN-NOTES.sensor-triggered-donation.en.md](./DESIGN-NOTES.sensor-triggered-donation.en.md): Design draft for a sensor-triggered donation flow
