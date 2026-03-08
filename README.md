@@ -1,6 +1,6 @@
 # Mycel Protocol v0.1
 
-Language: English | [Traditional Chinese](./PROTOCOL.md)
+Language: English | [Traditional Chinese](./README.zh-TW.md)
 
 ## 0. Positioning
 

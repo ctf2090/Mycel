@@ -1,5 +1,7 @@
 # Mycel Protocol v0.1
 
+語言：繁體中文 | [English](./README.md)
+
 ## 0. 定位
 
 Mycel 是一種具備以下特性的文本協議：
