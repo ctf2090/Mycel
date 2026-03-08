@@ -49,6 +49,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [DESIGN-NOTES.donation-app-layer.zh-TW.md](./DESIGN-NOTES.donation-app-layer.zh-TW.md): Traditional Chinese design draft for the same donation app model
 - [DESIGN-NOTES.sensor-triggered-donation.en.md](./DESIGN-NOTES.sensor-triggered-donation.en.md): Design draft for a sensor-triggered donation flow
 - [DESIGN-NOTES.sensor-triggered-donation.zh-TW.md](./DESIGN-NOTES.sensor-triggered-donation.zh-TW.md): Traditional Chinese design draft for the same flow
+- [DESIGN-NOTES.governance-history-security.en.md](./DESIGN-NOTES.governance-history-security.en.md): Design draft for securing governance history
+- [DESIGN-NOTES.governance-history-security.zh-TW.md](./DESIGN-NOTES.governance-history-security.zh-TW.md): Traditional Chinese design draft for the same topic
 
 ### Meta
 
