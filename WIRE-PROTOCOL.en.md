@@ -9,7 +9,7 @@ This document defines the transport-level message format and minimum synchroniza
 Goals for v0.1:
 
 - Define a stable wire envelope
-- Define minimum fields for `HELLO`, `WANT`, and `OBJECT`
+- Define normative fields for the v0.1 sync message set
 - Keep implementation neutral, technical, and interoperable
 
 ## 1. Conformance
@@ -17,8 +17,10 @@ Goals for v0.1:
 A node is v0.1 wire-compatible if it:
 
 1. Produces and parses the envelope in Section 2
-2. Implements `HELLO`, `WANT`, and `OBJECT`
-3. Verifies object hash and signature before acceptance
+2. Implements `HELLO`, `MANIFEST`, `HEADS`, `WANT`, `OBJECT`, `BYE`, and `ERROR`
+3. Verifies envelope signatures and object hash/signature before acceptance
+4. Implements `SNAPSHOT_OFFER` if it advertises `snapshot-sync`
+5. Implements `VIEW_ANNOUNCE` if it advertises `view-sync`
 
 ## 2. Message Envelope
 
@@ -113,7 +115,82 @@ Required `payload` fields:
 - `capabilities`
 - `nonce`
 
-## 5. WANT
+## 5. MANIFEST
+
+`MANIFEST` advertises a node's currently served sync surface.
+It is a wire message summary, not a content-addressed protocol object.
+
+```json
+{
+  "type": "MANIFEST",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:manifest-001",
+  "timestamp": "2026-03-08T20:00:10+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "node_id": "node:alpha",
+    "capabilities": ["patch-sync", "snapshot-sync", "view-sync"],
+    "topics": ["text/core", "text/commentary"],
+    "heads": {
+      "doc:origin-text": ["rev:0ab1", "rev:8fd2"]
+    },
+    "snapshots": ["snap:44cc"],
+    "views": ["view:9aa0"]
+  },
+  "sig": "sig:..."
+}
+```
+
+Required `payload` fields:
+
+- `node_id`
+- `capabilities`
+- `heads`
+
+Field rules:
+
+- `heads` is a map of `doc_id -> non-empty array of canonical revision IDs`
+- each head list MUST contain unique revision IDs
+- each head list SHOULD be sent in lexicographic ascending order for stable replay
+- `snapshots`, if present, MUST contain canonical snapshot IDs
+- `views`, if present, MUST contain canonical view IDs
+
+## 6. HEADS
+
+`HEADS` announces current heads for one or more documents.
+
+```json
+{
+  "type": "HEADS",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:heads-001",
+  "timestamp": "2026-03-08T20:00:30+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "documents": {
+      "doc:origin-text": ["rev:0ab1", "rev:8fd2"],
+      "doc:governance-rules": ["rev:91de"]
+    },
+    "replace": true
+  },
+  "sig": "sig:..."
+}
+```
+
+Required `payload` fields:
+
+- `documents`
+- `replace`
+
+Field rules:
+
+- `documents` is a non-empty map of `doc_id -> non-empty array of canonical revision IDs`
+- each head list MUST contain unique revision IDs
+- each head list SHOULD be sent in lexicographic ascending order for stable replay
+- if `replace` is `true`, the sender declares that the listed head sets replace its prior head advertisement for the same listed documents
+- if `replace` is `false`, the sender declares that the listed head sets are additive hints only
+
+## 7. WANT
 
 `WANT` requests missing objects by canonical object ID.
 In v0.1, these IDs are typed content-addressed IDs such as `rev:<object_hash>` or `patch:<object_hash>`.
@@ -138,7 +215,7 @@ Required `payload` fields:
 
 - `objects`: non-empty list of canonical object IDs
 
-## 6. OBJECT
+## 8. OBJECT
 
 `OBJECT` transmits one object payload.
 
@@ -191,7 +268,106 @@ Receiver MUST:
 4. Verify object-level signature according to the normative object signature rules in `PROTOCOL.en.md`
 5. Store object only when verification passes
 
-## 7. Error Handling
+## 9. SNAPSHOT_OFFER
+
+`SNAPSHOT_OFFER` advertises that a snapshot is available for fetch by `WANT`.
+
+```json
+{
+  "type": "SNAPSHOT_OFFER",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:snap-001",
+  "timestamp": "2026-03-08T20:02:00+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "snapshot_id": "snap:44cc",
+    "root_hash": "hash:snapshot-root",
+    "documents": ["doc:origin-text"],
+    "object_count": 3912,
+    "size_bytes": 1048576
+  },
+  "sig": "sig:..."
+}
+```
+
+Required `payload` fields:
+
+- `snapshot_id`
+- `root_hash`
+- `documents`
+
+Field rules:
+
+- `snapshot_id` MUST be a canonical snapshot ID
+- `documents` MUST be a non-empty array of `doc_id`
+- `object_count`, if present, MUST be a non-negative integer
+- `size_bytes`, if present, MUST be a non-negative integer
+- when the receiver later fetches the referenced Snapshot object, its `snapshot_id` and `root_hash` MUST match this offer
+
+## 10. VIEW_ANNOUNCE
+
+`VIEW_ANNOUNCE` advertises that a signed View object is available for fetch by `WANT`.
+
+```json
+{
+  "type": "VIEW_ANNOUNCE",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:view-001",
+  "timestamp": "2026-03-08T20:02:05+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "view_id": "view:9aa0",
+    "maintainer": "pk:community-curator",
+    "documents": {
+      "doc:origin-text": "rev:0ab1"
+    }
+  },
+  "sig": "sig:..."
+}
+```
+
+Required `payload` fields:
+
+- `view_id`
+- `maintainer`
+- `documents`
+
+Field rules:
+
+- `view_id` MUST be a canonical view ID
+- `documents` MUST be a non-empty map of `doc_id -> canonical revision ID`
+- the fetched View object's `view_id`, `maintainer`, and `documents` MUST match the announcement
+
+## 11. BYE
+
+`BYE` closes a session gracefully.
+
+```json
+{
+  "type": "BYE",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:bye-001",
+  "timestamp": "2026-03-08T20:02:10+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "reason": "normal-close"
+  },
+  "sig": "sig:..."
+}
+```
+
+Required `payload` fields:
+
+- `reason`
+
+Suggested `reason` values:
+
+- `normal-close`
+- `shutdown`
+- `idle-timeout`
+- `policy-reject`
+
+## 12. Error Handling
 
 On parse/validation failure, send `ERROR`:
 
@@ -211,6 +387,11 @@ On parse/validation failure, send `ERROR`:
 }
 ```
 
+Required `payload` fields:
+
+- `in_reply_to`
+- `code`
+
 Suggested codes:
 
 - `UNSUPPORTED_VERSION`
@@ -220,7 +401,7 @@ Suggested codes:
 - `OBJECT_NOT_FOUND`
 - `RATE_LIMITED`
 
-## 8. Minimal Sync Flow
+## 13. Minimal Sync Flow
 
 1. `HELLO` exchange
 2. `MANIFEST` / `HEADS` exchange
@@ -230,14 +411,14 @@ Suggested codes:
 6. Optional `SNAPSHOT_OFFER` / `VIEW_ANNOUNCE`
 7. `BYE` on graceful close
 
-## 9. Security Notes
+## 14. Security Notes
 
 - Envelope signature does not replace object-level signature checks
 - Reject unsigned or invalidly signed control messages by local policy
 - Apply rate limits for repeated invalid traffic
 - Keep transport and acceptance decisions separate
 
-## 10. Next Extensions
+## 15. Next Extensions
 
 Planned for later versions:
 

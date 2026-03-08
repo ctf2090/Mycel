@@ -9,7 +9,7 @@
 v0.1 目標：
 
 - 定義穩定的 wire envelope
-- 定義 `HELLO`、`WANT`、`OBJECT` 的最小欄位
+- 定義 v0.1 同步訊息集的規範性欄位
 - 保持實作中立、技術化、可互通
 
 ## 1. 相容條件
@@ -17,8 +17,10 @@ v0.1 目標：
 節點若符合以下條件，即可視為 v0.1 wire 相容：
 
 1. 可產生與解析第 2 節 envelope
-2. 實作 `HELLO`、`WANT`、`OBJECT`
-3. 在接受物件前驗證雜湊與簽章
+2. 實作 `HELLO`、`MANIFEST`、`HEADS`、`WANT`、`OBJECT`、`BYE`、`ERROR`
+3. 在接受前驗證 envelope 簽章以及物件雜湊/簽章
+4. 若宣告 `snapshot-sync`，則實作 `SNAPSHOT_OFFER`
+5. 若宣告 `view-sync`，則實作 `VIEW_ANNOUNCE`
 
 ## 2. 訊息信封
 
@@ -113,7 +115,82 @@ v0.1 定義以下訊息種類：
 - `capabilities`
 - `nonce`
 
-## 5. WANT
+## 5. MANIFEST
+
+`MANIFEST` 用於宣告節點目前提供的同步表面。
+它是 wire message summary，不是內容定址的協議物件。
+
+```json
+{
+  "type": "MANIFEST",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:manifest-001",
+  "timestamp": "2026-03-08T20:00:10+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "node_id": "node:alpha",
+    "capabilities": ["patch-sync", "snapshot-sync", "view-sync"],
+    "topics": ["text/core", "text/commentary"],
+    "heads": {
+      "doc:origin-text": ["rev:0ab1", "rev:8fd2"]
+    },
+    "snapshots": ["snap:44cc"],
+    "views": ["view:9aa0"]
+  },
+  "sig": "sig:..."
+}
+```
+
+必要 `payload` 欄位：
+
+- `node_id`
+- `capabilities`
+- `heads`
+
+欄位規則：
+
+- `heads` 是 `doc_id -> 非空 canonical revision ID 陣列` 的 map
+- 每個 head list MUST 只包含唯一 revision ID
+- 每個 head list SHOULD 以字典序遞增傳送，方便穩定重放
+- 若有 `snapshots`，其內容 MUST 是 canonical snapshot ID
+- 若有 `views`，其內容 MUST 是 canonical view ID
+
+## 6. HEADS
+
+`HEADS` 用於宣告一個或多個文件目前的 heads。
+
+```json
+{
+  "type": "HEADS",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:heads-001",
+  "timestamp": "2026-03-08T20:00:30+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "documents": {
+      "doc:origin-text": ["rev:0ab1", "rev:8fd2"],
+      "doc:governance-rules": ["rev:91de"]
+    },
+    "replace": true
+  },
+  "sig": "sig:..."
+}
+```
+
+必要 `payload` 欄位：
+
+- `documents`
+- `replace`
+
+欄位規則：
+
+- `documents` 是非空的 `doc_id -> 非空 canonical revision ID 陣列` map
+- 每個 head list MUST 只包含唯一 revision ID
+- 每個 head list SHOULD 以字典序遞增傳送，方便穩定重放
+- 若 `replace` 為 `true`，表示發送端宣告：對於這些列出的文件，其 head set 應取代先前的廣播內容
+- 若 `replace` 為 `false`，表示發送端宣告：這些 head set 只是增量提示
+
+## 7. WANT
 
 `WANT` 依 canonical object ID 請求缺少的物件。
 在 v0.1，這些 ID 是帶型別前綴的內容定址 ID，例如 `rev:<object_hash>` 或 `patch:<object_hash>`。
@@ -138,7 +215,7 @@ v0.1 定義以下訊息種類：
 
 - `objects`：非空的 canonical object ID 列表
 
-## 6. OBJECT
+## 8. OBJECT
 
 `OBJECT` 用於傳送單一物件內容。
 
@@ -191,7 +268,106 @@ v0.1 定義以下訊息種類：
 4. 依 `PROTOCOL.zh-TW.md` 中的規範性 object signature rules 驗證物件層簽章
 5. 驗證通過才可入庫
 
-## 7. 錯誤處理
+## 9. SNAPSHOT_OFFER
+
+`SNAPSHOT_OFFER` 用於宣告某個 snapshot 可透過 `WANT` 抓取。
+
+```json
+{
+  "type": "SNAPSHOT_OFFER",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:snap-001",
+  "timestamp": "2026-03-08T20:02:00+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "snapshot_id": "snap:44cc",
+    "root_hash": "hash:snapshot-root",
+    "documents": ["doc:origin-text"],
+    "object_count": 3912,
+    "size_bytes": 1048576
+  },
+  "sig": "sig:..."
+}
+```
+
+必要 `payload` 欄位：
+
+- `snapshot_id`
+- `root_hash`
+- `documents`
+
+欄位規則：
+
+- `snapshot_id` MUST 是 canonical snapshot ID
+- `documents` MUST 是非空的 `doc_id` 陣列
+- 若有 `object_count`，其值 MUST 是非負整數
+- 若有 `size_bytes`，其值 MUST 是非負整數
+- 當接收端之後抓取對應的 Snapshot 物件時，其 `snapshot_id` 與 `root_hash` MUST 與此 offer 一致
+
+## 10. VIEW_ANNOUNCE
+
+`VIEW_ANNOUNCE` 用於宣告某個已簽章的 View 物件可透過 `WANT` 抓取。
+
+```json
+{
+  "type": "VIEW_ANNOUNCE",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:view-001",
+  "timestamp": "2026-03-08T20:02:05+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "view_id": "view:9aa0",
+    "maintainer": "pk:community-curator",
+    "documents": {
+      "doc:origin-text": "rev:0ab1"
+    }
+  },
+  "sig": "sig:..."
+}
+```
+
+必要 `payload` 欄位：
+
+- `view_id`
+- `maintainer`
+- `documents`
+
+欄位規則：
+
+- `view_id` MUST 是 canonical view ID
+- `documents` MUST 是非空的 `doc_id -> canonical revision ID` map
+- 抓取到的 View 物件之 `view_id`、`maintainer`、`documents` MUST 與此 announcement 一致
+
+## 11. BYE
+
+`BYE` 用於正常關閉 session。
+
+```json
+{
+  "type": "BYE",
+  "version": "mycel-wire/0.1",
+  "msg_id": "msg:bye-001",
+  "timestamp": "2026-03-08T20:02:10+08:00",
+  "from": "node:alpha",
+  "payload": {
+    "reason": "normal-close"
+  },
+  "sig": "sig:..."
+}
+```
+
+必要 `payload` 欄位：
+
+- `reason`
+
+建議 `reason` 值：
+
+- `normal-close`
+- `shutdown`
+- `idle-timeout`
+- `policy-reject`
+
+## 12. 錯誤處理
 
 解析或驗證失敗時，回傳 `ERROR`：
 
@@ -211,6 +387,11 @@ v0.1 定義以下訊息種類：
 }
 ```
 
+必要 `payload` 欄位：
+
+- `in_reply_to`
+- `code`
+
 建議錯誤碼：
 
 - `UNSUPPORTED_VERSION`
@@ -220,7 +401,7 @@ v0.1 定義以下訊息種類：
 - `OBJECT_NOT_FOUND`
 - `RATE_LIMITED`
 
-## 8. 最小同步流程
+## 13. 最小同步流程
 
 1. 交換 `HELLO`
 2. 交換 `MANIFEST` / `HEADS`
@@ -230,14 +411,14 @@ v0.1 定義以下訊息種類：
 6. 可選擇交換 `SNAPSHOT_OFFER` / `VIEW_ANNOUNCE`
 7. 正常關閉時傳送 `BYE`
 
-## 9. 安全備註
+## 14. 安全備註
 
 - envelope 簽章不能取代 object 層簽章檢查
 - 依本地 policy 拒絕未簽章或簽章錯誤的控制訊息
 - 對重複無效流量套用 rate limit
 - 保持 transport 與 acceptance 決策分離
 
-## 10. 後續延伸
+## 15. 後續延伸
 
 後續版本可擴充：
 
