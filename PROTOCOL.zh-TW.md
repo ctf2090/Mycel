@@ -1043,13 +1043,17 @@ Mycel 的核心不是唯一真理，而是：
 
 ## 19. 建議下一版
 
-目前這版是概念規格。下一步最值得補的是三塊：
+目前這版已包含：
 
-1. **Wire protocol**：`HELLO`、`WANT`、`OBJECT` 的具體欄位
-2. **Canonical serialization spec**：避免不同實作 hash 不一致
-3. **Merge semantics**：block-based auto-merge 規則
+1. **Wire protocol**：規範性的同步訊息 schema
+2. **Canonical serialization appendix**：決定性的雜湊與簽章規則
+3. **Conservative merge generation profile**：可安全重放的合併輸出規則
 
-下一步可直接延伸成：**Mycel wire protocol v0.1**，定義節點封包格式與同步流程細節。
+下一步最有價值的是：
+
+1. **Implementation checklist**：把規格整理成可落地的實作 profile
+2. **Consistency audit**：把所有文件中的例子、術語、範圍對齊
+3. **Governance simplification review**：在視 v0.1 為穩定前，先收斂 selector / governance 的可選複雜度
 
 ## Appendix A. Canonical Serialization（規範）
 

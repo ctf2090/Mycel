@@ -1042,13 +1042,17 @@ In one sentence, Mycel differs from other systems as follows:
 
 ## 19. Recommended Next Version
 
-This version is a conceptual spec. The three most valuable next additions are:
+This version now includes:
 
-1. **Wire protocol**: concrete fields for `HELLO`, `WANT`, and `OBJECT`
-2. **Canonical serialization spec**: prevent hash mismatch across implementations
-3. **Merge semantics**: explicit block-based auto-merge rules
+1. **Wire protocol**: normative sync-message schemas
+2. **Canonical serialization appendix**: deterministic hashing and signing rules
+3. **Conservative merge generation profile**: replay-safe merge output rules
 
-The next direct extension can be: **Mycel wire protocol v0.1**, defining packet formats and synchronization details.
+The most valuable next additions are:
+
+1. **Implementation checklist**: turn the spec into a buildable implementation profile
+2. **Consistency audit**: align examples, terminology, and scope across all documents
+3. **Governance simplification review**: reduce optional selector/governance complexity before calling v0.1 stable
 
 ## Appendix A. Canonical Serialization (Normative)
 

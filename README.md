@@ -20,7 +20,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 ## Current Status
 
 - Protocol stage: `v0.1` conceptual specification
-- Current focus: object model, signing model, replication flow, and merge behavior
+- Current focus: spec consistency, implementation readiness, and governance simplification
 
 ## Documentation
 
@@ -32,9 +32,9 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 
 ## Near-Term Priorities
 
-1. Finalize wire protocol fields (`HELLO`, `WANT`, `OBJECT`)
-2. Lock canonical serialization rules for deterministic hashing
-3. Define block-level merge semantics
+1. Do a full consistency pass across `README`, `PROTOCOL`, and `WIRE-PROTOCOL`
+2. Decide whether v0.1 governance parameters should be reduced further before stabilization
+3. Turn the spec into an implementation checklist or reference profile
 
 ## Project Scope
 
