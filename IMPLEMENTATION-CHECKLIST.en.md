@@ -15,7 +15,7 @@ Target a constrained v0.1 client first:
 - `HELLO`, `MANIFEST`, `HEADS`, `WANT`, `OBJECT`, `BYE`, and `ERROR`
 - `SNAPSHOT_OFFER` and `VIEW_ANNOUNCE` if the client advertises those capabilities
 - replay-based revision verification
-- deterministic head selection
+- deterministic, profile-locked head selection
 - conservative merge generation profile
 
 Defer if needed:
@@ -87,8 +87,10 @@ Defer if needed:
 - [ ] Maintain an index for `doc_id -> revisions`.
 - [ ] Maintain an index for `revision_id -> parents`.
 - [ ] Maintain an index for `author -> patches`.
-- [ ] Maintain an index for `view_id -> selected document heads`.
-- [ ] Persist local trust policy separately from replicated protocol objects.
+- [ ] Maintain an index for `view_id -> governance signal contents`.
+- [ ] Maintain an index for `profile_id -> selected document heads`.
+- [ ] Persist local transport and safety policy separately from replicated protocol objects.
+- [ ] Keep discretionary local policy out of the active accepted-head path.
 - [ ] Support rebuilding indexes from the object store alone.
 
 ## 7. Wire Protocol
@@ -117,17 +119,21 @@ Defer if needed:
 - [ ] Verify objects before indexing or exposing them to readers.
 - [ ] Support snapshot-assisted catch-up if snapshots are advertised.
 - [ ] Support fetching announced views if `view-sync` is enabled.
+- [ ] Treat fetched View objects as governance signals rather than user preference state.
 
 ## 9. Views and Head Selection
 
-- [ ] Store verified `view` objects separately from local policy state.
-- [ ] Group selector inputs by `view_id`, `doc_id`, and `effective_selection_time`.
+- [ ] Store verified `view` objects as governance signals, separately from local transport/safety policy state.
+- [ ] Group selector inputs by `profile_id`, `doc_id`, and `effective_selection_time`.
+- [ ] Resolve `profile_id` as a fixed `policy_hash` for the active reader profile.
 - [ ] Compute eligible heads exactly as specified.
 - [ ] Use only verified View objects with matching `policy_hash` as maintainer signals.
 - [ ] Implement selector epoch calculation exactly.
 - [ ] Implement the normative `selector_score`.
 - [ ] Implement the normative tie-break order.
 - [ ] Emit or persist the minimum decision trace schema.
+- [ ] Do not expose discretionary local policy controls that alter the active accepted head.
+- [ ] If multiple fixed profiles are supported, enumerate them explicitly rather than allowing ad hoc local profiles.
 
 ## 10. Merge Generation
 
@@ -145,6 +151,7 @@ Defer if needed:
 - [ ] Provide revision commit entry points.
 - [ ] Provide sync pull entry points.
 - [ ] Provide view inspection or head-inspection entry points.
+- [ ] Separate reader-facing accepted-head inspection from curator-facing View publication workflows.
 - [ ] Provide store-rebuild or reindex entry points for recovery.
 
 ## 12. Interop Test Minimum

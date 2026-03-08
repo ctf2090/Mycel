@@ -15,7 +15,7 @@
 - 實作 `HELLO`、`MANIFEST`、`HEADS`、`WANT`、`OBJECT`、`BYE`、`ERROR`
 - 若宣告對應 capability，才實作 `SNAPSHOT_OFFER` 與 `VIEW_ANNOUNCE`
 - 以 replay 為基礎的 revision 驗證
-- 決定性的 head selection
+- 決定性且 profile-locked 的 head selection
 - 保守版 merge generation profile
 
 可延後：
@@ -87,8 +87,10 @@
 - [ ] 維護 `doc_id -> revisions` 索引。
 - [ ] 維護 `revision_id -> parents` 索引。
 - [ ] 維護 `author -> patches` 索引。
-- [ ] 維護 `view_id -> selected document heads` 索引。
-- [ ] 把本地 trust policy 與可複製的協議物件分開保存。
+- [ ] 維護 `view_id -> governance signal contents` 索引。
+- [ ] 維護 `profile_id -> selected document heads` 索引。
+- [ ] 把本地 transport 與 safety policy 與可複製的協議物件分開保存。
+- [ ] 不讓自由裁量的本地 policy 進入 active accepted-head 路徑。
 - [ ] 支援只靠 object store 就能重建 indexes。
 
 ## 7. Wire Protocol
@@ -117,17 +119,21 @@
 - [ ] 先驗證物件，再建立索引或提供給 reader。
 - [ ] 若對方宣告 snapshot，可支援 snapshot-assisted catch-up。
 - [ ] 若啟用 `view-sync`，可支援抓取已公告的 views。
+- [ ] 將抓回的 View objects 視為 governance signals，而不是使用者偏好狀態。
 
 ## 9. Views 與 Head Selection
 
-- [ ] 把已驗證的 `view` 物件與本地 policy state 分開保存。
-- [ ] 依 `view_id`、`doc_id`、`effective_selection_time` 分組 selector inputs。
+- [ ] 把已驗證的 `view` 物件當成 governance signals 保存，並與本地 transport/safety policy state 分開。
+- [ ] 依 `profile_id`、`doc_id`、`effective_selection_time` 分組 selector inputs。
+- [ ] 將 `profile_id` 解析為 active reader profile 的固定 `policy_hash`。
 - [ ] 精準實作 eligible heads 判定。
 - [ ] 只使用 `policy_hash` 相同且已驗證的 View 物件作為 maintainer signals。
 - [ ] 精準實作 selector epoch 計算。
 - [ ] 實作規範中的 `selector_score`。
 - [ ] 實作規範中的 tie-break 順序。
 - [ ] 輸出或保存最小 decision trace schema。
+- [ ] 不提供會改變 active accepted head 的自由裁量本地 policy controls。
+- [ ] 若支援多個固定 profiles，必須明確列舉，而不是允許 ad hoc local profiles。
 
 ## 10. Merge Generation
 
@@ -145,6 +151,7 @@
 - [ ] 提供 revision commit 入口。
 - [ ] 提供 sync pull 入口。
 - [ ] 提供 view inspection 或 head inspection 入口。
+- [ ] 把 reader-facing accepted-head inspection 與 curator-facing View publication workflow 分開。
 - [ ] 提供 store-rebuild 或 reindex 入口，以利復原。
 
 ## 12. Interop Test 最低門檻

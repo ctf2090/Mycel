@@ -31,7 +31,7 @@ Mycel 的設計目標：
 1. **可驗證歷史**：所有被接受的修改都必須可追溯、可重放驗證。
 2. **去中心存活**：在沒有單一伺服器時，內容仍可保存與同步。
 3. **分支合法**：分叉是第一級合法狀態，不是錯誤。
-4. **合併可選**：社群可依本地 policy 形成自己的採信視圖（accepted view）。
+4. **合併可選**：社群可發布已簽章的治理 View，而 reader client 依固定 profile 規則導出 accepted head。
 5. **匿名可用**：作者可使用假名金鑰，並應最小化 metadata 暴露。
 6. **文本優先（v0.1）**：在 v0.1 以 block / paragraph 為主要操作單位。
 
@@ -43,7 +43,7 @@ Mycel 把資料拆成 6 種核心概念：
 - **Block**：段落/區塊
 - **Patch**：一次修改
 - **Revision**：某個可驗證狀態
-- **View**：某社群採信的版本集合
+- **View**：用來導出 accepted head 的已簽章治理訊號
 - **Snapshot**：某一時刻的快照包
 
 ## 3. 基本原則
@@ -80,13 +80,15 @@ object_id = <type-prefix>:<object_hash>
 
 同一個文件可以有多個 heads。
 
-### 3.4 採信視圖不是全域真理
+### 3.4 Accepted Head 由 Profile 治理，而非全域真理
 
-所謂「採信版本」只是某個 View，不是全網唯一版本。
+所謂「採信版本」只是某個治理 View profile 的輸出，不是全網唯一版本。
+不同合法 profile 可以並存，但合規的 reader client MUST 以固定的 protocol-defined profile 輸入導出 active accepted head，而不是依本地偏好自由裁量。
 
 ### 3.5 傳輸與接受分離
 
-節點可以接收某 object，不代表一定接受它進入本地採信視圖。
+節點可以接收某 object，但不讓它進入 profile-governed accepted-head 路徑。
+物件只有在完整驗證且符合固定 selector profile 的條件後，才會影響 accepted-head selection。
 
 ## 4. 物件模型
 
@@ -325,7 +327,7 @@ merge revision 範例：
 
 ### 4.6 View
 
-View 是「某社群／某節點目前採信哪些版本」。
+View 是一個已簽章的治理訊號，用來聲明某維護者在特定 policy body 下採信哪些 revisions。
 
 ```json
 {
@@ -347,7 +349,8 @@ View 是「某社群／某節點目前採信哪些版本」。
 }
 ```
 
-View 很重要，因為 Mycel 沒有單一全域採信視圖。
+在 v0.1，View 不是終端使用者的偏好物件。
+它是用來導出 profile-governed accepted head 的其中一個 selector 輸入。
 
 `view_id` 是導出的 canonical object ID，格式為 `view:<object_hash>`。
 它 MUST 由省略 `view_id` 與 `signature` 後的 canonical View 內容計算而得。
@@ -510,7 +513,7 @@ Mycel 節點分成 5 類角色（同一節點可兼任多種角色）：
 
 1. **Author Node**：產生 patch / revision
 2. **Mirror Node**：保存與提供內容
-3. **Curator Node**：維護 view 與採信分支
+3. **Curator Node**：發布 View objects 並維護採信分支訊號
 4. **Relay Node**：轉發 metadata 與 objects
 5. **Archivist Node**：保存完整歷史
 
@@ -544,7 +547,7 @@ Mycel 不要求全節點同步全部資料，支援 partial replication。
 2. 取得 manifest
 3. 拉最近 snapshot
 4. 補差額 patch / revision
-5. 建立本地 view
+5. 為一個或多個固定 profiles 建立 accepted-head 索引
 
 日常更新：
 
@@ -553,7 +556,7 @@ Mycel 不要求全節點同步全部資料，支援 partial replication。
 3. 以 canonical object ID 拉取缺失
 4. 驗 hash、驗簽章
 5. 存入本地 store
-6. 依 policy 決定是否納入 view
+6. 依固定 profile 規則重算 accepted heads
 
 ### 8.3 交換訊息類型
 
@@ -691,38 +694,40 @@ Generator MUST NOT 依賴隱藏的 merge metadata 來讓結果狀態成立。
 
 ## 10. View 與採信
 
-Mycel 不定義全域唯一採信視圖，只存在：
-
-- local view
-- community view
-- public view
-- archival view
-
-例子：
-
-- 某社群維護自己的採信視圖
-- 某學者維護一個批判校勘視圖
-- 某節點只接受自己信任作者的 patch
-
+Mycel 不定義全域唯一 accepted head。
+同一組文件可同時存在多個固定的 View profiles。
 這個設計正是 Mycel 與 blockchain 的大差異。
+
+### 10.0 Reader Client 合規要求（規範）
+
+為了在保留 multi-view 的前提下，盡量降低 client 的自由裁量影響：
+
+1. 合規的 reader client MUST 將每個顯示中的文件家族綁定到一個固定的 View profile。
+2. 在 v0.1，accepted-head selection 的 profile 識別值為 `policy_hash`。
+3. 合規的 reader client MUST 只依已驗證的 protocol objects 與該固定 profile 導出 active accepted head。
+4. 合規的 reader client MUST NOT 提供會改變 active accepted head 的自由裁量本地 policy controls。
+5. 合規的 reader client MAY 為了審計而顯示 raw heads、branch graphs、或其他 profile 的結果，但除非另有有效固定 profile 治理該結果，否則 MUST NOT 將其顯示為 active accepted head。
 
 ### 10.1 決定性 Head 選擇（規範）
 
 為了降低 client 端分歧，head 選擇必須由協議規範驅動：
 
-1. client MUST 以 `view_id` 與 `doc_id` 發出請求，且 MAY 附帶 selection-time boundary（選擇時間邊界）。
+1. client MUST 先解析一個固定的 `profile_id`，並以 `profile_id` 與 `doc_id` 發出請求，且 MAY 附帶 selection-time boundary（選擇時間邊界）。
 2. client MUST NOT 強制指定 `head_id`。
-3. node MUST 依請求 view 的 policy，從 eligible heads 即時計算 `selected_head`。
-4. 對同一組已驗證物件集合、本地 selector policy state（選擇器策略狀態）、以及有效 selection time（選擇時間），選擇器 MUST 產生決定性結果。
+3. node MUST 依請求的固定 profile，從 eligible heads 即時計算 `selected_head`。
+4. 對同一組已驗證物件集合、固定 profile 參數、以及有效 selection time（選擇時間），選擇器 MUST 產生決定性結果。
 5. 回應 MUST 包含 `selected_head` 與可機器解析的 decision trace（決策軌跡）。
 
 #### 10.1.1 Selector Inputs
 
 Selector 的輸入 tuple（輸入組）為：
 
-- `view_id`
+- `profile_id`
 - `doc_id`
 - `effective_selection_time`
+
+在 v0.1，`profile_id` 就是 active View profile 的固定 `policy_hash`。
+若 client 支援多個固定 profiles，MUST 以明確列舉方式提供；它 MUST NOT 為 active accepted-head 路徑臨時構造 ad hoc local policies。
 
 `effective_selection_time` 定義如下：
 
@@ -731,12 +736,7 @@ Selector 的輸入 tuple（輸入組）為：
 
 若 client 省略 boundary，node MUST 在 decision trace（決策軌跡）中輸出解析後的 `effective_selection_time`。
 
-Node MUST 將 `view_id` 解析為一個完整驗證過的 View 物件 `V`。
-Selector policy hash（選擇器策略雜湊）為：
-
-```text
-policy_hash = HASH(canonical_serialization(V.policy))
-```
+Selector 只可使用 `policy_hash` 等於 `profile_id` 的完整驗證 View 物件。
 
 #### 10.1.2 Eligible Heads
 
@@ -745,8 +745,7 @@ policy_hash = HASH(canonical_serialization(V.policy))
 1. 該 Revision 已依所有 object、hash、signature、state 規則完整驗證
 2. 該 Revision 的 `doc_id` 與請求的 `doc_id` 相同
 3. 該 Revision 的 timestamp 小於或等於 `effective_selection_time`
-4. 該 Revision 已被與 `policy_hash` 關聯的本地 policy state 接受進入候選集合
-5. 不存在另一個同文件、同樣已接受且 timestamp 小於或等於 `effective_selection_time` 的 descendant Revision
+4. 不存在另一個同文件、同樣已完整驗證且 timestamp 小於或等於 `effective_selection_time` 的 descendant Revision
 
 若不存在 eligible heads，選擇必須失敗，並回傳像 `NO_ELIGIBLE_HEAD` 這類可機器解析的原因。
 
@@ -759,14 +758,14 @@ policy_hash = HASH(canonical_serialization(V.policy))
    - `maintainer == k`
    - `timestamp` 落在 selector epoch 內
    - `timestamp <= effective_selection_time`
-   - `HASH(canonical_serialization(view.policy)) == policy_hash`
+   - `HASH(canonical_serialization(view.policy)) == profile_id`
 3. 依以下順序選出其中最新的一個 View：
    1. 較新的 `timestamp`
    2. 字典序較小的 `view_id`
 4. 若該 View 含有 `documents[doc_id]`，且其值正好是某個 eligible head，則 `k` 對該 head 貢獻一個 support signal
 5. 否則 `k` 對該 `doc_id` 不貢獻 signal
 
-對任一 `(policy_hash, doc_id, selector_epoch)`，每個 admitted maintainer 最多只能對一個 eligible head 貢獻 signal。
+對任一 `(profile_id, doc_id, selector_epoch)`，每個 admitted maintainer 最多只能對一個 eligible head 貢獻 signal。
 
 #### 10.1.4 Selector Score
 
@@ -798,10 +797,9 @@ Decision trace（決策軌跡）MUST 可機器解析，且至少包含：
 
 ```json
 {
-  "view_id": "view:...",
+  "profile_id": "hash:...",
   "doc_id": "doc:origin-text",
   "effective_selection_time": 1777781000,
-  "policy_hash": "hash:...",
   "selector_epoch": 587,
   "eligible_heads": [
     {
@@ -817,9 +815,9 @@ Decision trace（決策軌跡）MUST 可機器解析，且至少包含：
 }
 ```
 
-對同一組已驗證物件集合、selector policy state（選擇器策略狀態）、以及 effective selection time（選擇時間），此 trace MUST 可重現。
+對同一組已驗證物件集合、固定 profile 參數、以及 effective selection time（選擇時間），此 trace MUST 可重現。
 
-### 10.2 Maintainer Set + 權重準入（規範）
+### 10.2 View Profile 參數 + 維護者權重準入（規範）
 
 Mycel 採用假名、身份盲的維護者治理。
 維護者以 key 識別，不要求真實身份，也不要求彼此相識。
@@ -827,8 +825,8 @@ Mycel 採用假名、身份盲的維護者治理。
 準入與加權規則：
 
 1. 維護者候選資格 MUST 只依可驗證的協議行為評估，不依聲稱的真實身份。
-2. node MUST 保存並公布本地 selector policy parameters（選擇器策略參數），以便審計。
-3. Selector policy parameters（選擇器策略參數）至少 MUST 包含：
+2. 提供 accepted-head results 的 node MUST 保存並公布其固定 profile 參數，以便審計。
+3. 固定 profile 參數至少 MUST 包含：
    - `epoch_seconds`
    - `epoch_zero_timestamp`
    - `admission_window_epochs`
@@ -843,7 +841,7 @@ selector_epoch = floor((effective_selection_time - epoch_zero_timestamp) / epoch
 ```
 
 6. 對每個 maintainer key `k` 與 epoch `e`，定義：
-   - `valid_view_count(e, k)`：在 epoch `e` 中，由 `k` 發布且 policy hash 等於 selector `policy_hash` 的完整驗證 View 物件數量
+   - `valid_view_count(e, k)`：在 epoch `e` 中，由 `k` 發布且 policy hash 等於 selector `profile_id` 的完整驗證 View 物件數量
    - `critical_violation_count(e, k)`：在 epoch `e` 中可驗證歸因於 `k` 的重大違規數量
 7. 若某 key 在前 `admission_window_epochs` 個已完成 epoch 中同時滿足：
    - `valid_view_count` 總和至少為 `min_valid_views_for_admission`
@@ -866,7 +864,7 @@ effective_weight(e, k) =
 
 11. `clamp(x, lo, hi)` 的意義是：若 `x < lo` 回傳 `lo`，若 `x > hi` 回傳 `hi`，否則回傳 `x`。
 12. 若某 key 在 epoch `e-1` 有一個或多個重大違規，則它在 epoch `e` MUST 至少失去一個 weight unit。
-13. node MAY 依 policy 對某 key 執行 quarantine 或完全移除；被 quarantine 或移除的 key，其 effective weight MUST 為 `0`。
+13. 合規的 reader client MUST NOT 套用會改變 active accepted-head 路徑的自由裁量 per-installation quarantine 或 removal 規則。
 14. head 選擇 MUST 使用 `effective_weight(e, k)`，且 MUST NOT 單獨依賴原始 hit count。
 
 ## 11. 匿名與安全預設
@@ -895,14 +893,17 @@ Mycel 建議預設跑在匿名傳輸上，例如：
 - 不公開真實作者身份
 - topic 名稱可 capability 化
 
-### 11.4 信任策略
+### 11.4 本地傳輸與安全策略
 
-每個節點可定義：
+每個節點仍可定義：
 
 - 接受哪些作者 key
 - 接受哪些 curator key
 - 是否接受匿名 key
 - 新 key 是否先 quarantine
+
+這些本地策略 MAY 影響 storage、relay、moderation、或 private inspection。
+但對合規的 reader client 而言，它們 MUST NOT 改變第 10 節所定義的 fixed-profile active accepted head。
 
 ## 12. 本地儲存模型
 
@@ -920,11 +921,12 @@ Mycel 建議預設跑在匿名傳輸上，例如：
 - `revision -> parents`
 - `block_id -> latest states`
 - `author -> patches`
-- `view_id -> current head map`
+- `view_id -> governance signal contents`
+- `profile_id -> current accepted-head map`
 
 ### 12.3 Policy Store
 
-保存本地信任與接受規則。
+將本地傳輸、安全、與 moderation 規則，與 fixed-profile accepted-head 路徑分開保存。
 
 ## 13. URI / 命名格式
 
@@ -969,7 +971,8 @@ mycel verify
 
 - object store
 - index store
-- local policy store
+- local transport/safety policy store
+- accepted-head profile index
 
 ### 15.3 Network
 

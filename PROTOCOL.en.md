@@ -31,7 +31,7 @@ Mycel is designed with the following goals:
 1. **Verifiable history**: All accepted changes must be traceable and replay-verifiable.
 2. **Decentralized survivability**: Content remains preservable and synchronizable without a single server.
 3. **Forks are valid**: Forking is a first-class valid state.
-4. **Optional merge**: Communities can form their own accepted view by local policy.
+4. **Optional merge**: Communities can publish signed governance views, while reader clients derive accepted heads from fixed profile rules.
 5. **Anonymous usability**: Authors can use pseudonymous keys, and metadata exposure should be minimized.
 6. **Text-first (v0.1)**: In v0.1, block / paragraph is the primary unit of operation.
 
@@ -43,7 +43,7 @@ Mycel splits data into six core concepts:
 - **Block**: A paragraph/block
 - **Patch**: One modification
 - **Revision**: A verifiable state
-- **View**: A version set trusted by a community
+- **View**: A signed governance signal used to derive accepted heads
 - **Snapshot**: A packaged state at a point in time
 
 ## 3. Core Principles
@@ -80,13 +80,15 @@ Signature requirements for all v0.1 object types are defined normatively in Sect
 
 A single document may have multiple heads.
 
-### 3.4 Accepted View is Not Global Truth
+### 3.4 Accepted Head is Profile-Governed, Not Global Truth
 
-A so-called "accepted version" is only a View chosen by some group, not the only network-wide truth.
+A so-called "accepted version" is only the output of one governed View profile, not the only network-wide truth.
+Different valid profiles may coexist, but a conforming reader client MUST derive its active accepted head from fixed protocol-defined profile inputs rather than discretionary local preference.
 
 ### 3.5 Transport and Acceptance are Separate
 
-A node can receive an object without accepting it into its local accepted view.
+A node can receive an object without allowing it to affect the profile-governed accepted-head path.
+Objects influence accepted-head selection only after they are fully verified and admissible under the fixed selector profile.
 
 ## 4. Object Model
 
@@ -325,7 +327,7 @@ They only replay ordered Patch operations against the execution base state.
 
 ### 4.6 View
 
-A View means "which versions this community/node currently accepts".
+A View is a signed governance signal stating which revisions a maintainer accepts under one policy body.
 
 ```json
 {
@@ -347,7 +349,8 @@ A View means "which versions this community/node currently accepts".
 }
 ```
 
-View is critical, because Mycel has no single global accepted view.
+In v0.1, a View is not an end-user preference object.
+It is one selector input used to derive a profile-governed accepted head.
 
 `view_id` is a derived canonical object ID with the form `view:<object_hash>`.
 It MUST be computed from the canonical View body with `view_id` and `signature` omitted.
@@ -510,7 +513,7 @@ Mycel nodes have five role types (one node can take multiple roles):
 
 1. **Author Node**: creates patch/revision
 2. **Mirror Node**: stores and serves content
-3. **Curator Node**: maintains views and accepted branches
+3. **Curator Node**: publishes View objects and maintains accepted-branch signals
 4. **Relay Node**: forwards metadata and objects
 5. **Archivist Node**: preserves full history
 
@@ -544,7 +547,7 @@ First-time join:
 2. Fetches manifests
 3. Pulls latest snapshot
 4. Fills missing patch/revision gap
-5. Builds local view
+5. Builds accepted-head indexes for one or more fixed profiles
 
 Routine updates:
 
@@ -553,7 +556,7 @@ Routine updates:
 3. Fetch missing objects by canonical object ID
 4. Verify hash and signature
 5. Store in local store
-6. Decide whether to include into view based on local policy
+6. Recompute accepted heads under fixed profile rules
 
 ### 8.3 Message Types
 
@@ -691,38 +694,40 @@ If the generator emits `Auto-merged`, its Patch operations MUST be sufficient fo
 
 ## 10. View and Acceptance
 
-Mycel does not define one global accepted view. Only these exist:
-
-- local view
-- community view
-- public view
-- archival view
-
-Examples:
-
-- One community maintains its own accepted view
-- One scholar maintains a critical-edition view
-- One node accepts only patches from trusted authors
-
+Mycel does not define one global accepted head.
+Different fixed View profiles may coexist for the same document set.
 This is a core difference between Mycel and blockchain systems.
+
+### 10.0 Reader Client Conformance (Normative)
+
+To minimize discretionary client influence while preserving multi-view:
+
+1. A conforming reader client MUST map each displayed document family to one fixed View profile.
+2. In v0.1, the profile identifier for accepted-head selection is `policy_hash`.
+3. A conforming reader client MUST derive its active accepted head from verified protocol objects and that fixed profile only.
+4. A conforming reader client MUST NOT expose discretionary local policy controls that alter the active accepted head.
+5. A conforming reader client MAY expose raw heads, branch graphs, or alternative profile results for auditability, but MUST NOT present them as the active accepted head unless another valid fixed profile governs that result.
 
 ### 10.1 Deterministic Head Selection (Normative)
 
 To reduce client-side divergence, head selection is protocol-driven:
 
-1. A client MUST request by `view_id` and `doc_id`, and MAY include a selection-time boundary.
+1. A client MUST resolve one fixed `profile_id` and request by `profile_id` and `doc_id`, and MAY include a selection-time boundary.
 2. A client MUST NOT force `head_id`.
-3. A node MUST compute `selected_head` in real time from eligible heads under the requested view policy.
-4. The selector MUST be deterministic for the same verified object set, local selector policy state, and effective selection time.
+3. A node MUST compute `selected_head` in real time from eligible heads under the requested fixed profile.
+4. The selector MUST be deterministic for the same verified object set, fixed profile parameters, and effective selection time.
 5. The response MUST include `selected_head` and a machine-readable decision trace.
 
 #### 10.1.1 Selector Inputs
 
 The selector input tuple is:
 
-- `view_id`
+- `profile_id`
 - `doc_id`
 - `effective_selection_time`
+
+In v0.1, `profile_id` is the fixed `policy_hash` of the active View profile.
+If a client supports more than one fixed profile, it MUST enumerate them explicitly; it MUST NOT construct ad hoc local policies for the active accepted-head path.
 
 `effective_selection_time` is defined as:
 
@@ -731,12 +736,7 @@ The selector input tuple is:
 
 If the client omits the boundary, the node MUST emit the resolved `effective_selection_time` in the decision trace.
 
-The node MUST resolve `view_id` to a fully verified View object `V`.
-The selector policy hash is:
-
-```text
-policy_hash = HASH(canonical_serialization(V.policy))
-```
+The selector MUST use only fully verified View objects whose `policy_hash` equals `profile_id`.
 
 #### 10.1.2 Eligible Heads
 
@@ -745,8 +745,7 @@ For a given `doc_id`, a Revision is an eligible head if all of the following are
 1. the Revision is fully verified under all object, hash, signature, and state rules
 2. the Revision `doc_id` matches the requested `doc_id`
 3. the Revision timestamp is less than or equal to `effective_selection_time`
-4. the Revision is accepted for consideration by the local policy state associated with `policy_hash`
-5. there is no other accepted Revision for the same `doc_id`, with timestamp less than or equal to `effective_selection_time`, that is a descendant of it
+4. there is no other fully verified Revision for the same `doc_id`, with timestamp less than or equal to `effective_selection_time`, that is a descendant of it
 
 If no eligible heads exist, selection MUST fail with a machine-readable reason such as `NO_ELIGIBLE_HEAD`.
 
@@ -759,14 +758,14 @@ For each admitted maintainer key `k`, the selector derives at most one signal in
    - `maintainer == k`
    - `timestamp` is within the selector epoch
    - `timestamp <= effective_selection_time`
-   - `HASH(canonical_serialization(view.policy)) == policy_hash`
+   - `HASH(canonical_serialization(view.policy)) == profile_id`
 3. choose the latest such View by:
    1. newer `timestamp`
    2. lexicographically smaller `view_id`
 4. if that View has a `documents[doc_id]` entry and its value is one of the eligible heads, then `k` contributes one support signal to that head
 5. otherwise `k` contributes no signal for that `doc_id`
 
-Each admitted maintainer contributes to at most one eligible head for a given `(policy_hash, doc_id, selector_epoch)`.
+Each admitted maintainer contributes to at most one eligible head for a given `(profile_id, doc_id, selector_epoch)`.
 
 #### 10.1.4 Selector Score
 
@@ -798,10 +797,9 @@ The decision trace MUST be machine-readable and MUST include at least:
 
 ```json
 {
-  "view_id": "view:...",
+  "profile_id": "hash:...",
   "doc_id": "doc:origin-text",
   "effective_selection_time": 1777781000,
-  "policy_hash": "hash:...",
   "selector_epoch": 587,
   "eligible_heads": [
     {
@@ -817,9 +815,9 @@ The decision trace MUST be machine-readable and MUST include at least:
 }
 ```
 
-The trace MUST be reproducible from the same verified object set, selector policy state, and effective selection time.
+The trace MUST be reproducible from the same verified object set, fixed profile parameters, and effective selection time.
 
-### 10.2 Maintainer Set + Weights Admission (Normative)
+### 10.2 View Profile Parameters + Maintainer Set Admission (Normative)
 
 Mycel uses pseudonymous, identity-blind maintainer governance.
 Maintainers are identified by keys; real-world identity and mutual acquaintance are not required.
@@ -827,8 +825,8 @@ Maintainers are identified by keys; real-world identity and mutual acquaintance 
 Admission and weighting rules:
 
 1. A maintainer candidate MUST be evaluated only by verifiable protocol behavior, not claimed real identity.
-2. A node MUST store and publish its local selector policy parameters for auditability.
-3. At minimum, selector policy parameters MUST include:
+2. A node that serves accepted-head results MUST store and publish its fixed profile parameters for auditability.
+3. At minimum, fixed profile parameters MUST include:
    - `epoch_seconds`
    - `epoch_zero_timestamp`
    - `admission_window_epochs`
@@ -843,7 +841,7 @@ selector_epoch = floor((effective_selection_time - epoch_zero_timestamp) / epoch
 ```
 
 6. For each maintainer key `k` and epoch `e`, define:
-   - `valid_view_count(e, k)`: the number of fully verified View objects by `k` in epoch `e` whose policy hash matches the selector `policy_hash`
+   - `valid_view_count(e, k)`: the number of fully verified View objects by `k` in epoch `e` whose policy hash matches the selector `profile_id`
    - `critical_violation_count(e, k)`: the number of verifiable critical violations attributed to `k` in epoch `e`
 7. A maintainer key is admitted in epoch `e` if, across the previous `admission_window_epochs` completed epochs:
    - the sum of `valid_view_count` is at least `min_valid_views_for_admission`
@@ -865,7 +863,7 @@ effective_weight(e, k) =
 
 11. `clamp(x, lo, hi)` returns `lo` if `x < lo`, `hi` if `x > hi`, else `x`.
 12. A key with one or more critical violations in epoch `e-1` MUST lose at least one weight unit in epoch `e`.
-13. A node MAY quarantine or remove a key entirely by policy; quarantined or removed keys MUST have effective weight `0`.
+13. A conforming reader client MUST NOT apply discretionary per-installation quarantine or removal rules that alter the active accepted-head path.
 14. Head selection MUST use `effective_weight(e, k)` and MUST NOT rely on raw hit count alone.
 
 ## 11. Anonymity and Security Defaults
@@ -894,14 +892,17 @@ Recommended node behavior:
 - avoid exposing real author identity
 - topic names can be capability-based
 
-### 11.4 Trust Policy
+### 11.4 Local Transport and Safety Policy
 
-Each node may define:
+Each node may still define:
 
 - which author keys are accepted
 - which curator keys are accepted
 - whether anonymous keys are accepted
 - whether new keys must be quarantined first
+
+These local policies MAY affect storage, relay, moderation, or private inspection.
+In a conforming reader client, they MUST NOT alter the fixed-profile active accepted head described in Section 10.
 
 ## 12. Local Storage Model
 
@@ -919,11 +920,12 @@ Maintain indexes:
 - `revision -> parents`
 - `block_id -> latest states`
 - `author -> patches`
-- `view_id -> current head map`
+- `view_id -> governance signal contents`
+- `profile_id -> current accepted-head map`
 
 ### 12.3 Policy Store
 
-Persist local trust and acceptance rules.
+Persist local transport, safety, and moderation rules separately from the fixed-profile accepted-head path.
 
 ## 13. URI / Naming Format
 
@@ -968,7 +970,8 @@ A minimal Mycel client should include:
 
 - object store
 - index store
-- local policy store
+- local transport/safety policy store
+- accepted-head profile index
 
 ### 15.3 Network
 
