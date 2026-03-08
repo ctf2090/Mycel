@@ -34,6 +34,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [IMPLEMENTATION-CHECKLIST.zh-TW.md](./IMPLEMENTATION-CHECKLIST.zh-TW.md): Traditional Chinese implementation checklist
 - [PROFILE.fund-auto-disbursement-v0.1.en.md](./PROFILE.fund-auto-disbursement-v0.1.en.md): Narrow v0.1 profile draft for automatic fund disbursement
 - [PROFILE.fund-auto-disbursement-v0.1.zh-TW.md](./PROFILE.fund-auto-disbursement-v0.1.zh-TW.md): Traditional Chinese profile draft for the same flow
+- [PROFILE.mycel-over-tor-v0.1.en.md](./PROFILE.mycel-over-tor-v0.1.en.md): Narrow v0.1 deployment profile for Tor-routed Mycel transport
+- [PROFILE.mycel-over-tor-v0.1.zh-TW.md](./PROFILE.mycel-over-tor-v0.1.zh-TW.md): Traditional Chinese profile draft for the same Tor-oriented deployment
 
 ### Design Notes
 
