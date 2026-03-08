@@ -32,6 +32,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [WIRE-PROTOCOL.zh-TW.md](./WIRE-PROTOCOL.zh-TW.md): Wire protocol draft in Traditional Chinese
 - [IMPLEMENTATION-CHECKLIST.en.md](./IMPLEMENTATION-CHECKLIST.en.md): Implementation checklist for a minimal v0.1 client
 - [IMPLEMENTATION-CHECKLIST.zh-TW.md](./IMPLEMENTATION-CHECKLIST.zh-TW.md): Traditional Chinese implementation checklist
+- [PROFILE.fund-auto-disbursement-v0.1.en.md](./PROFILE.fund-auto-disbursement-v0.1.en.md): Narrow v0.1 profile draft for automatic fund disbursement
+- [PROFILE.fund-auto-disbursement-v0.1.zh-TW.md](./PROFILE.fund-auto-disbursement-v0.1.zh-TW.md): Traditional Chinese profile draft for the same flow
 
 ### Design Notes
 
