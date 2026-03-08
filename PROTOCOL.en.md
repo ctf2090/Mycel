@@ -28,12 +28,12 @@ Applicable scenarios include:
 
 Mycel is designed with the following goals:
 
-1. **Verifiable history**: Every change is traceable.
-2. **Decentralized survivability**: Content can be stored and synchronized without a single server.
-3. **Forks are valid**: Forking is not an error; it is a valid state.
-4. **Optional merge**: Communities can form their own canonical view.
-5. **Anonymous usability**: Authors can use pseudonymous keys instead of real-world identity.
-6. **Text-first**: Block / paragraph is the primary unit of operation.
+1. **Verifiable history**: All accepted changes must be traceable and replay-verifiable.
+2. **Decentralized survivability**: Content remains preservable and synchronizable without a single server.
+3. **Forks are valid**: Forking is a first-class valid state.
+4. **Optional merge**: Communities can form their own accepted view by local policy.
+5. **Anonymous usability**: Authors can use pseudonymous keys, and metadata exposure should be minimized.
+6. **Text-first (v0.1)**: In v0.1, block / paragraph is the primary unit of operation.
 
 ## 2. Protocol Concepts
 
@@ -64,13 +64,13 @@ All author-generated Patch, Revision, and View objects must include a digital si
 
 A single document may have multiple heads.
 
-### 3.4 Canonical is Not Global Truth
+### 3.4 Accepted View is Not Global Truth
 
-A so-called "canonical version" is only a View chosen by some group, not the only network-wide truth.
+A so-called "accepted version" is only a View chosen by some group, not the only network-wide truth.
 
 ### 3.5 Transport and Acceptance are Separate
 
-A node can receive an object without accepting it into its local canonical view.
+A node can receive an object without accepting it into its local accepted view.
 
 ## 4. Object Model
 
@@ -268,7 +268,7 @@ A View means "which versions this community/node currently accepts".
 }
 ```
 
-View is critical, because Mycel has no single global orthodoxy.
+View is critical, because Mycel has no single global accepted view.
 
 ### 4.7 Snapshot
 
@@ -349,7 +349,7 @@ Mycel nodes have five role types (one node can take multiple roles):
 
 1. **Author Node**: creates patch/revision
 2. **Mirror Node**: stores and serves content
-3. **Curator Node**: maintains view/canonical branches
+3. **Curator Node**: maintains views and accepted branches
 4. **Relay Node**: forwards metadata and objects
 5. **Archivist Node**: preserves full history
 
@@ -463,19 +463,19 @@ All of the following are valid:
 }
 ```
 
-## 10. View and Canon
+## 10. View and Acceptance
 
-Mycel does not define one global canon. Only these exist:
+Mycel does not define one global accepted view. Only these exist:
 
 - local view
-- school view
+- community view
 - public view
 - archival view
 
 Examples:
 
-- One school maintains its own canon
-- One scholar maintains a critical edition
+- One community maintains its own accepted view
+- One scholar maintains a critical-edition view
 - One node accepts only patches from trusted authors
 
 This is a core difference between Mycel and blockchain systems.

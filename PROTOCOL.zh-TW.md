@@ -28,12 +28,12 @@ Mycel 是一種具備以下特性的文本協議：
 
 Mycel 的設計目標：
 
-1. **可驗證歷史**：每次修改都可追溯。
-2. **去中心存活**：沒有單一伺服器也能保存與同步。
-3. **分支合法**：分叉不是錯誤，是合法狀態。
-4. **合併可選**：社群可自行形成 canonical view。
-5. **匿名可用**：作者可用假名金鑰，而非真實身分。
-6. **文本優先**：以 block / paragraph 為主要操作單位。
+1. **可驗證歷史**：所有被接受的修改都必須可追溯、可重放驗證。
+2. **去中心存活**：在沒有單一伺服器時，內容仍可保存與同步。
+3. **分支合法**：分叉是第一級合法狀態，不是錯誤。
+4. **合併可選**：社群可依本地 policy 形成自己的採信視圖（accepted view）。
+5. **匿名可用**：作者可使用假名金鑰，並應最小化 metadata 暴露。
+6. **文本優先（v0.1）**：在 v0.1 以 block / paragraph 為主要操作單位。
 
 ## 2. 協議概念
 
@@ -64,13 +64,13 @@ object_id = hash(canonical_serialization(object))
 
 同一個文件可以有多個 heads。
 
-### 3.4 Canonical 不是全域真理
+### 3.4 採信視圖不是全域真理
 
-所謂「正典版」只是某個 View，不是全網唯一版本。
+所謂「採信版本」只是某個 View，不是全網唯一版本。
 
 ### 3.5 傳輸與接受分離
 
-節點可以接收某 object，不代表一定接受它進入本地 canonical view。
+節點可以接收某 object，不代表一定接受它進入本地採信視圖。
 
 ## 4. 物件模型
 
@@ -268,7 +268,7 @@ View 是「某社群／某節點目前採信哪些版本」。
 }
 ```
 
-View 很重要，因為 Mycel 沒有單一全域正統。
+View 很重要，因為 Mycel 沒有單一全域採信視圖。
 
 ### 4.7 Snapshot
 
@@ -349,7 +349,7 @@ Mycel 節點分成 5 類角色（同一節點可兼任多種角色）：
 
 1. **Author Node**：產生 patch / revision
 2. **Mirror Node**：保存與提供內容
-3. **Curator Node**：維護 view / canonical branch
+3. **Curator Node**：維護 view 與採信分支
 4. **Relay Node**：轉發 metadata 與 objects
 5. **Archivist Node**：保存完整歷史
 
@@ -463,19 +463,19 @@ Mycel 不把衝突視為協議失敗。
 }
 ```
 
-## 10. View 與 Canon
+## 10. View 與採信
 
-Mycel 不定義全域唯一 canon，只存在：
+Mycel 不定義全域唯一採信視圖，只存在：
 
 - local view
-- school view
+- community view
 - public view
 - archival view
 
 例子：
 
-- 某教派維護自己的正典
-- 某學者維護一個批判校勘版
+- 某社群維護自己的採信視圖
+- 某學者維護一個批判校勘視圖
 - 某節點只接受自己信任作者的 patch
 
 這個設計正是 Mycel 與 blockchain 的大差異。
