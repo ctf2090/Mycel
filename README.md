@@ -38,6 +38,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [DESIGN-NOTES.mycel-app-layer.zh-TW.md](./DESIGN-NOTES.mycel-app-layer.zh-TW.md): Traditional Chinese design draft for the same App Layer model
 - [DESIGN-NOTES.qa-app-layer.en.md](./DESIGN-NOTES.qa-app-layer.en.md): Design draft for a Q&A app carried by Mycel
 - [DESIGN-NOTES.qa-app-layer.zh-TW.md](./DESIGN-NOTES.qa-app-layer.zh-TW.md): Traditional Chinese design draft for the same Q&A app model
+- [DESIGN-NOTES.qa-minimal-schema.en.md](./DESIGN-NOTES.qa-minimal-schema.en.md): Minimal schema draft for a Q&A app
+- [DESIGN-NOTES.qa-minimal-schema.zh-TW.md](./DESIGN-NOTES.qa-minimal-schema.zh-TW.md): Traditional Chinese minimal schema draft for the same Q&A app
 - [AGENTS.md](./AGENTS.md): Repository collaboration rules
 
 ## Near-Term Priorities
