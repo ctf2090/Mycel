@@ -1,6 +1,6 @@
 # Mycel Protocol v0.1
 
-Language: English | [Traditional Chinese](./README.zh-TW.md)
+Language: English | [Traditional Chinese](./PROTOCOL.zh-TW.md)
 
 ## 0. Positioning
 
@@ -12,11 +12,11 @@ Mycel is a text protocol with the following characteristics:
 - Multiple branches can coexist
 - No requirement for global single consensus
 
-It is neither a blockchain nor a Git clone. It is a protocol for text, knowledge, and classics that supports decentralization, forking, and verifiable history.
+It is neither a blockchain nor a Git clone. It is a protocol for text and knowledge artifacts that supports decentralization, forking, and verifiable history.
 
 Applicable scenarios include:
 
-- Classics
+- Long-lived texts
 - Commentary
 - Manifestos
 - Community charters
@@ -201,7 +201,7 @@ Example: annotate
   "annotation": {
     "block_id": "blk:ann01",
     "block_type": "annotation",
-    "content": "This paragraph is a common version in the East Harbor lineage."
+    "content": "This paragraph is a common community-maintained variant."
   }
 }
 ```
@@ -252,15 +252,15 @@ A View means "which versions this community/node currently accepts".
 {
   "type": "view",
   "version": "mycel/0.1",
-  "view_id": "view:east-school-v3",
-  "maintainer": "pk:east-curator",
+  "view_id": "view:community-curation-v3",
+  "maintainer": "pk:community-curator",
   "documents": {
     "doc:origin-text": "rev:merge001",
-    "doc:ritual-law": "rev:law220"
+    "doc:governance-rules": "rev:law220"
   },
   "policy": {
-    "preferred_branches": ["east-lineage"],
-    "accept_keys": ["pk:east-curator", "pk:elderB"],
+    "preferred_branches": ["community-mainline"],
+    "accept_keys": ["pk:community-curator", "pk:reviewerB"],
     "merge_rule": "manual-reviewed"
   },
   "timestamp": 1777781000,
@@ -544,7 +544,7 @@ v0.1 can use this naming style:
 - `mycel://doc/origin-text`
 - `mycel://rev/merge001`
 - `mycel://patch/91ac`
-- `mycel://view/east-school-v3`
+- `mycel://view/community-curation-v3`
 - `mycel://snap/weekly-2026-03-08`
 
 ## 14. CLI Prototype
@@ -556,9 +556,9 @@ mycel init
 mycel create-doc origin-text
 mycel patch origin-text
 mycel commit origin-text
-mycel branch create east-lineage
+mycel branch create community-mainline
 mycel merge rev:branchA rev:branchB
-mycel view create east-school-v3
+mycel view create community-curation-v3
 mycel sync
 mycel serve
 mycel verify

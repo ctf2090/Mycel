@@ -1,6 +1,6 @@
 # Mycel Protocol v0.1
 
-語言：繁體中文 | [English](./README.md)
+語言：繁體中文 | [English](./PROTOCOL.en.md)
 
 ## 0. 定位
 
@@ -12,13 +12,13 @@ Mycel 是一種具備以下特性的文本協議：
 - 多分支共存
 - 不要求全域單一共識
 
-它不是區塊鏈，也不是 Git 複製品；它是為文字／知識／經典而設計的，去中心、可分叉、可驗證歷史的協議。
+它不是區塊鏈，也不是 Git 複製品；它是為文字與知識內容而設計的，去中心、可分叉、可驗證歷史的協議。
 
 適用場景包含：
 
-- 經典
+- 長期文本
 - 註解
-- manifesto
+- 宣言文件
 - 社群章程
 - 規範文件
 - 去中心 wiki
@@ -201,7 +201,7 @@ v0.1 建議只定義少量基本操作：
   "annotation": {
     "block_id": "blk:ann01",
     "block_type": "annotation",
-    "content": "此段為東港支系常用版本。"
+    "content": "此段為社群常用的維護版本。"
   }
 }
 ```
@@ -252,15 +252,15 @@ View 是「某社群／某節點目前採信哪些版本」。
 {
   "type": "view",
   "version": "mycel/0.1",
-  "view_id": "view:east-school-v3",
-  "maintainer": "pk:east-curator",
+  "view_id": "view:community-curation-v3",
+  "maintainer": "pk:community-curator",
   "documents": {
     "doc:origin-text": "rev:merge001",
-    "doc:ritual-law": "rev:law220"
+    "doc:governance-rules": "rev:law220"
   },
   "policy": {
-    "preferred_branches": ["east-lineage"],
-    "accept_keys": ["pk:east-curator", "pk:elderB"],
+    "preferred_branches": ["community-mainline"],
+    "accept_keys": ["pk:community-curator", "pk:reviewerB"],
     "merge_rule": "manual-reviewed"
   },
   "timestamp": 1777781000,
@@ -544,7 +544,7 @@ v0.1 可用這種命名：
 - `mycel://doc/origin-text`
 - `mycel://rev/merge001`
 - `mycel://patch/91ac`
-- `mycel://view/east-school-v3`
+- `mycel://view/community-curation-v3`
 - `mycel://snap/weekly-2026-03-08`
 
 ## 14. CLI 雛形
@@ -556,9 +556,9 @@ mycel init
 mycel create-doc origin-text
 mycel patch origin-text
 mycel commit origin-text
-mycel branch create east-lineage
+mycel branch create community-mainline
 mycel merge rev:branchA rev:branchB
-mycel view create east-school-v3
+mycel view create community-curation-v3
 mycel sync
 mycel serve
 mycel verify
