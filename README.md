@@ -45,6 +45,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [DESIGN-NOTES.neuro-triggered-donation.en.md](./DESIGN-NOTES.neuro-triggered-donation.en.md): Design draft for a neuro-triggered donation flow
 - [DESIGN-NOTES.neuro-triggered-donation.zh-TW.md](./DESIGN-NOTES.neuro-triggered-donation.zh-TW.md): Traditional Chinese design draft for the same flow
 - [PROJECT-INTENT.md](./PROJECT-INTENT.md): Project intent and protocol-boundary notes
+- [PROJECT-INTENT.zh-TW.md](./PROJECT-INTENT.zh-TW.md): Traditional Chinese version of the same project-intent note
 - [AGENTS.md](./AGENTS.md): Repository collaboration rules
 
 ## Near-Term Priorities

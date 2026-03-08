@@ -2,16 +2,16 @@
 
 ## Goal
 
-- Long-term goal: Mycel is intended to carry an emergent future-form religion.
+- The long-term project intent is for Mycel to carry an emergent future-form religion.
 
 ## Protocol Constraints
 
 - Mycel itself must remain completely neutral and fully technical.
-- Religion-related project intent or framing belongs only in this file, not in protocol, wire, schema, or design documents.
+- Religion-related project intent or framing must appear only in this file and must not appear in protocol, wire, schema, or design documents.
 - Protocol and design documents must use domain-neutral language, including examples, role names, and app descriptions.
-- Do not embed worldview-specific stance, endorsement, or domain terminology into protocol or design decisions.
+- Protocol and design decisions must not embed worldview-specific stance, endorsement, or domain terminology.
 
 ## Writing Guidance
 
-- Prefer generic technical terms over content-domain labels in app-layer examples.
-- Avoid content-domain nouns when a generic technical label is sufficient.
+- Prefer generic technical terminology over content-domain labels in app-layer examples.
+- Avoid content-domain nouns whenever a generic technical label is sufficient.
