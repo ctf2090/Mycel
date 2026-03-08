@@ -37,8 +37,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 
 ### Design Notes
 
-- [DESIGN-NOTES.client-non-discretionary-multi-view.en.md](./DESIGN-NOTES.client-non-discretionary-multi-view.en.md): Client-non-discretionary multi-view design notes for a reader model where the active accepted head is derived from a fixed profile rather than local user discretion
-- [DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md](./DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md): Traditional Chinese notes for the same profile-locked multi-view reader model
+- [DESIGN-NOTES.client-non-discretionary-multi-view.en.md](./DESIGN-NOTES.client-non-discretionary-multi-view.en.md): Design draft for a protocol-governed multi-view reader model
+- [DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md](./DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md): Traditional Chinese design draft for the same model
 - [DESIGN-NOTES.two-maintainer-role.en.md](./DESIGN-NOTES.two-maintainer-role.en.md): Design draft for splitting editor and view maintainer authority
 - [DESIGN-NOTES.two-maintainer-role.zh-TW.md](./DESIGN-NOTES.two-maintainer-role.zh-TW.md): Traditional Chinese design draft for the same split-role model
 - [DESIGN-NOTES.mycel-app-layer.en.md](./DESIGN-NOTES.mycel-app-layer.en.md): Design draft for separating client, runtime, and effect responsibilities
