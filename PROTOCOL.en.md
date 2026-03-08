@@ -493,6 +493,24 @@ To reduce client-side divergence, head selection is protocol-driven:
    2. newer `revision_timestamp`
    3. lexicographically smaller `revision_id`
 
+### 10.2 Maintainer Set + Weights Admission (Normative)
+
+Mycel uses pseudonymous, identity-blind maintainer governance.
+Maintainers are identified by keys; real-world identity and mutual acquaintance are not required.
+
+Admission and weighting rules:
+
+1. A maintainer candidate MUST be evaluated only by verifiable protocol behavior, not claimed real identity.
+2. Minimum admission criteria MUST include:
+   1. valid signing history over a required observation window
+   2. no unresolved critical verification violations in that window
+   3. sustained protocol activity above a local minimum threshold
+3. A node MUST store and publish its local admission policy for auditability.
+4. Each maintainer key MUST have a bounded maximum influence (`weight_cap_per_key`).
+5. Weight updates MUST be step-limited per epoch to prevent abrupt governance capture.
+6. A key with repeated invalid or malicious actions MUST be downgraded, quarantined, or removed by policy.
+7. Head selection MUST use weighted maintainer signals, and MUST NOT rely on raw hit count alone.
+
 ## 11. Anonymity and Security Defaults
 
 ### 11.1 Transport Anonymity
