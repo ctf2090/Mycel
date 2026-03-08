@@ -192,6 +192,40 @@ Purpose:
 - preserve alternative answers
 - show the governing profile used to derive that result
 
+Example:
+
+```json
+{
+  "type": "qa_resolution",
+  "resolution_id": "res:4f21a8c9",
+  "app_id": "app:qa-canon",
+  "question_id": "q:7d9120aa",
+  "candidate_answers": [
+    "ans:19bc44e2",
+    "ans:73a0d5c1",
+    "ans:9ef2210b"
+  ],
+  "accepted_answer": "ans:19bc44e2",
+  "alternative_answers": [
+    "ans:73a0d5c1",
+    "ans:9ef2210b"
+  ],
+  "accepted_under_profile": "policy:community-main-v1",
+  "decision_trace_ref": "trace:84c0f117",
+  "rationale_summary": "Selected because it has the strongest accepted citation set and matching governance support under the active profile.",
+  "updated_at": 1772942400
+}
+```
+
+This example shows a normal Q&A pattern:
+
+- one question
+- multiple candidate answers
+- one active accepted answer
+- visible alternatives
+- an explicit profile reference
+- a trace handle that lets the client explain why this answer is currently shown
+
 ### 3.5 Citation Set
 
 Represents the textual basis for an answer.

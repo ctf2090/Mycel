@@ -192,6 +192,40 @@ effect objects 應保持顯式、可審計、且 replay-safe。
 - 保留替代答案
 - 顯示導出這個結果所使用的 governing profile
 
+範例：
+
+```json
+{
+  "type": "qa_resolution",
+  "resolution_id": "res:4f21a8c9",
+  "app_id": "app:qa-canon",
+  "question_id": "q:7d9120aa",
+  "candidate_answers": [
+    "ans:19bc44e2",
+    "ans:73a0d5c1",
+    "ans:9ef2210b"
+  ],
+  "accepted_answer": "ans:19bc44e2",
+  "alternative_answers": [
+    "ans:73a0d5c1",
+    "ans:9ef2210b"
+  ],
+  "accepted_under_profile": "policy:community-main-v1",
+  "decision_trace_ref": "trace:84c0f117",
+  "rationale_summary": "Selected because it has the strongest accepted citation set and matching governance support under the active profile.",
+  "updated_at": 1772942400
+}
+```
+
+這個範例展示了一個常見的 Q&A 模式：
+
+- 一個 question
+- 多個 candidate answers
+- 一個目前 active 的 accepted answer
+- 可見的 alternatives
+- 明確的 profile reference
+- 一個讓 client 解釋「為什麼現在顯示這個答案」的 trace handle
+
 ### 3.5 Citation Set
 
 表示一個答案的文本依據。
