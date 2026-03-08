@@ -326,7 +326,97 @@ If execution fails at any stage, the implementation should preserve the failure 
 
 The implementation must not silently skip failed paths.
 
-## 14. Non-goals
+## 14. JSON Examples
+
+The following examples illustrate one minimal `sensor-qualified` disbursement path.
+
+### 14.1 Trigger Record Example
+
+```json
+{
+  "type": "trigger_record",
+  "trigger_id": "trig:8b12",
+  "trigger_type": "sensor-qualified",
+  "trigger_ref": "event:74ac",
+  "fund_id": "fund:daily-support",
+  "policy_id": "policy:auto-disburse-v1",
+  "amount_requested": "2500",
+  "asset": "btc:sat",
+  "created_at": "2026-03-08T20:15:00+08:00"
+}
+```
+
+### 14.2 Execution Intent Example
+
+```json
+{
+  "type": "execution_intent",
+  "intent_id": "intent:c531",
+  "fund_id": "fund:daily-support",
+  "policy_id": "policy:auto-disburse-v1",
+  "signer_set_id": "signerset:treasury-v3",
+  "trigger_id": "trig:8b12",
+  "outputs": [
+    {
+      "destination_ref": "btc:bc1qrecipient0001",
+      "amount": "2500",
+      "asset": "btc:sat"
+    }
+  ],
+  "total_amount": "2500",
+  "intent_hash": "ih:2d7f9f10",
+  "status": "eligible",
+  "created_at": "2026-03-08T20:15:03+08:00"
+}
+```
+
+### 14.3 Signer Attestation Example
+
+```json
+{
+  "type": "signer_attestation",
+  "attestation_id": "att:5ef1",
+  "intent_id": "intent:c531",
+  "signer_id": "signer:node-03",
+  "signer_set_version": "3",
+  "intent_hash": "ih:2d7f9f10",
+  "outcome": "signed",
+  "created_at": "2026-03-08T20:15:05+08:00"
+}
+```
+
+### 14.4 Execution Receipt Example
+
+```json
+{
+  "type": "execution_receipt",
+  "receipt_id": "rcpt:7a11",
+  "intent_id": "intent:c531",
+  "executor": "runtime:btc-broadcaster-01",
+  "settlement_ref": "btc:txid:3d8f2b9c",
+  "status": "confirmed",
+  "submitted_at": "2026-03-08T20:15:08+08:00",
+  "confirmed_at": "2026-03-08T20:26:41+08:00",
+  "error_summary": ""
+}
+```
+
+### 14.5 Example Notes
+
+These examples intentionally show:
+
+- one accepted trigger
+- one derived execution intent
+- one successful signer attestation
+- one confirmed receipt
+
+A real implementation will usually preserve:
+
+- multiple signer attestations for the same `intent_hash`
+- failed or blocked outcomes
+- policy and signer-set references outside the minimum display path
+
+## 15. Non-goals
 
 This profile does not define:
 
@@ -337,7 +427,7 @@ This profile does not define:
 - dynamic weighted signer math
 - committee derivation beyond one active signer set
 
-## 15. Minimal First-client Requirements
+## 16. Minimal First-client Requirements
 
 For a first interoperable client, I recommend:
 
@@ -348,7 +438,7 @@ For a first interoperable client, I recommend:
 - no parallel partial-intent merging
 - explicit blocked-intent and failed-receipt views
 
-## 16. Open Questions
+## 17. Open Questions
 
 - Should a later version allow multiple active policy bundles per fund?
 - Should a later version allow weighted rather than fixed-threshold signer math?

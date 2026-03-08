@@ -326,7 +326,97 @@ receipt 必須可回連到：
 
 實作不可靜默略過失敗路徑。
 
-## 14. Non-goals
+## 14. JSON Examples
+
+以下範例展示一條最小的 `sensor-qualified` 撥款路徑。
+
+### 14.1 Trigger Record Example
+
+```json
+{
+  "type": "trigger_record",
+  "trigger_id": "trig:8b12",
+  "trigger_type": "sensor-qualified",
+  "trigger_ref": "event:74ac",
+  "fund_id": "fund:daily-support",
+  "policy_id": "policy:auto-disburse-v1",
+  "amount_requested": "2500",
+  "asset": "btc:sat",
+  "created_at": "2026-03-08T20:15:00+08:00"
+}
+```
+
+### 14.2 Execution Intent Example
+
+```json
+{
+  "type": "execution_intent",
+  "intent_id": "intent:c531",
+  "fund_id": "fund:daily-support",
+  "policy_id": "policy:auto-disburse-v1",
+  "signer_set_id": "signerset:treasury-v3",
+  "trigger_id": "trig:8b12",
+  "outputs": [
+    {
+      "destination_ref": "btc:bc1qrecipient0001",
+      "amount": "2500",
+      "asset": "btc:sat"
+    }
+  ],
+  "total_amount": "2500",
+  "intent_hash": "ih:2d7f9f10",
+  "status": "eligible",
+  "created_at": "2026-03-08T20:15:03+08:00"
+}
+```
+
+### 14.3 Signer Attestation Example
+
+```json
+{
+  "type": "signer_attestation",
+  "attestation_id": "att:5ef1",
+  "intent_id": "intent:c531",
+  "signer_id": "signer:node-03",
+  "signer_set_version": "3",
+  "intent_hash": "ih:2d7f9f10",
+  "outcome": "signed",
+  "created_at": "2026-03-08T20:15:05+08:00"
+}
+```
+
+### 14.4 Execution Receipt Example
+
+```json
+{
+  "type": "execution_receipt",
+  "receipt_id": "rcpt:7a11",
+  "intent_id": "intent:c531",
+  "executor": "runtime:btc-broadcaster-01",
+  "settlement_ref": "btc:txid:3d8f2b9c",
+  "status": "confirmed",
+  "submitted_at": "2026-03-08T20:15:08+08:00",
+  "confirmed_at": "2026-03-08T20:26:41+08:00",
+  "error_summary": ""
+}
+```
+
+### 14.5 Example Notes
+
+這些範例刻意只展示：
+
+- 一筆 accepted trigger
+- 一筆導出的 execution intent
+- 一筆成功的 signer attestation
+- 一筆 confirmed receipt
+
+真實實作通常還會保留：
+
+- 同一個 `intent_hash` 對應的多筆 signer attestations
+- failed 或 blocked outcomes
+- 在最小顯示路徑之外的 policy 與 signer-set 參照
+
+## 15. Non-goals
 
 這份 profile 不定義：
 
@@ -337,7 +427,7 @@ receipt 必須可回連到：
 - dynamic weighted signer math
 - 超出單一 active signer set 的 committee derivation
 
-## 15. Minimal First-client Requirements
+## 16. Minimal First-client Requirements
 
 對第一個可互通 client，我建議：
 
@@ -348,7 +438,7 @@ receipt 必須可回連到：
 - 不做 parallel partial-intent merging
 - 明確顯示 blocked-intent 與 failed-receipt 檢視
 
-## 16. Open Questions
+## 17. Open Questions
 
 - 後續版本是否應允許每個 fund 同時存在多個 active policy bundles？
 - 後續版本是否應允許 weighted signer math，而不是固定 threshold？
