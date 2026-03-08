@@ -192,6 +192,8 @@ At minimum, the Patch signature input must include:
 `patch_id` is a derived canonical object ID with the form `patch:<object_hash>`.
 It MUST be computed from the canonical Patch body with `patch_id` and `signature` omitted.
 
+For genesis-state Patch objects in v0.1, `base_revision` MUST use the fixed sentinel value `rev:genesis-null`.
+
 ### 4.4 Patch Operations
 
 v0.1 should define only a small set of primitive operations:
@@ -267,6 +269,24 @@ Example merge revision:
 
 `revision_id` is a derived canonical object ID with the form `rev:<object_hash>`.
 It MUST be computed from the canonical Revision body with `revision_id` and `signature` omitted.
+
+### 4.5.1 Revision State Construction (Normative)
+
+To make `state_hash` reproducible in v0.1, Revision state construction is defined as follows:
+
+1. `parents` is an ordered array.
+2. A genesis revision MUST use `parents: []`.
+3. A non-merge revision MUST use exactly one parent.
+4. A multi-parent revision MUST treat `parents[0]` as the execution base state.
+5. Additional parents in `parents[1..]` record merged ancestry only; they MUST NOT implicitly contribute content to the resulting state.
+6. Any content adopted from secondary parents MUST be materialized explicitly in the listed `patches`.
+7. `patches` is an ordered array and MUST be applied sequentially in array order.
+8. Every Patch referenced by a Revision MUST have the same `doc_id` as the Revision.
+9. Every Patch referenced by a non-genesis Revision MUST use `base_revision = parents[0]`. For a genesis revision, every referenced Patch MUST use `base_revision = rev:genesis-null`.
+10. If any referenced Patch is missing, invalid, or cannot be applied deterministically, the Revision is invalid.
+
+This means receivers never re-run a semantic merge algorithm to recompute a Revision state.
+They only replay ordered Patch operations against the execution base state.
 
 ### 4.6 View
 
@@ -358,6 +378,42 @@ For any content-addressed object type in v0.1:
 5. Reconstruct the derived ID as `<type-prefix>:<object_hash>`
 
 A receiver MUST reject any content-addressed object whose embedded derived ID does not match the recomputed canonical object ID.
+
+### 5.4 State Hash Computation (Normative)
+
+For a Revision in v0.1, `state_hash` is computed as follows:
+
+1. Resolve the execution base state:
+   - if `parents` is empty, use the empty state `{ "doc_id": <revision.doc_id>, "blocks": [] }`
+   - otherwise, load the fully verified state of `parents[0]`
+2. Replay the referenced `patches` in array order against that execution base state.
+3. Produce the resulting document state as a canonical state object:
+
+```json
+{
+  "doc_id": "doc:origin-text",
+  "blocks": [
+    {
+      "block_id": "blk:001",
+      "block_type": "paragraph",
+      "content": "...",
+      "attrs": {},
+      "children": []
+    }
+  ]
+}
+```
+
+4. Canonicalize that state object using the same serialization rules used elsewhere in the protocol.
+5. Compute `state_hash = HASH(canonical_state_bytes)`.
+
+Additional rules:
+
+- Top-level block order MUST be preserved in the resulting `blocks` array.
+- Child block order MUST be preserved in each `children` array.
+- Deleted blocks MUST be absent from the resulting state.
+- Multi-variant outcomes, if preserved, MUST be represented explicitly by the applied Patch result state rather than inferred from parent ancestry alone.
+- A receiver MUST reject any Revision whose declared `state_hash` does not match the recomputed value.
 
 ## 6. Identity and Signature
 
@@ -502,6 +558,9 @@ All of the following are valid:
 - **Auto-merged**: automatic merge succeeded
 - **Multi-variant**: keep parallel variants
 - **Manual-curation-required**: needs human curation
+
+In v0.1, any merge outcome that is published as a Revision MUST already be materialized as explicit Patch operations.
+Receivers verify the resulting state by replaying those Patches; they do not recompute a semantic merge from parent ancestry.
 
 ### 9.3 Multi-Variant Block Example
 

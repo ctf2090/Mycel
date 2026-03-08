@@ -192,6 +192,8 @@ Patch 的簽章輸入至少要包含：
 `patch_id` 是導出的 canonical object ID，格式為 `patch:<object_hash>`。
 它 MUST 由省略 `patch_id` 與 `signature` 後的 canonical Patch 內容計算而得。
 
+對 v0.1 的 genesis-state Patch 物件，`base_revision` MUST 使用固定 sentinel 值 `rev:genesis-null`。
+
 ### 4.4 Patch Operations
 
 v0.1 建議只定義少量基本操作：
@@ -267,6 +269,24 @@ merge revision 範例：
 
 `revision_id` 是導出的 canonical object ID，格式為 `rev:<object_hash>`。
 它 MUST 由省略 `revision_id` 與 `signature` 後的 canonical Revision 內容計算而得。
+
+### 4.5.1 Revision State Construction（規範）
+
+為了讓 v0.1 的 `state_hash` 可重算，Revision 狀態建構規則如下：
+
+1. `parents` 是有順序的陣列。
+2. Genesis revision MUST 使用 `parents: []`。
+3. 非 merge revision MUST 剛好有一個 parent。
+4. 多 parent revision MUST 將 `parents[0]` 視為唯一的執行基底狀態。
+5. `parents[1..]` 只記錄被合併的 ancestry；它們 MUST NOT 自動把內容帶入結果狀態。
+6. 任何從次要 parents 採納的內容，都 MUST 明確實體化在列出的 `patches` 中。
+7. `patches` 是有順序的陣列，且 MUST 依陣列順序逐一套用。
+8. Revision 所引用的每個 Patch，其 `doc_id` MUST 與該 Revision 相同。
+9. 非 genesis Revision 所引用的每個 Patch，其 `base_revision` MUST 等於 `parents[0]`。對 genesis revision，所有引用的 Patch 都 MUST 使用 `base_revision = rev:genesis-null`。
+10. 若任何引用的 Patch 缺失、無效、或無法決定性套用，該 Revision 即為無效。
+
+這表示接收端不會為了重算 Revision 狀態而重新執行 semantic merge 演算法。
+接收端只會對執行基底狀態重放有序的 Patch 操作。
 
 ### 4.6 View
 
@@ -358,6 +378,42 @@ hash = BLAKE3(canonical_bytes)
 5. 以 `<type-prefix>:<object_hash>` 重建導出 ID
 
 接收端 MUST 拒絕任何內嵌導出 ID 與重算 canonical object ID 不一致的內容定址物件。
+
+### 5.4 State Hash Computation（規範）
+
+在 v0.1，Revision 的 `state_hash` 依以下方式計算：
+
+1. 解析執行基底狀態：
+   - 若 `parents` 為空，使用空狀態 `{ "doc_id": <revision.doc_id>, "blocks": [] }`
+   - 否則，載入 `parents[0]` 已完整驗證的狀態
+2. 依陣列順序，把引用的 `patches` 重放到該執行基底狀態上。
+3. 產生結果文件狀態，表示為 canonical state object：
+
+```json
+{
+  "doc_id": "doc:origin-text",
+  "blocks": [
+    {
+      "block_id": "blk:001",
+      "block_type": "paragraph",
+      "content": "...",
+      "attrs": {},
+      "children": []
+    }
+  ]
+}
+```
+
+4. 以協議其他部分相同的 serialization 規則對該 state object 做 canonicalize。
+5. 計算 `state_hash = HASH(canonical_state_bytes)`。
+
+補充規則：
+
+- 頂層 block 順序 MUST 保留在結果 `blocks` 陣列中。
+- 子 block 順序 MUST 保留在各自的 `children` 陣列中。
+- 已刪除的 block MUST 不出現在結果狀態中。
+- 若要保留 multi-variant 結果，MUST 由套用後的 Patch 結果狀態明確表達，而不能只從 parent ancestry 隱式推導。
+- 接收端 MUST 拒絕任何宣告的 `state_hash` 與重算值不一致的 Revision。
 
 ## 6. 身分與簽章
 
@@ -502,6 +558,9 @@ Mycel 不把衝突視為協議失敗。
 - **Auto-merged**：自動合併成功
 - **Multi-variant**：保留並列版本
 - **Manual-curation-required**：需要人工整理
+
+在 v0.1，任何以 Revision 發布的 merge 結果，都 MUST 已經被實體化成明確的 Patch 操作。
+接收端是靠重放這些 Patches 驗證結果狀態，而不是根據 parent ancestry 重新計算 semantic merge。
 
 ### 9.3 多版本 block 範例
 
