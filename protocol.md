@@ -1,5 +1,7 @@
 # Mycel Protocol v0.1
 
+Language: English | [Traditional Chinese](./PROTOCOL.md)
+
 ## 0. Positioning
 
 Mycel is a text protocol with the following characteristics:
