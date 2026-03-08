@@ -2,7 +2,7 @@
 
 狀態：design draft
 
-這份筆記描述一個由 Mycel 承載的 Q&A 應用層，同時把教義、詮釋與牧養流程留在核心協議之外。
+這份筆記描述一個由 Mycel 承載的 Q&A 應用層，同時把特定內容領域的分析與諮詢流程留在核心協議之外。
 
 核心原則是：
 
@@ -13,7 +13,7 @@
 
 ## 0. 目標
 
-讓 Mycel 可以承載一個可持久保存的 Q&A 系統，同時不把核心協議變成 doctrine engine。
+讓 Mycel 可以承載一個可持久保存的 Q&A 系統，同時不把核心協議變成特定領域的問答引擎。
 
 放在 Mycel 裡：
 
@@ -26,9 +26,9 @@
 
 留在 Mycel core 外：
 
-- doctrinal truth claims
-- religious endorsement
-- private counseling judgments
+- 特定領域的真值主張
+- 世界觀式背書
+- 私密諮詢判斷
 - external search 或 HTTP execution
 - secrets 與 runtime credentials
 
@@ -59,7 +59,7 @@ client 是面向使用者的層。
 非責任：
 
 - 不重定義 accepted-answer 規則
-- 不直接決定 doctrinal acceptance
+- 不直接決定特定領域的採信結果
 - 當 protocol 要求保留審計可見性時，不得隱藏 alternative answers
 
 ### 2.2 Runtime Layer
@@ -77,7 +77,7 @@ runtime 是 optional 且 assistive 的層。
 
 - 不可自行發布 accepted answers
 - 不可繞過 view-maintainer governance
-- 不可把草稿輸出當成 accepted doctrine
+- 不可把草稿輸出當成已採用的最終內容
 
 ### 2.3 Effect Layer
 
@@ -163,7 +163,7 @@ effect objects 應保持顯式、可審計、且 replay-safe。
 - `commentary`
 - `clarification`
 - `objection`
-- `pastoral-guidance`
+- `applied-guidance`
 
 建議 `source_mode` 值：
 
@@ -198,7 +198,7 @@ effect objects 應保持顯式、可審計、且 replay-safe。
 {
   "type": "qa_resolution",
   "resolution_id": "res:4f21a8c9",
-  "app_id": "app:qa-canon",
+  "app_id": "app:qa-reference",
   "question_id": "q:7d9120aa",
   "candidate_answers": [
     "ans:19bc44e2",
@@ -357,7 +357,7 @@ traceability 應把這條邊界清楚呈現給使用者。
 
 Q&A app 應採保守的 guardrails。
 
-- 宣稱具有 doctrinal authority 的答案，預設應帶 citations。
+- 宣稱具有權威性地位的答案，預設應帶 citations。
 - runtime 產生的草稿應清楚標示。
 - accepted answer 不應被視為 protocol-level 的全域真理。
 - reader clients 應明確區分 `accepted answer` 與 `only possible answer`。

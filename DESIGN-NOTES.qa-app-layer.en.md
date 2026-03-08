@@ -2,7 +2,7 @@
 
 Status: design draft
 
-This note describes a Q&A application layer carried by Mycel while keeping doctrine, interpretation, and pastoral workflows outside the core protocol.
+This note describes a Q&A application layer carried by Mycel while keeping domain-specific interpretation and advisory workflows outside the core protocol.
 
 The main design principle is:
 
@@ -13,7 +13,7 @@ The main design principle is:
 
 ## 0. Goal
 
-Enable Mycel to carry a durable Q&A system without turning the core protocol into a doctrine engine.
+Enable Mycel to carry a durable Q&A system without turning the core protocol into a domain-specific answer engine.
 
 Keep in Mycel:
 
@@ -26,9 +26,9 @@ Keep in Mycel:
 
 Keep outside Mycel core:
 
-- doctrinal truth claims
-- religious endorsement
-- private counseling judgments
+- domain-specific truth claims
+- worldview-specific endorsement
+- private advisory judgments
 - external search or HTTP execution
 - secrets and runtime credentials
 
@@ -59,7 +59,7 @@ Responsibilities:
 Non-responsibilities:
 
 - do not redefine accepted-answer rules
-- do not directly decide doctrinal acceptance
+- do not directly decide domain-specific acceptance
 - do not hide alternative answers when the protocol requires audit visibility
 
 ### 2.2 Runtime Layer
@@ -77,7 +77,7 @@ Non-responsibilities:
 
 - do not publish accepted answers by itself
 - do not bypass view-maintainer governance
-- do not treat draft output as accepted doctrine
+- do not treat draft output as accepted final content
 
 ### 2.3 Effect Layer
 
@@ -163,7 +163,7 @@ Suggested `answer_kind` values:
 - `commentary`
 - `clarification`
 - `objection`
-- `pastoral-guidance`
+- `applied-guidance`
 
 Suggested `source_mode` values:
 
@@ -198,7 +198,7 @@ Example:
 {
   "type": "qa_resolution",
   "resolution_id": "res:4f21a8c9",
-  "app_id": "app:qa-canon",
+  "app_id": "app:qa-reference",
   "question_id": "q:7d9120aa",
   "candidate_answers": [
     "ans:19bc44e2",
@@ -357,7 +357,7 @@ This keeps machine assistance subordinate to normal governance.
 
 The Q&A app should adopt conservative guardrails.
 
-- Answers that claim doctrinal authority should carry citations by default.
+- Answers that claim authoritative status should carry citations by default.
 - Runtime-generated drafts should be clearly labeled.
 - The accepted answer should never be treated as protocol-level universal truth.
 - Reader clients should distinguish `accepted answer` from `only possible answer`.
