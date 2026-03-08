@@ -597,14 +597,114 @@ Mycel 不定義全域唯一採信視圖，只存在：
 
 為了降低 client 端分歧，head 選擇必須由協議規範驅動：
 
-1. client MUST 以 `view_id` 發出請求（可選擇附帶時間邊界），且 MUST NOT 強制指定 `head_id`。
-2. node MUST 依請求 view 的 policy，從可用 heads 即時計算 `selected_head`。
-3. 對同一組輸入狀態與 policy，選擇器 MUST 產生決定性結果。
-4. 回應 MUST 包含 `selected_head` 與可機器解析的決策軌跡（分數構成與 tie-break 原因）。
-5. tie-break 順序 MUST 固定為：
-   1. 較高 `selector_score`
-   2. 較新 `revision_timestamp`
-   3. 字典序較小的 `revision_id`
+1. client MUST 以 `view_id` 與 `doc_id` 發出請求，且 MAY 附帶 selection-time boundary。
+2. client MUST NOT 強制指定 `head_id`。
+3. node MUST 依請求 view 的 policy，從 eligible heads 即時計算 `selected_head`。
+4. 對同一組已驗證物件集合、本地 selector policy state、以及有效 selection time，選擇器 MUST 產生決定性結果。
+5. 回應 MUST 包含 `selected_head` 與可機器解析的 decision trace。
+
+#### 10.1.1 Selector Inputs
+
+Selector 的輸入 tuple 為：
+
+- `view_id`
+- `doc_id`
+- `effective_selection_time`
+
+`effective_selection_time` 定義如下：
+
+- 若 client 有提供 boundary，則使用該值
+- 否則使用 node 處理請求時的本地時間
+
+若 client 省略 boundary，node MUST 在 decision trace 中輸出解析後的 `effective_selection_time`。
+
+Node MUST 將 `view_id` 解析為一個完整驗證過的 View 物件 `V`。
+Selector policy hash 為：
+
+```text
+policy_hash = HASH(canonical_serialization(V.policy))
+```
+
+#### 10.1.2 Eligible Heads
+
+對某個 `doc_id` 而言，Revision 若要成為 eligible head，必須同時符合以下條件：
+
+1. 該 Revision 已依所有 object、hash、signature、state 規則完整驗證
+2. 該 Revision 的 `doc_id` 與請求的 `doc_id` 相同
+3. 該 Revision 的 timestamp 小於或等於 `effective_selection_time`
+4. 該 Revision 已被與 `policy_hash` 關聯的本地 policy state 接受進入候選集合
+5. 不存在另一個同文件、同樣已接受且 timestamp 小於或等於 `effective_selection_time` 的 descendant Revision
+
+若不存在 eligible heads，選擇必須失敗，並回傳像 `NO_ELIGIBLE_HEAD` 這類可機器解析的原因。
+
+#### 10.1.3 Maintainer Signals
+
+對每個已準入的 maintainer key `k`，selector 在 selector epoch 中最多導出一個 signal：
+
+1. 依第 10.2 節規則決定 selector epoch
+2. 收集所有完整驗證過的 View 物件，且需符合：
+   - `maintainer == k`
+   - `timestamp` 落在 selector epoch 內
+   - `timestamp <= effective_selection_time`
+   - `HASH(canonical_serialization(view.policy)) == policy_hash`
+3. 依以下順序選出其中最新的一個 View：
+   1. 較新的 `timestamp`
+   2. 字典序較小的 `view_id`
+4. 若該 View 含有 `documents[doc_id]`，且其值正好是某個 eligible head，則 `k` 對該 head 貢獻一個 support signal
+5. 否則 `k` 對該 `doc_id` 不貢獻 signal
+
+對任一 `(policy_hash, doc_id, selector_epoch)`，每個 admitted maintainer 最多只能對一個 eligible head 貢獻 signal。
+
+#### 10.1.4 Selector Score
+
+對每個 eligible head `h`：
+
+```text
+weighted_support(h) = sum(effective_weight(k)) for all maintainers k signaling to h
+supporter_count(h) = count(k) for all maintainers k signaling to h
+selector_score(h) = weighted_support(h)
+```
+
+被選中的 head，是 ordered tuple 最大的 eligible head：
+
+```text
+(selector_score, revision_timestamp, inverse_lexicographic_priority)
+```
+
+Tie-break 順序 MUST 固定為：
+
+1. 較高 `selector_score`
+2. 較新 `revision_timestamp`
+3. 字典序較小的 `revision_id`
+
+Raw supporter count MAY 出現在 trace 中以利審計，但 MUST NOT 高於 `selector_score`。
+
+#### 10.1.5 Decision Trace Schema
+
+Decision trace MUST 可機器解析，且至少包含：
+
+```json
+{
+  "view_id": "view:...",
+  "doc_id": "doc:origin-text",
+  "effective_selection_time": 1777781000,
+  "policy_hash": "hash:...",
+  "selector_epoch": 587,
+  "eligible_heads": [
+    {
+      "revision_id": "rev:0ab1",
+      "revision_timestamp": 1777780000,
+      "weighted_support": 7,
+      "supporter_count": 3,
+      "selector_score": 7
+    }
+  ],
+  "selected_head": "rev:0ab1",
+  "tie_break_reason": "higher_selector_score"
+}
+```
+
+對同一組已驗證物件集合、selector policy state、以及 effective selection time，此 trace MUST 可重現。
 
 ### 10.2 Maintainer Set + 權重準入（規範）
 
@@ -614,15 +714,47 @@ Mycel 採用假名、身份盲的維護者治理。
 準入與加權規則：
 
 1. 維護者候選資格 MUST 只依可驗證的協議行為評估，不依聲稱的真實身份。
-2. 最低準入條件 MUST 包含：
-   1. 在要求觀察視窗內有有效簽章歷史
-   2. 該視窗內沒有未解決的重大驗證違規
-   3. 持續協議活動達到本地最小門檻
-3. node MUST 保存並公布本地準入 policy，以便審計。
-4. 每個維護者 key MUST 有最大影響上限（`weight_cap_per_key`）。
-5. 權重更新 MUST 受每個 epoch 的步進上限限制，避免突發治理劫持。
-6. 對重複無效或惡意行為的 key，policy MUST 執行降權、隔離或移除。
-7. head 選擇 MUST 使用加權維護者訊號，且 MUST NOT 單獨依賴原始 hit count。
+2. node MUST 保存並公布本地 selector policy parameters，以便審計。
+3. Selector policy parameters 至少 MUST 包含：
+   - `epoch_seconds`
+   - `epoch_zero_timestamp`
+   - `admission_window_epochs`
+   - `min_valid_views_for_admission`
+   - `min_valid_views_per_epoch`
+   - `weight_cap_per_key`
+4. `epoch_seconds` MUST 是正整數。
+5. Selector epoch 為：
+
+```text
+selector_epoch = floor((effective_selection_time - epoch_zero_timestamp) / epoch_seconds)
+```
+
+6. 對每個 maintainer key `k` 與 epoch `e`，定義：
+   - `valid_view_count(e, k)`：在 epoch `e` 中，由 `k` 發布且 policy hash 等於 selector `policy_hash` 的完整驗證 View 物件數量
+   - `critical_violation_count(e, k)`：在 epoch `e` 中可驗證歸因於 `k` 的重大違規數量
+7. 若某 key 在前 `admission_window_epochs` 個已完成 epoch 中同時滿足：
+   - `valid_view_count` 總和至少為 `min_valid_views_for_admission`
+   - `critical_violation_count` 總和為零
+   則該 key 在 epoch `e` 中視為 admitted。
+8. 非 admitted key 的 effective weight MUST 為 `0`。
+9. Admitted key 第一次取得的 weight 為 `1`。
+10. 之後每個 epoch 的 effective weight 更新規則如下：
+
+```text
+delta(e, k) =
+  -1 if critical_violation_count(e-1, k) > 0
+  +1 if critical_violation_count(e-1, k) == 0
+       and valid_view_count(e-1, k) >= min_valid_views_per_epoch
+   0 otherwise
+
+effective_weight(e, k) =
+  clamp(effective_weight(e-1, k) + delta(e, k), 0, weight_cap_per_key)
+```
+
+11. `clamp(x, lo, hi)` 的意義是：若 `x < lo` 回傳 `lo`，若 `x > hi` 回傳 `hi`，否則回傳 `x`。
+12. 若某 key 在 epoch `e-1` 有一個或多個重大違規，則它在 epoch `e` MUST 至少失去一個 weight unit。
+13. node MAY 依 policy 對某 key 執行 quarantine 或完全移除；被 quarantine 或移除的 key，其 effective weight MUST 為 `0`。
+14. head 選擇 MUST 使用 `effective_weight(e, k)`，且 MUST NOT 單獨依賴原始 hit count。
 
 ## 11. 匿名與安全預設
 

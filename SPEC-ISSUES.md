@@ -141,7 +141,7 @@ Remaining gap:
 ## Issue 4: Deterministic head selection is declared but not specified enough
 
 - Priority: P1
-- Current status: open
+- Current status: resolved
 - Affected docs:
   - `PROTOCOL.en.md:483`
   - `PROTOCOL.en.md:496`
@@ -161,6 +161,13 @@ Recommended decision:
 
 - Either fully specify the selector inputs and scoring formula in v0.1, or demote the current text to non-normative guidance.
 - Define a minimal decision-trace schema if the field remains mandatory.
+
+Current outcome:
+
+- The spec now defines selector inputs, effective selection time, and eligible-head rules.
+- The spec now derives maintainer signals from verified View objects with the same policy hash.
+- The spec now defines selector epochs, admitted maintainer weights, a deterministic `selector_score`, and a minimum machine-readable decision trace schema.
+- Tie-break behavior is now defined as part of the selector rather than left implicit.
 
 ## Issue 5: Signature requirements are incomplete across object types
 
@@ -234,6 +241,6 @@ Current outcome:
 
 ## Suggested Resolution Order
 
-1. Either fully specify head selection or move it to a later version.
-2. Decide whether semantic merge generation belongs in v0.1 or should be explicitly deferred.
-3. Re-review the spec for any remaining derived assumptions that still rely on local policy rather than normative rules.
+1. Decide whether semantic merge generation belongs in v0.1 or should be explicitly deferred.
+2. Re-review the spec for any remaining derived assumptions that still rely on local policy rather than normative rules.
+3. Do a full consistency pass across README / PROTOCOL / WIRE-PROTOCOL examples and terminology.

@@ -597,14 +597,114 @@ This is a core difference between Mycel and blockchain systems.
 
 To reduce client-side divergence, head selection is protocol-driven:
 
-1. A client MUST request by `view_id` (optionally with a time boundary), and MUST NOT force `head_id`.
-2. A node MUST compute `selected_head` in real time from eligible heads under the requested view policy.
-3. The selector MUST be deterministic for the same input state and policy.
-4. The response MUST include `selected_head` and a machine-readable decision trace (score components and tie-break reason).
-5. Tie-break order MUST be fixed as:
-   1. higher `selector_score`
-   2. newer `revision_timestamp`
-   3. lexicographically smaller `revision_id`
+1. A client MUST request by `view_id` and `doc_id`, and MAY include a selection-time boundary.
+2. A client MUST NOT force `head_id`.
+3. A node MUST compute `selected_head` in real time from eligible heads under the requested view policy.
+4. The selector MUST be deterministic for the same verified object set, local selector policy state, and effective selection time.
+5. The response MUST include `selected_head` and a machine-readable decision trace.
+
+#### 10.1.1 Selector Inputs
+
+The selector input tuple is:
+
+- `view_id`
+- `doc_id`
+- `effective_selection_time`
+
+`effective_selection_time` is defined as:
+
+- the client-supplied boundary, if one is provided
+- otherwise the node's request-handling time
+
+If the client omits the boundary, the node MUST emit the resolved `effective_selection_time` in the decision trace.
+
+The node MUST resolve `view_id` to a fully verified View object `V`.
+The selector policy hash is:
+
+```text
+policy_hash = HASH(canonical_serialization(V.policy))
+```
+
+#### 10.1.2 Eligible Heads
+
+For a given `doc_id`, a Revision is an eligible head if all of the following are true:
+
+1. the Revision is fully verified under all object, hash, signature, and state rules
+2. the Revision `doc_id` matches the requested `doc_id`
+3. the Revision timestamp is less than or equal to `effective_selection_time`
+4. the Revision is accepted for consideration by the local policy state associated with `policy_hash`
+5. there is no other accepted Revision for the same `doc_id`, with timestamp less than or equal to `effective_selection_time`, that is a descendant of it
+
+If no eligible heads exist, selection MUST fail with a machine-readable reason such as `NO_ELIGIBLE_HEAD`.
+
+#### 10.1.3 Maintainer Signals
+
+For each admitted maintainer key `k`, the selector derives at most one signal in the selector epoch:
+
+1. determine the selector epoch using the rules in Section 10.2
+2. collect all fully verified View objects such that:
+   - `maintainer == k`
+   - `timestamp` is within the selector epoch
+   - `timestamp <= effective_selection_time`
+   - `HASH(canonical_serialization(view.policy)) == policy_hash`
+3. choose the latest such View by:
+   1. newer `timestamp`
+   2. lexicographically smaller `view_id`
+4. if that View has a `documents[doc_id]` entry and its value is one of the eligible heads, then `k` contributes one support signal to that head
+5. otherwise `k` contributes no signal for that `doc_id`
+
+Each admitted maintainer contributes to at most one eligible head for a given `(policy_hash, doc_id, selector_epoch)`.
+
+#### 10.1.4 Selector Score
+
+For each eligible head `h`:
+
+```text
+weighted_support(h) = sum(effective_weight(k)) for all maintainers k signaling to h
+supporter_count(h) = count(k) for all maintainers k signaling to h
+selector_score(h) = weighted_support(h)
+```
+
+The selected head is the eligible head with the greatest ordered tuple:
+
+```text
+(selector_score, revision_timestamp, inverse_lexicographic_priority)
+```
+
+Tie-break order MUST be:
+
+1. higher `selector_score`
+2. newer `revision_timestamp`
+3. lexicographically smaller `revision_id`
+
+Raw supporter count MAY appear in the trace for auditability, but MUST NOT outrank `selector_score`.
+
+#### 10.1.5 Decision Trace Schema
+
+The decision trace MUST be machine-readable and MUST include at least:
+
+```json
+{
+  "view_id": "view:...",
+  "doc_id": "doc:origin-text",
+  "effective_selection_time": 1777781000,
+  "policy_hash": "hash:...",
+  "selector_epoch": 587,
+  "eligible_heads": [
+    {
+      "revision_id": "rev:0ab1",
+      "revision_timestamp": 1777780000,
+      "weighted_support": 7,
+      "supporter_count": 3,
+      "selector_score": 7
+    }
+  ],
+  "selected_head": "rev:0ab1",
+  "tie_break_reason": "higher_selector_score"
+}
+```
+
+The trace MUST be reproducible from the same verified object set, selector policy state, and effective selection time.
 
 ### 10.2 Maintainer Set + Weights Admission (Normative)
 
@@ -614,15 +714,46 @@ Maintainers are identified by keys; real-world identity and mutual acquaintance 
 Admission and weighting rules:
 
 1. A maintainer candidate MUST be evaluated only by verifiable protocol behavior, not claimed real identity.
-2. Minimum admission criteria MUST include:
-   1. valid signing history over a required observation window
-   2. no unresolved critical verification violations in that window
-   3. sustained protocol activity above a local minimum threshold
-3. A node MUST store and publish its local admission policy for auditability.
-4. Each maintainer key MUST have a bounded maximum influence (`weight_cap_per_key`).
-5. Weight updates MUST be step-limited per epoch to prevent abrupt governance capture.
-6. A key with repeated invalid or malicious actions MUST be downgraded, quarantined, or removed by policy.
-7. Head selection MUST use weighted maintainer signals, and MUST NOT rely on raw hit count alone.
+2. A node MUST store and publish its local selector policy parameters for auditability.
+3. At minimum, selector policy parameters MUST include:
+   - `epoch_seconds`
+   - `epoch_zero_timestamp`
+   - `admission_window_epochs`
+   - `min_valid_views_for_admission`
+   - `min_valid_views_per_epoch`
+   - `weight_cap_per_key`
+4. `epoch_seconds` MUST be a positive integer.
+5. The selector epoch is:
+
+```text
+selector_epoch = floor((effective_selection_time - epoch_zero_timestamp) / epoch_seconds)
+```
+
+6. For each maintainer key `k` and epoch `e`, define:
+   - `valid_view_count(e, k)`: the number of fully verified View objects by `k` in epoch `e` whose policy hash matches the selector `policy_hash`
+   - `critical_violation_count(e, k)`: the number of verifiable critical violations attributed to `k` in epoch `e`
+7. A maintainer key is admitted in epoch `e` if, across the previous `admission_window_epochs` completed epochs:
+   - the sum of `valid_view_count` is at least `min_valid_views_for_admission`
+   - the sum of `critical_violation_count` is zero
+8. A non-admitted key MUST have effective weight `0`.
+9. An admitted key first receives weight `1`.
+10. For each later epoch, the effective weight update rule is:
+
+```text
+delta(e, k) =
+  -1 if critical_violation_count(e-1, k) > 0
+  +1 if critical_violation_count(e-1, k) == 0
+       and valid_view_count(e-1, k) >= min_valid_views_per_epoch
+   0 otherwise
+
+effective_weight(e, k) =
+  clamp(effective_weight(e-1, k) + delta(e, k), 0, weight_cap_per_key)
+```
+
+11. `clamp(x, lo, hi)` returns `lo` if `x < lo`, `hi` if `x > hi`, else `x`.
+12. A key with one or more critical violations in epoch `e-1` MUST lose at least one weight unit in epoch `e`.
+13. A node MAY quarantine or remove a key entirely by policy; quarantined or removed keys MUST have effective weight `0`.
+14. Head selection MUST use `effective_weight(e, k)` and MUST NOT rely on raw hit count alone.
 
 ## 11. Anonymity and Security Defaults
 
