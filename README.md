@@ -59,6 +59,8 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md](./DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md): Traditional Chinese design draft for the same custody model
 - [DESIGN-NOTES.mycel-anonymity-model.en.md](./DESIGN-NOTES.mycel-anonymity-model.en.md): Design draft for analyzing anonymity across transport, metadata, client, runtime, and replication layers
 - [DESIGN-NOTES.mycel-anonymity-model.zh-TW.md](./DESIGN-NOTES.mycel-anonymity-model.zh-TW.md): Traditional Chinese design draft for the same anonymity model
+- [DESIGN-NOTES.mycel-full-stack-map.en.md](./DESIGN-NOTES.mycel-full-stack-map.en.md): Design draft mapping the current Mycel documents into one layered full-stack system view
+- [DESIGN-NOTES.mycel-full-stack-map.zh-TW.md](./DESIGN-NOTES.mycel-full-stack-map.zh-TW.md): Traditional Chinese design draft for the same full-stack map
 - [DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md): Design draft for keeping protocol core changes conservative while moving faster in profiles and design notes
 - [DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md): Traditional Chinese design draft for the same upgrade philosophy
 - [DESIGN-NOTES.peer-discovery-model.en.md](./DESIGN-NOTES.peer-discovery-model.en.md): Design draft for bounded peer discovery across public, restricted, and Tor-oriented deployments
