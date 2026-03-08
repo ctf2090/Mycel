@@ -19,9 +19,10 @@ This document tracks protocol-spec issues that are likely to cause interoperabil
 ## Issue 1: Object identity is underspecified
 
 - Priority: P0
-- Current status: partially resolved
+- Current status: resolved
 - Resolution commits:
   - `8858aad` (`Clarify object identity and wire format`)
+  - `7990b2d` (`Add canonical serialization appendix`)
 - Affected docs:
   - `PROTOCOL.en.md:51`
   - `PROTOCOL.en.md:77`
@@ -58,10 +59,7 @@ Current outcome:
 - The spec now distinguishes logical IDs (`doc_id`, `block_id`) from canonical object IDs (`patch_id`, `revision_id`, `view_id`, `snapshot_id`).
 - The wire `OBJECT` message now requires `object_id` to match the recomputed typed hash.
 - Receivers are now required to reject mismatches between embedded derived IDs and recomputed canonical IDs.
-
-Remaining gap:
-
-- Canonical serialization is still only defined at a high level, so hash compatibility still depends on a future serialization appendix.
+- Canonical serialization is now defined normatively, so hash compatibility no longer depends on implementation-local JSON formatting.
 
 ## Issue 2: Core protocol and wire protocol define incompatible message shapes
 
@@ -102,6 +100,7 @@ Current outcome:
 - Current status: partially resolved
 - Resolution commits:
   - `4f133e9` (`Define deterministic state hash replay rules`)
+  - `7990b2d` (`Add canonical serialization appendix`)
 - Affected docs:
   - `PROTOCOL.en.md:211`
   - `PROTOCOL.en.md:297`
@@ -133,10 +132,10 @@ Current outcome:
 - The spec now defines ordered `parents`, ordered `patches`, and replay from `parents[0]` as the execution base state.
 - Secondary parents are now ancestry-only unless their content is materialized by explicit Patch operations.
 - `state_hash` now has a normative replay-and-hash procedure, including a canonical state object shape and receiver rejection on mismatch.
+- Canonical state serialization is now anchored to a normative canonical JSON appendix.
 
 Remaining gap:
 
-- Canonical state serialization is still dependent on the general canonical serialization rules, which remain underspecified.
 - Merge behavior is now replay-safe, but semantic merge generation rules are still not defined.
 
 ## Issue 4: Deterministic head selection is declared but not specified enough
@@ -235,6 +234,6 @@ Current outcome:
 
 ## Suggested Resolution Order
 
-1. Finish a canonical serialization appendix so hash, signature, and `state_hash` are fully cross-implementation safe.
-2. Either fully specify head selection or move it to a later version.
+1. Either fully specify head selection or move it to a later version.
+2. Decide whether semantic merge generation belongs in v0.1 or should be explicitly deferred.
 3. Re-review the spec for any remaining derived assumptions that still rely on local policy rather than normative rules.
