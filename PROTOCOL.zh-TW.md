@@ -480,6 +480,19 @@ Mycel 不定義全域唯一採信視圖，只存在：
 
 這個設計正是 Mycel 與 blockchain 的大差異。
 
+### 10.1 決定性 Head 選擇（規範）
+
+為了降低 client 端分歧，head 選擇必須由協議規範驅動：
+
+1. client MUST 以 `view_id` 發出請求（可選擇附帶時間邊界），且 MUST NOT 強制指定 `head_id`。
+2. node MUST 依請求 view 的 policy，從可用 heads 即時計算 `selected_head`。
+3. 對同一組輸入狀態與 policy，選擇器 MUST 產生決定性結果。
+4. 回應 MUST 包含 `selected_head` 與可機器解析的決策軌跡（分數構成與 tie-break 原因）。
+5. tie-break 順序 MUST 固定為：
+   1. 較高 `selector_score`
+   2. 較新 `revision_timestamp`
+   3. 字典序較小的 `revision_id`
+
 ## 11. 匿名與安全預設
 
 ### 11.1 傳輸匿名

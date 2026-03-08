@@ -480,6 +480,19 @@ Examples:
 
 This is a core difference between Mycel and blockchain systems.
 
+### 10.1 Deterministic Head Selection (Normative)
+
+To reduce client-side divergence, head selection is protocol-driven:
+
+1. A client MUST request by `view_id` (optionally with a time boundary), and MUST NOT force `head_id`.
+2. A node MUST compute `selected_head` in real time from eligible heads under the requested view policy.
+3. The selector MUST be deterministic for the same input state and policy.
+4. The response MUST include `selected_head` and a machine-readable decision trace (score components and tie-break reason).
+5. Tie-break order MUST be fixed as:
+   1. higher `selector_score`
+   2. newer `revision_timestamp`
+   3. lexicographically smaller `revision_id`
+
 ## 11. Anonymity and Security Defaults
 
 ### 11.1 Transport Anonymity
