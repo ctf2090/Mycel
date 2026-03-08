@@ -261,7 +261,7 @@ A minimal Q&A client should:
 
 ## 8. Minimal Runtime Requirements
 
-If runtime assistance is enabled, the runtime should:
+If runtime assistance is enabled outside `qa-strict-v0.1`, the runtime should:
 
 - write draft answers as normal `answer` records
 - label them through `source_mode`
@@ -271,5 +271,138 @@ If runtime assistance is enabled, the runtime should:
 ## 9. Open Questions
 
 - Should `question` and `resolution` always live in separate documents, or can they be co-located in one app state document?
-- Should inline citations be allowed in addition to citation-set IDs in the strict profile?
-- Should `confidence_label` remain free-form, or should the first profile define a fixed enum?
+- Should future non-strict profiles allow inline citations in addition to citation-set IDs?
+- Should future non-strict profiles keep `confidence_label` free-form, or standardize a larger enum?
+
+## 10. Strict Profile v0.1
+
+For a first interoperable client, I recommend one narrow strict profile:
+
+- `profile_name`: `qa-strict-v0.1`
+- `app_id`: implementation-defined, but fixed per deployment
+- objective: reduce parser and UI discretion for the first client
+
+### 10.1 Global Strict Rules
+
+The strict profile should enforce all of the following:
+
+1. Unknown fields are rejected in all four record families.
+2. All required fields must be present and must have the exact expected type.
+3. Empty strings are rejected for `title`, `body`, and all logical IDs.
+4. Arrays that are required to be non-empty must be rejected if empty.
+5. Duplicate IDs inside `candidate_answers`, `alternative_answers`, or `references` are rejected.
+6. `created_at` must be less than or equal to `updated_at`.
+7. One stored record must contain one primary logical object only.
+
+### 10.2 Strict Question Rules
+
+- `language` is required.
+- `topic_tags` may be present, but each item must be a non-empty string.
+- `answer_count` is forbidden because it is cache-like and can drift.
+- `current_resolution_id` is optional.
+
+Allowed fields only:
+
+- `type`
+- `question_id`
+- `app_id`
+- `asked_by`
+- `title`
+- `body`
+- `status`
+- `topic_tags`
+- `target_corpus`
+- `language`
+- `current_resolution_id`
+- `created_at`
+- `updated_at`
+
+### 10.3 Strict Answer Rules
+
+- `source_mode` must be `human-authored`.
+- `citations` is required for `direct-answer`, `commentary`, and `applied-guidance`.
+- `citations`, if present, must contain citation-set IDs only.
+- Inline citation objects are forbidden.
+- `runtime_receipt_refs` is forbidden.
+- `confidence_label`, if present, must be one of `draft`, `reviewed`, `stable`.
+
+Allowed fields only:
+
+- `type`
+- `answer_id`
+- `app_id`
+- `question_id`
+- `answered_by`
+- `answer_kind`
+- `body`
+- `source_mode`
+- `citations`
+- `supersedes_answer`
+- `summary`
+- `confidence_label`
+- `created_at`
+- `updated_at`
+
+### 10.4 Strict Resolution Rules
+
+- `decision_trace_ref` is required.
+- `rationale_summary` is required.
+- `state_label`, if present, must be one of `draft`, `active`, `superseded`.
+- `created_at` is required.
+- There must be exactly one `accepted_answer`.
+- There must be at most one active resolution per `(question_id, accepted_under_profile)`.
+
+Allowed fields only:
+
+- `type`
+- `resolution_id`
+- `app_id`
+- `question_id`
+- `candidate_answers`
+- `accepted_answer`
+- `alternative_answers`
+- `accepted_under_profile`
+- `decision_trace_ref`
+- `rationale_summary`
+- `supersedes_resolution`
+- `state_label`
+- `created_at`
+- `updated_at`
+
+### 10.5 Strict Citation-Set Rules
+
+- `references` must contain only objects with `source_id`, `locator`, and optional `quote` / `note`.
+- `quote_policy` is required.
+- `source_bundle_id` is forbidden.
+- Each citation set must reference exactly one `answer_id`.
+
+Allowed fields only:
+
+- `type`
+- `citation_id`
+- `app_id`
+- `question_id`
+- `answer_id`
+- `references`
+- `quote_policy`
+- `notes`
+- `created_at`
+- `updated_at`
+
+### 10.6 Strict Runtime Boundary
+
+In `qa-strict-v0.1`:
+
+- runtime may retrieve, index, or notify
+- runtime must not publish accepted answers
+- runtime must not publish `answer` records
+- any machine assistance must remain outside the strict accepted-answer path
+
+### 10.7 First-Client Benefit
+
+This strict profile intentionally trades flexibility for predictable implementation:
+
+- fewer parsing branches
+- less UI ambiguity
+- less governance drift
+- easier interoperability testing

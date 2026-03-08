@@ -261,7 +261,7 @@
 
 ## 8. 最小 Runtime Requirements
 
-若啟用 runtime assistance，runtime 應做到：
+若在 `qa-strict-v0.1` 之外啟用 runtime assistance，runtime 應做到：
 
 - 把草稿答案寫成一般 `answer` records
 - 透過 `source_mode` 標示來源
@@ -271,5 +271,138 @@
 ## 9. Open Questions
 
 - `question` 與 `resolution` 是否一定要分成不同 documents，還是可共置在同一個 app state document？
-- strict profile 是否允許 inline citations，還是只允許 citation-set IDs？
-- `confidence_label` 是否應維持 free-form，還是第一個 profile 就把它收斂成固定 enum？
+- 未來的非 strict profiles 是否應允許 inline citations，而不只接受 citation-set IDs？
+- 未來的非 strict profiles 是否應讓 `confidence_label` 維持 free-form，還是收斂成更大的固定 enum？
+
+## 10. Strict Profile v0.1
+
+對第一個可互通 client，我建議先固定一個較窄的 strict profile：
+
+- `profile_name`: `qa-strict-v0.1`
+- `app_id`: 由部署自行決定，但對單一部署必須固定
+- objective: 降低第一版 client 的 parser 與 UI 自由裁量
+
+### 10.1 全域 Strict Rules
+
+strict profile 應強制下列規則：
+
+1. 四種 record families 都拒絕未知欄位。
+2. 所有必要欄位都必須存在，且型別必須完全符合預期。
+3. `title`、`body` 與所有 logical IDs 不可為空字串。
+4. 規定為非空的陣列若為空，必須拒絕。
+5. `candidate_answers`、`alternative_answers`、`references` 內若有重複 ID，必須拒絕。
+6. `created_at` 必須小於或等於 `updated_at`。
+7. 一筆儲存的 record 只能包含一個 primary logical object。
+
+### 10.2 Strict Question Rules
+
+- `language` 為必要欄位。
+- `topic_tags` 可以存在，但每個 item 都必須是非空字串。
+- `answer_count` 禁止，因為它屬於 cache-like 欄位，容易漂移。
+- `current_resolution_id` 可選。
+
+只允許下列欄位：
+
+- `type`
+- `question_id`
+- `app_id`
+- `asked_by`
+- `title`
+- `body`
+- `status`
+- `topic_tags`
+- `target_corpus`
+- `language`
+- `current_resolution_id`
+- `created_at`
+- `updated_at`
+
+### 10.3 Strict Answer Rules
+
+- `source_mode` 必須是 `human-authored`。
+- `direct-answer`、`commentary`、`applied-guidance` 必須帶 `citations`。
+- `citations` 若存在，內容只能是 citation-set IDs。
+- 禁止 inline citation objects。
+- 禁止 `runtime_receipt_refs`。
+- `confidence_label` 若存在，只能是 `draft`、`reviewed`、`stable` 之一。
+
+只允許下列欄位：
+
+- `type`
+- `answer_id`
+- `app_id`
+- `question_id`
+- `answered_by`
+- `answer_kind`
+- `body`
+- `source_mode`
+- `citations`
+- `supersedes_answer`
+- `summary`
+- `confidence_label`
+- `created_at`
+- `updated_at`
+
+### 10.4 Strict Resolution Rules
+
+- `decision_trace_ref` 為必要欄位。
+- `rationale_summary` 為必要欄位。
+- `state_label` 若存在，只能是 `draft`、`active`、`superseded` 之一。
+- `created_at` 為必要欄位。
+- 必須且只能有一個 `accepted_answer`。
+- 對每個 `(question_id, accepted_under_profile)`，最多只能有一個 active resolution。
+
+只允許下列欄位：
+
+- `type`
+- `resolution_id`
+- `app_id`
+- `question_id`
+- `candidate_answers`
+- `accepted_answer`
+- `alternative_answers`
+- `accepted_under_profile`
+- `decision_trace_ref`
+- `rationale_summary`
+- `supersedes_resolution`
+- `state_label`
+- `created_at`
+- `updated_at`
+
+### 10.5 Strict Citation-Set Rules
+
+- `references` 裡只能有包含 `source_id`、`locator`、可選 `quote` / `note` 的 objects。
+- `quote_policy` 為必要欄位。
+- 禁止 `source_bundle_id`。
+- 每個 citation set 只能對應一個 `answer_id`。
+
+只允許下列欄位：
+
+- `type`
+- `citation_id`
+- `app_id`
+- `question_id`
+- `answer_id`
+- `references`
+- `quote_policy`
+- `notes`
+- `created_at`
+- `updated_at`
+
+### 10.6 Strict Runtime Boundary
+
+在 `qa-strict-v0.1` 中：
+
+- runtime 可以做 retrieval、indexing、notification
+- runtime 不可發布 accepted answers
+- runtime 不可發布 `answer` records
+- 任何 machine assistance 都必須留在 strict accepted-answer path 之外
+
+### 10.7 First-Client Benefit
+
+這個 strict profile 刻意用彈性換取可預測實作：
+
+- 較少的 parsing branches
+- 較少的 UI ambiguity
+- 較少的 governance drift
+- 較容易做 interoperability testing
