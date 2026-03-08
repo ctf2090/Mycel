@@ -104,7 +104,7 @@ A Document defines the identity and baseline settings of a text.
   "content_model": "block-tree",
   "created_at": 1777777777,
   "created_by": "pk:authorA",
-  "genesis_revision": "rev:abc123"
+  "genesis_revision": "rev:0ab1"
 }
 ```
 
@@ -154,7 +154,7 @@ A Patch represents one modification to a document.
   "version": "mycel/0.1",
   "patch_id": "patch:91ac",
   "doc_id": "doc:origin-text",
-  "base_revision": "rev:old001",
+  "base_revision": "rev:0ab1",
   "author": "pk:authorA",
   "timestamp": 1777778888,
   "ops": [
@@ -273,9 +273,9 @@ It is not the full text itself, but a verifiable state formed by "parents + patc
 {
   "type": "revision",
   "version": "mycel/0.1",
-  "revision_id": "rev:new001",
+  "revision_id": "rev:8fd2",
   "doc_id": "doc:origin-text",
-  "parents": ["rev:old001"],
+  "parents": ["rev:0ab1"],
   "patches": ["patch:91ac"],
   "state_hash": "hash:state001",
   "author": "pk:authorA",
@@ -290,10 +290,10 @@ Example merge revision:
 {
   "type": "revision",
   "version": "mycel/0.1",
-  "revision_id": "rev:merge001",
+  "revision_id": "rev:c7d4",
   "doc_id": "doc:origin-text",
-  "parents": ["rev:branchA", "rev:branchB"],
-  "patches": ["patch:mergeA"],
+  "parents": ["rev:8fd2", "rev:b351"],
+  "patches": ["patch:a12f"],
   "state_hash": "hash:merged-state",
   "author": "pk:curator1",
   "timestamp": 1777780000,
@@ -331,11 +331,11 @@ A View means "which versions this community/node currently accepts".
 {
   "type": "view",
   "version": "mycel/0.1",
-  "view_id": "view:community-curation-v3",
+  "view_id": "view:9aa0",
   "maintainer": "pk:community-curator",
   "documents": {
-    "doc:origin-text": "rev:merge001",
-    "doc:governance-rules": "rev:law220"
+    "doc:origin-text": "rev:c7d4",
+    "doc:governance-rules": "rev:91de"
   },
   "policy": {
     "preferred_branches": ["community-mainline"],
@@ -360,14 +360,14 @@ A Snapshot is used for fast synchronization.
 {
   "type": "snapshot",
   "version": "mycel/0.1",
-  "snapshot_id": "snap:weekly-2026-03-08",
+  "snapshot_id": "snap:44cc",
   "documents": {
-    "doc:origin-text": "rev:merge001"
+    "doc:origin-text": "rev:c7d4"
   },
   "included_objects": [
-    "rev:merge001",
+    "rev:c7d4",
     "patch:91ac",
-    "patch:mergeA"
+    "patch:a12f"
   ],
   "root_hash": "hash:snapshot-root",
   "created_by": "pk:mirrorA",
@@ -529,9 +529,9 @@ Each node may publish a manifest:
   "node_id": "node:alpha",
   "topics": ["text/core", "text/commentary"],
   "heads": {
-    "doc:origin-text": ["rev:merge001", "rev:branchB"]
+    "doc:origin-text": ["rev:c7d4", "rev:b351"]
   },
-  "snapshots": ["snap:weekly-2026-03-08"],
+  "snapshots": ["snap:44cc"],
   "capabilities": ["patch-sync", "snapshot-sync", "view-sync"]
 }
 ```
@@ -678,11 +678,11 @@ If the generator emits `Auto-merged`, its Patch operations MUST be sufficient fo
   "block_id": "blk:001",
   "variants": [
     {
-      "from_revision": "rev:branchA",
+      "from_revision": "rev:8fd2",
       "content": "At first there was no final draft, only transmission."
     },
     {
-      "from_revision": "rev:branchB",
+      "from_revision": "rev:b351",
       "content": "At first there was no final draft, only transmission and rewriting."
     }
   ]
@@ -930,10 +930,10 @@ Persist local trust and acceptance rules.
 v0.1 can use this naming style:
 
 - `mycel://doc/origin-text`
-- `mycel://rev/merge001`
+- `mycel://rev/c7d4`
 - `mycel://patch/91ac`
-- `mycel://view/community-curation-v3`
-- `mycel://snap/weekly-2026-03-08`
+- `mycel://view/9aa0`
+- `mycel://snap/44cc`
 
 ## 14. CLI Prototype
 
@@ -945,7 +945,7 @@ mycel create-doc origin-text
 mycel patch origin-text
 mycel commit origin-text
 mycel branch create community-mainline
-mycel merge rev:branchA rev:branchB
+mycel merge rev:8fd2 rev:b351
 mycel view create community-curation-v3
 mycel sync
 mycel serve

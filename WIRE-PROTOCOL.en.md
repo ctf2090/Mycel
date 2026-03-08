@@ -133,7 +133,7 @@ It is a wire message summary, not a content-addressed protocol object.
     "capabilities": ["patch-sync", "snapshot-sync", "view-sync"],
     "topics": ["text/core", "text/commentary"],
     "heads": {
-      "doc:origin-text": ["rev:0ab1", "rev:8fd2"]
+      "doc:origin-text": ["rev:c7d4", "rev:b351"]
     },
     "snapshots": ["snap:44cc"],
     "views": ["view:9aa0"]
@@ -169,7 +169,7 @@ Field rules:
   "from": "node:alpha",
   "payload": {
     "documents": {
-      "doc:origin-text": ["rev:0ab1", "rev:8fd2"],
+      "doc:origin-text": ["rev:c7d4", "rev:b351"],
       "doc:governance-rules": ["rev:91de"]
     },
     "replace": true
@@ -205,7 +205,7 @@ Logical IDs such as `doc_id` and `block_id` are not valid `WANT` targets.
   "timestamp": "2026-03-08T20:01:00+08:00",
   "from": "node:beta",
   "payload": {
-    "objects": ["rev:merge001", "patch:91ac"],
+    "objects": ["rev:c7d4", "patch:a12f"],
     "max_items": 256
   },
   "sig": "sig:..."
@@ -228,7 +228,7 @@ Required `payload` fields:
   "timestamp": "2026-03-08T20:01:02+08:00",
   "from": "node:alpha",
   "payload": {
-    "object_id": "patch:91ac",
+    "object_id": "patch:a12f",
     "object_type": "patch",
     "encoding": "json",
     "hash_alg": "blake3",
@@ -320,7 +320,7 @@ Field rules:
     "view_id": "view:9aa0",
     "maintainer": "pk:community-curator",
     "documents": {
-      "doc:origin-text": "rev:0ab1"
+      "doc:origin-text": "rev:c7d4"
     }
   },
   "sig": "sig:..."
@@ -382,7 +382,7 @@ On parse/validation failure, send `ERROR`:
   "payload": {
     "in_reply_to": "msg:obj-001",
     "code": "INVALID_HASH",
-    "detail": "Hash mismatch for object patch:91ac"
+    "detail": "Hash mismatch for object patch:a12f"
   },
   "sig": "sig:..."
 }
