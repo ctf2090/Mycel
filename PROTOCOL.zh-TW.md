@@ -509,13 +509,18 @@ v0.1 的物件簽章要求如下：
 
 ## 7. 節點模型
 
-Mycel 節點分成 5 類角色（同一節點可兼任多種角色）：
+Mycel 節點可同時兼任多種角色。
+在 v0.1，與 maintainer 有關的角色拆分如下：
 
-1. **Author Node**：產生 patch / revision
-2. **Mirror Node**：保存與提供內容
-3. **Curator Node**：發布 View objects 並維護採信分支訊號
-4. **Relay Node**：轉發 metadata 與 objects
-5. **Archivist Node**：保存完整歷史
+1. **Author Node**：產生一般 patch / revision 物件
+2. **Editor-Maintainer Node**：發布 maintainer-grade patch / revision 物件，可建立新的 candidate heads
+3. **View-Maintainer Node**：發布會影響 accepted-head selection 的 View objects
+4. **Mirror Node**：保存與提供內容
+5. **Relay Node**：轉發 metadata 與 objects
+6. **Archivist Node**：保存完整歷史
+
+同一把 key 或同一個 node MAY 同時持有 editor-maintainer 與 view-maintainer 角色。
+僅持有 editor-maintainer 身分，MUST NOT 自動取得 selector weight。
 
 ## 8. P2P 同步層
 
@@ -708,6 +713,17 @@ Mycel 不定義全域唯一 accepted head。
 4. 合規的 reader client MUST NOT 提供會改變 active accepted head 的自由裁量本地 policy controls。
 5. 合規的 reader client MAY 為了審計而顯示 raw heads、branch graphs、或其他 profile 的結果，但除非另有有效固定 profile 治理該結果，否則 MUST NOT 將其顯示為 active accepted head。
 
+### 10.0.1 兩種 Maintainer 角色（規範）
+
+對 v0.1 的 governed multi-view selection：
+
+1. `editor-maintainer` MAY 發布可建立新 candidate heads 的 Patch 與 Revision 物件。
+2. `view-maintainer` MAY 發布會貢獻 governance signals 的 View 物件，用於 accepted-head selection。
+3. 同一把 key MAY 同時持有兩種角色。
+4. 僅持有 editor-maintainer 身分，MUST NOT 自動取得 selector weight。
+5. Selector weight 與 accepted-head governance MUST 只由 view-maintainer 行為導出，除非未來某個 profile 明確定義其他 signal source。
+6. 一個完整驗證過的 Revision，即使尚未得到 accepted-head 支持，仍 MAY 作為合法 head 存在。
+
 ### 10.1 決定性 Head 選擇（規範）
 
 為了降低 client 端分歧，head 選擇必須由協議規範驅動：
@@ -751,7 +767,7 @@ Selector 只可使用 `policy_hash` 等於 `profile_id` 的完整驗證 View 物
 
 #### 10.1.3 Maintainer Signals
 
-對每個已準入的 maintainer key `k`，selector 在 selector epoch（選擇器 epoch）中最多導出一個 signal（訊號）：
+對每個已準入的 view-maintainer key `k`，selector 在 selector epoch（選擇器 epoch）中最多導出一個 signal（訊號）：
 
 1. 依第 10.2 節規則決定 selector epoch
 2. 收集所有完整驗證過的 View 物件，且需符合：
@@ -765,15 +781,15 @@ Selector 只可使用 `policy_hash` 等於 `profile_id` 的完整驗證 View 物
 4. 若該 View 含有 `documents[doc_id]`，且其值正好是某個 eligible head，則 `k` 對該 head 貢獻一個 support signal
 5. 否則 `k` 對該 `doc_id` 不貢獻 signal
 
-對任一 `(profile_id, doc_id, selector_epoch)`，每個 admitted maintainer 最多只能對一個 eligible head 貢獻 signal。
+對任一 `(profile_id, doc_id, selector_epoch)`，每個 admitted view-maintainer 最多只能對一個 eligible head 貢獻 signal。
 
 #### 10.1.4 Selector Score
 
 對每個 eligible head `h`：
 
 ```text
-weighted_support(h) = sum(effective_weight(k)) for all maintainers k signaling to h
-supporter_count(h) = count(k) for all maintainers k signaling to h
+weighted_support(h) = sum(effective_weight(k)) for all view-maintainers k signaling to h
+supporter_count(h) = count(k) for all view-maintainers k signaling to h
 selector_score(h) = weighted_support(h)
 ```
 
@@ -817,14 +833,14 @@ Decision trace（決策軌跡）MUST 可機器解析，且至少包含：
 
 對同一組已驗證物件集合、固定 profile 參數、以及 effective selection time（選擇時間），此 trace MUST 可重現。
 
-### 10.2 View Profile 參數 + 維護者權重準入（規範）
+### 10.2 View Profile 參數 + View-Maintainer 準入（規範）
 
-Mycel 採用假名、身份盲的維護者治理。
-維護者以 key 識別，不要求真實身份，也不要求彼此相識。
+Mycel 對 accepted-head selection 採用假名、身份盲的治理。
+View-maintainers 以 key 識別，不要求真實身份，也不要求彼此相識。
 
 準入與加權規則：
 
-1. 維護者候選資格 MUST 只依可驗證的協議行為評估，不依聲稱的真實身份。
+1. View-maintainer 候選資格 MUST 只依可驗證的協議行為評估，不依聲稱的真實身份。
 2. 提供 accepted-head results 的 node MUST 保存並公布其固定 profile 參數，以便審計。
 3. 固定 profile 參數至少 MUST 包含：
    - `epoch_seconds`
@@ -840,10 +856,10 @@ Mycel 採用假名、身份盲的維護者治理。
 selector_epoch = floor((effective_selection_time - epoch_zero_timestamp) / epoch_seconds)
 ```
 
-6. 對每個 maintainer key `k` 與 epoch `e`，定義：
+6. 對每個 view-maintainer key `k` 與 epoch `e`，定義：
    - `valid_view_count(e, k)`：在 epoch `e` 中，由 `k` 發布且 policy hash 等於 selector `profile_id` 的完整驗證 View 物件數量
    - `critical_violation_count(e, k)`：在 epoch `e` 中可驗證歸因於 `k` 的重大違規數量
-7. 若某 key 在前 `admission_window_epochs` 個已完成 epoch 中同時滿足：
+7. 若某個 view-maintainer key 在前 `admission_window_epochs` 個已完成 epoch 中同時滿足：
    - `valid_view_count` 總和至少為 `min_valid_views_for_admission`
    - `critical_violation_count` 總和為零
    則該 key 在 epoch `e` 中視為 admitted。
@@ -866,6 +882,17 @@ effective_weight(e, k) =
 12. 若某 key 在 epoch `e-1` 有一個或多個重大違規，則它在 epoch `e` MUST 至少失去一個 weight unit。
 13. 合規的 reader client MUST NOT 套用會改變 active accepted-head 路徑的自由裁量 per-installation quarantine 或 removal 規則。
 14. head 選擇 MUST 使用 `effective_weight(e, k)`，且 MUST NOT 單獨依賴原始 hit count。
+
+### 10.3 Editor-Maintainer 發布政策（規範）
+
+Editor-maintainer policy 與 accepted-head governance 分離：
+
+1. 某個 profile MAY 定義 editor-maintainer 身分是否為受限的發布類別。
+2. 若某個 profile 定義 editor-maintainer 準入，該準入規則 MUST 可審計且明確。
+3. Editor-maintainer 身分 MAY 決定哪些 revisions 會在 reader 或 curator tooling 中被標成正式 candidate heads。
+4. Editor-maintainer 身分本身 MUST NOT 影響 `effective_weight`。
+5. 同時具備 editor-maintainer 與 view-maintainer 身分的 key，MUST 分別滿足兩條規則路徑。
+6. 除非某個 profile 明確收窄集合，否則 v0.1 的 eligible heads 仍是第 10.1.2 節中所有完整驗證的 heads，而不只限 editor-maintainer 發布的 heads。
 
 ## 11. 匿名與安全預設
 

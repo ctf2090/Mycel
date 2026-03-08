@@ -509,13 +509,18 @@ This means:
 
 ## 7. Node Model
 
-Mycel nodes have five role types (one node can take multiple roles):
+Mycel nodes may take multiple roles at once.
+In v0.1, the maintainer-facing roles are split as follows:
 
-1. **Author Node**: creates patch/revision
-2. **Mirror Node**: stores and serves content
-3. **Curator Node**: publishes View objects and maintains accepted-branch signals
-4. **Relay Node**: forwards metadata and objects
-5. **Archivist Node**: preserves full history
+1. **Author Node**: creates ordinary patch/revision objects
+2. **Editor-Maintainer Node**: publishes maintainer-grade patch/revision objects that can create new candidate heads
+3. **View-Maintainer Node**: publishes View objects that contribute governance signals to accepted-head selection
+4. **Mirror Node**: stores and serves content
+5. **Relay Node**: forwards metadata and objects
+6. **Archivist Node**: preserves full history
+
+The same key or node MAY hold both editor-maintainer and view-maintainer roles.
+Holding editor-maintainer status alone MUST NOT grant selector weight.
 
 ## 8. P2P Sync Layer
 
@@ -708,6 +713,17 @@ To minimize discretionary client influence while preserving multi-view:
 4. A conforming reader client MUST NOT expose discretionary local policy controls that alter the active accepted head.
 5. A conforming reader client MAY expose raw heads, branch graphs, or alternative profile results for auditability, but MUST NOT present them as the active accepted head unless another valid fixed profile governs that result.
 
+### 10.0.1 Two Maintainer Roles (Normative)
+
+For governed multi-view selection in v0.1:
+
+1. An `editor-maintainer` MAY publish Patch and Revision objects that create new candidate heads.
+2. A `view-maintainer` MAY publish View objects that contribute governance signals to accepted-head selection.
+3. A single key MAY hold both roles.
+4. Holding editor-maintainer status MUST NOT, by itself, grant selector weight.
+5. Selector weight and accepted-head governance MUST be derived from view-maintainer behavior only, unless a future profile explicitly defines another signal source.
+6. A fully verified Revision MAY exist as a valid head even if it has no accepted-head support yet.
+
 ### 10.1 Deterministic Head Selection (Normative)
 
 To reduce client-side divergence, head selection is protocol-driven:
@@ -751,7 +767,7 @@ If no eligible heads exist, selection MUST fail with a machine-readable reason s
 
 #### 10.1.3 Maintainer Signals
 
-For each admitted maintainer key `k`, the selector derives at most one signal in the selector epoch:
+For each admitted view-maintainer key `k`, the selector derives at most one signal in the selector epoch:
 
 1. determine the selector epoch using the rules in Section 10.2
 2. collect all fully verified View objects such that:
@@ -765,15 +781,15 @@ For each admitted maintainer key `k`, the selector derives at most one signal in
 4. if that View has a `documents[doc_id]` entry and its value is one of the eligible heads, then `k` contributes one support signal to that head
 5. otherwise `k` contributes no signal for that `doc_id`
 
-Each admitted maintainer contributes to at most one eligible head for a given `(profile_id, doc_id, selector_epoch)`.
+Each admitted view-maintainer contributes to at most one eligible head for a given `(profile_id, doc_id, selector_epoch)`.
 
 #### 10.1.4 Selector Score
 
 For each eligible head `h`:
 
 ```text
-weighted_support(h) = sum(effective_weight(k)) for all maintainers k signaling to h
-supporter_count(h) = count(k) for all maintainers k signaling to h
+weighted_support(h) = sum(effective_weight(k)) for all view-maintainers k signaling to h
+supporter_count(h) = count(k) for all view-maintainers k signaling to h
 selector_score(h) = weighted_support(h)
 ```
 
@@ -817,14 +833,14 @@ The decision trace MUST be machine-readable and MUST include at least:
 
 The trace MUST be reproducible from the same verified object set, fixed profile parameters, and effective selection time.
 
-### 10.2 View Profile Parameters + Maintainer Set Admission (Normative)
+### 10.2 View Profile Parameters + View-Maintainer Admission (Normative)
 
-Mycel uses pseudonymous, identity-blind maintainer governance.
-Maintainers are identified by keys; real-world identity and mutual acquaintance are not required.
+Mycel uses pseudonymous, identity-blind governance for accepted-head selection.
+View-maintainers are identified by keys; real-world identity and mutual acquaintance are not required.
 
 Admission and weighting rules:
 
-1. A maintainer candidate MUST be evaluated only by verifiable protocol behavior, not claimed real identity.
+1. A view-maintainer candidate MUST be evaluated only by verifiable protocol behavior, not claimed real identity.
 2. A node that serves accepted-head results MUST store and publish its fixed profile parameters for auditability.
 3. At minimum, fixed profile parameters MUST include:
    - `epoch_seconds`
@@ -840,10 +856,10 @@ Admission and weighting rules:
 selector_epoch = floor((effective_selection_time - epoch_zero_timestamp) / epoch_seconds)
 ```
 
-6. For each maintainer key `k` and epoch `e`, define:
+6. For each view-maintainer key `k` and epoch `e`, define:
    - `valid_view_count(e, k)`: the number of fully verified View objects by `k` in epoch `e` whose policy hash matches the selector `profile_id`
    - `critical_violation_count(e, k)`: the number of verifiable critical violations attributed to `k` in epoch `e`
-7. A maintainer key is admitted in epoch `e` if, across the previous `admission_window_epochs` completed epochs:
+7. A view-maintainer key is admitted in epoch `e` if, across the previous `admission_window_epochs` completed epochs:
    - the sum of `valid_view_count` is at least `min_valid_views_for_admission`
    - the sum of `critical_violation_count` is zero
 8. A non-admitted key MUST have effective weight `0`.
@@ -865,6 +881,17 @@ effective_weight(e, k) =
 12. A key with one or more critical violations in epoch `e-1` MUST lose at least one weight unit in epoch `e`.
 13. A conforming reader client MUST NOT apply discretionary per-installation quarantine or removal rules that alter the active accepted-head path.
 14. Head selection MUST use `effective_weight(e, k)` and MUST NOT rely on raw hit count alone.
+
+### 10.3 Editor-Maintainer Publication Policy (Normative)
+
+Editor-maintainer policy is separate from accepted-head governance:
+
+1. A profile MAY define whether editor-maintainer status exists as a restricted publication class.
+2. If a profile defines editor-maintainer admission, the admission rule MUST be auditable and explicit.
+3. Editor-maintainer status MAY control which revisions are highlighted as formal candidate heads in reader or curator tooling.
+4. Editor-maintainer status MUST NOT, by itself, affect `effective_weight`.
+5. A key that is both editor-maintainer and view-maintainer MUST satisfy both rule paths independently.
+6. Unless a profile explicitly narrows the set, eligible heads in v0.1 remain all fully verified heads under Section 10.1.2, not only editor-maintainer-published heads.
 
 ## 11. Anonymity and Security Defaults
 
@@ -893,7 +920,6 @@ Recommended node behavior:
 - topic names can be capability-based
 
 ### 11.4 Local Transport and Safety Policy
-
 Each node may still define:
 
 - which author keys are accepted

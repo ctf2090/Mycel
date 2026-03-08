@@ -44,6 +44,7 @@ Defer if needed:
 - [ ] Implement `snapshot` parsing with derived `snapshot_id`.
 - [ ] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
 - [ ] Reject unknown required fields or invalid field types according to the chosen strictness policy.
+- [ ] Model editor-maintainer and view-maintainer role assignment independently.
 
 ## 3. Canonical Serialization and Hashing
 
@@ -80,6 +81,7 @@ Defer if needed:
 - [ ] Treat `parents[0]` as the only execution base state.
 - [ ] Treat `parents[1..]` as ancestry-only unless content is materialized by explicit patch operations.
 - [ ] Recompute and verify `state_hash` for every received revision.
+- [ ] Keep revision publication authority separate from accepted-head governance weight.
 
 ## 6. Local State and Storage
 
@@ -127,13 +129,15 @@ Defer if needed:
 - [ ] Group selector inputs by `profile_id`, `doc_id`, and `effective_selection_time`.
 - [ ] Resolve `profile_id` as a fixed `policy_hash` for the active reader profile.
 - [ ] Compute eligible heads exactly as specified.
-- [ ] Use only verified View objects with matching `policy_hash` as maintainer signals.
+- [ ] Use only verified View objects with matching `policy_hash` as view-maintainer signals.
 - [ ] Implement selector epoch calculation exactly.
 - [ ] Implement the normative `selector_score`.
 - [ ] Implement the normative tie-break order.
 - [ ] Emit or persist the minimum decision trace schema.
 - [ ] Do not expose discretionary local policy controls that alter the active accepted head.
 - [ ] If multiple fixed profiles are supported, enumerate them explicitly rather than allowing ad hoc local profiles.
+- [ ] Ensure editor-maintainer status alone never grants selector weight.
+- [ ] If dual-role keys are supported, validate editor-maintainer and view-maintainer admission separately.
 
 ## 10. Merge Generation
 
@@ -152,6 +156,7 @@ Defer if needed:
 - [ ] Provide sync pull entry points.
 - [ ] Provide view inspection or head-inspection entry points.
 - [ ] Separate reader-facing accepted-head inspection from curator-facing View publication workflows.
+- [ ] Separate editor-maintainer revision publication from view-maintainer governance publication workflows.
 - [ ] Provide store-rebuild or reindex entry points for recovery.
 
 ## 12. Interop Test Minimum

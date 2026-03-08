@@ -44,6 +44,7 @@
 - [ ] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
 - [ ] 拒絕任何內嵌導出 ID 與重算 canonical ID 不一致的內容定址物件。
 - [ ] 依我們選定的 strictness policy，拒絕未知必要欄位或非法欄位型別。
+- [ ] 將 editor-maintainer 與 view-maintainer 的角色指派分開建模。
 
 ## 3. Canonical Serialization 與 Hashing
 
@@ -80,6 +81,7 @@
 - [ ] 把 `parents[0]` 視為唯一 execution base state。
 - [ ] 把 `parents[1..]` 視為 ancestry-only，除非內容被顯式 patch operation 實體化。
 - [ ] 對每個接收的 revision 重算並驗證 `state_hash`。
+- [ ] 讓 revision 發布權與 accepted-head governance weight 維持分離。
 
 ## 6. 本地狀態與儲存
 
@@ -127,13 +129,15 @@
 - [ ] 依 `profile_id`、`doc_id`、`effective_selection_time` 分組 selector inputs。
 - [ ] 將 `profile_id` 解析為 active reader profile 的固定 `policy_hash`。
 - [ ] 精準實作 eligible heads 判定。
-- [ ] 只使用 `policy_hash` 相同且已驗證的 View 物件作為 maintainer signals。
+- [ ] 只使用 `policy_hash` 相同且已驗證的 View 物件作為 view-maintainer signals。
 - [ ] 精準實作 selector epoch 計算。
 - [ ] 實作規範中的 `selector_score`。
 - [ ] 實作規範中的 tie-break 順序。
 - [ ] 輸出或保存最小 decision trace schema。
 - [ ] 不提供會改變 active accepted head 的自由裁量本地 policy controls。
 - [ ] 若支援多個固定 profiles，必須明確列舉，而不是允許 ad hoc local profiles。
+- [ ] 確保僅有 editor-maintainer 身分不會自動取得 selector weight。
+- [ ] 若支援 dual-role keys，必須分別驗證 editor-maintainer 與 view-maintainer 準入。
 
 ## 10. Merge Generation
 
@@ -152,6 +156,7 @@
 - [ ] 提供 sync pull 入口。
 - [ ] 提供 view inspection 或 head inspection 入口。
 - [ ] 把 reader-facing accepted-head inspection 與 curator-facing View publication workflow 分開。
+- [ ] 把 editor-maintainer revision publication 與 view-maintainer governance publication workflow 分開。
 - [ ] 提供 store-rebuild 或 reindex 入口，以利復原。
 
 ## 12. Interop Test 最低門檻
