@@ -148,6 +148,28 @@ Main remaining gaps:
 2. canonical serialization promoted into a clearly shared protocol utility
 3. stronger `mycel-core`-level test depth around protocol parsing and verification
 
+Implementation anchors:
+
+1. Crates:
+   `crates/mycel-core`
+   `crates/mycel-sim`
+   `apps/mycel-cli`
+2. Key files:
+   `crates/mycel-core/src/protocol.rs`
+   `crates/mycel-core/src/verify.rs`
+   `crates/mycel-core/src/lib.rs`
+   `crates/mycel-sim/src/validate.rs`
+   `apps/mycel-cli/src/object.rs`
+   `apps/mycel-cli/tests/object_verify_smoke.rs`
+   `apps/mycel-cli/tests/object_inspect_smoke.rs`
+   `apps/mycel-cli/tests/validate_smoke.rs`
+3. Useful commands:
+   `cargo test -p mycel-core`
+   `cargo test -p mycel-cli`
+   `cargo run -p mycel-cli -- object inspect <path> --json`
+   `cargo run -p mycel-cli -- object verify <path> --json`
+   `cargo run -p mycel-cli -- validate <path> --json`
+
 #### M2: Replay, Storage, and Rebuild
 
 Focus:
@@ -175,6 +197,23 @@ Main remaining gaps:
 2. `state_hash` verification engine
 3. persistent local store model
 4. object builder and writer path
+
+Implementation anchors:
+
+1. Crates:
+   `crates/mycel-core`
+   `apps/mycel-cli`
+2. Key files:
+   `crates/mycel-core/src/verify.rs`
+   `crates/mycel-core/src/protocol.rs`
+   `IMPLEMENTATION-CHECKLIST.en.md`
+   `fixtures/README.md`
+3. Expected next code areas:
+   replay and `state_hash` logic will likely land first in `crates/mycel-core`
+   storage-write and rebuild entry points will likely need new files or modules, not more CLI-only glue
+4. Useful commands:
+   `cargo test -p mycel-core`
+   `cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json`
 
 ## Phase 2: Reader-Plus-Governance
 
@@ -247,6 +286,20 @@ Main remaining gaps:
 3. governance publication workflow
 4. broader governance-state persistence
 
+Implementation anchors:
+
+1. Crates:
+   `crates/mycel-core`
+   `apps/mycel-cli`
+2. Key files:
+   `crates/mycel-core/src/head.rs`
+   `apps/mycel-cli/src/head.rs`
+   `apps/mycel-cli/tests/head_inspect_smoke.rs`
+   `fixtures/head-inspect/README.md`
+3. Useful commands:
+   `cargo run -p mycel-cli -- head inspect <doc-id> --input <path-or-fixture> --json`
+   `cargo test -p mycel-cli head_inspect`
+
 ## Phase 3: Full-Stack
 
 Goal: extend from local verification and governed reading into interoperable replication, richer profiles, and selective app-layer support.
@@ -306,6 +359,23 @@ Current read:
 
 Not started in implementation, but scaffolded in docs and simulator structure.
 
+Implementation anchors:
+
+1. Crates:
+   `crates/mycel-sim`
+   `apps/mycel-cli`
+2. Key files:
+   `crates/mycel-sim/src/run.rs`
+   `crates/mycel-sim/src/model.rs`
+   `crates/mycel-sim/src/manifest.rs`
+   `sim/README.md`
+   `WIRE-PROTOCOL.en.md`
+   `PROTOCOL.en.md`
+3. Useful commands:
+   `cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json --json`
+   `cargo run -p mycel-cli -- report inspect sim/reports/out/three-peer-consistency.report.json --events --json`
+   `cargo run -p mycel-cli -- report diff <left> <right> --events --json`
+
 #### M5: Selective App-Layer Expansion
 
 Focus:
@@ -323,6 +393,16 @@ Completion gate:
 Current read:
 
 Mostly deferred by design.
+
+Implementation anchors:
+
+1. Design and spec files:
+   `docs/design-notes/`
+   `PROFILE.fund-auto-disbursement-v0.1.en.md`
+   `PROFILE.mycel-over-tor-v0.1.en.md`
+   `PROJECT-INTENT.md`
+2. Key rule for this milestone:
+   mature features should become profiles or schemas before they become protocol-core work
 
 ## Cross-Cutting Priorities
 
