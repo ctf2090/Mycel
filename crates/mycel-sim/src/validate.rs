@@ -175,7 +175,12 @@ fn validate_from_target(
     };
 
     let input = load_all(root, &mut summary);
-    let scoped = scope_input(root, &input, target);
+    let mut scoped = scope_input(root, &input, target);
+    if matches!(target, ValidationTarget::Report(_)) && scoped.reports.is_empty() {
+        if let Some(value) = load_json::<Report>(target_path, &mut summary) {
+            scoped = scope_for_direct_report(&input, target_path, value);
+        }
+    }
 
     summary.fixture_count = scoped.fixtures.len();
     summary.peer_count = scoped.peers.len();
@@ -430,6 +435,18 @@ fn scope_for_test_case(root: &Path, input: &ValidationInput, path: &Path) -> Val
 
 fn scope_for_report(input: &ValidationInput, path: &Path) -> ValidationInput {
     let reports = filter_by_path(&input.reports, path);
+    build_report_scope(input, reports)
+}
+
+fn scope_for_direct_report(input: &ValidationInput, path: &Path, value: Report) -> ValidationInput {
+    let reports = vec![NamedReport {
+        path: path.to_path_buf(),
+        value,
+    }];
+    build_report_scope(input, reports)
+}
+
+fn build_report_scope(input: &ValidationInput, reports: Vec<NamedReport>) -> ValidationInput {
     let fixture_ids: HashSet<_> = reports
         .iter()
         .map(|report| report.value.fixture_id.as_str())
@@ -918,8 +935,10 @@ fn load_test_cases(root: &Path, summary: &mut ValidationSummary) -> Vec<NamedTes
 
 fn load_reports(root: &Path, summary: &mut ValidationSummary) -> Vec<NamedReport> {
     let base = root.join("sim/reports");
+    let invalid_base = base.join("invalid");
     load_json_files_recursive::<Report>(&base, summary)
         .into_iter()
+        .filter(|(path, _)| !path.starts_with(&invalid_base))
         .map(|(path, value)| NamedReport { path, value })
         .collect()
 }

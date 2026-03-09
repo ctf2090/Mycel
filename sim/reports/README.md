@@ -14,6 +14,7 @@ Tracked outputs should eventually include:
 
 Generated report files should go under `sim/reports/out/`, which is ignored by git.
 Generated reports under `sim/reports/out/` can also be validated with `mycel validate`.
+Intentional negative validation examples live under `sim/reports/invalid/` and are excluded from repo-wide validation scans.
 
 ## Schema
 
@@ -27,3 +28,9 @@ Generated reports under `sim/reports/out/` can also be validated with `mycel val
 - Runtime observation metadata now also includes `events_per_second` and `ms_per_event`.
 - Seeded scheduling metadata now also includes `scheduled_peer_order`.
 - Negative runs now also expose a deterministic `fault_plan` derived from the seed.
+
+## Negative Example
+
+- `sim/reports/invalid/random-seed-prefix-mismatch.example.json` intentionally uses `seed_source = "random"` with a non-`random:` seed so `mycel validate` should fail for that file.
+- Example command:
+  `cargo run -p mycel-cli -- validate sim/reports/invalid/random-seed-prefix-mismatch.example.json --json`
