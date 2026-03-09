@@ -349,6 +349,73 @@ fn report_inspect_step_json_returns_empty_events_for_unknown_step() {
 }
 
 #[test]
+fn report_inspect_step_range_json_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+        "2:3",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["event_count"], 2);
+    let events = json["events"]
+        .as_array()
+        .expect("events should be an array");
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0]["step"], 2);
+    assert_eq!(events[1]["step"], 3);
+}
+
+#[test]
+fn report_inspect_step_range_text_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+        "1:2",
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "events: 2");
+    assert_stdout_contains(
+        &output,
+        "event #1 phase=load action=load-fixture outcome=ok",
+    );
+    assert_stdout_contains(
+        &output,
+        "event #2 phase=sync action=seed-advertise outcome=ok",
+    );
+}
+
+#[test]
+fn report_inspect_step_range_json_returns_empty_events_for_unknown_range() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+        "99:120",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["event_count"], 0);
+    assert_eq!(
+        json["events"].as_array().map(Vec::len),
+        Some(0),
+        "expected empty events array, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn report_inspect_node_json_filters_events_for_example_report() {
     let output = run_report(&[
         "report",
@@ -369,6 +436,30 @@ fn report_inspect_node_json_filters_events_for_example_report() {
     assert_eq!(events.len(), 1);
     assert_eq!(events[0]["node_id"], "node:peer-seed");
     assert_eq!(events[0]["action"], "seed-advertise");
+}
+
+#[test]
+fn report_inspect_node_and_step_range_json_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--node",
+        "node:peer-seed",
+        "--step-range",
+        "2:2",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["event_count"], 1);
+    let events = json["events"]
+        .as_array()
+        .expect("events should be an array");
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0]["node_id"], "node:peer-seed");
+    assert_eq!(events[0]["step"], 2);
 }
 
 #[test]
@@ -862,6 +953,62 @@ fn report_inspect_rejects_step_with_full() {
 }
 
 #[test]
+fn report_inspect_rejects_step_range_with_failures() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--failures",
+        "--step-range",
+        "1:2",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect --step-range cannot be combined with --failures",
+    );
+}
+
+#[test]
+fn report_inspect_rejects_step_range_with_full() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+        "1:2",
+        "--full",
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect --step-range cannot be combined with --full",
+    );
+}
+
+#[test]
+fn report_inspect_rejects_step_and_step_range_together() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step",
+        "2",
+        "--step-range",
+        "1:3",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect accepts only one of --step or --step-range",
+    );
+}
+
+#[test]
 fn report_inspect_rejects_node_with_full() {
     let output = run_report(&[
         "report",
@@ -944,6 +1091,50 @@ fn report_inspect_rejects_invalid_step_value() {
 
     assert_exit_code(&output, 2);
     assert_stderr_contains(&output, "invalid value for --step: bogus");
+}
+
+#[test]
+fn report_inspect_requires_step_range_value() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "missing value for --step-range");
+}
+
+#[test]
+fn report_inspect_rejects_invalid_step_range_value() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+        "bogus",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "invalid value for --step-range: bogus");
+}
+
+#[test]
+fn report_inspect_rejects_reversed_step_range() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--step-range",
+        "3:2",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "invalid value for --step-range: 3:2 (start must be <= end)",
+    );
 }
 
 #[test]

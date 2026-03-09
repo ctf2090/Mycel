@@ -44,6 +44,7 @@ fn print_usage() {
     println!("  --action <name> Filter event inspection to one action");
     println!("  --outcome <name> Filter event inspection to one outcome");
     println!("  --step <n>      Filter event inspection to one step number");
+    println!("  --step-range <a>:<b>  Filter event inspection to one inclusive step range");
     println!("  --node <id>     Filter event or failure inspection to one node");
     println!();
     println!("Sim options:");
@@ -298,6 +299,7 @@ struct ReportInspectFilters {
     action: Option<String>,
     outcome: Option<String>,
     step: Option<u64>,
+    step_range: Option<(u64, u64)>,
     node: Option<String>,
 }
 
@@ -689,6 +691,11 @@ fn filter_events(events: &[ReportEvent], filters: &ReportInspectFilters) -> Vec<
         })
         .filter(|event| filters.step.is_none_or(|step| event.step == step))
         .filter(|event| {
+            filters
+                .step_range
+                .is_none_or(|(start, end)| start <= event.step && event.step <= end)
+        })
+        .filter(|event| {
             filters.node.as_deref().is_none_or(|node| {
                 event
                     .node_id
@@ -698,6 +705,24 @@ fn filter_events(events: &[ReportEvent], filters: &ReportInspectFilters) -> Vec<
         })
         .cloned()
         .collect()
+}
+
+fn parse_step_range(value: &str) -> Result<(u64, u64), String> {
+    let Some((start, end)) = value.split_once(':') else {
+        return Err(format!("invalid value for --step-range: {value}"));
+    };
+    let start = start
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for --step-range: {value}"))?;
+    let end = end
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for --step-range: {value}"))?;
+    if start > end {
+        return Err(format!(
+            "invalid value for --step-range: {value} (start must be <= end)"
+        ));
+    }
+    Ok((start, end))
 }
 
 fn filter_failures(
@@ -1039,6 +1064,7 @@ fn main() {
                 let mut expect_action_value = false;
                 let mut expect_outcome_value = false;
                 let mut expect_step_value = false;
+                let mut expect_step_range_value = false;
                 let mut expect_node_value = false;
 
                 for arg in args {
@@ -1063,6 +1089,18 @@ fn main() {
                         };
                         filters.step = Some(step);
                         expect_step_value = false;
+                    } else if expect_step_range_value {
+                        let step_range = match parse_step_range(&arg) {
+                            Ok(step_range) => step_range,
+                            Err(message) => {
+                                eprintln!("{message}");
+                                eprintln!();
+                                print_usage();
+                                std::process::exit(2);
+                            }
+                        };
+                        filters.step_range = Some(step_range);
+                        expect_step_range_value = false;
                     } else if expect_node_value {
                         filters.node = Some(arg);
                         expect_node_value = false;
@@ -1089,6 +1127,12 @@ fn main() {
                         }
                         if filters.step.is_some() {
                             eprintln!("report inspect --step cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.step_range.is_some() {
+                            eprintln!("report inspect --step-range cannot be combined with --full");
                             eprintln!();
                             print_usage();
                             std::process::exit(2);
@@ -1141,6 +1185,14 @@ fn main() {
                         }
                         if filters.step.is_some() {
                             eprintln!("report inspect --step cannot be combined with --failures");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.step_range.is_some() {
+                            eprintln!(
+                                "report inspect --step-range cannot be combined with --failures"
+                            );
                             eprintln!();
                             print_usage();
                             std::process::exit(2);
@@ -1235,7 +1287,41 @@ fn main() {
                             print_usage();
                             std::process::exit(2);
                         }
+                        if filters.step_range.is_some() {
+                            eprintln!("report inspect accepts only one of --step or --step-range");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
                         expect_step_value = true;
+                    } else if arg == "--step-range" {
+                        if expect_step_range_value {
+                            eprintln!("missing value for --step-range");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Full {
+                            eprintln!("report inspect --step-range cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Failures {
+                            eprintln!(
+                                "report inspect --step-range cannot be combined with --failures"
+                            );
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.step.is_some() {
+                            eprintln!("report inspect accepts only one of --step or --step-range");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        expect_step_range_value = true;
                     } else if arg == "--node" {
                         if expect_node_value {
                             eprintln!("missing value for --node");
@@ -1284,6 +1370,12 @@ fn main() {
                     print_usage();
                     std::process::exit(2);
                 }
+                if expect_step_range_value {
+                    eprintln!("missing value for --step-range");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                }
                 if expect_node_value {
                     eprintln!("missing value for --node");
                     eprintln!();
@@ -1296,6 +1388,7 @@ fn main() {
                         || filters.action.is_some()
                         || filters.outcome.is_some()
                         || filters.step.is_some()
+                        || filters.step_range.is_some()
                         || filters.node.is_some())
                 {
                     mode = ReportInspectMode::Events;
