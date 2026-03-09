@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mycel.local/schemas/head-inspect.schema.json",
+  "title": "Mycel Head Inspect Input Bundle",
+  "description": "Local input bundle for the minimal mycel head inspect CLI.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_id",
+    "description",
+    "profile",
+    "revisions",
+    "views"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "bundle_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile": {
+      "$ref": "#/$defs/profile"
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "expected": {
+      "$ref": "#/$defs/expected"
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_hash",
+        "effective_selection_time"
+      ],
+      "properties": {
+        "policy_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effective_selection_time": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "epoch_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "epoch_zero_timestamp": {
+          "type": "integer"
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "doc_id",
+        "selected_head"
+      ],
+      "properties": {
+        "doc_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selected_head": {
+          "type": "string",
+          "minLength": 1
+        },
+        "eligible_head_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_revision_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_view_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

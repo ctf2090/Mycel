@@ -12,6 +12,7 @@ The first goal is to keep fixtures:
 ## Layout
 
 - `object-sets/`: canonical object collections and failure cases
+- `head-inspect/`: local input bundles for the minimal `mycel head inspect` CLI
 
 ## Rules
 

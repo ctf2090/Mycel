@@ -10,7 +10,7 @@ mod common;
 
 use common::{
     assert_exit_code, assert_stderr_contains, assert_stdout_contains, assert_success,
-    create_temp_dir, parse_json_stdout, run_mycel, stdout_text,
+    create_temp_dir, parse_json_stdout, repo_root, run_mycel, stdout_text,
 };
 
 struct TempInputFile {
@@ -123,21 +123,6 @@ fn signed_revision(
     value
 }
 
-fn signed_view(signing_key: &SigningKey, policy: Value, documents: Value, timestamp: u64) -> Value {
-    let mut value = json!({
-        "type": "view",
-        "version": "mycel/0.1",
-        "maintainer": signer_id(signing_key),
-        "documents": documents,
-        "policy": policy,
-        "timestamp": timestamp
-    });
-    let id = recompute_id(&value, "view_id", "view");
-    value["view_id"] = Value::String(id);
-    value["signature"] = Value::String(sign_value(signing_key, &value));
-    value
-}
-
 fn hash_json(value: &Value) -> String {
     let canonical = canonical_json(value);
     let mut hasher = Sha256::new();
@@ -145,86 +130,23 @@ fn hash_json(value: &Value) -> String {
     format!("hash:{:x}", hasher.finalize())
 }
 
-fn object_string(value: &Value, field: &str) -> String {
-    value[field]
-        .as_str()
-        .expect("field should be string")
-        .to_string()
-}
-
 #[test]
 fn head_inspect_json_selects_highest_supported_head() {
-    let author_key = signing_key(7);
-    let maintainer_a = signing_key(8);
-    let maintainer_b = signing_key(9);
-    let maintainer_c = signing_key(10);
     let doc_id = "doc:sample";
-
-    let revision_a = signed_revision(&author_key, doc_id, vec![], 1000, "hash:state-a");
-    let revision_b = signed_revision(
-        &author_key,
-        doc_id,
-        vec![object_string(&revision_a, "revision_id")],
-        1010,
-        "hash:state-b",
-    );
-    let revision_c = signed_revision(
-        &author_key,
-        doc_id,
-        vec![object_string(&revision_a, "revision_id")],
-        1020,
-        "hash:state-c",
-    );
-
-    let policy = json!({
-        "accept_keys": [
-            signer_id(&maintainer_a),
-            signer_id(&maintainer_b),
-            signer_id(&maintainer_c)
-        ],
-        "merge_rule": "manual-reviewed",
-        "preferred_branches": ["main"]
-    });
-    let profile_hash = hash_json(&policy);
-
-    let view_a = signed_view(
-        &maintainer_a,
-        policy.clone(),
-        json!({ doc_id: object_string(&revision_b, "revision_id") }),
-        1100,
-    );
-    let view_b = signed_view(
-        &maintainer_b,
-        policy.clone(),
-        json!({ doc_id: object_string(&revision_c, "revision_id") }),
-        1110,
-    );
-    let view_c = signed_view(
-        &maintainer_c,
-        policy.clone(),
-        json!({ doc_id: object_string(&revision_b, "revision_id") }),
-        1120,
-    );
-
-    let bundle = json!({
-        "profile": {
-            "policy_hash": profile_hash,
-            "effective_selection_time": 1200,
-            "epoch_seconds": 3600,
-            "epoch_zero_timestamp": 0
-        },
-        "revisions": [revision_a, revision_b.clone(), revision_c.clone()],
-        "views": [view_a, view_b, view_c]
-    });
-    let input = write_input_file("head-inspect-valid", "input.json", bundle);
-    let path = path_arg(&input.path);
+    let path = repo_root()
+        .join("fixtures/head-inspect/minimal-head-selection.example.json")
+        .to_string_lossy()
+        .into_owned();
     let output = run_mycel(&["head", "inspect", doc_id, "--input", &path, "--json"]);
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
     assert_eq!(json["status"], "ok");
     assert_eq!(json["doc_id"], doc_id);
-    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    assert_eq!(
+        json["selected_head"],
+        "rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad"
+    );
     assert_eq!(json["tie_break_reason"], "higher_selector_score");
     assert_eq!(json["verified_revision_count"], 3);
     assert_eq!(json["verified_view_count"], 3);

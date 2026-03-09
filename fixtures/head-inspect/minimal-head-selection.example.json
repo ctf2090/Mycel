@@ -1,0 +1,128 @@
+{
+  "$schema": "./head-inspect.schema.json",
+  "bundle_id": "minimal-head-selection",
+  "description": "Minimal local input bundle for head inspection smoke coverage",
+  "expected": {
+    "doc_id": "doc:sample",
+    "eligible_head_count": 2,
+    "selected_head": "rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad",
+    "verified_revision_count": 3,
+    "verified_view_count": 3
+  },
+  "profile": {
+    "effective_selection_time": 1200,
+    "epoch_seconds": 3600,
+    "epoch_zero_timestamp": 0,
+    "policy_hash": "hash:06e66caf7a308877829de59d1848af2bd7f9c96ae9eae61031f91f27b4719f82"
+  },
+  "revisions": [
+    {
+      "author": "pk:ed25519:6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=",
+      "doc_id": "doc:sample",
+      "parents": [],
+      "patches": [],
+      "revision_id": "rev:71654ac1a9f6e1f63e16ad71cbd5aee9fe1b8b79800fc9e0898824c8a76cea7c",
+      "signature": "sig:ed25519:MnuJgVHD1QXu1wyfkJGRQXMqXLcDavYZCpE5ASeDoe/XIvWcnizvYODv+YpnzfuneeVT0LuAIIqxeDCN3kG4Bw==",
+      "state_hash": "hash:state-a",
+      "timestamp": 1000,
+      "type": "revision",
+      "version": "mycel/0.1"
+    },
+    {
+      "author": "pk:ed25519:6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=",
+      "doc_id": "doc:sample",
+      "parents": [
+        "rev:71654ac1a9f6e1f63e16ad71cbd5aee9fe1b8b79800fc9e0898824c8a76cea7c"
+      ],
+      "patches": [],
+      "revision_id": "rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad",
+      "signature": "sig:ed25519:q1+wVZmNubqvKAwsjjcztkiL/GGv6JuO1JzS0Rq5j0Koor8gExyyFu5HwMKIdf+xwu+iUXD9aK/8uaSD6aB/CA==",
+      "state_hash": "hash:state-b",
+      "timestamp": 1010,
+      "type": "revision",
+      "version": "mycel/0.1"
+    },
+    {
+      "author": "pk:ed25519:6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=",
+      "doc_id": "doc:sample",
+      "parents": [
+        "rev:71654ac1a9f6e1f63e16ad71cbd5aee9fe1b8b79800fc9e0898824c8a76cea7c"
+      ],
+      "patches": [],
+      "revision_id": "rev:552fce487de89e2e8c7a002249b200440f4c24bfed735d1e7f730ea774f06430",
+      "signature": "sig:ed25519:9jGa7sbt9Jpu8XuJzpYTiLdBhtIM+ytEXLblkhgOx1L9divfiGIsO+AwH9RPR2ia/z32VCwxMAeydlAyyYusDA==",
+      "state_hash": "hash:state-c",
+      "timestamp": 1020,
+      "type": "revision",
+      "version": "mycel/0.1"
+    }
+  ],
+  "views": [
+    {
+      "documents": {
+        "doc:sample": "rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad"
+      },
+      "maintainer": "pk:ed25519:E5j2LG0aRXxRumpLXz29L2n8qTIWIY3ImX5Ba9F9k8o=",
+      "policy": {
+        "accept_keys": [
+          "pk:ed25519:E5j2LG0aRXxRumpLXz29L2n8qTIWIY3ImX5Ba9F9k8o=",
+          "pk:ed25519:/RckOFqgx1tk+3jNYC+h2ZH96/drE8WO1wLqyDXp9hg=",
+          "pk:ed25519:Q6cucUQBdi32a2jCbfvfJoKq7J8kdOykYT5CSg+6/Tw="
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": [
+          "main"
+        ]
+      },
+      "signature": "sig:ed25519:YAaplCd7T1eM59r7QrkjxkHxKDjAs5sdCgE9BoU5F3PTyLOLJLB34k1yQM68idEhCWYebn7m2s6Toh1mOa4qBQ==",
+      "timestamp": 1100,
+      "type": "view",
+      "version": "mycel/0.1",
+      "view_id": "view:a23f4834d94dd8862832c1e67137debaba9fd27ded60e5baad98747c62b524e6"
+    },
+    {
+      "documents": {
+        "doc:sample": "rev:552fce487de89e2e8c7a002249b200440f4c24bfed735d1e7f730ea774f06430"
+      },
+      "maintainer": "pk:ed25519:/RckOFqgx1tk+3jNYC+h2ZH96/drE8WO1wLqyDXp9hg=",
+      "policy": {
+        "accept_keys": [
+          "pk:ed25519:E5j2LG0aRXxRumpLXz29L2n8qTIWIY3ImX5Ba9F9k8o=",
+          "pk:ed25519:/RckOFqgx1tk+3jNYC+h2ZH96/drE8WO1wLqyDXp9hg=",
+          "pk:ed25519:Q6cucUQBdi32a2jCbfvfJoKq7J8kdOykYT5CSg+6/Tw="
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": [
+          "main"
+        ]
+      },
+      "signature": "sig:ed25519:2WTRAJxrd50nsCE6+PIwh52+znJyUmV/l+rga7EHNdFim4kV3eGGGX2COSy7bB2/gYHVxrSGXBVDurLuUK1BCw==",
+      "timestamp": 1110,
+      "type": "view",
+      "version": "mycel/0.1",
+      "view_id": "view:61884a2341095b86998a774193b83125a4154e15be914226edee14bb48291de0"
+    },
+    {
+      "documents": {
+        "doc:sample": "rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad"
+      },
+      "maintainer": "pk:ed25519:Q6cucUQBdi32a2jCbfvfJoKq7J8kdOykYT5CSg+6/Tw=",
+      "policy": {
+        "accept_keys": [
+          "pk:ed25519:E5j2LG0aRXxRumpLXz29L2n8qTIWIY3ImX5Ba9F9k8o=",
+          "pk:ed25519:/RckOFqgx1tk+3jNYC+h2ZH96/drE8WO1wLqyDXp9hg=",
+          "pk:ed25519:Q6cucUQBdi32a2jCbfvfJoKq7J8kdOykYT5CSg+6/Tw="
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": [
+          "main"
+        ]
+      },
+      "signature": "sig:ed25519:eSEqkq/KmCbhpbzG8VgCnOWRZohkOTxiL/4TCUaHAXZd5bUQX5RPpbu1/19x1CNfDmH9AjS4FVWMxUzlFj2SAA==",
+      "timestamp": 1120,
+      "type": "view",
+      "version": "mycel/0.1",
+      "view_id": "view:a1e192281a833f202f4576b9b41c93cea9c21eac0eeb56df4e666f640a843403"
+    }
+  ]
+}
