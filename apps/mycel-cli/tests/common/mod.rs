@@ -18,8 +18,12 @@ pub fn mycel_bin() -> PathBuf {
 }
 
 pub fn run_mycel(args: &[&str]) -> Output {
+    run_mycel_in_dir(&repo_root(), args)
+}
+
+pub fn run_mycel_in_dir(current_dir: &Path, args: &[&str]) -> Output {
     Command::new(mycel_bin())
-        .current_dir(repo_root())
+        .current_dir(current_dir)
         .args(args)
         .output()
         .expect("mycel command should run")

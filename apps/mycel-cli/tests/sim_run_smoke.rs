@@ -1,4 +1,7 @@
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
@@ -6,14 +9,15 @@ mod common;
 
 use common::{
     assert_empty_stderr, assert_exit_code, assert_stderr_contains, assert_stdout_contains,
-    load_report, parse_json_stdout, run_sim, stderr_text, validate_generated_report,
+    load_report, parse_json_stdout, repo_root, run_mycel_in_dir, run_sim, stderr_text,
+    validate_generated_report,
 };
 
 fn sim_run_lock() -> MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
         .lock()
-        .expect("sim run test lock should not be poisoned")
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 fn assert_runtime_seed_mode(summary: &Value, report: &Value, expected_source: &str) {
@@ -31,6 +35,77 @@ fn assert_runtime_seed_mode(summary: &Value, report: &Value, expected_source: &s
         .expect("report metadata should be an object");
     assert_eq!(metadata["seed_source"], expected_source);
     assert_eq!(metadata["deterministic_seed"], deterministic_seed);
+}
+
+struct TempWorkspace {
+    root: PathBuf,
+}
+
+impl Drop for TempWorkspace {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
+
+fn create_temp_workspace(prefix: &str) -> TempWorkspace {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after unix epoch")
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "mycel-cli-{prefix}-{}-{unique}",
+        std::process::id()
+    ));
+
+    copy_dir_recursive(&repo_root().join("fixtures"), &root.join("fixtures"));
+    copy_dir_recursive(&repo_root().join("sim"), &root.join("sim"));
+    fs::copy(repo_root().join("Cargo.toml"), root.join("Cargo.toml"))
+        .expect("Cargo.toml should copy into temporary workspace");
+
+    TempWorkspace { root }
+}
+
+fn copy_dir_recursive(source: &Path, destination: &Path) {
+    fs::create_dir_all(destination).expect("destination directory should be created");
+
+    for entry in fs::read_dir(source).expect("source directory should be readable") {
+        let entry = entry.expect("directory entry should load");
+        let entry_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        let entry_type = entry.file_type().expect("file type should load");
+
+        if entry_type.is_dir() {
+            copy_dir_recursive(&entry_path, &destination_path);
+        } else {
+            fs::copy(&entry_path, &destination_path).unwrap_or_else(|err| {
+                panic!(
+                    "failed to copy {} to {}: {err}",
+                    entry_path.display(),
+                    destination_path.display()
+                )
+            });
+        }
+    }
+}
+
+fn write_json_fixture(workspace: &TempWorkspace, relative_path: &str, value: &Value) -> PathBuf {
+    let path = workspace.root.join(relative_path);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).expect("parent directory should exist");
+    }
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(value).expect("json should serialize"),
+    )
+    .unwrap_or_else(|err| panic!("failed to write {}: {err}", path.display()));
+    path
+}
+
+fn load_json_value(path: &Path) -> Value {
+    let content = fs::read_to_string(path)
+        .unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()));
+    serde_json::from_str(&content)
+        .unwrap_or_else(|err| panic!("failed to parse {}: {err}", path.display()))
 }
 
 #[test]
@@ -240,6 +315,52 @@ fn partial_want_recovery_run_records_recovery_flow() {
 }
 
 #[test]
+fn signature_mismatch_run_produces_fault_plan_and_fail_result() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/signature-mismatch.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    assert_eq!(summary["seed_source"], "derived");
+    assert_eq!(summary["rejected_object_count"], 1);
+
+    let fault_plan = summary["fault_plan"]
+        .as_array()
+        .expect("fault_plan should be an array");
+    assert_eq!(fault_plan.len(), 1);
+    assert_eq!(fault_plan[0]["fault"], "signature-mismatch");
+
+    let report = load_report(&summary);
+    let events = report["events"]
+        .as_array()
+        .expect("events should be an array");
+    assert!(
+        events.iter().any(|entry| entry["action"] == "inject-fault"),
+        "expected inject-fault event in report"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|entry| entry["action"] == "reject-object-set"),
+        "expected reject-object-set event in report"
+    );
+
+    let validation = validate_generated_report(&summary);
+    assert_eq!(validation["report_count"], 1);
+}
+
+#[test]
 fn three_peer_consistency_run_text_reports_human_summary() {
     let _guard = sim_run_lock();
     let output = run_sim(&[
@@ -278,6 +399,98 @@ fn hash_mismatch_run_text_reports_fault_summary() {
     assert_stdout_contains(&output, "validation status: ok");
     assert_stdout_contains(&output, "result: fail");
     assert_stdout_contains(&output, "rejected objects: 1");
+}
+
+#[test]
+fn sim_run_rejects_unsupported_test_case_execution_mode() {
+    let _guard = sim_run_lock();
+    let workspace = create_temp_workspace("unsupported-test-mode");
+    let mut topology = load_json_value(
+        &workspace
+            .root
+            .join("sim/topologies/hash-mismatch.example.json"),
+    );
+    topology["topology_id"] = Value::String("unsupported-test-execution-mode".to_owned());
+    topology["execution_mode"] = Value::String("multi-process".to_owned());
+
+    let topology_path = write_json_fixture(
+        &workspace,
+        "sim/topologies/unsupported-test-execution-mode.example.json",
+        &topology,
+    );
+
+    let mut test_case =
+        load_json_value(&workspace.root.join("sim/tests/hash-mismatch.example.json"));
+    test_case["test_id"] = Value::String("unsupported-test-execution-mode".to_owned());
+    test_case["execution_mode"] = Value::String("multi-process".to_owned());
+    test_case["topology"] = Value::String(
+        topology_path
+            .strip_prefix(&workspace.root)
+            .expect("topology path should live under the temporary workspace")
+            .to_string_lossy()
+            .into_owned(),
+    );
+
+    let target_path = write_json_fixture(
+        &workspace,
+        "sim/tests/unsupported-test-execution-mode.example.json",
+        &test_case,
+    );
+    let target_owned = target_path.to_string_lossy().into_owned();
+    let output = run_mycel_in_dir(&workspace.root, &["sim", "run", &target_owned]);
+
+    assert_exit_code(&output, 1);
+    assert_stderr_contains(
+        &output,
+        "unsupported execution_mode 'multi-process'; only 'single-process' is implemented",
+    );
+}
+
+#[test]
+fn sim_run_rejects_unsupported_topology_execution_mode() {
+    let _guard = sim_run_lock();
+    let workspace = create_temp_workspace("unsupported-topology-mode");
+    let mut topology = load_json_value(
+        &workspace
+            .root
+            .join("sim/topologies/hash-mismatch.example.json"),
+    );
+    topology["topology_id"] = Value::String("unsupported-topology-execution-mode".to_owned());
+    topology
+        .as_object_mut()
+        .expect("topology should be a json object")
+        .remove("execution_mode");
+
+    let topology_path = write_json_fixture(
+        &workspace,
+        "sim/topologies/unsupported-topology-execution-mode.example.json",
+        &topology,
+    );
+
+    let mut test_case =
+        load_json_value(&workspace.root.join("sim/tests/hash-mismatch.example.json"));
+    test_case["test_id"] = Value::String("unsupported-topology-execution-mode".to_owned());
+    test_case["topology"] = Value::String(
+        topology_path
+            .strip_prefix(&workspace.root)
+            .expect("topology path should live under the temporary workspace")
+            .to_string_lossy()
+            .into_owned(),
+    );
+
+    let target_path = write_json_fixture(
+        &workspace,
+        "sim/tests/unsupported-topology-execution-mode.example.json",
+        &test_case,
+    );
+    let target_owned = target_path.to_string_lossy().into_owned();
+    let output = run_mycel_in_dir(&workspace.root, &["sim", "run", &target_owned]);
+
+    assert_exit_code(&output, 1);
+    assert_stderr_contains(
+        &output,
+        "unsupported topology execution_mode 'None'; only 'single-process' is implemented",
+    );
 }
 
 #[test]
