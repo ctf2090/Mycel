@@ -299,6 +299,25 @@ pub fn assert_report_list_help(stdout: &str) {
     );
 }
 
+pub fn assert_report_latest_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel report latest"),
+        "expected report latest usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Select the latest simulator report under a directory or one file"),
+        "expected report latest description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("[PATH]"),
+        "expected optional report latest path, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in report latest help, stdout: {stdout}"
+    );
+}
+
 pub fn assert_object_verify_help(stdout: &str) {
     assert!(
         stdout.contains("Usage: mycel object verify"),

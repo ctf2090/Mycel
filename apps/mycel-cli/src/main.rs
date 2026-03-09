@@ -171,6 +171,8 @@ enum ReportSubcommand {
     Inspect(ReportInspectCliArgs),
     #[command(about = "List simulator reports under a directory or one file")]
     List(ReportListCliArgs),
+    #[command(about = "Select the latest simulator report under a directory or one file")]
+    Latest(ReportLatestCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
 }
@@ -255,6 +257,20 @@ struct ReportListCliArgs {
     )]
     target: Option<String>,
     #[arg(long, help = "Emit machine-readable report listing output")]
+    json: bool,
+    #[arg(hide = true, allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct ReportLatestCliArgs {
+    #[arg(
+        value_name = "PATH",
+        help = "Report directory or one report file to select from",
+        allow_hyphen_values = true
+    )]
+    target: Option<String>,
+    #[arg(long, help = "Emit machine-readable latest-report output")]
     json: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
@@ -635,6 +651,7 @@ struct InspectedReport {
     failures: Vec<ReportFailure>,
 }
 
+#[derive(Clone)]
 struct ReportListEntry {
     path: PathBuf,
     status: String,
@@ -642,6 +659,8 @@ struct ReportListEntry {
     topology_id: Option<String>,
     fixture_id: Option<String>,
     test_id: Option<String>,
+    started_at: Option<String>,
+    finished_at: Option<String>,
     validation_status: Option<String>,
     result: Option<String>,
     peer_count: usize,
@@ -658,6 +677,22 @@ struct ReportListSummary {
     invalid_report_count: usize,
     reports: Vec<ReportListEntry>,
     errors: Vec<String>,
+}
+
+struct ReportLatestSummary {
+    root: PathBuf,
+    status: String,
+    report_count: usize,
+    valid_report_count: usize,
+    invalid_report_count: usize,
+    selected: Option<ReportListEntry>,
+    errors: Vec<String>,
+}
+
+impl ReportLatestSummary {
+    fn is_ok(&self) -> bool {
+        self.errors.is_empty()
+    }
 }
 
 impl ReportListSummary {
@@ -915,6 +950,8 @@ fn build_report_list_entry(path: PathBuf) -> ReportListEntry {
         topology_id: inspected.summary.topology_id,
         fixture_id: inspected.summary.fixture_id,
         test_id: inspected.summary.test_id,
+        started_at: inspected.summary.started_at,
+        finished_at: inspected.summary.finished_at,
         validation_status: inspected.summary.validation_status,
         result: inspected.summary.result,
         peer_count: inspected.summary.peer_count,
@@ -940,6 +977,72 @@ fn list_reports(target: PathBuf) -> ReportListSummary {
     }
 
     summary
+}
+
+fn latest_report_sort_key(report: &ReportListEntry) -> (Option<&str>, Option<&str>, String) {
+    (
+        report.finished_at.as_deref(),
+        report.started_at.as_deref(),
+        report.path.to_string_lossy().into_owned(),
+    )
+}
+
+fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
+    if !summary.is_ok() {
+        return ReportLatestSummary {
+            root: summary.root,
+            status: "failed".to_string(),
+            report_count: summary.report_count,
+            valid_report_count: summary.valid_report_count,
+            invalid_report_count: summary.invalid_report_count,
+            selected: None,
+            errors: summary.errors,
+        };
+    }
+
+    if summary.report_count == 0 {
+        return ReportLatestSummary {
+            root: summary.root,
+            status: "failed".to_string(),
+            report_count: 0,
+            valid_report_count: 0,
+            invalid_report_count: 0,
+            selected: None,
+            errors: vec!["no reports found under target".to_string()],
+        };
+    }
+
+    let selected = summary
+        .reports
+        .iter()
+        .filter(|report| report.status == "ok")
+        .max_by_key(|report| latest_report_sort_key(report))
+        .cloned();
+
+    match selected {
+        Some(selected) => ReportLatestSummary {
+            root: summary.root,
+            status: if summary.invalid_report_count > 0 {
+                "warning".to_string()
+            } else {
+                "ok".to_string()
+            },
+            report_count: summary.report_count,
+            valid_report_count: summary.valid_report_count,
+            invalid_report_count: summary.invalid_report_count,
+            selected: Some(selected),
+            errors: Vec::new(),
+        },
+        None => ReportLatestSummary {
+            root: summary.root,
+            status: "failed".to_string(),
+            report_count: summary.report_count,
+            valid_report_count: summary.valid_report_count,
+            invalid_report_count: summary.invalid_report_count,
+            selected: None,
+            errors: vec!["no valid reports found under target".to_string()],
+        },
+    }
 }
 
 fn print_report_text(summary: &ReportInspectSummary) -> i32 {
@@ -1025,6 +1128,9 @@ fn print_report_list_text(summary: &ReportListSummary) -> i32 {
         if let Some(run_id) = &report.run_id {
             print!(" run_id={run_id}");
         }
+        if let Some(finished_at) = &report.finished_at {
+            print!(" finished_at={finished_at}");
+        }
         if let Some(result) = &report.result {
             print!(" result={result}");
         }
@@ -1049,6 +1155,95 @@ fn print_report_list_text(summary: &ReportListSummary) -> i32 {
     }
 }
 
+fn print_report_latest_text(summary: &ReportLatestSummary) -> i32 {
+    println!("reports root: {}", summary.root.display());
+    println!("status: {}", summary.status);
+    println!("reports: {}", summary.report_count);
+    println!("valid reports: {}", summary.valid_report_count);
+    println!("invalid reports: {}", summary.invalid_report_count);
+
+    if let Some(selected) = &summary.selected {
+        println!("selected report: {}", selected.path.display());
+        if let Some(run_id) = &selected.run_id {
+            println!("run id: {run_id}");
+        }
+        if let Some(fixture_id) = &selected.fixture_id {
+            println!("fixture id: {fixture_id}");
+        }
+        if let Some(test_id) = &selected.test_id {
+            println!("test id: {test_id}");
+        }
+        if let Some(started_at) = &selected.started_at {
+            println!("started at: {started_at}");
+        }
+        if let Some(finished_at) = &selected.finished_at {
+            println!("finished at: {finished_at}");
+        }
+        if let Some(validation_status) = &selected.validation_status {
+            println!("validation status: {validation_status}");
+        }
+        if let Some(result) = &selected.result {
+            println!("result: {result}");
+        }
+        println!("peers: {}", selected.peer_count);
+        println!("events: {}", selected.event_count);
+        println!("failures: {}", selected.failure_count);
+    }
+
+    if summary.is_ok() {
+        println!("report latest: {}", summary.status);
+        0
+    } else {
+        println!("report latest: failed");
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    }
+}
+
+fn print_report_latest_json(summary: &ReportLatestSummary) -> Result<i32, CliError> {
+    let selected = summary.selected.as_ref().map(|report| {
+        serde_json::json!({
+            "path": report.path,
+            "status": report.status,
+            "run_id": report.run_id,
+            "topology_id": report.topology_id,
+            "fixture_id": report.fixture_id,
+            "test_id": report.test_id,
+            "started_at": report.started_at,
+            "finished_at": report.finished_at,
+            "validation_status": report.validation_status,
+            "result": report.result,
+            "peer_count": report.peer_count,
+            "event_count": report.event_count,
+            "failure_count": report.failure_count,
+            "parse_error": report.parse_error,
+        })
+    });
+    let json = serde_json::json!({
+        "root": summary.root,
+        "status": summary.status,
+        "report_count": summary.report_count,
+        "valid_report_count": summary.valid_report_count,
+        "invalid_report_count": summary.invalid_report_count,
+        "selected": selected,
+        "errors": summary.errors,
+    });
+
+    match serde_json::to_string_pretty(&json) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                Ok(0)
+            } else {
+                Ok(1)
+            }
+        }
+        Err(source) => Err(CliError::serialization("latest report summary", source)),
+    }
+}
+
 fn print_report_list_json(summary: &ReportListSummary) -> Result<i32, CliError> {
     let reports = summary
         .reports
@@ -1061,6 +1256,8 @@ fn print_report_list_json(summary: &ReportListSummary) -> Result<i32, CliError> 
                 "topology_id": report.topology_id,
                 "fixture_id": report.fixture_id,
                 "test_id": report.test_id,
+                "started_at": report.started_at,
+                "finished_at": report.finished_at,
                 "validation_status": report.validation_status,
                 "result": report.result,
                 "peer_count": report.peer_count,
@@ -1399,6 +1596,14 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
             report_list(PathBuf::from(target), args.json)
         }
+        Some(ReportSubcommand::Latest(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "report latest") {
+                return Err(CliError::usage(message));
+            }
+
+            let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
+            report_latest(PathBuf::from(target), args.json)
+        }
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
             Err(CliError::usage(format!(
@@ -1585,6 +1790,15 @@ fn report_list(target: PathBuf, json: bool) -> Result<i32, CliError> {
         print_report_list_json(&summary)
     } else {
         Ok(print_report_list_text(&summary))
+    }
+}
+
+fn report_latest(target: PathBuf, json: bool) -> Result<i32, CliError> {
+    let summary = latest_report(list_reports(target));
+    if json {
+        print_report_latest_json(&summary)
+    } else {
+        Ok(print_report_latest_text(&summary))
     }
 }
 
