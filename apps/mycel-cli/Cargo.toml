@@ -13,3 +13,4 @@ path = "src/main.rs"
 [dependencies]
 mycel-core = { path = "../../crates/mycel-core" }
 mycel-sim = { path = "../../crates/mycel-sim" }
+serde_json = "1.0"

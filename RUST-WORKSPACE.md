@@ -42,6 +42,7 @@ Current validate examples:
 - `cargo run -p mycel-cli -- validate`
 - `cargo run -p mycel-cli -- validate fixtures/object-sets/signature-mismatch/fixture.json`
 - `cargo run -p mycel-cli -- validate sim/tests/three-peer-consistency.example.json`
+- `cargo run -p mycel-cli -- validate sim/tests/three-peer-consistency.example.json --json`
 
 Recommended next:
 

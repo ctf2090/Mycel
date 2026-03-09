@@ -14,6 +14,9 @@ fn print_usage() {
     println!("  validate   Validate the repo root, one file, or one supported directory");
     println!("  help       Show this message");
     println!();
+    println!("Validate options:");
+    println!("  --json     Emit machine-readable validation output");
+    println!();
     println!("Planned next commands:");
     println!("  sim        Run a simulator test case");
 }
@@ -30,9 +33,7 @@ fn print_info() {
     println!("reports: {}", paths.reports_root);
 }
 
-fn validate(target: PathBuf) -> i32 {
-    let summary = validate_path(&target);
-
+fn print_validation_text(summary: &mycel_sim::validate::ValidationSummary) -> i32 {
     if let Some(root) = &summary.root {
         println!("repo root: {}", root.display());
     }
@@ -57,17 +58,56 @@ fn validate(target: PathBuf) -> i32 {
     }
 }
 
+fn print_validation_json(summary: &mycel_sim::validate::ValidationSummary) -> i32 {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                0
+            } else {
+                1
+            }
+        }
+        Err(err) => {
+            eprintln!("failed to serialize validation summary: {err}");
+            2
+        }
+    }
+}
+
+fn validate(target: PathBuf, json: bool) -> i32 {
+    let summary = validate_path(&target);
+
+    if json {
+        print_validation_json(&summary)
+    } else {
+        print_validation_text(&summary)
+    }
+}
+
 fn main() {
     let mut args = env::args().skip(1);
 
     match args.next().as_deref() {
         Some("info") => print_info(),
         Some("validate") => {
-            let target = args
-                .next()
-                .map(PathBuf::from)
-                .unwrap_or_else(|| PathBuf::from("."));
-            std::process::exit(validate(target));
+            let mut target = PathBuf::from(".");
+            let mut json = false;
+
+            for arg in args {
+                if arg == "--json" {
+                    json = true;
+                } else if target == PathBuf::from(".") {
+                    target = PathBuf::from(arg);
+                } else {
+                    eprintln!("unexpected validate argument: {arg}");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                }
+            }
+
+            std::process::exit(validate(target, json));
         }
         Some("help") | None => print_usage(),
         Some(other) => {
