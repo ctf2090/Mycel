@@ -39,6 +39,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 
 - [docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.en.md](./docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.en.md): Design draft for a protocol-governed multi-view reader model
 - [docs/design-notes/DESIGN-NOTES.two-maintainer-role.en.md](./docs/design-notes/DESIGN-NOTES.two-maintainer-role.en.md): Design draft for splitting editor and view maintainer authority
+- [docs/design-notes/DESIGN-NOTES.maintainer-conflict-flow.en.md](./docs/design-notes/DESIGN-NOTES.maintainer-conflict-flow.en.md): Design draft for preserving and governing maintainer conflicts over rival document ideas
 - [docs/design-notes/DESIGN-NOTES.mycel-app-layer.en.md](./docs/design-notes/DESIGN-NOTES.mycel-app-layer.en.md): Design draft for separating client, runtime, and effect responsibilities
 - [docs/design-notes/DESIGN-NOTES.qa-app-layer.en.md](./docs/design-notes/DESIGN-NOTES.qa-app-layer.en.md): Design draft for a Q&A app carried by Mycel
 - [docs/design-notes/DESIGN-NOTES.qa-minimal-schema.en.md](./docs/design-notes/DESIGN-NOTES.qa-minimal-schema.en.md): Minimal schema draft for a Q&A app
