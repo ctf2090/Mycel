@@ -28,35 +28,35 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 
 ### Specs
 
-- Protocol: [EN](./PROTOCOL.en.md) | [繁中](./PROTOCOL.zh-TW.md)
-- Wire Protocol: [EN](./WIRE-PROTOCOL.en.md) | [繁中](./WIRE-PROTOCOL.zh-TW.md)
-- Implementation Checklist: [EN](./IMPLEMENTATION-CHECKLIST.en.md) | [繁中](./IMPLEMENTATION-CHECKLIST.zh-TW.md)
-- Fund Auto-disbursement Profile v0.1: [EN](./PROFILE.fund-auto-disbursement-v0.1.en.md) | [繁中](./PROFILE.fund-auto-disbursement-v0.1.zh-TW.md)
-- Mycel over Tor Profile v0.1: [EN](./PROFILE.mycel-over-tor-v0.1.en.md) | [繁中](./PROFILE.mycel-over-tor-v0.1.zh-TW.md)
+- [PROTOCOL.en.md](./PROTOCOL.en.md): Full protocol specification
+- [WIRE-PROTOCOL.en.md](./WIRE-PROTOCOL.en.md): Wire protocol draft
+- [IMPLEMENTATION-CHECKLIST.en.md](./IMPLEMENTATION-CHECKLIST.en.md): Implementation checklist for a minimal v0.1 client
+- [PROFILE.fund-auto-disbursement-v0.1.en.md](./PROFILE.fund-auto-disbursement-v0.1.en.md): Narrow v0.1 profile draft for automatic fund disbursement
+- [PROFILE.mycel-over-tor-v0.1.en.md](./PROFILE.mycel-over-tor-v0.1.en.md): Narrow v0.1 deployment profile for Tor-routed Mycel transport
 
 ### Design Notes
 
-- Client Non-discretionary Multi-view: [EN](./DESIGN-NOTES.client-non-discretionary-multi-view.en.md) | [繁中](./DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md)
-- Two-Maintainer-Role Model: [EN](./DESIGN-NOTES.two-maintainer-role.en.md) | [繁中](./DESIGN-NOTES.two-maintainer-role.zh-TW.md)
-- Mycel App Layer: [EN](./DESIGN-NOTES.mycel-app-layer.en.md) | [繁中](./DESIGN-NOTES.mycel-app-layer.zh-TW.md)
-- Q&A App Layer: [EN](./DESIGN-NOTES.qa-app-layer.en.md) | [繁中](./DESIGN-NOTES.qa-app-layer.zh-TW.md)
-- Q&A Minimal Schema: [EN](./DESIGN-NOTES.qa-minimal-schema.en.md) | [繁中](./DESIGN-NOTES.qa-minimal-schema.zh-TW.md)
-- Donation App Layer: [EN](./DESIGN-NOTES.donation-app-layer.en.md) | [繁中](./DESIGN-NOTES.donation-app-layer.zh-TW.md)
-- Canonical Text Profile: [EN](./DESIGN-NOTES.canonical-text-profile.en.md) | [繁中](./DESIGN-NOTES.canonical-text-profile.zh-TW.md)
-- Interpretation Dispute Model: [EN](./DESIGN-NOTES.interpretation-dispute-model.en.md) | [繁中](./DESIGN-NOTES.interpretation-dispute-model.zh-TW.md)
-- Auto-signer Consent Model: [EN](./DESIGN-NOTES.auto-signer-consent-model.en.md) | [繁中](./DESIGN-NOTES.auto-signer-consent-model.zh-TW.md)
-- Policy-driven Threshold Custody: [EN](./DESIGN-NOTES.policy-driven-threshold-custody.en.md) | [繁中](./DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md)
-- Mycel Anonymity Model: [EN](./DESIGN-NOTES.mycel-anonymity-model.en.md) | [繁中](./DESIGN-NOTES.mycel-anonymity-model.zh-TW.md)
-- First-client Scope v0.1: [EN](./DESIGN-NOTES.first-client-scope-v0.1.en.md) | [繁中](./DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md)
-- Mycel Full-stack Map: [EN](./DESIGN-NOTES.mycel-full-stack-map.en.md) | [繁中](./DESIGN-NOTES.mycel-full-stack-map.zh-TW.md)
-- Mycel Protocol Upgrade Philosophy: [EN](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md) | [繁中](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md)
-- Peer Discovery Model: [EN](./DESIGN-NOTES.peer-discovery-model.en.md) | [繁中](./DESIGN-NOTES.peer-discovery-model.zh-TW.md)
-- Sensor-triggered Donation: [EN](./DESIGN-NOTES.sensor-triggered-donation.en.md) | [繁中](./DESIGN-NOTES.sensor-triggered-donation.zh-TW.md)
-- Governance History Security: [EN](./DESIGN-NOTES.governance-history-security.en.md) | [繁中](./DESIGN-NOTES.governance-history-security.zh-TW.md)
+- [DESIGN-NOTES.client-non-discretionary-multi-view.en.md](./DESIGN-NOTES.client-non-discretionary-multi-view.en.md): Design draft for a protocol-governed multi-view reader model
+- [DESIGN-NOTES.two-maintainer-role.en.md](./DESIGN-NOTES.two-maintainer-role.en.md): Design draft for splitting editor and view maintainer authority
+- [DESIGN-NOTES.mycel-app-layer.en.md](./DESIGN-NOTES.mycel-app-layer.en.md): Design draft for separating client, runtime, and effect responsibilities
+- [DESIGN-NOTES.qa-app-layer.en.md](./DESIGN-NOTES.qa-app-layer.en.md): Design draft for a Q&A app carried by Mycel
+- [DESIGN-NOTES.qa-minimal-schema.en.md](./DESIGN-NOTES.qa-minimal-schema.en.md): Minimal schema draft for a Q&A app
+- [DESIGN-NOTES.donation-app-layer.en.md](./DESIGN-NOTES.donation-app-layer.en.md): Design draft for a donation-oriented app carried by Mycel
+- [DESIGN-NOTES.canonical-text-profile.en.md](./DESIGN-NOTES.canonical-text-profile.en.md): Design draft for a neutral canonical-text profile with witnesses, anchors, commentary, and accepted readings
+- [DESIGN-NOTES.interpretation-dispute-model.en.md](./DESIGN-NOTES.interpretation-dispute-model.en.md): Design draft for preserving and governing rival interpretations without overwriting root text
+- [DESIGN-NOTES.auto-signer-consent-model.en.md](./DESIGN-NOTES.auto-signer-consent-model.en.md): Design draft for enrollment and consent boundaries in automatic signer systems
+- [DESIGN-NOTES.policy-driven-threshold-custody.en.md](./DESIGN-NOTES.policy-driven-threshold-custody.en.md): Design draft for policy-authorized automatic threshold custody
+- [DESIGN-NOTES.mycel-anonymity-model.en.md](./DESIGN-NOTES.mycel-anonymity-model.en.md): Design draft for analyzing anonymity across transport, metadata, client, runtime, and replication layers
+- [DESIGN-NOTES.first-client-scope-v0.1.en.md](./DESIGN-NOTES.first-client-scope-v0.1.en.md): Design draft for the narrow first-client target and what it must deliberately defer
+- [DESIGN-NOTES.mycel-full-stack-map.en.md](./DESIGN-NOTES.mycel-full-stack-map.en.md): Design draft mapping the current Mycel documents into one layered full-stack system view
+- [DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md): Design draft for keeping protocol core changes conservative while moving faster in profiles and design notes
+- [DESIGN-NOTES.peer-discovery-model.en.md](./DESIGN-NOTES.peer-discovery-model.en.md): Design draft for bounded peer discovery across public, restricted, and Tor-oriented deployments
+- [DESIGN-NOTES.sensor-triggered-donation.en.md](./DESIGN-NOTES.sensor-triggered-donation.en.md): Design draft for a sensor-triggered donation flow
+- [DESIGN-NOTES.governance-history-security.en.md](./DESIGN-NOTES.governance-history-security.en.md): Design draft for securing governance history
 
 ### Meta
 
-- Project Intent: [EN](./PROJECT-INTENT.md) | [繁中](./PROJECT-INTENT.zh-TW.md)
+- [PROJECT-INTENT.md](./PROJECT-INTENT.md): Project intent and protocol-boundary notes
 - [AGENTS.md](./AGENTS.md): Repository collaboration rules
 
 ## Near-Term Priorities

@@ -28,35 +28,35 @@ Mycel 可以承載各種內容領域；協議本身保持中立且純技術化�
 
 ### Specs
 
-- Protocol： [EN](./PROTOCOL.en.md) | [繁中](./PROTOCOL.zh-TW.md)
-- Wire Protocol： [EN](./WIRE-PROTOCOL.en.md) | [繁中](./WIRE-PROTOCOL.zh-TW.md)
-- Implementation Checklist： [EN](./IMPLEMENTATION-CHECKLIST.en.md) | [繁中](./IMPLEMENTATION-CHECKLIST.zh-TW.md)
-- Fund Auto-disbursement Profile v0.1： [EN](./PROFILE.fund-auto-disbursement-v0.1.en.md) | [繁中](./PROFILE.fund-auto-disbursement-v0.1.zh-TW.md)
-- Mycel over Tor Profile v0.1： [EN](./PROFILE.mycel-over-tor-v0.1.en.md) | [繁中](./PROFILE.mycel-over-tor-v0.1.zh-TW.md)
+- [PROTOCOL.zh-TW.md](./PROTOCOL.zh-TW.md)：完整協議規格
+- [WIRE-PROTOCOL.zh-TW.md](./WIRE-PROTOCOL.zh-TW.md)：wire protocol 草案
+- [IMPLEMENTATION-CHECKLIST.zh-TW.md](./IMPLEMENTATION-CHECKLIST.zh-TW.md)：最小 v0.1 client 實作檢查清單
+- [PROFILE.fund-auto-disbursement-v0.1.zh-TW.md](./PROFILE.fund-auto-disbursement-v0.1.zh-TW.md)：fund auto-disbursement v0.1 profile 草案
+- [PROFILE.mycel-over-tor-v0.1.zh-TW.md](./PROFILE.mycel-over-tor-v0.1.zh-TW.md)：Mycel over Tor v0.1 profile 草案
 
 ### Design Notes
 
-- Client Non-discretionary Multi-view： [EN](./DESIGN-NOTES.client-non-discretionary-multi-view.en.md) | [繁中](./DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md)
-- Two-Maintainer-Role Model： [EN](./DESIGN-NOTES.two-maintainer-role.en.md) | [繁中](./DESIGN-NOTES.two-maintainer-role.zh-TW.md)
-- Mycel App Layer： [EN](./DESIGN-NOTES.mycel-app-layer.en.md) | [繁中](./DESIGN-NOTES.mycel-app-layer.zh-TW.md)
-- Q&A App Layer： [EN](./DESIGN-NOTES.qa-app-layer.en.md) | [繁中](./DESIGN-NOTES.qa-app-layer.zh-TW.md)
-- Q&A Minimal Schema： [EN](./DESIGN-NOTES.qa-minimal-schema.en.md) | [繁中](./DESIGN-NOTES.qa-minimal-schema.zh-TW.md)
-- Donation App Layer： [EN](./DESIGN-NOTES.donation-app-layer.en.md) | [繁中](./DESIGN-NOTES.donation-app-layer.zh-TW.md)
-- Canonical Text Profile： [EN](./DESIGN-NOTES.canonical-text-profile.en.md) | [繁中](./DESIGN-NOTES.canonical-text-profile.zh-TW.md)
-- Interpretation Dispute Model： [EN](./DESIGN-NOTES.interpretation-dispute-model.en.md) | [繁中](./DESIGN-NOTES.interpretation-dispute-model.zh-TW.md)
-- Auto-signer Consent Model： [EN](./DESIGN-NOTES.auto-signer-consent-model.en.md) | [繁中](./DESIGN-NOTES.auto-signer-consent-model.zh-TW.md)
-- Policy-driven Threshold Custody： [EN](./DESIGN-NOTES.policy-driven-threshold-custody.en.md) | [繁中](./DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md)
-- Mycel Anonymity Model： [EN](./DESIGN-NOTES.mycel-anonymity-model.en.md) | [繁中](./DESIGN-NOTES.mycel-anonymity-model.zh-TW.md)
-- First-client Scope v0.1： [EN](./DESIGN-NOTES.first-client-scope-v0.1.en.md) | [繁中](./DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md)
-- Mycel Full-stack Map： [EN](./DESIGN-NOTES.mycel-full-stack-map.en.md) | [繁中](./DESIGN-NOTES.mycel-full-stack-map.zh-TW.md)
-- Mycel Protocol Upgrade Philosophy： [EN](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md) | [繁中](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md)
-- Peer Discovery Model： [EN](./DESIGN-NOTES.peer-discovery-model.en.md) | [繁中](./DESIGN-NOTES.peer-discovery-model.zh-TW.md)
-- Sensor-triggered Donation： [EN](./DESIGN-NOTES.sensor-triggered-donation.en.md) | [繁中](./DESIGN-NOTES.sensor-triggered-donation.zh-TW.md)
-- Governance History Security： [EN](./DESIGN-NOTES.governance-history-security.en.md) | [繁中](./DESIGN-NOTES.governance-history-security.zh-TW.md)
+- [DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md](./DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md)：client-non-discretionary multi-view 設計草案
+- [DESIGN-NOTES.two-maintainer-role.zh-TW.md](./DESIGN-NOTES.two-maintainer-role.zh-TW.md)：two-maintainer-role 設計草案
+- [DESIGN-NOTES.mycel-app-layer.zh-TW.md](./DESIGN-NOTES.mycel-app-layer.zh-TW.md)：Mycel App Layer 設計草案
+- [DESIGN-NOTES.qa-app-layer.zh-TW.md](./DESIGN-NOTES.qa-app-layer.zh-TW.md)：Q&A App Layer 設計草案
+- [DESIGN-NOTES.qa-minimal-schema.zh-TW.md](./DESIGN-NOTES.qa-minimal-schema.zh-TW.md)：Q&A 最小 schema 草案
+- [DESIGN-NOTES.donation-app-layer.zh-TW.md](./DESIGN-NOTES.donation-app-layer.zh-TW.md)：Donation App Layer 設計草案
+- [DESIGN-NOTES.canonical-text-profile.zh-TW.md](./DESIGN-NOTES.canonical-text-profile.zh-TW.md)：Canonical Text Profile 設計草案
+- [DESIGN-NOTES.interpretation-dispute-model.zh-TW.md](./DESIGN-NOTES.interpretation-dispute-model.zh-TW.md)：Interpretation Dispute Model 設計草案
+- [DESIGN-NOTES.auto-signer-consent-model.zh-TW.md](./DESIGN-NOTES.auto-signer-consent-model.zh-TW.md)：auto-signer consent model 設計草案
+- [DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md](./DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md)：policy-driven threshold custody 設計草案
+- [DESIGN-NOTES.mycel-anonymity-model.zh-TW.md](./DESIGN-NOTES.mycel-anonymity-model.zh-TW.md)：Mycel anonymity model 設計草案
+- [DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md](./DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md)：first-client scope v0.1 設計草案
+- [DESIGN-NOTES.mycel-full-stack-map.zh-TW.md](./DESIGN-NOTES.mycel-full-stack-map.zh-TW.md)：Mycel full-stack map 設計草案
+- [DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md](./DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md)：Mycel protocol upgrade philosophy 設計草案
+- [DESIGN-NOTES.peer-discovery-model.zh-TW.md](./DESIGN-NOTES.peer-discovery-model.zh-TW.md)：peer discovery model 設計草案
+- [DESIGN-NOTES.sensor-triggered-donation.zh-TW.md](./DESIGN-NOTES.sensor-triggered-donation.zh-TW.md)：Sensor-triggered Donation 設計草案
+- [DESIGN-NOTES.governance-history-security.zh-TW.md](./DESIGN-NOTES.governance-history-security.zh-TW.md)：Governance History Security 設計草案
 
 ### Meta
 
-- Project Intent： [EN](./PROJECT-INTENT.md) | [繁中](./PROJECT-INTENT.zh-TW.md)
+- [PROJECT-INTENT.zh-TW.md](./PROJECT-INTENT.zh-TW.md)：專案意圖與協議邊界說明
 - [AGENTS.md](./AGENTS.md)：repo 協作規則
 
 ## 近期優先事項
