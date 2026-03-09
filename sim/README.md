@@ -144,6 +144,39 @@ Minimal JSON shape example:
 }
 ```
 
+Simulator-run output notes:
+
+- text output is intended for human-readable run summaries
+- `--json` is the stable machine-consumable run summary surface
+- tools and tests should rely on fields such as `result`, `validation_status`, `report_path`, `deterministic_seed`, `seed_source`, `event_count`, `peer_count`, `verified_object_count`, `rejected_object_count`, `matched_expected_outcomes`, `scheduled_peer_order`, and `fault_plan`
+- `report_path` points to the generated full report; use the report for step-by-step `events`, `failures`, and persisted run metadata
+- `seed_source` records whether the seed was `derived`, `override`, `random`, or `auto`
+
+Minimal JSON shape example:
+
+```json
+{
+  "result": "pass",
+  "validation_status": "ok",
+  "report_path": "/workspaces/Mycel/sim/reports/out/three-peer-consistency.example.report.json",
+  "deterministic_seed": "derived:...",
+  "seed_source": "derived",
+  "peer_count": 3,
+  "event_count": 12,
+  "verified_object_count": 3,
+  "rejected_object_count": 0,
+  "matched_expected_outcomes": [
+    "sync-success"
+  ],
+  "scheduled_peer_order": [
+    "reader-A",
+    "seed-B",
+    "observer-C"
+  ],
+  "fault_plan": []
+}
+```
+
 Simulator run notes:
 
 - `sim run` currently supports only `single-process` test-cases
