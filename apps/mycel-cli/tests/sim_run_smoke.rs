@@ -61,6 +61,23 @@ fn validate_generated_report(summary: &Value) -> Value {
     validation
 }
 
+fn assert_runtime_seed_mode(summary: &Value, report: &Value, expected_source: &str) {
+    let deterministic_seed = summary["deterministic_seed"]
+        .as_str()
+        .expect("deterministic_seed should be a string");
+    assert_eq!(summary["seed_source"], expected_source);
+    assert!(
+        deterministic_seed.starts_with(&format!("{expected_source}:")),
+        "expected seed '{deterministic_seed}' to start with '{expected_source}:'"
+    );
+
+    let metadata = report["metadata"]
+        .as_object()
+        .expect("report metadata should be an object");
+    assert_eq!(metadata["seed_source"], expected_source);
+    assert_eq!(metadata["deterministic_seed"], deterministic_seed);
+}
+
 #[test]
 fn three_peer_consistency_run_produces_pass_report() {
     let output = run_sim(&[
@@ -160,6 +177,62 @@ fn hash_mismatch_run_produces_fault_plan_and_fail_result() {
 
     let validation = validate_generated_report(&summary);
     assert_eq!(validation["report_count"], 1);
+}
+
+#[test]
+fn hash_mismatch_run_supports_random_seed_mode() {
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/hash-mismatch.example.json",
+        "--json",
+        "--seed",
+        "random",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    assert_eq!(summary["validation_status"], "ok");
+
+    let report = load_report(&summary);
+    assert_runtime_seed_mode(&summary, &report, "random");
+
+    let validation = validate_generated_report(&summary);
+    assert_eq!(validation["status"], "ok");
+}
+
+#[test]
+fn hash_mismatch_run_supports_auto_seed_mode() {
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/hash-mismatch.example.json",
+        "--json",
+        "--seed",
+        "auto",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    assert_eq!(summary["validation_status"], "ok");
+
+    let report = load_report(&summary);
+    assert_runtime_seed_mode(&summary, &report, "auto");
+
+    let validation = validate_generated_report(&summary);
+    assert_eq!(validation["status"], "ok");
 }
 
 #[test]
