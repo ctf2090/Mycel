@@ -22,6 +22,7 @@
 - When the user asks for a solution or recommendation, provide multiple viable options by default, not just a single “best” answer.
 - For each option, include a one-line tradeoff (cost/time/risk/complexity) so the user can choose.
 - After completing a piece of work, end with a short evaluation of valuable next-stage work and let the user choose from multiple concrete options by default.
+- In final next-stage recommendations, put the highest-value option first by default.
 - If the right choice depends on unknown constraints, ask 1–2 short clarifying questions, but still provide a best-effort set of options based on common assumptions.
 - If you use an uncommon English term, include a brief Traditional Chinese translation the first time you use it (for example: “orchestrator (流程編排器)”).
 - For timestamps in logs/messages/docs, default to `Asia/Taipei (UTC+8)` unless the user explicitly asks for another timezone.
