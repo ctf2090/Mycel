@@ -1,0 +1,10 @@
+{
+  "fixture_id": "hash-mismatch",
+  "description": "Negative fixture where one advertised object has a mismatched body hash",
+  "seed_peer": "peer-fault",
+  "reader_peers": ["peer-reader-a"],
+  "expected_outcomes": [
+    "object-rejected-hash-mismatch",
+    "no-invalid-index-write"
+  ]
+}

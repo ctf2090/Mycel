@@ -1,0 +1,27 @@
+{
+  "topology_id": "three-peer-consistency",
+  "description": "One seed peer and two reader peers compare verified results",
+  "fixture_set": "fixtures/object-sets/minimal-valid",
+  "peers": [
+    {
+      "node_id": "node:peer-seed",
+      "role": "seed",
+      "bootstrap_peers": []
+    },
+    {
+      "node_id": "node:peer-reader-a",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-seed"]
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-seed"]
+    }
+  ],
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results"
+  ]
+}

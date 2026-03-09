@@ -1,0 +1,11 @@
+{
+  "fixture_id": "partial-want-recovery",
+  "description": "Fixture for explicit WANT-based recovery of missing objects",
+  "seed_peer": "peer-seed",
+  "reader_peers": ["peer-reader-a"],
+  "expected_outcomes": [
+    "missing-objects-requested",
+    "recovery-success",
+    "post-recovery-replay-success"
+  ]
+}

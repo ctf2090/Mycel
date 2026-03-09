@@ -1,0 +1,10 @@
+{
+  "fixture_id": "signature-mismatch",
+  "description": "Negative fixture where one object or message carries an invalid signature",
+  "seed_peer": "peer-fault",
+  "reader_peers": ["peer-reader-a"],
+  "expected_outcomes": [
+    "signature-verification-failure",
+    "no-invalid-index-write"
+  ]
+}

@@ -1,1 +1,4 @@
 AGENTS-MYCEL.md
+sim/runtime/*
+!sim/runtime/README.md
+sim/reports/out/

@@ -1,0 +1,16 @@
+{
+  "fixture_id": "minimal-valid",
+  "description": "Smallest valid seed fixture for first sync testing",
+  "seed_peer": "peer-seed",
+  "reader_peers": ["peer-reader-a"],
+  "documents": [
+    {
+      "doc_id": "doc:sample-minimal"
+    }
+  ],
+  "expected_outcomes": [
+    "sync-success",
+    "all-objects-verified",
+    "deterministic-replay"
+  ]
+}

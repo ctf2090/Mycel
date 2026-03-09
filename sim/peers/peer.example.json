@@ -1,0 +1,11 @@
+{
+  "node_id": "node:peer-reader-a",
+  "role": "reader",
+  "endpoint": "local:peer-reader-a",
+  "capabilities": ["patch-sync"],
+  "bootstrap_peers": ["node:peer-seed"],
+  "store_ref": "runtime/peer-reader-a/store",
+  "fixture_policy": {
+    "allow_fixture_load": false
+  }
+}

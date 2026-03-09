@@ -60,6 +60,11 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [PROJECT-INTENT.md](./PROJECT-INTENT.md): Project intent and protocol-boundary notes
 - [AGENTS.md](./AGENTS.md): Repository collaboration rules
 
+### Implementation Scaffold
+
+- [fixtures/README.md](./fixtures/README.md): Language-neutral fixture sets for simulator and verification testing
+- [sim/README.md](./sim/README.md): Language-neutral scaffold for peer simulator structure, topologies, tests, and reports
+
 ## Near-Term Priorities
 
 1. Build a narrow first client around sync, verification, accepted-head selection, and reader-first text rendering

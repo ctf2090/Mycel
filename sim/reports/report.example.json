@@ -1,0 +1,18 @@
+{
+  "run_id": "run:example-001",
+  "topology_id": "three-peer-consistency",
+  "fixture_id": "minimal-valid",
+  "peers": [
+    {
+      "node_id": "node:peer-reader-a",
+      "status": "ok",
+      "verified_object_ids": []
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "status": "ok",
+      "verified_object_ids": []
+    }
+  ],
+  "result": "pass"
+}
