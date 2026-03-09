@@ -5,8 +5,8 @@ use serde_json::Value;
 mod common;
 
 use common::{
-    assert_exit_code, assert_json_status, assert_stderr_contains, assert_success, load_report,
-    parse_json_stdout, run_sim, run_validate, stderr_text,
+    assert_exit_code, assert_stderr_contains, load_report, parse_json_stdout, run_sim,
+    stderr_text, validate_generated_report,
 };
 
 fn sim_run_lock() -> MutexGuard<'static, ()> {
@@ -14,16 +14,6 @@ fn sim_run_lock() -> MutexGuard<'static, ()> {
     LOCK.get_or_init(|| Mutex::new(()))
         .lock()
         .expect("sim run test lock should not be poisoned")
-}
-
-fn validate_generated_report(summary: &Value) -> Value {
-    let report_path = summary["report_path"]
-        .as_str()
-        .expect("report_path should be a string");
-    let output = run_validate(&["validate", report_path, "--json"]);
-
-    assert_success(&output);
-    assert_json_status(&output, "ok")
 }
 
 fn assert_runtime_seed_mode(summary: &Value, report: &Value, expected_source: &str) {

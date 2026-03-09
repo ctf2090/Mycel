@@ -91,6 +91,16 @@ pub fn assert_json_warning_contains(output: &Output, expected_text: &str) -> Val
     json
 }
 
+pub fn validate_generated_report(summary: &Value) -> Value {
+    let report_path = summary["report_path"]
+        .as_str()
+        .expect("report_path should be a string");
+    let output = run_validate(&["validate", report_path, "--json"]);
+
+    assert_success(&output);
+    assert_json_status(&output, "ok")
+}
+
 pub fn load_report(summary: &Value) -> Value {
     let report_path = summary["report_path"]
         .as_str()
