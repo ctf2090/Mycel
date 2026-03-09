@@ -404,6 +404,7 @@ Validation output notes:
 - tools and tests should rely on JSON fields such as `status`, `root`, `target`, `fixture_count`, `peer_count`, `topology_count`, `test_case_count`, `report_count`, `warnings`, and `errors`
 - warning-only validation still emits `status: warning`; `--strict` changes the exit behavior, not the warning payload itself
 - peer-scoped validation now loads related topologies, test cases, and reports from the same repo when they reference the selected peer node IDs
+- test-case-scoped validation now also loads related peer fixtures through the selected topology before reporting scope counts
 - for example, `validate sim/peers --json` no longer treats `peer.example.json` as an isolated standalone input; it pulls in the matching topologies and reports before deciding whether the peer is unused
 
 Minimal JSON shape example:
@@ -451,6 +452,23 @@ Minimal `validate sim/topologies --json` shape example:
   "status": "ok",
   "root": "/workspaces/Mycel",
   "target": "/workspaces/Mycel/sim/topologies",
+  "fixture_count": 4,
+  "peer_count": 1,
+  "topology_count": 4,
+  "test_case_count": 4,
+  "report_count": 5,
+  "warnings": [],
+  "errors": []
+}
+```
+
+Minimal `validate sim/tests --json` shape example:
+
+```json
+{
+  "status": "ok",
+  "root": "/workspaces/Mycel",
+  "target": "/workspaces/Mycel/sim/tests",
   "fixture_count": 4,
   "peer_count": 1,
   "topology_count": 4,
