@@ -1,0 +1,30 @@
+{
+  "$schema": "./test-case.schema.json",
+  "test_id": "three-peer-consistency",
+  "description": "Two reader peers should converge on the same verified object set and replay result.",
+  "category": "deterministic-comparison",
+  "topology": "sim/topologies/three-peer-consistency.example.json",
+  "fixture_set": "fixtures/object-sets/minimal-valid",
+  "execution_mode": "single-process",
+  "expected_result": "pass",
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results"
+  ],
+  "assertions": [
+    {
+      "assertion_id": "matching-object-sets",
+      "description": "Reader peers store the same verified canonical object IDs.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "matching-replay-results",
+      "description": "Reader peers compute the same replay result for the synced document set.",
+      "severity": "error"
+    }
+  ],
+  "notes": [
+    "Use this as the baseline deterministic comparison test case."
+  ]
+}
