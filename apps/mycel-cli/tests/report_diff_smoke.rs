@@ -125,6 +125,52 @@ fn report_diff_json_can_ignore_summary_field_differences() {
 }
 
 #[test]
+fn report_diff_json_can_select_summary_fields() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--json",
+        "--field",
+        "run-id",
+        "--field",
+        "peer-count",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["comparison"], "different");
+    assert_eq!(
+        json["selected_fields"],
+        serde_json::json!(["run-id", "peer-count"])
+    );
+    let differences = json["differences"]
+        .as_array()
+        .expect("differences should be an array");
+    assert!(
+        differences.iter().any(|entry| entry["field"] == "run_id"),
+        "expected run_id diff, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        differences
+            .iter()
+            .any(|entry| entry["field"] == "peer_count"),
+        "expected peer_count diff, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        differences
+            .iter()
+            .all(|entry| entry["field"] != "seed_source"),
+        "expected seed_source to be excluded, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn report_diff_json_can_fail_on_summary_differences() {
     let output = run_report(&[
         "report",
@@ -139,6 +185,33 @@ fn report_diff_json_can_fail_on_summary_differences() {
     let json = parse_json_stdout(&output);
     assert_eq!(json["status"], "ok");
     assert_eq!(json["comparison"], "different");
+}
+
+#[test]
+fn report_diff_events_json_can_select_event_fields() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--events",
+        "--json",
+        "--field",
+        "event-detail",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["comparison"], "different");
+    assert_eq!(json["selected_fields"], serde_json::json!(["event-detail"]));
+    assert!(
+        json["event_difference_count"]
+            .as_u64()
+            .is_some_and(|count| count >= 1),
+        "expected event-detail diff, stdout: {}",
+        stdout_text(&output)
+    );
 }
 
 #[test]
@@ -163,6 +236,25 @@ fn report_diff_events_json_can_ignore_event_field_differences() {
 }
 
 #[test]
+fn report_diff_rejects_field_with_ignore_field() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--field",
+        "run-id",
+        "--ignore-field",
+        "seed-source",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "cannot be used with");
+    assert_stderr_contains(&output, "--field <FIELD>");
+    assert_stderr_contains(&output, "--ignore-field <FIELD>");
+}
+
+#[test]
 fn report_diff_events_json_reports_match_for_same_report() {
     let output = run_report(&[
         "report",
@@ -184,6 +276,21 @@ fn report_diff_events_json_reports_match_for_same_report() {
         "expected no event differences, stdout: {}",
         stdout_text(&output)
     );
+}
+
+#[test]
+fn report_diff_text_reports_selected_fields() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--field",
+        "run-id",
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "selected fields: run-id");
 }
 
 #[test]

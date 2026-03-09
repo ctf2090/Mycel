@@ -226,10 +226,19 @@ struct ReportDiffCliArgs {
     )]
     events: bool,
     #[arg(
+        long = "field",
+        value_enum,
+        value_name = "FIELD",
+        help = "Compare only one diff field; repeat to select multiple fields",
+        conflicts_with = "ignore_fields"
+    )]
+    fields: Vec<ReportDiffIgnoreField>,
+    #[arg(
         long = "ignore-field",
         value_enum,
         value_name = "FIELD",
-        help = "Ignore one diff field; repeat to ignore multiple fields"
+        help = "Ignore one diff field; repeat to ignore multiple fields",
+        conflicts_with = "fields"
     )]
     ignore_fields: Vec<ReportDiffIgnoreField>,
     #[arg(
@@ -1075,6 +1084,7 @@ struct ReportDiffSummary {
     status: String,
     comparison: String,
     difference_count: usize,
+    selected_fields: Vec<String>,
     ignored_fields: Vec<String>,
     left: ReportDiffSideSummary,
     right: ReportDiffSideSummary,
@@ -1095,6 +1105,7 @@ struct ReportEventDiffSummary {
     status: String,
     comparison: String,
     event_difference_count: usize,
+    selected_fields: Vec<String>,
     ignored_fields: Vec<String>,
     left: ReportDiffSideSummary,
     right: ReportDiffSideSummary,
@@ -1347,6 +1358,13 @@ fn ignored_field_names(ignore_fields: &[ReportDiffIgnoreField]) -> Vec<String> {
         .collect()
 }
 
+fn selected_field_names(fields: &[ReportDiffIgnoreField]) -> Vec<String> {
+    fields
+        .iter()
+        .map(|field| field.as_str().to_string())
+        .collect()
+}
+
 fn summary_field_ignored(
     ignore_fields: &[ReportDiffIgnoreField],
     field: ReportDiffIgnoreField,
@@ -1354,21 +1372,29 @@ fn summary_field_ignored(
     ignore_fields.contains(&field)
 }
 
+fn diff_field_selected(fields: &[ReportDiffIgnoreField], field: ReportDiffIgnoreField) -> bool {
+    fields.is_empty() || fields.contains(&field)
+}
+
 fn push_report_diff_field(
     differences: &mut Vec<ReportDiffEntry>,
+    fields: &[ReportDiffIgnoreField],
     ignore_fields: &[ReportDiffIgnoreField],
     ignore_field: ReportDiffIgnoreField,
     field: &str,
     left: serde_json::Value,
     right: serde_json::Value,
 ) {
-    if !summary_field_ignored(ignore_fields, ignore_field) {
+    if diff_field_selected(fields, ignore_field)
+        && !summary_field_ignored(ignore_fields, ignore_field)
+    {
         push_report_diff_if_changed(differences, field, left, right);
     }
 }
 
 fn normalized_event_value(
     event: &ReportEvent,
+    fields: &[ReportDiffIgnoreField],
     ignore_fields: &[ReportDiffIgnoreField],
 ) -> serde_json::Value {
     let mut value = serde_json::to_value(event).unwrap_or_else(|_| serde_json::Value::Null);
@@ -1376,22 +1402,34 @@ fn normalized_event_value(
         return value;
     };
 
-    if ignore_fields.contains(&ReportDiffIgnoreField::EventPhase) {
+    if !diff_field_selected(fields, ReportDiffIgnoreField::EventPhase)
+        || ignore_fields.contains(&ReportDiffIgnoreField::EventPhase)
+    {
         object.remove("phase");
     }
-    if ignore_fields.contains(&ReportDiffIgnoreField::EventAction) {
+    if !diff_field_selected(fields, ReportDiffIgnoreField::EventAction)
+        || ignore_fields.contains(&ReportDiffIgnoreField::EventAction)
+    {
         object.remove("action");
     }
-    if ignore_fields.contains(&ReportDiffIgnoreField::EventOutcome) {
+    if !diff_field_selected(fields, ReportDiffIgnoreField::EventOutcome)
+        || ignore_fields.contains(&ReportDiffIgnoreField::EventOutcome)
+    {
         object.remove("outcome");
     }
-    if ignore_fields.contains(&ReportDiffIgnoreField::EventNodeId) {
+    if !diff_field_selected(fields, ReportDiffIgnoreField::EventNodeId)
+        || ignore_fields.contains(&ReportDiffIgnoreField::EventNodeId)
+    {
         object.remove("node_id");
     }
-    if ignore_fields.contains(&ReportDiffIgnoreField::EventObjectIds) {
+    if !diff_field_selected(fields, ReportDiffIgnoreField::EventObjectIds)
+        || ignore_fields.contains(&ReportDiffIgnoreField::EventObjectIds)
+    {
         object.remove("object_ids");
     }
-    if ignore_fields.contains(&ReportDiffIgnoreField::EventDetail) {
+    if !diff_field_selected(fields, ReportDiffIgnoreField::EventDetail)
+        || ignore_fields.contains(&ReportDiffIgnoreField::EventDetail)
+    {
         object.remove("detail");
     }
 
@@ -1420,6 +1458,7 @@ fn collect_report_diff_errors(
 fn diff_reports(
     left_path: PathBuf,
     right_path: PathBuf,
+    fields: &[ReportDiffIgnoreField],
     ignore_fields: &[ReportDiffIgnoreField],
 ) -> ReportDiffSummary {
     let left_inspected = inspect_report(left_path);
@@ -1435,6 +1474,7 @@ fn diff_reports(
             status: "failed".to_string(),
             comparison: "failed".to_string(),
             difference_count: 0,
+            selected_fields: selected_field_names(fields),
             ignored_fields: ignored_field_names(ignore_fields),
             left,
             right,
@@ -1446,6 +1486,7 @@ fn diff_reports(
     let mut differences = Vec::new();
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::RunId,
         "run_id",
@@ -1454,6 +1495,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::TopologyId,
         "topology_id",
@@ -1462,6 +1504,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::FixtureId,
         "fixture_id",
@@ -1470,6 +1513,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::TestId,
         "test_id",
@@ -1478,6 +1522,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::ExecutionMode,
         "execution_mode",
@@ -1486,6 +1531,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::StartedAt,
         "started_at",
@@ -1494,6 +1540,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::FinishedAt,
         "finished_at",
@@ -1502,6 +1549,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::ValidationStatus,
         "validation_status",
@@ -1510,6 +1558,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::DeterministicSeed,
         "deterministic_seed",
@@ -1518,6 +1567,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::SeedSource,
         "seed_source",
@@ -1526,6 +1576,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::Result,
         "result",
@@ -1534,6 +1585,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::PeerCount,
         "peer_count",
@@ -1542,6 +1594,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::EventCount,
         "event_count",
@@ -1550,6 +1603,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::FailureCount,
         "failure_count",
@@ -1558,6 +1612,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::VerifiedObjectCount,
         "verified_object_count",
@@ -1566,6 +1621,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::RejectedObjectCount,
         "rejected_object_count",
@@ -1574,6 +1630,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::MatchedExpectedOutcomes,
         "matched_expected_outcomes",
@@ -1582,6 +1639,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::ScheduledPeerOrder,
         "scheduled_peer_order",
@@ -1590,6 +1648,7 @@ fn diff_reports(
     );
     push_report_diff_field(
         &mut differences,
+        fields,
         ignore_fields,
         ReportDiffIgnoreField::FaultPlanCount,
         "fault_plan_count",
@@ -1607,6 +1666,7 @@ fn diff_reports(
         status: "ok".to_string(),
         comparison: comparison.to_string(),
         difference_count: differences.len(),
+        selected_fields: selected_field_names(fields),
         ignored_fields: ignored_field_names(ignore_fields),
         left,
         right,
@@ -1618,6 +1678,7 @@ fn diff_reports(
 fn diff_report_events(
     left_path: PathBuf,
     right_path: PathBuf,
+    fields: &[ReportDiffIgnoreField],
     ignore_fields: &[ReportDiffIgnoreField],
 ) -> ReportEventDiffSummary {
     let left_inspected = inspect_report(left_path);
@@ -1632,6 +1693,7 @@ fn diff_report_events(
             status: "failed".to_string(),
             comparison: "failed".to_string(),
             event_difference_count: 0,
+            selected_fields: selected_field_names(fields),
             ignored_fields: ignored_field_names(ignore_fields),
             left,
             right,
@@ -1662,8 +1724,8 @@ fn diff_report_events(
         let right_event = right_by_step.get(&step).cloned();
         match (&left_event, &right_event) {
             (Some(left_event), Some(right_event))
-                if normalized_event_value(left_event, ignore_fields)
-                    != normalized_event_value(right_event, ignore_fields) =>
+                if normalized_event_value(left_event, fields, ignore_fields)
+                    != normalized_event_value(right_event, fields, ignore_fields) =>
             {
                 event_differences.push(ReportEventDiffEntry {
                     step,
@@ -1702,6 +1764,7 @@ fn diff_report_events(
         status: "ok".to_string(),
         comparison: comparison.to_string(),
         event_difference_count: event_differences.len(),
+        selected_fields: selected_field_names(fields),
         ignored_fields: ignored_field_names(ignore_fields),
         left,
         right,
@@ -2825,6 +2888,7 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
                 PathBuf::from(args.right),
                 args.json,
                 args.events,
+                &args.fields,
                 &args.ignore_fields,
                 args.fail_on_diff,
             )
@@ -3065,6 +3129,9 @@ fn print_report_diff_text(summary: &ReportDiffSummary, fail_on_diff: bool) -> i3
     println!("right report: {}", summary.right.path.display());
     println!("comparison: {}", summary.comparison);
     println!("difference count: {}", summary.difference_count);
+    if !summary.selected_fields.is_empty() {
+        println!("selected fields: {}", summary.selected_fields.join(", "));
+    }
     if !summary.ignored_fields.is_empty() {
         println!("ignored fields: {}", summary.ignored_fields.join(", "));
     }
@@ -3097,6 +3164,9 @@ fn print_report_event_diff_text(summary: &ReportEventDiffSummary, fail_on_diff: 
     println!("right report: {}", summary.right.path.display());
     println!("comparison: {}", summary.comparison);
     println!("event difference count: {}", summary.event_difference_count);
+    if !summary.selected_fields.is_empty() {
+        println!("selected fields: {}", summary.selected_fields.join(", "));
+    }
     if !summary.ignored_fields.is_empty() {
         println!("ignored fields: {}", summary.ignored_fields.join(", "));
     }
@@ -3164,18 +3234,19 @@ fn report_diff(
     right: PathBuf,
     json: bool,
     events: bool,
+    fields: &[ReportDiffIgnoreField],
     ignore_fields: &[ReportDiffIgnoreField],
     fail_on_diff: bool,
 ) -> Result<i32, CliError> {
     if events {
-        let summary = diff_report_events(left, right, ignore_fields);
+        let summary = diff_report_events(left, right, fields, ignore_fields);
         if json {
             print_report_event_diff_json(&summary, fail_on_diff)
         } else {
             Ok(print_report_event_diff_text(&summary, fail_on_diff))
         }
     } else {
-        let summary = diff_reports(left, right, ignore_fields);
+        let summary = diff_reports(left, right, fields, ignore_fields);
         if json {
             print_report_diff_json(&summary, fail_on_diff)
         } else {

@@ -41,6 +41,7 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report>`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --json`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --fail-on-diff`
+- `cargo run -p mycel-cli -- report diff <left-report> <right-report> --field run-id`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --ignore-field run-id`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --events`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --events --json`
@@ -116,6 +117,7 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --json`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --fail-on-diff`
+- `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --field run-id --field peer-count`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --ignore-field run-id --ignore-field seed-source`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --events`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --events --json`
@@ -170,9 +172,11 @@ Report-inspection output notes:
 - `report diff <left> <right>` compares two reports at the summary level and prints a human-readable difference list
 - `report diff <left> <right> --json` emits a stable diff summary with `status`, `comparison`, `difference_count`, `left`, `right`, `differences`, and `errors`
 - `report diff <left> <right> --fail-on-diff` keeps the same payload but exits with failure when `comparison` is `different`
+- `report diff <left> <right> --field <field>` turns diffing into an allowlist mode; repeat the flag to compare multiple specific fields
 - `report diff <left> <right> --ignore-field <field>` removes specific fields from comparison; repeat the flag to ignore multiple fields
 - `report diff <left> <right> --events` compares event traces step-by-step and prints event-level differences instead of summary-field differences
 - `report diff <left> <right> --events --json` emits `event_difference_count` plus `event_differences[]`, where each entry is `changed`, `left_only`, or `right_only`
+- `--field` and `--ignore-field` are mutually exclusive
 - `status: ok` means both inputs parsed as report targets successfully; use `comparison: match|different` to tell whether the summaries differ
 - the default diff mode compares stable summary fields such as IDs, execution metadata, counts, expected outcomes, scheduled peer order, and fault-plan count
 - event diff currently aligns trace entries by `step`
