@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
 use mycel_core::head::inspect_heads_from_path;
 use mycel_core::head::HeadInspectSummary;
 use mycel_core::verify::{verify_object_path, ObjectVerificationSummary};
@@ -16,6 +16,7 @@ use mycel_sim::validate::validate_path;
 #[derive(Parser)]
 #[command(
     name = "mycel",
+    about = "Mycel CLI for validation, inspection, and simulator workflows.",
     disable_version_flag = true,
     disable_help_subcommand = true
 )]
@@ -26,11 +27,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum CliCommand {
+    #[command(about = "Inspect accepted-head selection from a local input bundle")]
     Head(HeadCliArgs),
+    #[command(about = "Show workspace and simulator scaffold information")]
     Info,
+    #[command(about = "Verify one Mycel object file")]
     Object(ObjectCliArgs),
+    #[command(about = "Inspect one simulator report")]
     Report(ReportCliArgs),
+    #[command(about = "Run a simulator test case")]
     Sim(SimCliArgs),
+    #[command(about = "Validate the repo root, one file, or one supported directory")]
     Validate(ValidateCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -44,6 +51,7 @@ struct HeadCliArgs {
 
 #[derive(Subcommand)]
 enum HeadSubcommand {
+    #[command(about = "Inspect one document's accepted head")]
     Inspect(HeadInspectCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -51,13 +59,17 @@ enum HeadSubcommand {
 
 #[derive(Args)]
 struct HeadInspectCliArgs {
-    #[arg(allow_hyphen_values = true)]
+    #[arg(
+        value_name = "DOC_ID",
+        help = "Document identifier to inspect",
+        allow_hyphen_values = true
+    )]
     doc_id: Option<String>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "PATH_OR_FIXTURE", help = "Input bundle path or repo fixture name", num_args = 0..=1)]
     input: Option<Option<String>>,
-    #[arg(long)]
+    #[arg(long, help = "Emit machine-readable head inspection output")]
     json: bool,
-    #[arg(allow_hyphen_values = true)]
+    #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
 
@@ -69,6 +81,7 @@ struct ObjectCliArgs {
 
 #[derive(Subcommand)]
 enum ObjectSubcommand {
+    #[command(about = "Verify one object file")]
     Verify(ObjectVerifyCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -76,11 +89,15 @@ enum ObjectSubcommand {
 
 #[derive(Args)]
 struct ObjectVerifyCliArgs {
-    #[arg(allow_hyphen_values = true)]
+    #[arg(
+        value_name = "PATH",
+        help = "Object file to verify",
+        allow_hyphen_values = true
+    )]
     target: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Emit machine-readable object verification output")]
     json: bool,
-    #[arg(allow_hyphen_values = true)]
+    #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
 
@@ -92,6 +109,7 @@ struct ReportCliArgs {
 
 #[derive(Subcommand)]
 enum ReportSubcommand {
+    #[command(about = "Inspect one simulator report")]
     Inspect(ReportInspectCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -99,33 +117,37 @@ enum ReportSubcommand {
 
 #[derive(Args)]
 struct ReportInspectCliArgs {
-    #[arg(allow_hyphen_values = true)]
+    #[arg(
+        value_name = "PATH",
+        help = "Simulator report to inspect",
+        allow_hyphen_values = true
+    )]
     target: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Emit machine-readable report inspection output")]
     json: bool,
-    #[arg(long)]
+    #[arg(long, help = "Show only report events")]
     events: bool,
-    #[arg(long)]
+    #[arg(long, help = "Show only report failures")]
     failures: bool,
-    #[arg(long)]
+    #[arg(long, help = "Emit the full raw report (requires --json)")]
     full: bool,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one phase", num_args = 0..=1)]
     phase: Option<Option<String>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one action", num_args = 0..=1)]
     action: Option<Option<String>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one outcome", num_args = 0..=1)]
     outcome: Option<Option<String>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", num_args = 0..=1)]
     step: Option<Option<String>>,
-    #[arg(long = "step-range", num_args = 0..=1)]
+    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", num_args = 0..=1)]
     step_range: Option<Option<String>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "N", help = "Keep the first N matching events", num_args = 0..=1)]
     first: Option<Option<String>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "N", help = "Keep the last N matching events", num_args = 0..=1)]
     last: Option<Option<String>>,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "NODE_ID", help = "Filter event or failure inspection to one node", num_args = 0..=1)]
     node: Option<Option<String>>,
-    #[arg(allow_hyphen_values = true)]
+    #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
 
@@ -137,6 +159,7 @@ struct SimCliArgs {
 
 #[derive(Subcommand)]
 enum SimSubcommand {
+    #[command(about = "Run one test case and write a report")]
     Run(SimRunCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -144,73 +167,42 @@ enum SimSubcommand {
 
 #[derive(Args)]
 struct SimRunCliArgs {
-    #[arg(allow_hyphen_values = true)]
+    #[arg(
+        value_name = "PATH",
+        help = "Simulator test case to run",
+        allow_hyphen_values = true
+    )]
     target: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Emit machine-readable run output")]
     json: bool,
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, value_name = "SEED", help = "Use a fixed seed, or 'random' / 'auto' to generate one", num_args = 0..=1)]
     seed: Option<Option<String>>,
-    #[arg(allow_hyphen_values = true)]
+    #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
 
 #[derive(Args)]
 struct ValidateCliArgs {
-    #[arg(allow_hyphen_values = true)]
+    #[arg(
+        value_name = "PATH",
+        help = "Repo root, file, or supported directory to validate",
+        allow_hyphen_values = true
+    )]
     target: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Emit machine-readable validation output")]
     json: bool,
-    #[arg(long)]
+    #[arg(long, help = "Treat warnings as failures")]
     strict: bool,
-    #[arg(allow_hyphen_values = true)]
+    #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
 
 fn print_usage() {
-    println!("mycel <command> [path]");
+    let mut command = Cli::command();
+    command
+        .print_long_help()
+        .expect("top-level help should render");
     println!();
-    println!("Commands:");
-    println!("  head       Inspect accepted-head selection from a local input bundle");
-    println!("  info       Show workspace and simulator scaffold information");
-    println!("  object     Verify one Mycel object file");
-    println!("  report     Inspect one simulator report");
-    println!("  sim        Run a simulator test case");
-    println!("  validate   Validate the repo root, one file, or one supported directory");
-    println!("  help       Show this message");
-    println!();
-    println!("Head options:");
-    println!("  inspect <doc_id> --input <path|fixture>  Inspect one document's accepted head");
-    println!(
-        "  --json                                   Emit machine-readable head inspection output"
-    );
-    println!();
-    println!("Object options:");
-    println!("  verify <path>  Verify one object file");
-    println!("  --json         Emit machine-readable object verification output");
-    println!();
-    println!("Report options:");
-    println!("  inspect <path>  Inspect one simulator report");
-    println!("  --json          Emit machine-readable report inspection output");
-    println!("  --events        Show only report events");
-    println!("  --failures      Show only report failures");
-    println!("  --full          Emit the full raw report (requires --json)");
-    println!("  --phase <name>  Filter event inspection to one phase");
-    println!("  --action <name> Filter event inspection to one action");
-    println!("  --outcome <name> Filter event inspection to one outcome");
-    println!("  --step <n>      Filter event inspection to one step number");
-    println!("  --step-range <a>:<b>  Filter event inspection to one inclusive step range");
-    println!("  --first <n>     Filter event inspection to the first N matching events");
-    println!("  --last <n>      Filter event inspection to the last N matching events");
-    println!("  --node <id>     Filter event or failure inspection to one node");
-    println!();
-    println!("Sim options:");
-    println!("  run <path> Run one test-case and write a report to sim/reports/out/");
-    println!("  --json     Emit machine-readable run output");
-    println!("  --seed     Use a fixed seed, or 'random' / 'auto' to generate one");
-    println!();
-    println!("Validate options:");
-    println!("  --json     Emit machine-readable validation output");
-    println!("  --strict   Treat warnings as failures");
 }
 
 fn print_info() {
@@ -1404,7 +1396,14 @@ fn main() {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(err) => {
-            eprintln!("{err}");
+            if matches!(
+                err.kind(),
+                clap::error::ErrorKind::DisplayHelp | clap::error::ErrorKind::DisplayVersion
+            ) {
+                err.print().expect("clap help should print");
+            } else {
+                eprintln!("{err}");
+            }
             std::process::exit(err.exit_code());
         }
     };

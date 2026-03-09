@@ -10,7 +10,7 @@ mod common;
 
 use common::{
     assert_exit_code, assert_stderr_contains, assert_stdout_contains, assert_success,
-    create_temp_dir, parse_json_stdout, repo_root, run_mycel, stdout_text,
+    assert_top_level_help, create_temp_dir, parse_json_stdout, repo_root, run_mycel, stdout_text,
 };
 
 struct TempInputFile {
@@ -693,7 +693,7 @@ fn head_inspect_requires_input_path() {
 
     assert_exit_code(&output, 2);
     assert_stderr_contains(&output, "missing --input for head inspect");
-    assert_stdout_contains(&output, "Head options:");
+    assert_top_level_help(&stdout_text(&output));
 }
 
 #[test]
@@ -714,5 +714,5 @@ fn head_rejects_unknown_subcommand() {
 
     assert_exit_code(&output, 2);
     assert_stderr_contains(&output, "unknown head subcommand: bogus");
-    assert_stdout_contains(&output, "Head options:");
+    assert_top_level_help(&stdout_text(&output));
 }

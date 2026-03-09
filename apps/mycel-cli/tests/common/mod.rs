@@ -187,9 +187,13 @@ pub fn assert_empty_stderr(output: &Output) {
     assert_eq!(stderr, "", "expected empty stderr, stderr: {stderr}");
 }
 
-pub fn assert_usage_sections(stdout: &str) {
+pub fn assert_top_level_help(stdout: &str) {
     assert!(
-        stdout.contains("mycel <command> [path]"),
+        stdout.contains("Mycel CLI for validation, inspection, and simulator workflows."),
+        "expected CLI description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Usage: mycel [COMMAND]"),
         "expected usage header, stdout: {stdout}"
     );
     assert!(
@@ -197,36 +201,74 @@ pub fn assert_usage_sections(stdout: &str) {
         "expected Commands section, stdout: {stdout}"
     );
     assert!(
-        stdout.contains("Head options:"),
-        "expected Head options section, stdout: {stdout}"
-    );
-    assert!(
-        stdout.contains("Object options:"),
-        "expected Object options section, stdout: {stdout}"
-    );
-    assert!(
-        stdout.contains("Report options:"),
-        "expected Report options section, stdout: {stdout}"
-    );
-    assert!(
-        stdout.contains("Sim options:"),
-        "expected Sim options section, stdout: {stdout}"
-    );
-    assert!(
-        stdout.contains("report"),
-        "expected report command in usage, stdout: {stdout}"
-    );
-    assert!(
-        stdout.contains("Validate options:"),
-        "expected Validate options section, stdout: {stdout}"
+        stdout.contains("Options:"),
+        "expected Options section, stdout: {stdout}"
     );
     assert!(
         stdout.contains("head"),
-        "expected head command in usage, stdout: {stdout}"
+        "expected head command in help, stdout: {stdout}"
     );
     assert!(
-        stdout.contains("object"),
-        "expected object command in usage, stdout: {stdout}"
+        stdout.contains("report"),
+        "expected report command in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("validate"),
+        "expected validate command in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("-h, --help"),
+        "expected help flag in help output, stdout: {stdout}"
+    );
+}
+
+pub fn assert_head_inspect_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel head inspect"),
+        "expected head inspect usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Inspect one document's accepted head"),
+        "expected head inspect description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("DOC_ID"),
+        "expected doc id argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--input"),
+        "expected input flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("PATH_OR_FIXTURE"),
+        "expected input value name in help, stdout: {stdout}"
+    );
+}
+
+pub fn assert_report_inspect_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel report inspect"),
+        "expected report inspect usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Inspect one simulator report"),
+        "expected report inspect description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--events"),
+        "expected events flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--step-range"),
+        "expected step-range flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("START:END"),
+        "expected step-range value name in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("NODE_ID"),
+        "expected node value name in help, stdout: {stdout}"
     );
 }
 

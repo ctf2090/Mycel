@@ -10,8 +10,8 @@ mod common;
 
 use common::{
     assert_empty_stderr, assert_exit_code, assert_json_status, assert_stderr_contains,
-    assert_stdout_contains, assert_success, create_temp_dir, parse_json_stdout, run_mycel,
-    stdout_text,
+    assert_stdout_contains, assert_success, assert_top_level_help, create_temp_dir,
+    parse_json_stdout, run_mycel, stdout_text,
 };
 
 struct TempObjectFile {
@@ -273,7 +273,7 @@ fn object_verify_missing_target_fails_cleanly() {
 
     assert_exit_code(&output, 2);
     assert_stderr_contains(&output, "missing object verify target");
-    assert_stdout_contains(&output, "Object options:");
+    assert_top_level_help(&stdout_text(&output));
 }
 
 #[test]
@@ -282,7 +282,7 @@ fn object_verify_unknown_subcommand_fails_cleanly() {
 
     assert_exit_code(&output, 2);
     assert_stderr_contains(&output, "unknown object subcommand: bogus");
-    assert_stdout_contains(&output, "Object options:");
+    assert_top_level_help(&stdout_text(&output));
 }
 
 #[test]
