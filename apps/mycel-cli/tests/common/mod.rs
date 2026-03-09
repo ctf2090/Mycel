@@ -48,3 +48,7 @@ pub fn load_report(summary: &Value) -> Value {
 pub fn stderr_text(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
 }
+
+pub fn stdout_text(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
