@@ -44,6 +44,7 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- report list <path> --json`
 - `cargo run -p mycel-cli -- report latest`
 - `cargo run -p mycel-cli -- report latest --json`
+- `cargo run -p mycel-cli -- report latest --full --json`
 - `cargo run -p mycel-cli -- report latest <path> --json`
 - `cargo run -p mycel-cli -- report inspect <path> --events`
 - `cargo run -p mycel-cli -- report inspect <path> --failures`
@@ -74,6 +75,7 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report list sim/reports/report.example.json --json`
 - `cargo run -p mycel-cli -- report latest`
 - `cargo run -p mycel-cli -- report latest --json`
+- `cargo run -p mycel-cli -- report latest --full --json`
 - `cargo run -p mycel-cli -- report latest sim/reports/out --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --full --json`
@@ -106,6 +108,7 @@ Report-inspection output notes:
 - parse failures inside a listing downgrade the overall list status to `warning` but do not fail the command; target resolution failures still return `status: failed`
 - `report latest` selects the newest valid report under the target and prints a human-readable summary
 - `report latest --json` emits a stable summary with `root`, `status`, counts, `selected`, and `errors`
+- `report latest --full --json` emits the selected raw report JSON without summary reshaping
 - latest selection prefers `finished_at`, then `started_at`, then path as a deterministic tie-break
 - invalid reports do not block `report latest` if at least one valid report exists; they downgrade the top-level status to `warning`
 - `report inspect <path>` prints a human-readable summary for one simulator report

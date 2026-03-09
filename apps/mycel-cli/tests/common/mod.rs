@@ -316,6 +316,10 @@ pub fn assert_report_latest_help(stdout: &str) {
         stdout.contains("--json"),
         "expected json flag in report latest help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--full"),
+        "expected full flag in report latest help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_object_verify_help(stdout: &str) {

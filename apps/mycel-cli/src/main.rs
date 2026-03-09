@@ -272,6 +272,12 @@ struct ReportLatestCliArgs {
     target: Option<String>,
     #[arg(long, help = "Emit machine-readable latest-report output")]
     json: bool,
+    #[arg(
+        long,
+        help = "Emit the selected raw report (requires --json)",
+        requires = "json"
+    )]
+    full: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -1045,6 +1051,13 @@ fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
     }
 }
 
+fn latest_report_path(summary: &ReportLatestSummary) -> Option<PathBuf> {
+    summary
+        .selected
+        .as_ref()
+        .map(|selected| selected.path.clone())
+}
+
 fn print_report_text(summary: &ReportInspectSummary) -> i32 {
     println!("report path: {}", summary.path.display());
     if let Some(run_id) = &summary.run_id {
@@ -1602,7 +1615,7 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             }
 
             let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_latest(PathBuf::from(target), args.json)
+            report_latest(PathBuf::from(target), args.json, args.full)
         }
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
@@ -1793,8 +1806,25 @@ fn report_list(target: PathBuf, json: bool) -> Result<i32, CliError> {
     }
 }
 
-fn report_latest(target: PathBuf, json: bool) -> Result<i32, CliError> {
+fn report_latest(target: PathBuf, json: bool, full: bool) -> Result<i32, CliError> {
     let summary = latest_report(list_reports(target));
+    if full {
+        if !json {
+            return Err(CliError::usage("report latest --full requires --json"));
+        }
+
+        return match latest_report_path(&summary) {
+            Some(path) => {
+                let inspected = inspect_report(path);
+                match inspected.report.as_ref() {
+                    Some(report) => print_report_full_json(&inspected.summary, report),
+                    None => print_report_latest_json(&summary),
+                }
+            }
+            None => print_report_latest_json(&summary),
+        };
+    }
+
     if json {
         print_report_latest_json(&summary)
     } else {
