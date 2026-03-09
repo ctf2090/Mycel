@@ -37,6 +37,11 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- sim run <test-case>`
 - `cargo run -p mycel-cli -- sim run <test-case> --json`
 
+Runnable examples:
+
+- `cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json`
+- `cargo run -p mycel-cli -- sim run sim/tests/signature-mismatch.example.json`
+
 Validation output notes:
 
 - `--json` includes a stable top-level `status`

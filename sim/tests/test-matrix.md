@@ -10,6 +10,7 @@
 
 - `reject-hash-mismatch`: reject invalid object body hash
 - `reject-signature-mismatch`: reject invalid object or wire signature
+  Reference JSON: `sim/tests/signature-mismatch.example.json`
 
 ## Recovery
 

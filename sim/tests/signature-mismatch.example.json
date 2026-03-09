@@ -1,0 +1,29 @@
+{
+  "$schema": "./test-case.schema.json",
+  "test_id": "signature-mismatch",
+  "description": "Reader peers should deterministically reject the injected signature mismatch according to the fault plan.",
+  "category": "negative",
+  "topology": "sim/topologies/signature-mismatch.example.json",
+  "fixture_set": "fixtures/object-sets/signature-mismatch",
+  "execution_mode": "single-process",
+  "expected_result": "fail",
+  "expected_outcomes": [
+    "signature-verification-failure",
+    "no-invalid-index-write"
+  ],
+  "assertions": [
+    {
+      "assertion_id": "fault-plan-present",
+      "description": "The generated report exposes a deterministic non-empty fault plan.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "signature-verification-failure",
+      "description": "At least one reader rejects the planned signature mismatch injection.",
+      "severity": "error"
+    }
+  ],
+  "notes": [
+    "Use this to inspect how deterministic seed ordering drives negative fault injection."
+  ]
+}
