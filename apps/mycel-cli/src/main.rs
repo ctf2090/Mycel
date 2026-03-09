@@ -335,6 +335,20 @@ struct ReportStatsCliArgs {
     target: Option<String>,
     #[arg(long, help = "Emit machine-readable report statistics output")]
     json: bool,
+    #[arg(
+        long,
+        value_name = "RESULT",
+        help = "Summarize only reports with one result",
+        value_enum
+    )]
+    result: Option<ReportResultFilter>,
+    #[arg(
+        long = "validation-status",
+        value_name = "VALIDATION_STATUS",
+        help = "Summarize only reports with one validation status",
+        value_enum
+    )]
+    validation_status: Option<ReportValidationStatusFilter>,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -799,6 +813,8 @@ struct ReportStatsLatestReport {
 struct ReportStatsSummary {
     root: PathBuf,
     status: String,
+    result_filter: Option<ReportResultFilter>,
+    validation_status_filter: Option<ReportValidationStatusFilter>,
     report_count: usize,
     valid_report_count: usize,
     invalid_report_count: usize,
@@ -916,8 +932,8 @@ impl<'a> From<&'a ReportStatsSummary> for ReportQuerySummaryView<'a> {
         Self {
             root: &summary.root,
             status: &summary.status,
-            result_filter: None,
-            validation_status_filter: None,
+            result_filter: summary.result_filter,
+            validation_status_filter: summary.validation_status_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
@@ -1373,6 +1389,8 @@ fn summarize_reports(summary: ReportListSummary) -> ReportStatsSummary {
     ReportStatsSummary {
         root: summary.root,
         status: summary.status,
+        result_filter: summary.result_filter,
+        validation_status_filter: summary.validation_status_filter,
         report_count: summary.report_count,
         valid_report_count: summary.valid_report_count,
         invalid_report_count: summary.invalid_report_count,
@@ -2085,7 +2103,12 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             }
 
             let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_stats(PathBuf::from(target), args.json)
+            report_stats(
+                PathBuf::from(target),
+                args.json,
+                args.result,
+                args.validation_status,
+            )
         }
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
@@ -2327,8 +2350,16 @@ fn report_latest(
     }
 }
 
-fn report_stats(target: PathBuf, json: bool) -> Result<i32, CliError> {
-    let summary = summarize_reports(list_reports(target));
+fn report_stats(
+    target: PathBuf,
+    json: bool,
+    result_filter: Option<ReportResultFilter>,
+    validation_status_filter: Option<ReportValidationStatusFilter>,
+) -> Result<i32, CliError> {
+    let summary = summarize_reports(query_reports(
+        target,
+        ReportQuery::new(result_filter, validation_status_filter),
+    ));
     if json {
         print_report_stats_json(&summary)
     } else {

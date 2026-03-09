@@ -363,6 +363,14 @@ pub fn assert_report_stats_help(stdout: &str) {
         stdout.contains("--json"),
         "expected json flag in report stats help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--result <RESULT>"),
+        "expected result flag in report stats help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--validation-status <VALIDATION_STATUS>"),
+        "expected validation-status flag in report stats help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_object_verify_help(stdout: &str) {

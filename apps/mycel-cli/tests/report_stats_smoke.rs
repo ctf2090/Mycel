@@ -96,6 +96,65 @@ fn report_stats_json_summarizes_directory() {
 }
 
 #[test]
+fn report_stats_json_filters_to_result_and_validation_status_intersection() {
+    let temp_dir = create_temp_dir("report-stats-filtered");
+    let matching_report = temp_dir.path().join("matching.report.json");
+    let wrong_result = temp_dir.path().join("wrong-result.report.json");
+    let wrong_validation = temp_dir.path().join("wrong-validation.report.json");
+    let invalid = temp_dir.path().join("broken.report.json");
+    write_report_with_result_and_validation_status(
+        &matching_report,
+        "run:matching",
+        "2026-03-09T12:00:05+08:00",
+        "pass",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_result,
+        "run:wrong-result",
+        "2026-03-09T13:00:05+08:00",
+        "fail",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_validation,
+        "run:wrong-validation",
+        "2026-03-09T14:00:05+08:00",
+        "pass",
+        "ok",
+    );
+    fs::write(&invalid, "{ broken json").expect("invalid report should be written");
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "stats",
+        &target,
+        "--result",
+        "pass",
+        "--validation-status",
+        "warning",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "warning");
+    assert_eq!(json["result_filter"], "pass");
+    assert_eq!(json["validation_status_filter"], "warning");
+    assert_eq!(json["report_count"], 2);
+    assert_eq!(json["valid_report_count"], 1);
+    assert_eq!(json["invalid_report_count"], 1);
+    assert_eq!(json["result_counts"]["pass"], 1);
+    assert!(json["result_counts"].get("fail").is_none());
+    assert_eq!(json["validation_status_counts"]["warning"], 1);
+    assert_eq!(
+        json["latest_valid_report"]["path"],
+        matching_report.display().to_string()
+    );
+}
+
+#[test]
 fn report_stats_text_reports_human_summary() {
     let temp_dir = create_temp_dir("report-stats-text");
     let pass_report = temp_dir.path().join("pass.report.json");
@@ -128,6 +187,35 @@ fn report_stats_text_reports_human_summary() {
     assert!(stdout.contains("ok: 1"));
     assert!(stdout.contains("warning: 1"));
     assert!(stdout.contains("latest valid report: "));
+}
+
+#[test]
+fn report_stats_text_reports_active_filters() {
+    let temp_dir = create_temp_dir("report-stats-text-filtered");
+    let report = temp_dir.path().join("matching.report.json");
+    write_report_with_result_and_validation_status(
+        &report,
+        "run:matching",
+        "2026-03-09T12:00:05+08:00",
+        "pass",
+        "warning",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "stats",
+        &target,
+        "--result",
+        "pass",
+        "--validation-status",
+        "warning",
+    ]);
+
+    assert_success(&output);
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("result filter: pass"));
+    assert!(stdout.contains("validation status filter: warning"));
 }
 
 #[test]
