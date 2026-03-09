@@ -10,7 +10,9 @@ use chrono::{FixedOffset, Utc};
 use serde::Serialize;
 use serde_json::json;
 
-use crate::model::{Fixture, Report, ReportEvent, ReportPeer, ReportSummary, TestCase, Topology};
+use crate::model::{
+    Fixture, Report, ReportEvent, ReportFailure, ReportPeer, ReportSummary, TestCase, Topology,
+};
 use crate::validate::{validate_path, ValidationStatus};
 
 #[derive(Debug, Clone, Default)]
@@ -242,6 +244,7 @@ fn simulate_report(
     let rejected_object_ids = build_rejected_object_ids(fixture);
     let matched_expected_outcomes = matched_expected_outcomes(test_case, topology, fixture);
     let mut events = Vec::new();
+    let mut failures = Vec::new();
 
     let has_hash_failure = fixture
         .expected_outcomes
@@ -343,6 +346,20 @@ fn simulate_report(
                 .notes
                 .push("Fixture declares this peer as the injected fault source.".to_owned());
             for planned_fault in &peer_faults {
+                failures.push(ReportFailure {
+                    failure_id: format!("fault:{}:{}", planned_fault.order, planned_fault.fault),
+                    node_id: Some(peer.node_id.clone()),
+                    description: format!(
+                        "Fault source injected planned fault #{} ('{}') toward {}.",
+                        planned_fault.order,
+                        planned_fault.fault,
+                        planned_fault
+                            .target_node_id
+                            .as_deref()
+                            .unwrap_or("unspecified-target")
+                    ),
+                    severity: Some("error".to_owned()),
+                });
                 push_event(
                     &mut events,
                     &planned_fault.phase,
@@ -369,6 +386,15 @@ fn simulate_report(
                         .to_owned(),
                 );
                 for planned_fault in &peer_targets_faults {
+                    failures.push(ReportFailure {
+                        failure_id: format!("rejection:{}:{}", planned_fault.order, peer.node_id),
+                        node_id: Some(peer.node_id.clone()),
+                        description: format!(
+                            "Reader rejected planned fault #{} ('{}').",
+                            planned_fault.order, planned_fault.fault
+                        ),
+                        severity: Some("error".to_owned()),
+                    });
                     push_event(
                         &mut events,
                         "verify",
@@ -474,7 +500,7 @@ fn simulate_report(
         peers,
         result: test_case.expected_result.clone(),
         events,
-        failures: Vec::new(),
+        failures,
         summary: Some(ReportSummary {
             verified_object_count: Some(verified_object_ids.len() as u64),
             rejected_object_count: Some(rejected_object_ids.len() as u64),

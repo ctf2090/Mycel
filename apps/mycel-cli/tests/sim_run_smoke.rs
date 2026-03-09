@@ -196,6 +196,9 @@ fn hash_mismatch_run_produces_fault_plan_and_fail_result() {
     let events = report["events"]
         .as_array()
         .expect("events should be an array");
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
     assert!(
         events.iter().any(|entry| entry["action"] == "inject-fault"),
         "expected inject-fault event in report"
@@ -205,6 +208,14 @@ fn hash_mismatch_run_produces_fault_plan_and_fail_result() {
             .iter()
             .any(|entry| entry["action"] == "reject-object-set"),
         "expected reject-object-set event in report"
+    );
+    assert!(
+        failures.iter().any(|entry| {
+            entry["description"]
+                .as_str()
+                .is_some_and(|description| description.contains("Reader rejected planned fault"))
+        }),
+        "expected reader rejection failure in report"
     );
 
     let validation = validate_generated_report(&summary);
@@ -345,6 +356,9 @@ fn signature_mismatch_run_produces_fault_plan_and_fail_result() {
     let events = report["events"]
         .as_array()
         .expect("events should be an array");
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
     assert!(
         events.iter().any(|entry| entry["action"] == "inject-fault"),
         "expected inject-fault event in report"
@@ -354,6 +368,14 @@ fn signature_mismatch_run_produces_fault_plan_and_fail_result() {
             .iter()
             .any(|entry| entry["action"] == "reject-object-set"),
         "expected reject-object-set event in report"
+    );
+    assert!(
+        failures.iter().any(|entry| {
+            entry["description"]
+                .as_str()
+                .is_some_and(|description| description.contains("Reader rejected planned fault"))
+        }),
+        "expected reader rejection failure in report"
     );
 
     let validation = validate_generated_report(&summary);
