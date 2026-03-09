@@ -108,6 +108,7 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report latest --validation-status failed --path-only`
 - `cargo run -p mycel-cli -- report latest sim/reports/out --json`
 - `cargo run -p mycel-cli -- report stats`
+- `cargo run -p mycel-cli -- validate sim/peers --json`
 - `cargo run -p mycel-cli -- report stats --json`
 - `cargo run -p mycel-cli -- report stats --counts-only --json`
 - `cargo run -p mycel-cli -- report stats --full-latest --json`
@@ -402,6 +403,8 @@ Validation output notes:
 - `--strict` treats warnings as failures for CI-oriented validation
 - tools and tests should rely on JSON fields such as `status`, `root`, `target`, `fixture_count`, `peer_count`, `topology_count`, `test_case_count`, `report_count`, `warnings`, and `errors`
 - warning-only validation still emits `status: warning`; `--strict` changes the exit behavior, not the warning payload itself
+- peer-scoped validation now loads related topologies, test cases, and reports from the same repo when they reference the selected peer node IDs
+- for example, `validate sim/peers --json` no longer treats `peer.example.json` as an isolated standalone input; it pulls in the matching topologies and reports before deciding whether the peer is unused
 
 Minimal JSON shape example:
 
