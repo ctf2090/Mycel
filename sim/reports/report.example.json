@@ -1,7 +1,10 @@
 {
+  "$schema": "./report.schema.json",
   "run_id": "run:example-001",
   "topology_id": "three-peer-consistency",
   "fixture_id": "minimal-valid",
+  "test_id": "three-peer-consistency",
+  "execution_mode": "single-process",
   "peers": [
     {
       "node_id": "node:peer-reader-a",
@@ -14,5 +17,14 @@
       "verified_object_ids": []
     }
   ],
-  "result": "pass"
+  "result": "pass",
+  "summary": {
+    "verified_object_count": 0,
+    "rejected_object_count": 0,
+    "matched_expected_outcomes": [
+      "sync-success",
+      "matching-object-sets",
+      "matching-replay-results"
+    ]
+  }
 }

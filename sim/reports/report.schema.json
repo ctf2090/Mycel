@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mycel.local/schemas/report.schema.json",
+  "title": "Mycel Peer Simulator Report",
+  "description": "Language-neutral contract for one simulator run report.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "topology_id",
+    "fixture_id",
+    "peers",
+    "result"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "topology_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "single-process",
+        "multi-process"
+      ]
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "peers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/peerReport"
+      }
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "partial"
+      ]
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/failure"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verified_object_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected_object_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "matched_expected_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "peerReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "status",
+        "verified_object_ids"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "degraded",
+            "failed"
+          ]
+        },
+        "verified_object_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "rejected_object_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_id",
+        "description"
+      ],
+      "properties": {
+        "failure_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "warning",
+            "error"
+          ]
+        }
+      }
+    }
+  }
+}

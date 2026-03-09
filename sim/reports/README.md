@@ -12,3 +12,9 @@ Tracked outputs should eventually include:
 - failure summaries
 
 Generated report files should go under `sim/reports/out/`, which is ignored by git.
+
+## Schema
+
+- `report.schema.json` is the formal contract for machine-readable simulator run reports.
+- `report.example.json` is the first example bound to that schema.
+- The schema keeps report output narrow enough for early harness work while leaving room for future summary and failure fields.
