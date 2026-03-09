@@ -5,8 +5,8 @@ use serde_json::Value;
 mod common;
 
 use common::{
-    assert_exit_code, assert_stderr_contains, load_report, parse_json_stdout, run_sim,
-    stderr_text, validate_generated_report,
+    assert_exit_code, assert_stderr_contains, load_report, parse_json_stdout, run_sim, stderr_text,
+    validate_generated_report,
 };
 
 fn sim_run_lock() -> MutexGuard<'static, ()> {
