@@ -444,6 +444,23 @@ Minimal `validate sim/peers --json` shape example:
 }
 ```
 
+Minimal `validate sim/topologies --json` shape example:
+
+```json
+{
+  "status": "ok",
+  "root": "/workspaces/Mycel",
+  "target": "/workspaces/Mycel/sim/topologies",
+  "fixture_count": 4,
+  "peer_count": 0,
+  "topology_count": 4,
+  "test_case_count": 4,
+  "report_count": 5,
+  "warnings": [],
+  "errors": []
+}
+```
+
 Object-inspection output notes:
 
 - text output is intended for quick structural inspection
