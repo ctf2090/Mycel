@@ -40,6 +40,7 @@ fn print_usage() {
     println!("  --events        Show only report events");
     println!("  --failures      Show only report failures");
     println!("  --full          Emit the full raw report (requires --json)");
+    println!("  --phase <name>  Filter event inspection to one phase");
     println!();
     println!("Sim options:");
     println!("  run <path> Run one test-case and write a report to sim/reports/out/");
@@ -652,6 +653,17 @@ fn print_report_events_json(summary: &ReportInspectSummary, events: &[ReportEven
     }
 }
 
+fn filter_events_by_phase(events: &[ReportEvent], phase_filter: Option<&str>) -> Vec<ReportEvent> {
+    match phase_filter {
+        Some(phase) => events
+            .iter()
+            .filter(|event| event.phase == phase)
+            .cloned()
+            .collect(),
+        None => events.to_vec(),
+    }
+}
+
 fn print_report_failures_text(summary: &ReportInspectSummary, failures: &[ReportFailure]) -> i32 {
     println!("report path: {}", summary.path.display());
     if let Some(run_id) = &summary.run_id {
@@ -725,7 +737,12 @@ fn print_report_full_json(summary: &ReportInspectSummary, report: &Report) -> i3
     }
 }
 
-fn report_inspect(target: PathBuf, json: bool, mode: ReportInspectMode) -> i32 {
+fn report_inspect(
+    target: PathBuf,
+    json: bool,
+    mode: ReportInspectMode,
+    phase_filter: Option<&str>,
+) -> i32 {
     let inspected = inspect_report(target);
     match mode {
         ReportInspectMode::Summary => {
@@ -736,10 +753,11 @@ fn report_inspect(target: PathBuf, json: bool, mode: ReportInspectMode) -> i32 {
             }
         }
         ReportInspectMode::Events => {
+            let filtered_events = filter_events_by_phase(&inspected.events, phase_filter);
             if json {
-                print_report_events_json(&inspected.summary, &inspected.events)
+                print_report_events_json(&inspected.summary, &filtered_events)
             } else {
-                print_report_events_text(&inspected.summary, &inspected.events)
+                print_report_events_text(&inspected.summary, &filtered_events)
             }
         }
         ReportInspectMode::Failures => {
@@ -961,11 +979,25 @@ fn main() {
                 let mut target = None;
                 let mut json = false;
                 let mut mode = ReportInspectMode::Summary;
+                let mut phase_filter = None;
+                let mut expect_phase_value = false;
 
                 for arg in args {
-                    if arg == "--json" {
+                    if expect_phase_value {
+                        phase_filter = Some(arg);
+                        expect_phase_value = false;
+                        if mode == ReportInspectMode::Summary {
+                            mode = ReportInspectMode::Events;
+                        }
+                    } else if arg == "--json" {
                         json = true;
                     } else if arg == "--full" {
+                        if phase_filter.is_some() {
+                            eprintln!("report inspect --phase cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
                         if mode != ReportInspectMode::Summary {
                             eprintln!(
                                 "report inspect accepts only one of --events, --failures, or --full"
@@ -986,6 +1018,12 @@ fn main() {
                         }
                         mode = ReportInspectMode::Events;
                     } else if arg == "--failures" {
+                        if phase_filter.is_some() {
+                            eprintln!("report inspect --phase cannot be combined with --failures");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
                         if mode != ReportInspectMode::Summary {
                             eprintln!(
                                 "report inspect accepts only one of --events, --failures, or --full"
@@ -995,6 +1033,26 @@ fn main() {
                             std::process::exit(2);
                         }
                         mode = ReportInspectMode::Failures;
+                    } else if arg == "--phase" {
+                        if expect_phase_value {
+                            eprintln!("missing value for --phase");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Full {
+                            eprintln!("report inspect --phase cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Failures {
+                            eprintln!("report inspect --phase cannot be combined with --failures");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        expect_phase_value = true;
                     } else if target.is_none() {
                         target = Some(PathBuf::from(arg));
                     } else {
@@ -1003,6 +1061,13 @@ fn main() {
                         print_usage();
                         std::process::exit(2);
                     }
+                }
+
+                if expect_phase_value {
+                    eprintln!("missing value for --phase");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
                 }
 
                 let Some(target) = target else {
@@ -1019,7 +1084,7 @@ fn main() {
                     std::process::exit(2);
                 }
 
-                std::process::exit(report_inspect(target, json, mode));
+                std::process::exit(report_inspect(target, json, mode, phase_filter.as_deref()));
             }
             Some(other) => {
                 eprintln!("unknown report subcommand: {other}");

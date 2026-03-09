@@ -92,6 +92,69 @@ fn report_inspect_events_text_reports_event_trace_for_example_report() {
 }
 
 #[test]
+fn report_inspect_phase_json_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--phase",
+        "sync",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["event_count"], 1);
+    let events = json["events"]
+        .as_array()
+        .expect("events should be an array");
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0]["phase"], "sync");
+    assert_eq!(events[0]["action"], "seed-advertise");
+}
+
+#[test]
+fn report_inspect_phase_text_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--phase",
+        "replay",
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "events: 1");
+    assert_stdout_contains(
+        &output,
+        "event #3 phase=replay action=reader-compare outcome=ok",
+    );
+}
+
+#[test]
+fn report_inspect_phase_json_returns_empty_events_for_unknown_phase() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--phase",
+        "missing-phase",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["event_count"], 0);
+    assert_eq!(
+        json["events"].as_array().map(Vec::len),
+        Some(0),
+        "expected empty events array, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn report_inspect_full_json_returns_raw_report_for_example_report() {
     let output = run_report(&[
         "report",
@@ -275,6 +338,56 @@ fn report_inspect_rejects_full_with_other_filter_flags() {
         &output,
         "report inspect accepts only one of --events, --failures, or --full",
     );
+}
+
+#[test]
+fn report_inspect_rejects_phase_with_failures() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--failures",
+        "--phase",
+        "sync",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect --phase cannot be combined with --failures",
+    );
+}
+
+#[test]
+fn report_inspect_rejects_phase_with_full() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--phase",
+        "sync",
+        "--full",
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect --phase cannot be combined with --full",
+    );
+}
+
+#[test]
+fn report_inspect_requires_phase_value() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--phase",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "missing value for --phase");
 }
 
 #[test]
