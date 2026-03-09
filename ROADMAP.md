@@ -178,6 +178,21 @@ Recommended build order:
 4. deepen `mycel-core` tests before expanding CLI surface, so object-rule regressions are caught below the CLI layer
 5. only after the shared core is stable, widen CLI and simulator-facing validation coverage where needed
 
+First implementation batch:
+
+1. Add typed parsing coverage for `document` and `block` logical-ID handling in `crates/mycel-core/src/protocol.rs`.
+2. Add typed parsing coverage for `patch`, `revision`, `view`, and `snapshot` derived-ID fields in `crates/mycel-core/src/protocol.rs`.
+3. Extract canonical object helpers from `crates/mycel-core/src/verify.rs` into shared protocol-level utilities for canonical JSON, derived-ID recomputation, and signed payload generation.
+4. Convert `crates/mycel-core/src/verify.rs` to consume the shared typed parsing and canonical helpers for every supported object family.
+5. Add `mycel-core` tests for malformed object type, missing signer fields, wrong derived-ID fields, and unsupported field-shape cases before widening more CLI behavior.
+
+Concrete completion check for this batch:
+
+1. `protocol.rs` understands every currently supported object family through one shared parsing layer.
+2. `verify.rs` no longer owns the only copy of canonical object mechanics.
+3. `cargo test -p mycel-core` provides direct coverage for the newly shared protocol helpers and object-family edge cases.
+4. Existing `object inspect` and `object verify` CLI contracts still pass without needing new CLI-only fallback logic.
+
 #### M2: Replay, Storage, and Rebuild
 
 Focus:
