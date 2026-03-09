@@ -119,6 +119,8 @@ fn print_run_text(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     println!("finished at: {}", summary.finished_at);
     println!("run duration ms: {}", summary.run_duration_ms);
     println!("deterministic seed: {}", summary.deterministic_seed);
+    println!("events per second: {:.3}", summary.events_per_second);
+    println!("ms per event: {:.3}", summary.ms_per_event);
     println!("validation status: {}", summary.validation_status);
     println!("report path: {}", summary.report_path.display());
     println!("result: {}", summary.result);

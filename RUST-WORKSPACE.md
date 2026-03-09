@@ -64,6 +64,7 @@ Current `sim run` behavior:
 - stamps generated reports with `started_at` / `finished_at` in `Asia/Taipei (UTC+8)`
 - records deterministic run metadata, including source paths and validation status
 - records `run_duration_ms` and a derived `deterministic_seed` for reproducible scheduling
+- records `events_per_second` and `ms_per_event` as runtime observation metrics
 - uses deterministic placeholder object IDs instead of real wire sync
 
 Recommended next:

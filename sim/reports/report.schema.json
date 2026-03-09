@@ -232,6 +232,8 @@
         "validation_status",
         "run_duration_ms",
         "deterministic_seed",
+        "events_per_second",
+        "ms_per_event",
         "source_test_case",
         "source_topology",
         "source_fixture"
@@ -271,6 +273,14 @@
         "deterministic_seed": {
           "type": "string",
           "minLength": 1
+        },
+        "events_per_second": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ms_per_event": {
+          "type": "number",
+          "minimum": 0
         },
         "source_test_case": {
           "type": "string",

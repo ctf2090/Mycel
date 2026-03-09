@@ -21,6 +21,8 @@ pub struct SimulationRunSummary {
     pub finished_at: String,
     pub run_duration_ms: u128,
     pub deterministic_seed: String,
+    pub events_per_second: f64,
+    pub ms_per_event: f64,
     pub validation_status: ValidationStatus,
     pub validation_warnings: Vec<String>,
     pub result: String,
@@ -94,7 +96,19 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
 
     let mut report = simulate_report(&test_case, &topology, &fixture)?;
     let finished_at = now_taipei_timestamp()?;
-    let run_duration_ms = started_clock.elapsed().as_millis();
+    let elapsed = started_clock.elapsed();
+    let run_duration_ms = elapsed.as_millis();
+    let event_count = report.events.len();
+    let events_per_second = if elapsed.as_secs_f64() > 0.0 {
+        event_count as f64 / elapsed.as_secs_f64()
+    } else {
+        0.0
+    };
+    let ms_per_event = if event_count > 0 {
+        (elapsed.as_secs_f64() * 1000.0) / event_count as f64
+    } else {
+        0.0
+    };
     report.started_at = Some(started_at.clone());
     report.finished_at = Some(finished_at.clone());
     report.metadata = Some(build_run_metadata(
@@ -105,6 +119,8 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         filtered_validation_status,
         run_duration_ms,
         &deterministic_seed,
+        events_per_second,
+        ms_per_event,
     ));
     if let Some(parent) = report_path.parent() {
         fs::create_dir_all(parent).map_err(|err| {
@@ -128,11 +144,13 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         finished_at,
         run_duration_ms,
         deterministic_seed,
+        events_per_second,
+        ms_per_event,
         validation_status: filtered_validation_status,
         validation_warnings: filtered_validation_warnings,
         result: report.result.clone(),
         peer_count: report.peers.len(),
-        event_count: report.events.len(),
+        event_count,
         verified_object_count: report
             .summary
             .as_ref()
@@ -469,6 +487,8 @@ fn build_run_metadata(
     validation_status: ValidationStatus,
     run_duration_ms: u128,
     deterministic_seed: &str,
+    events_per_second: f64,
+    ms_per_event: f64,
 ) -> serde_json::Value {
     json!({
         "generator": "mycel-cli/sim-run-v0",
@@ -479,6 +499,8 @@ fn build_run_metadata(
         "validation_status": validation_status.to_string(),
         "run_duration_ms": run_duration_ms,
         "deterministic_seed": deterministic_seed,
+        "events_per_second": events_per_second,
+        "ms_per_event": ms_per_event,
         "source_test_case": relative_path_string(root, test_case_path),
         "source_topology": relative_path_string(root, topology_path),
         "source_fixture": relative_path_string(root, fixture_path),

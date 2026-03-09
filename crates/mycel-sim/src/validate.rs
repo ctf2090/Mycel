@@ -1446,6 +1446,28 @@ fn validate_quality_hints(
                     ),
                 );
             }
+
+            if !metadata.contains_key("events_per_second") {
+                push_warning(
+                    summary,
+                    &report.path,
+                    format!(
+                        "report '{}' metadata does not include events_per_second",
+                        report.value.run_id
+                    ),
+                );
+            }
+
+            if !metadata.contains_key("ms_per_event") {
+                push_warning(
+                    summary,
+                    &report.path,
+                    format!(
+                        "report '{}' metadata does not include ms_per_event",
+                        report.value.run_id
+                    ),
+                );
+            }
         }
     }
 }

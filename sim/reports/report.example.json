@@ -64,6 +64,8 @@
     "validation_status": "ok",
     "run_duration_ms": 1000,
     "deterministic_seed": "three-peer-consistency|three-peer-consistency|minimal-valid|single-process",
+    "events_per_second": 3.0,
+    "ms_per_event": 333.333,
     "source_test_case": "sim/tests/three-peer-consistency.example.json",
     "source_topology": "sim/topologies/three-peer-consistency.example.json",
     "source_fixture": "fixtures/object-sets/minimal-valid/fixture.json"
