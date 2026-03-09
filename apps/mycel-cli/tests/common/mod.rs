@@ -301,6 +301,10 @@ pub fn assert_report_diff_help(stdout: &str) {
         stdout.contains("--json"),
         "expected json flag in report diff help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--events"),
+        "expected events flag in report diff help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_report_list_help(stdout: &str) {

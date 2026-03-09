@@ -74,6 +74,64 @@ fn report_diff_json_reports_summary_level_differences() {
 }
 
 #[test]
+fn report_diff_events_json_reports_match_for_same_report() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/report.example.json",
+        "--events",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["comparison"], "match");
+    assert_eq!(json["event_difference_count"], 0);
+    assert_eq!(
+        json["event_differences"].as_array().map(Vec::len),
+        Some(0),
+        "expected no event differences, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn report_diff_events_json_reports_step_level_differences() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--events",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["comparison"], "different");
+    assert!(
+        json["event_difference_count"]
+            .as_u64()
+            .is_some_and(|count| count >= 1),
+        "expected event differences, stdout: {}",
+        stdout_text(&output)
+    );
+    let differences = json["event_differences"]
+        .as_array()
+        .expect("event_differences should be an array");
+    assert!(
+        differences
+            .iter()
+            .any(|entry| entry["step"] == 1 && entry["change"] == "changed"),
+        "expected changed step 1 event, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn report_diff_text_reports_human_summary() {
     let output = run_report(&[
         "report",
@@ -90,6 +148,23 @@ fn report_diff_text_reports_human_summary() {
     );
     assert_stdout_contains(&output, "comparison: different");
     assert_stdout_contains(&output, "difference seed_source:");
+    assert_stdout_contains(&output, "report diff: different");
+}
+
+#[test]
+fn report_diff_events_text_reports_human_event_summary() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--events",
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "comparison: different");
+    assert_stdout_contains(&output, "event difference count:");
+    assert_stdout_contains(&output, "event step 1: changed");
     assert_stdout_contains(&output, "report diff: different");
 }
 
@@ -113,6 +188,31 @@ fn report_diff_fails_when_one_side_is_not_a_report_target() {
             .any(|entry| entry.as_str().is_some_and(|message| message
                 .contains("left report: report schema files are not inspect targets")))),
         "expected left-side error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn report_diff_events_fail_when_one_side_is_not_a_report_target() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.schema.json",
+        "sim/reports/report.example.json",
+        "--events",
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "failed");
+    assert_eq!(json["comparison"], "failed");
+    assert!(
+        json["errors"].as_array().is_some_and(|errors| errors
+            .iter()
+            .any(|entry| entry.as_str().is_some_and(|message| message
+                .contains("left report: report schema files are not inspect targets")))),
+        "expected left-side event diff error, stdout: {}",
         stdout_text(&output)
     );
 }

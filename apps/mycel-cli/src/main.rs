@@ -220,6 +220,11 @@ struct ReportDiffCliArgs {
     right: String,
     #[arg(long, help = "Emit machine-readable report diff output")]
     json: bool,
+    #[arg(
+        long,
+        help = "Compare event traces step-by-step instead of summary fields"
+    )]
+    events: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -1003,6 +1008,25 @@ struct ReportDiffSummary {
     errors: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct ReportEventDiffEntry {
+    step: u64,
+    change: String,
+    left: Option<ReportEvent>,
+    right: Option<ReportEvent>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ReportEventDiffSummary {
+    status: String,
+    comparison: String,
+    event_difference_count: usize,
+    left: ReportDiffSideSummary,
+    right: ReportDiffSideSummary,
+    event_differences: Vec<ReportEventDiffEntry>,
+    errors: Vec<String>,
+}
+
 #[derive(Clone, Copy)]
 struct ReportQuerySummaryView<'a> {
     root: &'a Path,
@@ -1241,13 +1265,10 @@ fn push_report_diff_if_changed(
     }
 }
 
-fn diff_reports(left_path: PathBuf, right_path: PathBuf) -> ReportDiffSummary {
-    let left_inspected = inspect_report(left_path);
-    let right_inspected = inspect_report(right_path);
-
-    let left = report_diff_side(&left_inspected.summary);
-    let right = report_diff_side(&right_inspected.summary);
-
+fn collect_report_diff_errors(
+    left: &ReportDiffSideSummary,
+    right: &ReportDiffSideSummary,
+) -> Vec<String> {
     let mut errors = Vec::new();
     errors.extend(
         left.errors
@@ -1260,6 +1281,17 @@ fn diff_reports(left_path: PathBuf, right_path: PathBuf) -> ReportDiffSummary {
             .iter()
             .map(|message| format!("right report: {message}")),
     );
+    errors
+}
+
+fn diff_reports(left_path: PathBuf, right_path: PathBuf) -> ReportDiffSummary {
+    let left_inspected = inspect_report(left_path);
+    let right_inspected = inspect_report(right_path);
+
+    let left = report_diff_side(&left_inspected.summary);
+    let right = report_diff_side(&right_inspected.summary);
+
+    let errors = collect_report_diff_errors(&left, &right);
 
     if !errors.is_empty() {
         return ReportDiffSummary {
@@ -1406,11 +1438,116 @@ fn diff_reports(left_path: PathBuf, right_path: PathBuf) -> ReportDiffSummary {
     }
 }
 
+fn diff_report_events(left_path: PathBuf, right_path: PathBuf) -> ReportEventDiffSummary {
+    let left_inspected = inspect_report(left_path);
+    let right_inspected = inspect_report(right_path);
+
+    let left = report_diff_side(&left_inspected.summary);
+    let right = report_diff_side(&right_inspected.summary);
+
+    let errors = collect_report_diff_errors(&left, &right);
+    if !errors.is_empty() {
+        return ReportEventDiffSummary {
+            status: "failed".to_string(),
+            comparison: "failed".to_string(),
+            event_difference_count: 0,
+            left,
+            right,
+            event_differences: Vec::new(),
+            errors,
+        };
+    }
+
+    let mut left_by_step = BTreeMap::new();
+    for event in left_inspected.events {
+        left_by_step.insert(event.step, event);
+    }
+
+    let mut right_by_step = BTreeMap::new();
+    for event in right_inspected.events {
+        right_by_step.insert(event.step, event);
+    }
+
+    let all_steps = left_by_step
+        .keys()
+        .chain(right_by_step.keys())
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>();
+
+    let mut event_differences = Vec::new();
+    for step in all_steps {
+        let left_event = left_by_step.get(&step).cloned();
+        let right_event = right_by_step.get(&step).cloned();
+        match (&left_event, &right_event) {
+            (Some(left_event), Some(right_event))
+                if !report_events_equal(left_event, right_event) =>
+            {
+                event_differences.push(ReportEventDiffEntry {
+                    step,
+                    change: "changed".to_string(),
+                    left: Some(left_event.clone()),
+                    right: Some(right_event.clone()),
+                });
+            }
+            (Some(_), None) => {
+                event_differences.push(ReportEventDiffEntry {
+                    step,
+                    change: "left_only".to_string(),
+                    left: left_event,
+                    right: None,
+                });
+            }
+            (None, Some(_)) => {
+                event_differences.push(ReportEventDiffEntry {
+                    step,
+                    change: "right_only".to_string(),
+                    left: None,
+                    right: right_event,
+                });
+            }
+            _ => {}
+        }
+    }
+
+    let comparison = if event_differences.is_empty() {
+        "match"
+    } else {
+        "different"
+    };
+
+    ReportEventDiffSummary {
+        status: "ok".to_string(),
+        comparison: comparison.to_string(),
+        event_difference_count: event_differences.len(),
+        left,
+        right,
+        event_differences,
+        errors: Vec::new(),
+    }
+}
+
 fn format_report_diff_value(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::String(text) => format!("{text:?}"),
         _ => value.to_string(),
     }
+}
+
+fn report_events_equal(left: &ReportEvent, right: &ReportEvent) -> bool {
+    serde_json::to_value(left).ok() == serde_json::to_value(right).ok()
+}
+
+fn format_report_event_text(event: &ReportEvent) -> String {
+    let node = event.node_id.as_deref().unwrap_or("-");
+    let detail = event.detail.as_deref().unwrap_or("-");
+    format!(
+        "phase={} action={} outcome={} node={} objects={} detail={detail:?}",
+        event.phase,
+        event.action,
+        event.outcome,
+        node,
+        event.object_ids.len(),
+    )
 }
 
 fn is_report_schema_file(path: &Path) -> bool {
@@ -2499,6 +2636,7 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
                 PathBuf::from(args.left),
                 PathBuf::from(args.right),
                 args.json,
+                args.events,
             )
         }
         Some(ReportSubcommand::Inspect(args)) => {
@@ -2759,6 +2897,34 @@ fn print_report_diff_text(summary: &ReportDiffSummary) -> i32 {
     }
 }
 
+fn print_report_event_diff_text(summary: &ReportEventDiffSummary) -> i32 {
+    println!("left report: {}", summary.left.path.display());
+    println!("right report: {}", summary.right.path.display());
+    println!("comparison: {}", summary.comparison);
+    println!("event difference count: {}", summary.event_difference_count);
+
+    for difference in &summary.event_differences {
+        println!("event step {}: {}", difference.step, difference.change);
+        if let Some(left) = &difference.left {
+            println!("  left: {}", format_report_event_text(left));
+        }
+        if let Some(right) = &difference.right {
+            println!("  right: {}", format_report_event_text(right));
+        }
+    }
+
+    if summary.status == "failed" {
+        println!("report diff: failed");
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    } else {
+        println!("report diff: {}", summary.comparison);
+        0
+    }
+}
+
 fn print_report_diff_json(summary: &ReportDiffSummary) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
@@ -2773,12 +2939,35 @@ fn print_report_diff_json(summary: &ReportDiffSummary) -> Result<i32, CliError> 
     }
 }
 
-fn report_diff(left: PathBuf, right: PathBuf, json: bool) -> Result<i32, CliError> {
-    let summary = diff_reports(left, right);
-    if json {
-        print_report_diff_json(&summary)
+fn print_report_event_diff_json(summary: &ReportEventDiffSummary) -> Result<i32, CliError> {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.status == "failed" {
+                Ok(1)
+            } else {
+                Ok(0)
+            }
+        }
+        Err(source) => Err(CliError::serialization("report event diff summary", source)),
+    }
+}
+
+fn report_diff(left: PathBuf, right: PathBuf, json: bool, events: bool) -> Result<i32, CliError> {
+    if events {
+        let summary = diff_report_events(left, right);
+        if json {
+            print_report_event_diff_json(&summary)
+        } else {
+            Ok(print_report_event_diff_text(&summary))
+        }
     } else {
-        Ok(print_report_diff_text(&summary))
+        let summary = diff_reports(left, right);
+        if json {
+            print_report_diff_json(&summary)
+        } else {
+            Ok(print_report_diff_text(&summary))
+        }
     }
 }
 

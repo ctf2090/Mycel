@@ -40,6 +40,8 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- object verify <path> --json`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report>`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --json`
+- `cargo run -p mycel-cli -- report diff <left-report> <right-report> --events`
+- `cargo run -p mycel-cli -- report diff <left-report> <right-report> --events --json`
 - `cargo run -p mycel-cli -- report inspect <path>`
 - `cargo run -p mycel-cli -- report inspect <path> --json`
 - `cargo run -p mycel-cli -- report inspect <path> --full --json`
@@ -111,6 +113,8 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report stats sim/reports/out --json`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --json`
+- `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --events`
+- `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --events --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --full --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --events`
@@ -161,8 +165,11 @@ Report-inspection output notes:
 - `report stats` counts valid reports by `result` and `validation_status`, while still surfacing invalid parse entries through the shared top-level status and counts
 - `report diff <left> <right>` compares two reports at the summary level and prints a human-readable difference list
 - `report diff <left> <right> --json` emits a stable diff summary with `status`, `comparison`, `difference_count`, `left`, `right`, `differences`, and `errors`
+- `report diff <left> <right> --events` compares event traces step-by-step and prints event-level differences instead of summary-field differences
+- `report diff <left> <right> --events --json` emits `event_difference_count` plus `event_differences[]`, where each entry is `changed`, `left_only`, or `right_only`
 - `status: ok` means both inputs parsed as report targets successfully; use `comparison: match|different` to tell whether the summaries differ
-- the first version compares stable summary fields such as IDs, execution metadata, counts, expected outcomes, scheduled peer order, and fault-plan count; it does not yet emit event-level diffs
+- the default diff mode compares stable summary fields such as IDs, execution metadata, counts, expected outcomes, scheduled peer order, and fault-plan count
+- event diff currently aligns trace entries by `step`
 - `report inspect <path>` prints a human-readable summary for one simulator report
 - `report inspect <path> --json` emits a stable inspection summary including run identity, result, counts, selected metadata, and errors
 - `report inspect <path> --full --json` emits the raw report JSON without summary reshaping
@@ -229,6 +236,47 @@ Minimal `report diff --json` shape example:
       "field": "seed_source",
       "left": "derived",
       "right": null
+    }
+  ],
+  "errors": []
+}
+```
+
+Minimal `report diff --events --json` shape example:
+
+```json
+{
+  "status": "ok",
+  "comparison": "different",
+  "event_difference_count": 1,
+  "left": {
+    "path": "sim/reports/report.example.json",
+    "event_count": 3,
+    "errors": []
+  },
+  "right": {
+    "path": "sim/reports/invalid/missing-seed-source.example.json",
+    "event_count": 3,
+    "errors": []
+  },
+  "event_differences": [
+    {
+      "step": 1,
+      "change": "changed",
+      "left": {
+        "step": 1,
+        "phase": "load",
+        "action": "load-fixture",
+        "outcome": "ok",
+        "detail": "Loaded minimal-valid fixture for baseline sync testing."
+      },
+      "right": {
+        "step": 1,
+        "phase": "load",
+        "action": "load-fixture",
+        "outcome": "ok",
+        "detail": "Loaded minimal-valid fixture for missing-seed-source warning demonstration."
+      }
     }
   ],
   "errors": []
