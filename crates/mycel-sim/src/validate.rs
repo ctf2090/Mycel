@@ -1387,6 +1387,39 @@ fn validate_quality_hints(
                 ),
             );
         }
+
+        if report.value.started_at.is_none() {
+            push_warning(
+                summary,
+                &report.path,
+                format!(
+                    "report '{}' does not include started_at",
+                    report.value.run_id
+                ),
+            );
+        }
+
+        if report.value.finished_at.is_none() {
+            push_warning(
+                summary,
+                &report.path,
+                format!(
+                    "report '{}' does not include finished_at",
+                    report.value.run_id
+                ),
+            );
+        }
+
+        if report.value.metadata.is_none() {
+            push_warning(
+                summary,
+                &report.path,
+                format!(
+                    "report '{}' does not include deterministic run metadata",
+                    report.value.run_id
+                ),
+            );
+        }
     }
 }
 

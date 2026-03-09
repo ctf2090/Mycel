@@ -61,6 +61,8 @@ Current `sim run` behavior:
 - loads one `test-case -> topology -> fixture` chain
 - writes a machine-readable report to `sim/reports/out/`
 - emits a deterministic per-step event trace inside the generated report
+- stamps generated reports with `started_at` / `finished_at` in `Asia/Taipei (UTC+8)`
+- records deterministic run metadata, including source paths and validation status
 - uses deterministic placeholder object IDs instead of real wire sync
 
 Recommended next:

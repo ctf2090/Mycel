@@ -5,6 +5,8 @@
   "fixture_id": "minimal-valid",
   "test_id": "three-peer-consistency",
   "execution_mode": "single-process",
+  "started_at": "2026-03-09T16:00:00+08:00",
+  "finished_at": "2026-03-09T16:00:01+08:00",
   "peers": [
     {
       "node_id": "node:peer-reader-a",
@@ -52,5 +54,16 @@
       "matching-object-sets",
       "matching-replay-results"
     ]
+  },
+  "metadata": {
+    "generator": "mycel-cli/sim-run-v0",
+    "deterministic": true,
+    "run_mode": "deterministic-placeholder",
+    "trace_version": "v0",
+    "timezone": "Asia/Taipei (UTC+8)",
+    "validation_status": "ok",
+    "source_test_case": "sim/tests/three-peer-consistency.example.json",
+    "source_topology": "sim/topologies/three-peer-consistency.example.json",
+    "source_fixture": "fixtures/object-sets/minimal-valid/fixture.json"
   }
 }

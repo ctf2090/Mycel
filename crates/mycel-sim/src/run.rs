@@ -4,6 +4,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use chrono::{FixedOffset, Utc};
 use serde::Serialize;
 use serde_json::json;
 
@@ -15,6 +16,8 @@ pub struct SimulationRunSummary {
     pub root: PathBuf,
     pub target: PathBuf,
     pub report_path: PathBuf,
+    pub started_at: String,
+    pub finished_at: String,
     pub validation_status: ValidationStatus,
     pub validation_warnings: Vec<String>,
     pub result: String,
@@ -49,7 +52,22 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         return Err("schema files are not simulator run targets".to_owned());
     }
 
+    let started_at = now_taipei_timestamp()?;
     let test_case = load_json::<TestCase>(&target)?;
+    let report_path = root
+        .join("sim/reports/out")
+        .join(format!("{}.report.json", test_case.test_id));
+    let filtered_validation_warnings: Vec<_> = validation
+        .warnings
+        .iter()
+        .filter(|warning| Path::new(&warning.path) != report_path)
+        .map(|warning| format!("{}: {}", warning.path, warning.message))
+        .collect();
+    let filtered_validation_status = derive_validation_status(
+        !validation.errors.is_empty(),
+        !filtered_validation_warnings.is_empty(),
+    );
+
     if test_case.execution_mode != "single-process" {
         return Err(format!(
             "unsupported execution_mode '{}'; only 'single-process' is implemented",
@@ -69,10 +87,17 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
     let fixture_path = root.join(&test_case.fixture_set).join("fixture.json");
     let fixture = load_json::<Fixture>(&fixture_path)?;
 
-    let report = simulate_report(&test_case, &topology, &fixture)?;
-    let report_path = root
-        .join("sim/reports/out")
-        .join(format!("{}.report.json", test_case.test_id));
+    let mut report = simulate_report(&test_case, &topology, &fixture)?;
+    let finished_at = now_taipei_timestamp()?;
+    report.started_at = Some(started_at.clone());
+    report.finished_at = Some(finished_at.clone());
+    report.metadata = Some(build_run_metadata(
+        &root,
+        &target,
+        &topology_path,
+        &fixture_path,
+        filtered_validation_status,
+    ));
     if let Some(parent) = report_path.parent() {
         fs::create_dir_all(parent).map_err(|err| {
             format!(
@@ -91,12 +116,10 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         root,
         target,
         report_path,
-        validation_status: validation.status,
-        validation_warnings: validation
-            .warnings
-            .iter()
-            .map(|warning| format!("{}: {}", warning.path, warning.message))
-            .collect(),
+        started_at,
+        finished_at,
+        validation_status: filtered_validation_status,
+        validation_warnings: filtered_validation_warnings,
         result: report.result.clone(),
         peer_count: report.peers.len(),
         event_count: report.events.len(),
@@ -335,11 +358,7 @@ fn simulate_report(
             rejected_object_count: Some(rejected_object_ids.len() as u64),
             matched_expected_outcomes,
         }),
-        metadata: Some(json!({
-            "generator": "mycel-cli/sim-run-v0",
-            "topology_description": topology.description,
-            "fixture_description": fixture.description,
-        })),
+        metadata: None,
     };
 
     Ok(report)
@@ -430,6 +449,50 @@ where
     let body = fs::read_to_string(path)
         .map_err(|err| format!("failed to read {}: {err}", path.display()))?;
     serde_json::from_str(&body).map_err(|err| format!("failed to parse {}: {err}", path.display()))
+}
+
+fn build_run_metadata(
+    root: &Path,
+    test_case_path: &Path,
+    topology_path: &Path,
+    fixture_path: &Path,
+    validation_status: ValidationStatus,
+) -> serde_json::Value {
+    json!({
+        "generator": "mycel-cli/sim-run-v0",
+        "deterministic": true,
+        "run_mode": "deterministic-placeholder",
+        "trace_version": "v0",
+        "timezone": "Asia/Taipei (UTC+8)",
+        "validation_status": validation_status.to_string(),
+        "source_test_case": relative_path_string(root, test_case_path),
+        "source_topology": relative_path_string(root, topology_path),
+        "source_fixture": relative_path_string(root, fixture_path),
+    })
+}
+
+fn derive_validation_status(has_errors: bool, has_warnings: bool) -> ValidationStatus {
+    if has_errors {
+        ValidationStatus::Failed
+    } else if has_warnings {
+        ValidationStatus::Warning
+    } else {
+        ValidationStatus::Ok
+    }
+}
+
+fn now_taipei_timestamp() -> Result<String, String> {
+    let offset = FixedOffset::east_opt(8 * 60 * 60)
+        .ok_or_else(|| "failed to construct Asia/Taipei fixed offset".to_owned())?;
+    Ok(Utc::now().with_timezone(&offset).to_rfc3339())
+}
+
+fn relative_path_string(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .ok()
+        .and_then(|relative| relative.to_str())
+        .map(|value| value.replace('\\', "/"))
+        .unwrap_or_else(|| path.display().to_string())
 }
 
 fn push_event(

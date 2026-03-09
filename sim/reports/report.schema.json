@@ -97,7 +97,7 @@
       }
     },
     "metadata": {
-      "type": "object"
+      "$ref": "#/$defs/runMetadata"
     }
   },
   "$defs": {
@@ -215,6 +215,62 @@
           "uniqueItems": true
         },
         "detail": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "runMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator",
+        "deterministic",
+        "run_mode",
+        "trace_version",
+        "timezone",
+        "validation_status",
+        "source_test_case",
+        "source_topology",
+        "source_fixture"
+      ],
+      "properties": {
+        "generator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deterministic": {
+          "type": "boolean"
+        },
+        "run_mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trace_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1
+        },
+        "validation_status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "warning",
+            "failed"
+          ]
+        },
+        "source_test_case": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_topology": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_fixture": {
           "type": "string",
           "minLength": 1
         }

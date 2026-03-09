@@ -115,6 +115,8 @@ fn validate(target: PathBuf, json: bool, strict: bool) -> i32 {
 fn print_run_text(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     println!("repo root: {}", summary.root.display());
     println!("run target: {}", summary.target.display());
+    println!("started at: {}", summary.started_at);
+    println!("finished at: {}", summary.finished_at);
     println!("validation status: {}", summary.validation_status);
     println!("report path: {}", summary.report_path.display());
     println!("result: {}", summary.result);
