@@ -42,6 +42,7 @@ fn print_usage() {
     println!("  --full          Emit the full raw report (requires --json)");
     println!("  --phase <name>  Filter event inspection to one phase");
     println!("  --action <name> Filter event inspection to one action");
+    println!("  --outcome <name> Filter event inspection to one outcome");
     println!("  --node <id>     Filter event or failure inspection to one node");
     println!();
     println!("Sim options:");
@@ -294,6 +295,7 @@ enum ReportInspectMode {
 struct ReportInspectFilters {
     phase: Option<String>,
     action: Option<String>,
+    outcome: Option<String>,
     node: Option<String>,
 }
 
@@ -678,6 +680,12 @@ fn filter_events(events: &[ReportEvent], filters: &ReportInspectFilters) -> Vec<
                 .is_none_or(|action| event.action == action)
         })
         .filter(|event| {
+            filters
+                .outcome
+                .as_deref()
+                .is_none_or(|outcome| event.outcome == outcome)
+        })
+        .filter(|event| {
             filters.node.as_deref().is_none_or(|node| {
                 event
                     .node_id
@@ -1026,6 +1034,7 @@ fn main() {
                 let mut filters = ReportInspectFilters::default();
                 let mut expect_phase_value = false;
                 let mut expect_action_value = false;
+                let mut expect_outcome_value = false;
                 let mut expect_node_value = false;
 
                 for arg in args {
@@ -1035,6 +1044,9 @@ fn main() {
                     } else if expect_action_value {
                         filters.action = Some(arg);
                         expect_action_value = false;
+                    } else if expect_outcome_value {
+                        filters.outcome = Some(arg);
+                        expect_outcome_value = false;
                     } else if expect_node_value {
                         filters.node = Some(arg);
                         expect_node_value = false;
@@ -1049,6 +1061,12 @@ fn main() {
                         }
                         if filters.action.is_some() {
                             eprintln!("report inspect --action cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.outcome.is_some() {
+                            eprintln!("report inspect --outcome cannot be combined with --full");
                             eprintln!();
                             print_usage();
                             std::process::exit(2);
@@ -1087,6 +1105,14 @@ fn main() {
                         }
                         if filters.action.is_some() {
                             eprintln!("report inspect --action cannot be combined with --failures");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.outcome.is_some() {
+                            eprintln!(
+                                "report inspect --outcome cannot be combined with --failures"
+                            );
                             eprintln!();
                             print_usage();
                             std::process::exit(2);
@@ -1140,6 +1166,28 @@ fn main() {
                             std::process::exit(2);
                         }
                         expect_action_value = true;
+                    } else if arg == "--outcome" {
+                        if expect_outcome_value {
+                            eprintln!("missing value for --outcome");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Full {
+                            eprintln!("report inspect --outcome cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Failures {
+                            eprintln!(
+                                "report inspect --outcome cannot be combined with --failures"
+                            );
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        expect_outcome_value = true;
                     } else if arg == "--node" {
                         if expect_node_value {
                             eprintln!("missing value for --node");
@@ -1176,6 +1224,12 @@ fn main() {
                     print_usage();
                     std::process::exit(2);
                 }
+                if expect_outcome_value {
+                    eprintln!("missing value for --outcome");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                }
                 if expect_node_value {
                     eprintln!("missing value for --node");
                     eprintln!();
@@ -1186,6 +1240,7 @@ fn main() {
                 if mode == ReportInspectMode::Summary
                     && (filters.phase.is_some()
                         || filters.action.is_some()
+                        || filters.outcome.is_some()
                         || filters.node.is_some())
                 {
                     mode = ReportInspectMode::Events;

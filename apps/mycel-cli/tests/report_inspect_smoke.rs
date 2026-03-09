@@ -218,6 +218,74 @@ fn report_inspect_action_json_returns_empty_events_for_unknown_action() {
 }
 
 #[test]
+fn report_inspect_outcome_json_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--outcome",
+        "ok",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["event_count"], 3);
+    let events = json["events"]
+        .as_array()
+        .expect("events should be an array");
+    assert_eq!(events.len(), 3);
+    assert!(events.iter().all(|event| event["outcome"] == "ok"));
+}
+
+#[test]
+fn report_inspect_outcome_text_filters_events_for_generated_negative_report() {
+    let _guard = sim_run_lock();
+    let sim_output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/hash-mismatch.example.json",
+        "--json",
+    ]);
+    assert_success(&sim_output);
+
+    let sim_json = parse_json_stdout(&sim_output);
+    let report_path = sim_json["report_path"]
+        .as_str()
+        .expect("report_path should be a string")
+        .to_owned();
+
+    let output = run_report(&["report", "inspect", &report_path, "--outcome", "failed"]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "events: 1");
+    assert_stdout_contains(&output, "phase=sync action=inject-fault outcome=failed");
+}
+
+#[test]
+fn report_inspect_outcome_json_returns_empty_events_for_unknown_outcome() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--outcome",
+        "missing-outcome",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["event_count"], 0);
+    assert_eq!(
+        json["events"].as_array().map(Vec::len),
+        Some(0),
+        "expected empty events array, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn report_inspect_node_json_filters_events_for_example_report() {
     let output = run_report(&[
         "report",
@@ -238,6 +306,30 @@ fn report_inspect_node_json_filters_events_for_example_report() {
     assert_eq!(events.len(), 1);
     assert_eq!(events[0]["node_id"], "node:peer-seed");
     assert_eq!(events[0]["action"], "seed-advertise");
+}
+
+#[test]
+fn report_inspect_node_and_outcome_json_filters_events_for_example_report() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--node",
+        "node:peer-seed",
+        "--outcome",
+        "ok",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["event_count"], 1);
+    let events = json["events"]
+        .as_array()
+        .expect("events should be an array");
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0]["node_id"], "node:peer-seed");
+    assert_eq!(events[0]["outcome"], "ok");
 }
 
 #[test]
@@ -609,6 +701,43 @@ fn report_inspect_rejects_action_with_full() {
 }
 
 #[test]
+fn report_inspect_rejects_outcome_with_failures() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--failures",
+        "--outcome",
+        "ok",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect --outcome cannot be combined with --failures",
+    );
+}
+
+#[test]
+fn report_inspect_rejects_outcome_with_full() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--outcome",
+        "ok",
+        "--full",
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "report inspect --outcome cannot be combined with --full",
+    );
+}
+
+#[test]
 fn report_inspect_rejects_node_with_full() {
     let output = run_report(&[
         "report",
@@ -651,6 +780,19 @@ fn report_inspect_requires_action_value() {
 
     assert_exit_code(&output, 2);
     assert_stderr_contains(&output, "missing value for --action");
+}
+
+#[test]
+fn report_inspect_requires_outcome_value() {
+    let output = run_report(&[
+        "report",
+        "inspect",
+        "sim/reports/report.example.json",
+        "--outcome",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "missing value for --outcome");
 }
 
 #[test]
