@@ -280,6 +280,63 @@ pub fn assert_report_inspect_help(stdout: &str) {
     );
 }
 
+pub fn assert_object_verify_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel object verify"),
+        "expected object verify usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Verify one object file"),
+        "expected object verify description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("<PATH>"),
+        "expected object path argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in help, stdout: {stdout}"
+    );
+}
+
+pub fn assert_sim_run_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel sim run"),
+        "expected sim run usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Run one test case and write a report"),
+        "expected sim run description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("<PATH>"),
+        "expected sim path argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--seed <SEED>"),
+        "expected seed flag in help, stdout: {stdout}"
+    );
+}
+
+pub fn assert_validate_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel validate"),
+        "expected validate usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Validate the repo root, one file, or one supported directory"),
+        "expected validate description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("[PATH]"),
+        "expected optional path argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--strict"),
+        "expected strict flag in help, stdout: {stdout}"
+    );
+}
+
 pub fn assert_info_sections(stdout: &str) {
     assert!(
         stdout.contains("Mycel Rust workspace"),

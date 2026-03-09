@@ -1,9 +1,9 @@
 mod common;
 
 use common::{
-    assert_empty_stderr, assert_exit_code, assert_head_inspect_help, assert_report_inspect_help,
-    assert_stderr_contains, assert_stderr_starts_with, assert_top_level_help, run_mycel,
-    stdout_text,
+    assert_empty_stderr, assert_exit_code, assert_head_inspect_help, assert_object_verify_help,
+    assert_report_inspect_help, assert_sim_run_help, assert_stderr_contains,
+    assert_stderr_starts_with, assert_top_level_help, assert_validate_help, run_mycel, stdout_text,
 };
 
 #[test]
@@ -50,4 +50,31 @@ fn report_inspect_help_prints_structured_clap_help() {
     assert_exit_code(&output, 0);
     assert_empty_stderr(&output);
     assert_report_inspect_help(&stdout_text(&output));
+}
+
+#[test]
+fn object_verify_help_prints_structured_clap_help() {
+    let output = run_mycel(&["object", "verify", "--help"]);
+
+    assert_exit_code(&output, 0);
+    assert_empty_stderr(&output);
+    assert_object_verify_help(&stdout_text(&output));
+}
+
+#[test]
+fn sim_run_help_prints_structured_clap_help() {
+    let output = run_mycel(&["sim", "run", "--help"]);
+
+    assert_exit_code(&output, 0);
+    assert_empty_stderr(&output);
+    assert_sim_run_help(&stdout_text(&output));
+}
+
+#[test]
+fn validate_help_prints_structured_clap_help() {
+    let output = run_mycel(&["validate", "--help"]);
+
+    assert_exit_code(&output, 0);
+    assert_empty_stderr(&output);
+    assert_validate_help(&stdout_text(&output));
 }
