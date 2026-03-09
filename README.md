@@ -23,6 +23,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 
 - Protocol stage: `v0.1` conceptual specification with a growing profile and design-note layer
 - Current focus: first-client scoping, implementation readiness, and narrowing the path from design notes to concrete profiles
+- Current Rust CLI status: suitable for internal validation and deterministic simulator-harness workflows, but not yet a production Mycel client or node
 
 ## Documentation
 

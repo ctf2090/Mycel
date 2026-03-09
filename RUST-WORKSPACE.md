@@ -73,6 +73,39 @@ Current `sim run` behavior:
 - derives `fault_plan` from the deterministic seed for negative fixture ordering
 - uses deterministic placeholder object IDs instead of real wire sync
 
+## Internal Production Boundary
+
+The current CLI can be treated as internal-production-ready only for narrow repository-local workflows.
+
+Allowed internal-production use:
+
+- repository validation in CI or operator-run local checks via `mycel validate`
+- deterministic simulator-harness runs via `mycel sim run` against version-controlled fixture/test-case inputs
+- machine-readable report generation and replay of deterministic test metadata inside the repository scaffold
+
+Required conditions for that internal-production use:
+
+- the CLI is run inside a repository root that contains `Cargo.toml`, `fixtures/`, and `sim/`
+- CI remains green for formatting, workspace tests, and negative validation smoke coverage
+- `validate` JSON/text output and `sim run` JSON/text output are treated as stable operational contracts for internal tooling
+- generated reports continue to validate successfully with `mycel validate`
+- usage remains bounded to the checked-in scaffold, examples, and deterministic test inputs
+
+Not allowed to be described as current CLI capability:
+
+- a production Mycel client
+- a production Mycel node
+- real wire-sync execution
+- real object parsing/replay from live network traffic
+- multi-process or distributed deployment orchestration
+- external-operator production automation based on assumptions beyond the checked-in simulator scaffold
+
+Practical interpretation:
+
+- `mycel validate` is close to internal-production tooling for repository quality gates
+- `mycel sim run` is suitable as an internal deterministic harness, not as evidence of live network behavior
+- the CLI should still be described as implementation scaffold, not as a finished product surface
+
 Recommended next:
 
 - add per-step event traces to `sim run`
