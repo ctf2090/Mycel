@@ -15,6 +15,7 @@ use mycel_sim::model::{Report, ReportEvent, ReportFailure};
 use mycel_sim::run::{run_test_case_with_options, RunOptions};
 use mycel_sim::simulator_banner;
 use mycel_sim::validate::validate_path;
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -85,9 +86,9 @@ enum CliCommand {
     Head(HeadCliArgs),
     #[command(about = "Show workspace and simulator scaffold information")]
     Info,
-    #[command(about = "Verify one Mycel object file")]
+    #[command(about = "Inspect or verify one Mycel object file")]
     Object(ObjectCliArgs),
-    #[command(about = "Inspect one simulator report")]
+    #[command(about = "Inspect, compare, and query simulator reports")]
     Report(ReportCliArgs),
     #[command(about = "Run a simulator test case")]
     Sim(SimCliArgs),
@@ -187,6 +188,8 @@ struct ReportCliArgs {
 
 #[derive(Subcommand)]
 enum ReportSubcommand {
+    #[command(about = "Compare two simulator reports at the summary level")]
+    Diff(ReportDiffCliArgs),
     #[command(about = "Inspect one simulator report")]
     Inspect(ReportInspectCliArgs),
     #[command(about = "List simulator reports under a directory or one file")]
@@ -197,6 +200,28 @@ enum ReportSubcommand {
     Stats(ReportStatsCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
+}
+
+#[derive(Args)]
+struct ReportDiffCliArgs {
+    #[arg(
+        value_name = "LEFT_PATH",
+        help = "Left-hand simulator report to compare",
+        required = true,
+        allow_hyphen_values = true
+    )]
+    left: String,
+    #[arg(
+        value_name = "RIGHT_PATH",
+        help = "Right-hand simulator report to compare",
+        required = true,
+        allow_hyphen_values = true
+    )]
+    right: String,
+    #[arg(long, help = "Emit machine-readable report diff output")]
+    json: bool,
+    #[arg(hide = true, allow_hyphen_values = true)]
+    extra: Vec<String>,
 }
 
 #[derive(Args)]
@@ -935,6 +960,49 @@ struct ReportStatsSummary {
     errors: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct ReportDiffSideSummary {
+    path: PathBuf,
+    run_id: Option<String>,
+    topology_id: Option<String>,
+    fixture_id: Option<String>,
+    test_id: Option<String>,
+    execution_mode: Option<String>,
+    started_at: Option<String>,
+    finished_at: Option<String>,
+    validation_status: Option<String>,
+    deterministic_seed: Option<String>,
+    seed_source: Option<String>,
+    result: Option<String>,
+    peer_count: usize,
+    event_count: usize,
+    failure_count: usize,
+    verified_object_count: Option<u64>,
+    rejected_object_count: Option<u64>,
+    matched_expected_outcomes: Vec<String>,
+    scheduled_peer_order: Vec<String>,
+    fault_plan_count: usize,
+    errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ReportDiffEntry {
+    field: String,
+    left: serde_json::Value,
+    right: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ReportDiffSummary {
+    status: String,
+    comparison: String,
+    difference_count: usize,
+    left: ReportDiffSideSummary,
+    right: ReportDiffSideSummary,
+    differences: Vec<ReportDiffEntry>,
+    errors: Vec<String>,
+}
+
 #[derive(Clone, Copy)]
 struct ReportQuerySummaryView<'a> {
     root: &'a Path,
@@ -1130,6 +1198,219 @@ fn metadata_array_len(report: &Report, key: &str) -> usize {
         .and_then(|value| value.as_array())
         .map(Vec::len)
         .unwrap_or(0)
+}
+
+fn report_diff_side(summary: &ReportInspectSummary) -> ReportDiffSideSummary {
+    ReportDiffSideSummary {
+        path: summary.path.clone(),
+        run_id: summary.run_id.clone(),
+        topology_id: summary.topology_id.clone(),
+        fixture_id: summary.fixture_id.clone(),
+        test_id: summary.test_id.clone(),
+        execution_mode: summary.execution_mode.clone(),
+        started_at: summary.started_at.clone(),
+        finished_at: summary.finished_at.clone(),
+        validation_status: summary.validation_status.clone(),
+        deterministic_seed: summary.deterministic_seed.clone(),
+        seed_source: summary.seed_source.clone(),
+        result: summary.result.clone(),
+        peer_count: summary.peer_count,
+        event_count: summary.event_count,
+        failure_count: summary.failure_count,
+        verified_object_count: summary.verified_object_count,
+        rejected_object_count: summary.rejected_object_count,
+        matched_expected_outcomes: summary.matched_expected_outcomes.clone(),
+        scheduled_peer_order: summary.scheduled_peer_order.clone(),
+        fault_plan_count: summary.fault_plan_count,
+        errors: summary.errors.clone(),
+    }
+}
+
+fn push_report_diff_if_changed(
+    differences: &mut Vec<ReportDiffEntry>,
+    field: &str,
+    left: serde_json::Value,
+    right: serde_json::Value,
+) {
+    if left != right {
+        differences.push(ReportDiffEntry {
+            field: field.to_string(),
+            left,
+            right,
+        });
+    }
+}
+
+fn diff_reports(left_path: PathBuf, right_path: PathBuf) -> ReportDiffSummary {
+    let left_inspected = inspect_report(left_path);
+    let right_inspected = inspect_report(right_path);
+
+    let left = report_diff_side(&left_inspected.summary);
+    let right = report_diff_side(&right_inspected.summary);
+
+    let mut errors = Vec::new();
+    errors.extend(
+        left.errors
+            .iter()
+            .map(|message| format!("left report: {message}")),
+    );
+    errors.extend(
+        right
+            .errors
+            .iter()
+            .map(|message| format!("right report: {message}")),
+    );
+
+    if !errors.is_empty() {
+        return ReportDiffSummary {
+            status: "failed".to_string(),
+            comparison: "failed".to_string(),
+            difference_count: 0,
+            left,
+            right,
+            differences: Vec::new(),
+            errors,
+        };
+    }
+
+    let mut differences = Vec::new();
+    push_report_diff_if_changed(
+        &mut differences,
+        "run_id",
+        serde_json::json!(left.run_id),
+        serde_json::json!(right.run_id),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "topology_id",
+        serde_json::json!(left.topology_id),
+        serde_json::json!(right.topology_id),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "fixture_id",
+        serde_json::json!(left.fixture_id),
+        serde_json::json!(right.fixture_id),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "test_id",
+        serde_json::json!(left.test_id),
+        serde_json::json!(right.test_id),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "execution_mode",
+        serde_json::json!(left.execution_mode),
+        serde_json::json!(right.execution_mode),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "started_at",
+        serde_json::json!(left.started_at),
+        serde_json::json!(right.started_at),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "finished_at",
+        serde_json::json!(left.finished_at),
+        serde_json::json!(right.finished_at),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "validation_status",
+        serde_json::json!(left.validation_status),
+        serde_json::json!(right.validation_status),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "deterministic_seed",
+        serde_json::json!(left.deterministic_seed),
+        serde_json::json!(right.deterministic_seed),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "seed_source",
+        serde_json::json!(left.seed_source),
+        serde_json::json!(right.seed_source),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "result",
+        serde_json::json!(left.result),
+        serde_json::json!(right.result),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "peer_count",
+        serde_json::json!(left.peer_count),
+        serde_json::json!(right.peer_count),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "event_count",
+        serde_json::json!(left.event_count),
+        serde_json::json!(right.event_count),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "failure_count",
+        serde_json::json!(left.failure_count),
+        serde_json::json!(right.failure_count),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "verified_object_count",
+        serde_json::json!(left.verified_object_count),
+        serde_json::json!(right.verified_object_count),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "rejected_object_count",
+        serde_json::json!(left.rejected_object_count),
+        serde_json::json!(right.rejected_object_count),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "matched_expected_outcomes",
+        serde_json::json!(left.matched_expected_outcomes),
+        serde_json::json!(right.matched_expected_outcomes),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "scheduled_peer_order",
+        serde_json::json!(left.scheduled_peer_order),
+        serde_json::json!(right.scheduled_peer_order),
+    );
+    push_report_diff_if_changed(
+        &mut differences,
+        "fault_plan_count",
+        serde_json::json!(left.fault_plan_count),
+        serde_json::json!(right.fault_plan_count),
+    );
+
+    let comparison = if differences.is_empty() {
+        "match"
+    } else {
+        "different"
+    };
+
+    ReportDiffSummary {
+        status: "ok".to_string(),
+        comparison: comparison.to_string(),
+        difference_count: differences.len(),
+        left,
+        right,
+        differences,
+        errors: Vec::new(),
+    }
+}
+
+fn format_report_diff_value(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(text) => format!("{text:?}"),
+        _ => value.to_string(),
+    }
 }
 
 fn is_report_schema_file(path: &Path) -> bool {
@@ -2209,6 +2490,17 @@ fn handle_object_command(command: ObjectCliArgs) -> Result<i32, CliError> {
 
 fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
     match command.command {
+        Some(ReportSubcommand::Diff(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "report diff") {
+                return Err(CliError::usage(message));
+            }
+
+            report_diff(
+                PathBuf::from(args.left),
+                PathBuf::from(args.right),
+                args.json,
+            )
+        }
         Some(ReportSubcommand::Inspect(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "report inspect") {
                 return Err(CliError::usage(message));
@@ -2437,6 +2729,56 @@ fn print_report_full_json(
             Ok(0)
         }
         Err(source) => Err(CliError::serialization("full report JSON", source)),
+    }
+}
+
+fn print_report_diff_text(summary: &ReportDiffSummary) -> i32 {
+    println!("left report: {}", summary.left.path.display());
+    println!("right report: {}", summary.right.path.display());
+    println!("comparison: {}", summary.comparison);
+    println!("difference count: {}", summary.difference_count);
+
+    for difference in &summary.differences {
+        println!(
+            "difference {}: left={} right={}",
+            difference.field,
+            format_report_diff_value(&difference.left),
+            format_report_diff_value(&difference.right)
+        );
+    }
+
+    if summary.status == "failed" {
+        println!("report diff: failed");
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    } else {
+        println!("report diff: {}", summary.comparison);
+        0
+    }
+}
+
+fn print_report_diff_json(summary: &ReportDiffSummary) -> Result<i32, CliError> {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.status == "failed" {
+                Ok(1)
+            } else {
+                Ok(0)
+            }
+        }
+        Err(source) => Err(CliError::serialization("report diff summary", source)),
+    }
+}
+
+fn report_diff(left: PathBuf, right: PathBuf, json: bool) -> Result<i32, CliError> {
+    let summary = diff_reports(left, right);
+    if json {
+        print_report_diff_json(&summary)
+    } else {
+        Ok(print_report_diff_text(&summary))
     }
 }
 

@@ -280,6 +280,29 @@ pub fn assert_report_inspect_help(stdout: &str) {
     );
 }
 
+pub fn assert_report_diff_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel report diff"),
+        "expected report diff usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Compare two simulator reports at the summary level"),
+        "expected report diff description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("<LEFT_PATH>"),
+        "expected left report path in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("<RIGHT_PATH>"),
+        "expected right report path in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in report diff help, stdout: {stdout}"
+    );
+}
+
 pub fn assert_report_list_help(stdout: &str) {
     assert!(
         stdout.contains("Usage: mycel report list"),

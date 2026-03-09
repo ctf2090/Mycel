@@ -38,6 +38,8 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- object inspect <path> --json`
 - `cargo run -p mycel-cli -- object verify <path>`
 - `cargo run -p mycel-cli -- object verify <path> --json`
+- `cargo run -p mycel-cli -- report diff <left-report> <right-report>`
+- `cargo run -p mycel-cli -- report diff <left-report> <right-report> --json`
 - `cargo run -p mycel-cli -- report inspect <path>`
 - `cargo run -p mycel-cli -- report inspect <path> --json`
 - `cargo run -p mycel-cli -- report inspect <path> --full --json`
@@ -107,6 +109,8 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report stats --result pass --json`
 - `cargo run -p mycel-cli -- report stats --validation-status warning --json`
 - `cargo run -p mycel-cli -- report stats sim/reports/out --json`
+- `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json`
+- `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --full --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --events`
@@ -155,6 +159,10 @@ Report-inspection output notes:
 - `report stats --result <pass|fail>` narrows the aggregated valid-report set to one result while still retaining invalid parse entries in the top-level counts and status
 - `report stats --validation-status <ok|warning|failed>` narrows the aggregated valid-report set to one validation status while still retaining invalid parse entries in the top-level counts and status
 - `report stats` counts valid reports by `result` and `validation_status`, while still surfacing invalid parse entries through the shared top-level status and counts
+- `report diff <left> <right>` compares two reports at the summary level and prints a human-readable difference list
+- `report diff <left> <right> --json` emits a stable diff summary with `status`, `comparison`, `difference_count`, `left`, `right`, `differences`, and `errors`
+- `status: ok` means both inputs parsed as report targets successfully; use `comparison: match|different` to tell whether the summaries differ
+- the first version compares stable summary fields such as IDs, execution metadata, counts, expected outcomes, scheduled peer order, and fault-plan count; it does not yet emit event-level diffs
 - `report inspect <path>` prints a human-readable summary for one simulator report
 - `report inspect <path> --json` emits a stable inspection summary including run identity, result, counts, selected metadata, and errors
 - `report inspect <path> --full --json` emits the raw report JSON without summary reshaping
@@ -180,6 +188,52 @@ Report-inspection output notes:
 - `--node` cannot be combined with `--full`
 - `--full` requires `--json`
 - schema files are not valid inspect targets; use an actual report file such as `sim/reports/report.example.json` or one generated under `sim/reports/out/`
+
+Minimal `report diff --json` shape example:
+
+```json
+{
+  "status": "ok",
+  "comparison": "different",
+  "difference_count": 3,
+  "left": {
+    "path": "sim/reports/report.example.json",
+    "run_id": "run:example-001",
+    "result": "pass",
+    "peer_count": 2,
+    "event_count": 3,
+    "failure_count": 0,
+    "errors": []
+  },
+  "right": {
+    "path": "sim/reports/invalid/missing-seed-source.example.json",
+    "run_id": "run:missing-seed-source-001",
+    "result": "pass",
+    "peer_count": 3,
+    "event_count": 3,
+    "failure_count": 0,
+    "errors": []
+  },
+  "differences": [
+    {
+      "field": "run_id",
+      "left": "run:example-001",
+      "right": "run:missing-seed-source-001"
+    },
+    {
+      "field": "peer_count",
+      "left": 2,
+      "right": 3
+    },
+    {
+      "field": "seed_source",
+      "left": "derived",
+      "right": null
+    }
+  ],
+  "errors": []
+}
+```
 
 Minimal `report stats --counts-only --json` shape example:
 

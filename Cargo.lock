@@ -383,6 +383,7 @@ dependencies = [
  "ed25519-dalek",
  "mycel-core",
  "mycel-sim",
+ "serde",
  "serde_json",
  "sha2",
  "thiserror",
