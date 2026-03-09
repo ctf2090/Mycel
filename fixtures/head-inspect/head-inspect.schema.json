@@ -39,6 +39,12 @@
         "type": "object"
       }
     },
+    "critical_violations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/critical_violation"
+      }
+    },
     "expected": {
       "$ref": "#/$defs/expected"
     }
@@ -88,6 +94,28 @@
         "weight_cap_per_key": {
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "critical_violation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maintainer",
+        "timestamp"
+      ],
+      "properties": {
+        "maintainer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timestamp": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },

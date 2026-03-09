@@ -49,6 +49,8 @@ struct HeadInspectInput {
     revisions: Vec<Value>,
     #[serde(default)]
     views: Vec<Value>,
+    #[serde(default)]
+    critical_violations: Vec<HeadInspectCriticalViolation>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,6 +63,14 @@ struct HeadInspectProfile {
     min_valid_views_for_admission: u64,
     min_valid_views_per_epoch: u64,
     weight_cap_per_key: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct HeadInspectCriticalViolation {
+    maintainer: String,
+    timestamp: u64,
+    #[serde(default)]
+    reason: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -168,7 +178,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         ),
     );
     summary.notes.push(
-        "minimal selector mode: critical violation accounting and profile-defined penalty rules are not implemented yet; critical_violation_count is assumed to be 0".to_string(),
+        "minimal selector mode: critical violations are bundle-provided fixture evidence; external dispute / penalty objects are not implemented yet".to_string(),
     );
 
     let verified_revisions = collect_verified_revisions(
@@ -192,6 +202,30 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
             "verified_revisions={} verified_views={}",
             summary.verified_revision_count, summary.verified_view_count
         ),
+    );
+    summary.push_trace(
+        "critical_violations",
+        if input.critical_violations.is_empty() {
+            "no bundle-provided critical violations".to_string()
+        } else {
+            input
+                .critical_violations
+                .iter()
+                .map(|violation| {
+                    format!(
+                        "{}@{}{}",
+                        violation.maintainer,
+                        violation.timestamp,
+                        violation
+                            .reason
+                            .as_deref()
+                            .map(|reason| format!(" reason={reason}"))
+                            .unwrap_or_default()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        },
     );
 
     if !summary.errors.is_empty() {
@@ -218,6 +252,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
 
     let (effective_weights, weight_trace) = compute_effective_weights(
         &verified_views,
+        &input.critical_violations,
         summary
             .selector_epoch
             .expect("selector epoch should be set"),
@@ -694,10 +729,12 @@ fn latest_support_by_maintainer(
 
 fn compute_effective_weights(
     views: &[VerifiedView],
+    critical_violations: &[HeadInspectCriticalViolation],
     selector_epoch: i64,
     profile: &HeadInspectProfile,
 ) -> (HashMap<String, u64>, Vec<DecisionTraceEntry>) {
     let mut per_epoch_counts: HashMap<String, BTreeMap<i64, u64>> = HashMap::new();
+    let mut per_epoch_violations: HashMap<String, BTreeMap<i64, u64>> = HashMap::new();
 
     for view in views {
         let epoch = selector_epoch_for_view(
@@ -713,7 +750,27 @@ fn compute_effective_weights(
             .or_insert(1);
     }
 
-    let mut maintainers = per_epoch_counts.keys().cloned().collect::<Vec<_>>();
+    for violation in critical_violations {
+        let epoch = selector_epoch_for_view(
+            violation.timestamp,
+            profile.epoch_seconds,
+            profile.epoch_zero_timestamp,
+        );
+        per_epoch_violations
+            .entry(violation.maintainer.clone())
+            .or_default()
+            .entry(epoch)
+            .and_modify(|count| *count += 1)
+            .or_insert(1);
+    }
+
+    let mut maintainers = per_epoch_counts
+        .keys()
+        .chain(per_epoch_violations.keys())
+        .cloned()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
     maintainers.sort();
 
     let mut weights = HashMap::new();
@@ -722,8 +779,14 @@ fn compute_effective_weights(
     for maintainer in maintainers {
         let counts = per_epoch_counts
             .get(&maintainer)
-            .expect("maintainer counts should exist");
-        let effective_weight = effective_weight_for_epoch(counts, selector_epoch, profile);
+            .cloned()
+            .unwrap_or_default();
+        let violations = per_epoch_violations
+            .get(&maintainer)
+            .cloned()
+            .unwrap_or_default();
+        let effective_weight =
+            effective_weight_for_epoch(&counts, &violations, selector_epoch, profile);
         weights.insert(maintainer.clone(), effective_weight);
 
         let mut count_parts = counts
@@ -733,14 +796,22 @@ fn compute_effective_weights(
         if count_parts.is_empty() {
             count_parts.push("no_views".to_string());
         }
+        let mut violation_parts = violations
+            .iter()
+            .map(|(epoch, count)| format!("epoch{epoch}={count}"))
+            .collect::<Vec<_>>();
+        if violation_parts.is_empty() {
+            violation_parts.push("none".to_string());
+        }
 
         trace.push(DecisionTraceEntry {
             step: "effective_weight".to_string(),
             detail: format!(
-                "{maintainer} admitted={admitted} weight={weight} counts=[{counts}]",
-                admitted = is_admitted_in_epoch(counts, selector_epoch, profile),
+                "{maintainer} admitted={admitted} weight={weight} counts=[{counts}] violations=[{violations}]",
+                admitted = is_admitted_in_epoch(&counts, &violations, selector_epoch, profile),
                 weight = effective_weight,
-                counts = count_parts.join(", ")
+                counts = count_parts.join(", "),
+                violations = violation_parts.join(", ")
             ),
         });
     }
@@ -750,20 +821,24 @@ fn compute_effective_weights(
 
 fn effective_weight_for_epoch(
     counts: &BTreeMap<i64, u64>,
+    violations: &BTreeMap<i64, u64>,
     epoch: i64,
     profile: &HeadInspectProfile,
 ) -> u64 {
-    if !is_admitted_in_epoch(counts, epoch, profile) {
+    if !is_admitted_in_epoch(counts, violations, epoch, profile) {
         return 0;
     }
 
-    if epoch <= 0 || !is_admitted_in_epoch(counts, epoch - 1, profile) {
+    if epoch <= 0 || !is_admitted_in_epoch(counts, violations, epoch - 1, profile) {
         return 1;
     }
 
-    let previous_weight = effective_weight_for_epoch(counts, epoch - 1, profile);
+    let previous_weight = effective_weight_for_epoch(counts, violations, epoch - 1, profile);
     let previous_valid_views = counts.get(&(epoch - 1)).copied().unwrap_or(0);
-    let delta = if previous_valid_views >= profile.min_valid_views_per_epoch {
+    let previous_critical_violations = violations.get(&(epoch - 1)).copied().unwrap_or(0);
+    let delta = if previous_critical_violations > 0 {
+        -1_i64
+    } else if previous_valid_views >= profile.min_valid_views_per_epoch {
         1_i64
     } else {
         0_i64
@@ -778,6 +853,7 @@ fn effective_weight_for_epoch(
 
 fn is_admitted_in_epoch(
     counts: &BTreeMap<i64, u64>,
+    violations: &BTreeMap<i64, u64>,
     epoch: i64,
     profile: &HeadInspectProfile,
 ) -> bool {
@@ -792,8 +868,11 @@ fn is_admitted_in_epoch(
     let valid_view_sum = (start_epoch..=end_epoch)
         .map(|candidate_epoch| counts.get(&candidate_epoch).copied().unwrap_or(0))
         .sum::<u64>();
+    let critical_violation_sum = (start_epoch..=end_epoch)
+        .map(|candidate_epoch| violations.get(&candidate_epoch).copied().unwrap_or(0))
+        .sum::<u64>();
 
-    valid_view_sum >= profile.min_valid_views_for_admission
+    valid_view_sum >= profile.min_valid_views_for_admission && critical_violation_sum == 0
 }
 
 fn clamp_weight(value: i64, lo: i64, hi: i64) -> u64 {

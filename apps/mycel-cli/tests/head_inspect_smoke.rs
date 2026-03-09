@@ -169,6 +169,14 @@ fn documents_value(doc_id: &str, revision_id: &Value) -> Value {
     Value::Object(documents)
 }
 
+fn critical_violation(maintainer: &SigningKey, timestamp: u64, reason: &str) -> Value {
+    json!({
+        "maintainer": signer_id(maintainer),
+        "timestamp": timestamp,
+        "reason": reason
+    })
+}
+
 #[test]
 fn head_inspect_json_selects_highest_supported_head() {
     let doc_id = "doc:sample";
@@ -271,7 +279,8 @@ fn head_inspect_text_fails_when_no_eligible_head_exists() {
     let bundle = json!({
         "profile": head_profile(hash_json(&policy), 1200),
         "revisions": [revision],
-        "views": []
+        "views": [],
+        "critical_violations": []
     });
     let input = write_input_file("head-inspect-missing-doc", "input.json", bundle);
     let path = path_arg(&input.path);
@@ -294,7 +303,8 @@ fn head_inspect_directory_resolves_input_json() {
     let bundle = json!({
         "profile": head_profile(hash_json(&policy), 1200),
         "revisions": [revision],
-        "views": []
+        "views": [],
+        "critical_violations": []
     });
     let dir = create_temp_dir("head-inspect-directory");
     let path = dir.path().join("input.json");
@@ -406,7 +416,8 @@ fn head_inspect_uses_effective_weight_in_selector_score() {
                 documents_value(doc_id, &revision_b["revision_id"]),
                 240
             )
-        ]
+        ],
+        "critical_violations": []
     });
     let input = write_input_file("head-inspect-weighted", "input.json", bundle);
     let output = run_mycel(&[
@@ -445,6 +456,116 @@ fn head_inspect_uses_effective_weight_in_selector_score() {
                         .is_some_and(|detail| detail.contains("weight=2"))
             })),
         "expected effective_weight trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn head_inspect_penalizes_critical_violations() {
+    let doc_id = "doc:penalty";
+    let revision_author = signing_key(41);
+    let maintainer_a = signing_key(51);
+    let maintainer_b = signing_key(52);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 10, "hash:penalty-a");
+    let revision_b = signed_revision(&revision_author, doc_id, vec![], 20, "hash:penalty-b");
+    let bundle = json!({
+        "profile": {
+            "policy_hash": hash_json(&policy),
+            "effective_selection_time": 250,
+            "epoch_seconds": 100,
+            "epoch_zero_timestamp": 0,
+            "admission_window_epochs": 2,
+            "min_valid_views_for_admission": 1,
+            "min_valid_views_per_epoch": 2,
+            "weight_cap_per_key": 3
+        },
+        "revisions": [revision_a.clone(), revision_b.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                10
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                12
+            ),
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                110
+            ),
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                120
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                210
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                220
+            )
+        ],
+        "critical_violations": [
+            critical_violation(&maintainer_a, 150, "equivocated view publication")
+        ]
+    });
+    let input = write_input_file("head-inspect-penalty", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    let eligible_heads = json["eligible_heads"]
+        .as_array()
+        .expect("eligible_heads should be array");
+    let penalized = eligible_heads
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_a["revision_id"])
+        .expect("penalized head summary should exist");
+    let surviving = eligible_heads
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_b["revision_id"])
+        .expect("surviving head summary should exist");
+    assert_eq!(penalized["weighted_support"], 0);
+    assert_eq!(surviving["weighted_support"], 1);
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("effective_weight")
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("violations=[epoch1=1]") && detail.contains("weight=0")
+                    })
+            })),
+        "expected penalty trace entry, stdout: {}",
         stdout_text(&output)
     );
 }
