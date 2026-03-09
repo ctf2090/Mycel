@@ -193,12 +193,20 @@ pub fn assert_usage_sections(stdout: &str) {
         "expected Commands section, stdout: {stdout}"
     );
     assert!(
+        stdout.contains("Object options:"),
+        "expected Object options section, stdout: {stdout}"
+    );
+    assert!(
         stdout.contains("Sim options:"),
         "expected Sim options section, stdout: {stdout}"
     );
     assert!(
         stdout.contains("Validate options:"),
         "expected Validate options section, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("object"),
+        "expected object command in usage, stdout: {stdout}"
     );
 }
 

@@ -1,6 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 
+use mycel_core::verify::{verify_object_path, ObjectVerificationSummary};
 use mycel_core::workspace_banner;
 use mycel_sim::manifest::SimulatorPaths;
 use mycel_sim::run::{run_test_case_with_options, RunOptions};
@@ -12,9 +13,14 @@ fn print_usage() {
     println!();
     println!("Commands:");
     println!("  info       Show workspace and simulator scaffold information");
+    println!("  object     Verify one Mycel object file");
     println!("  sim        Run a simulator test case");
     println!("  validate   Validate the repo root, one file, or one supported directory");
     println!("  help       Show this message");
+    println!();
+    println!("Object options:");
+    println!("  verify <path>  Verify one object file");
+    println!("  --json         Emit machine-readable object verification output");
     println!();
     println!("Sim options:");
     println!("  run <path> Run one test-case and write a report to sim/reports/out/");
@@ -36,6 +42,70 @@ fn print_info() {
     println!("topologies: {}", paths.topologies_root);
     println!("tests: {}", paths.tests_root);
     println!("reports: {}", paths.reports_root);
+}
+
+fn print_object_verification_text(summary: &ObjectVerificationSummary) -> i32 {
+    println!("object path: {}", summary.path.display());
+    if let Some(object_type) = &summary.object_type {
+        println!("object type: {object_type}");
+    }
+    if let Some(signature_rule) = &summary.signature_rule {
+        println!("signature rule: {signature_rule}");
+    }
+    if let Some(signer_field) = &summary.signer_field {
+        println!("signer field: {signer_field}");
+    }
+    if let Some(signer) = &summary.signer {
+        println!("signer: {signer}");
+    }
+    if let Some(declared_id) = &summary.declared_id {
+        println!("declared id: {declared_id}");
+    }
+    if let Some(recomputed_id) = &summary.recomputed_id {
+        println!("recomputed id: {recomputed_id}");
+    }
+    println!("status: {}", summary.status);
+
+    for note in &summary.notes {
+        println!("note: {note}");
+    }
+
+    if summary.is_ok() {
+        println!("verification: ok");
+        0
+    } else {
+        println!("verification: failed");
+        for error in &summary.errors {
+            eprintln!("error: {error}");
+        }
+        1
+    }
+}
+
+fn print_object_verification_json(summary: &ObjectVerificationSummary) -> i32 {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                0
+            } else {
+                1
+            }
+        }
+        Err(err) => {
+            eprintln!("failed to serialize object verification summary: {err}");
+            2
+        }
+    }
+}
+
+fn object_verify(target: PathBuf, json: bool) -> i32 {
+    let summary = verify_object_path(&target);
+    if json {
+        print_object_verification_json(&summary)
+    } else {
+        print_object_verification_text(&summary)
+    }
 }
 
 fn print_validation_text(summary: &mycel_sim::validate::ValidationSummary) -> i32 {
@@ -206,6 +276,46 @@ fn main() {
 
     match args.next().as_deref() {
         Some("info") => print_info(),
+        Some("object") => match args.next().as_deref() {
+            Some("verify") => {
+                let mut target = None;
+                let mut json = false;
+
+                for arg in args {
+                    if arg == "--json" {
+                        json = true;
+                    } else if target.is_none() {
+                        target = Some(PathBuf::from(arg));
+                    } else {
+                        eprintln!("unexpected object verify argument: {arg}");
+                        eprintln!();
+                        print_usage();
+                        std::process::exit(2);
+                    }
+                }
+
+                let Some(target) = target else {
+                    eprintln!("missing object verify target");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                };
+
+                std::process::exit(object_verify(target, json));
+            }
+            Some(other) => {
+                eprintln!("unknown object subcommand: {other}");
+                eprintln!();
+                print_usage();
+                std::process::exit(2);
+            }
+            None => {
+                eprintln!("missing object subcommand");
+                eprintln!();
+                print_usage();
+                std::process::exit(2);
+            }
+        },
         Some("validate") => {
             let mut target = PathBuf::from(".");
             let mut json = false;

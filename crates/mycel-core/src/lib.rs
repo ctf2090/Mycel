@@ -4,6 +4,7 @@
 //! workspace-level constants that both the simulator and CLI can depend on.
 
 pub mod protocol;
+pub mod verify;
 
 pub const WORKSPACE_NAME: &str = "mycel";
 
