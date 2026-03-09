@@ -177,6 +177,13 @@ impl ObjectSchema {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct DeclaredDerivedId<'a> {
+    pub field: &'static str,
+    pub prefix: &'static str,
+    pub value: &'a str,
+}
+
 pub fn object_schema(object_type: &str) -> Option<ObjectSchema> {
     ObjectKind::from_str(object_type)
         .ok()
@@ -267,8 +274,21 @@ impl<'a> ParsedObjectEnvelope<'a> {
     }
 
     pub fn declared_id(&self) -> Result<Option<&'a str>, StringFieldError> {
-        match self.schema.derived_id_field {
-            Some(field) => required_string_field(self.object, field).map(Some),
+        match self.declared_derived_id()? {
+            Some(declared) => Ok(Some(declared.value)),
+            None => Ok(None),
+        }
+    }
+
+    pub fn declared_derived_id(&self) -> Result<Option<DeclaredDerivedId<'a>>, StringFieldError> {
+        match self.schema.derived_id() {
+            Some((field, prefix)) => required_string_field(self.object, field).map(|value| {
+                Some(DeclaredDerivedId {
+                    field,
+                    prefix,
+                    value,
+                })
+            }),
             None => Ok(None),
         }
     }
@@ -396,6 +416,83 @@ mod tests {
     }
 
     #[test]
+    fn parse_patch_envelope_exposes_typed_derived_id() {
+        let value = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "author": "pk:ed25519:test"
+        });
+
+        let envelope = parse_object_envelope(&value).expect("patch envelope should parse");
+        let declared = envelope
+            .declared_derived_id()
+            .expect("patch derived ID should parse")
+            .expect("patch should expose a derived ID");
+        assert_eq!(declared.field, "patch_id");
+        assert_eq!(declared.prefix, "patch");
+        assert_eq!(declared.value, "patch:test");
+        assert_eq!(envelope.declared_id(), Ok(Some("patch:test")));
+    }
+
+    #[test]
+    fn parse_revision_envelope_exposes_typed_derived_id() {
+        let value = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "author": "pk:ed25519:test"
+        });
+
+        let envelope = parse_object_envelope(&value).expect("revision envelope should parse");
+        let declared = envelope
+            .declared_derived_id()
+            .expect("revision derived ID should parse")
+            .expect("revision should expose a derived ID");
+        assert_eq!(declared.field, "revision_id");
+        assert_eq!(declared.prefix, "rev");
+        assert_eq!(declared.value, "rev:test");
+    }
+
+    #[test]
+    fn parse_view_envelope_exposes_typed_derived_id() {
+        let value = json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "view_id": "view:test",
+            "maintainer": "pk:ed25519:test"
+        });
+
+        let envelope = parse_object_envelope(&value).expect("view envelope should parse");
+        let declared = envelope
+            .declared_derived_id()
+            .expect("view derived ID should parse")
+            .expect("view should expose a derived ID");
+        assert_eq!(declared.field, "view_id");
+        assert_eq!(declared.prefix, "view");
+        assert_eq!(declared.value, "view:test");
+    }
+
+    #[test]
+    fn parse_snapshot_envelope_exposes_typed_derived_id() {
+        let value = json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "created_by": "pk:ed25519:test"
+        });
+
+        let envelope = parse_object_envelope(&value).expect("snapshot envelope should parse");
+        let declared = envelope
+            .declared_derived_id()
+            .expect("snapshot derived ID should parse")
+            .expect("snapshot should expose a derived ID");
+        assert_eq!(declared.field, "snapshot_id");
+        assert_eq!(declared.prefix, "snap");
+        assert_eq!(declared.value, "snap:test");
+    }
+
+    #[test]
     fn parse_block_envelope_reports_wrong_logical_id_type() {
         let value = json!({
             "type": "block",
@@ -406,6 +503,22 @@ mod tests {
         let envelope = parse_object_envelope(&value).expect("block envelope should parse");
         assert_eq!(envelope.kind(), ObjectKind::Block);
         assert_eq!(envelope.logical_id(), Err(StringFieldError::WrongType));
+    }
+
+    #[test]
+    fn parse_patch_envelope_reports_wrong_derived_id_type() {
+        let value = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": 7,
+            "author": "pk:ed25519:test"
+        });
+
+        let envelope = parse_object_envelope(&value).expect("patch envelope should parse");
+        assert_eq!(
+            envelope.declared_derived_id(),
+            Err(StringFieldError::WrongType)
+        );
     }
 
     #[test]

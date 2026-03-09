@@ -269,8 +269,10 @@ fn verify_object_value_with_summary(
     }
 
     if let Some((id_field, prefix)) = schema.derived_id() {
-        match envelope.declared_id() {
-            Ok(Some(declared_id)) => summary.declared_id = Some(declared_id.to_string()),
+        match envelope.declared_derived_id() {
+            Ok(Some(declared)) => {
+                summary.declared_id = Some(declared.value.to_string());
+            }
             Err(StringFieldError::Missing) => summary.push_error(format!(
                 "{object_type} object is missing string field '{id_field}'"
             )),
@@ -369,8 +371,8 @@ fn inspect_object_value_with_summary(
 
     if let Some((id_field, _prefix)) = schema.derived_id() {
         summary.declared_id_field = Some(id_field.to_string());
-        match envelope.declared_id() {
-            Ok(Some(id)) => summary.declared_id = Some(id.to_string()),
+        match envelope.declared_derived_id() {
+            Ok(Some(declared)) => summary.declared_id = Some(declared.value.to_string()),
             Err(StringFieldError::WrongType) => {
                 summary.push_note(format!("top-level '{id_field}' should be a string"))
             }
