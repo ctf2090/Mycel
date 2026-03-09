@@ -92,6 +92,8 @@ fn normalized_event_value(
         return value;
     };
 
+    object.remove("step");
+
     if !diff_field_selected(fields, ReportDiffIgnoreField::EventPhase)
         || ignore_fields.contains(&ReportDiffIgnoreField::EventPhase)
     {
@@ -143,6 +145,86 @@ fn collect_report_diff_errors(
             .map(|message| format!("right report: {message}")),
     );
     errors
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct EventTraceIdentityKey {
+    phase: Option<String>,
+    action: Option<String>,
+    node_id: Option<String>,
+    object_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct IndexedReportEvent {
+    identity: ReportEventTraceIdentity,
+    event: ReportEvent,
+}
+
+fn identity_field_retained(
+    fields: &[ReportDiffIgnoreField],
+    ignore_fields: &[ReportDiffIgnoreField],
+    field: ReportDiffIgnoreField,
+) -> bool {
+    !ignore_fields.contains(&field) && (fields.is_empty() || fields.contains(&field))
+}
+
+fn event_trace_identity_key(
+    event: &ReportEvent,
+    fields: &[ReportDiffIgnoreField],
+    ignore_fields: &[ReportDiffIgnoreField],
+) -> EventTraceIdentityKey {
+    EventTraceIdentityKey {
+        phase: identity_field_retained(fields, ignore_fields, ReportDiffIgnoreField::EventPhase)
+            .then(|| event.phase.clone()),
+        action: identity_field_retained(fields, ignore_fields, ReportDiffIgnoreField::EventAction)
+            .then(|| event.action.clone()),
+        node_id: identity_field_retained(fields, ignore_fields, ReportDiffIgnoreField::EventNodeId)
+            .then(|| event.node_id.clone())
+            .flatten(),
+        object_ids: if identity_field_retained(
+            fields,
+            ignore_fields,
+            ReportDiffIgnoreField::EventObjectIds,
+        ) {
+            event.object_ids.clone()
+        } else {
+            Vec::new()
+        },
+    }
+}
+
+fn index_report_events(
+    events: Vec<ReportEvent>,
+    fields: &[ReportDiffIgnoreField],
+    ignore_fields: &[ReportDiffIgnoreField],
+) -> BTreeMap<(EventTraceIdentityKey, usize), IndexedReportEvent> {
+    let mut occurrences = BTreeMap::<EventTraceIdentityKey, usize>::new();
+    let mut indexed = BTreeMap::new();
+
+    for event in events {
+        let key = event_trace_identity_key(&event, fields, ignore_fields);
+        let occurrence = {
+            let count = occurrences.entry(key.clone()).or_insert(0);
+            *count += 1;
+            *count
+        };
+        indexed.insert(
+            (key.clone(), occurrence),
+            IndexedReportEvent {
+                identity: ReportEventTraceIdentity {
+                    phase: key.phase.clone(),
+                    action: key.action.clone(),
+                    node_id: key.node_id.clone(),
+                    object_ids: key.object_ids.clone(),
+                    occurrence,
+                },
+                event,
+            },
+        );
+    }
+
+    indexed
 }
 
 pub(super) fn diff_reports(
@@ -392,52 +474,62 @@ pub(super) fn diff_report_events(
         };
     }
 
-    let mut left_by_step = BTreeMap::new();
-    for event in left_inspected.events {
-        left_by_step.insert(event.step, event);
-    }
+    let left_by_identity = index_report_events(left_inspected.events, fields, ignore_fields);
+    let right_by_identity = index_report_events(right_inspected.events, fields, ignore_fields);
 
-    let mut right_by_step = BTreeMap::new();
-    for event in right_inspected.events {
-        right_by_step.insert(event.step, event);
-    }
-
-    let all_steps = left_by_step
+    let all_identities = left_by_identity
         .keys()
-        .chain(right_by_step.keys())
-        .copied()
+        .chain(right_by_identity.keys())
+        .cloned()
         .collect::<std::collections::BTreeSet<_>>();
 
     let mut event_differences = Vec::new();
-    for step in all_steps {
-        let left_event = left_by_step.get(&step).cloned();
-        let right_event = right_by_step.get(&step).cloned();
+    for identity_key in all_identities {
+        let left_event = left_by_identity.get(&identity_key).cloned();
+        let right_event = right_by_identity.get(&identity_key).cloned();
+        let trace_identity = left_event
+            .as_ref()
+            .map(|indexed| indexed.identity.clone())
+            .or_else(|| right_event.as_ref().map(|indexed| indexed.identity.clone()))
+            .expect("event identity set should contain one side");
+        let left_step = left_event.as_ref().map(|indexed| indexed.event.step);
+        let right_step = right_event.as_ref().map(|indexed| indexed.event.step);
+        let step = left_step.or(right_step).unwrap_or_default();
         match (&left_event, &right_event) {
             (Some(left_event), Some(right_event))
-                if normalized_event_value(left_event, fields, ignore_fields)
-                    != normalized_event_value(right_event, fields, ignore_fields) =>
+                if normalized_event_value(&left_event.event, fields, ignore_fields)
+                    != normalized_event_value(&right_event.event, fields, ignore_fields) =>
             {
                 event_differences.push(ReportEventDiffEntry {
                     step,
+                    left_step,
+                    right_step,
+                    trace_identity,
                     change: "changed".to_string(),
-                    left: Some(left_event.clone()),
-                    right: Some(right_event.clone()),
+                    left: Some(left_event.event.clone()),
+                    right: Some(right_event.event.clone()),
                 });
             }
             (Some(_), None) => {
                 event_differences.push(ReportEventDiffEntry {
                     step,
+                    left_step,
+                    right_step,
+                    trace_identity,
                     change: "left_only".to_string(),
-                    left: left_event,
+                    left: left_event.map(|indexed| indexed.event),
                     right: None,
                 });
             }
             (None, Some(_)) => {
                 event_differences.push(ReportEventDiffEntry {
                     step,
+                    left_step,
+                    right_step,
+                    trace_identity,
                     change: "right_only".to_string(),
                     left: None,
-                    right: right_event,
+                    right: right_event.map(|indexed| indexed.event),
                 });
             }
             _ => {}

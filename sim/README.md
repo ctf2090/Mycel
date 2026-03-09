@@ -174,8 +174,8 @@ Report-inspection output notes:
 - `report diff <left> <right> --fail-on-diff` keeps the same payload but exits with failure when `comparison` is `different`
 - `report diff <left> <right> --field <field>` turns diffing into an allowlist mode; repeat the flag to compare multiple specific fields
 - `report diff <left> <right> --ignore-field <field>` removes specific fields from comparison; repeat the flag to ignore multiple fields
-- `report diff <left> <right> --events` compares event traces step-by-step and prints event-level differences instead of summary-field differences
-- `report diff <left> <right> --events --json` emits `event_difference_count` plus `event_differences[]`, where each entry is `changed`, `left_only`, or `right_only`
+- `report diff <left> <right> --events` compares event traces by trace identity rather than raw `step`, so step drift alone does not create a diff
+- `report diff <left> <right> --events --json` emits `event_difference_count` plus `event_differences[]`; each entry includes `trace_identity`, `left_step`, and `right_step`, and is classified as `changed`, `left_only`, or `right_only`
 - `--field` and `--ignore-field` are mutually exclusive
 - `status: ok` means both inputs parsed as report targets successfully; use `comparison: match|different` to tell whether the summaries differ
 - the default diff mode compares stable summary fields such as IDs, execution metadata, counts, expected outcomes, scheduled peer order, and fault-plan count

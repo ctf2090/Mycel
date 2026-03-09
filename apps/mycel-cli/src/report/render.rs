@@ -19,6 +19,21 @@ fn print_report_query_text_header(summary: ReportQuerySummaryView<'_>) {
     println!("invalid reports: {}", summary.invalid_report_count);
 }
 
+fn format_trace_identity_text(identity: &ReportEventTraceIdentity) -> String {
+    let phase = identity.phase.as_deref().unwrap_or("*");
+    let action = identity.action.as_deref().unwrap_or("*");
+    let node = identity.node_id.as_deref().unwrap_or("*");
+    let object_ids = if identity.object_ids.is_empty() {
+        "*".to_string()
+    } else {
+        identity.object_ids.join(",")
+    };
+    format!(
+        "phase={phase} action={action} node={node} objects={object_ids} occurrence={}",
+        identity.occurrence
+    )
+}
+
 fn report_query_summary_json(
     summary: ReportQuerySummaryView<'_>,
 ) -> serde_json::Map<String, serde_json::Value> {
@@ -691,7 +706,20 @@ pub(super) fn print_report_event_diff_text(
     }
 
     for difference in &summary.event_differences {
-        println!("event step {}: {}", difference.step, difference.change);
+        println!(
+            "event step {}: {} ({})",
+            difference.step,
+            difference.change,
+            format_trace_identity_text(&difference.trace_identity)
+        );
+        if difference.left_step != difference.right_step {
+            if let Some(left_step) = difference.left_step {
+                println!("  left step: {left_step}");
+            }
+            if let Some(right_step) = difference.right_step {
+                println!("  right step: {right_step}");
+            }
+        }
         if let Some(left) = &difference.left {
             println!("  left: {}", format_report_event_text(left));
         }

@@ -573,8 +573,20 @@ struct ReportDiffSummary {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct ReportEventTraceIdentity {
+    phase: Option<String>,
+    action: Option<String>,
+    node_id: Option<String>,
+    object_ids: Vec<String>,
+    occurrence: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct ReportEventDiffEntry {
     step: u64,
+    left_step: Option<u64>,
+    right_step: Option<u64>,
+    trace_identity: ReportEventTraceIdentity,
     change: String,
     left: Option<ReportEvent>,
     right: Option<ReportEvent>,
