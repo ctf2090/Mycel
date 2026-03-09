@@ -7,6 +7,12 @@
 - 一種能發布新的 candidate heads
 - 一種能影響 accepted-head selection
 
+相關文件：
+
+- `DESIGN-NOTES.maintainer-conflict-flow.*`：當 rival maintainer ideas 變成 competing heads 時的完整流程
+- `DESIGN-NOTES.interpretation-dispute-model.*`：當分歧已嚴重到成為正式 interpretation dispute 時的處理模型
+- `DESIGN-NOTES.client-non-discretionary-multi-view.*`：client 端如何依這些 governance signals 計算 accepted head
+
 目標是避免把「能寫內容」和「能決定 reader 看什麼」預設成同一種權力。
 
 ## 0. 目標

@@ -7,6 +7,12 @@ This note proposes splitting maintainer responsibility into two explicit roles:
 - a role that can publish new candidate heads
 - a role that can influence accepted-head selection
 
+Related notes:
+
+- `DESIGN-NOTES.maintainer-conflict-flow.*` for the end-to-end flow when rival maintainer ideas become competing heads
+- `DESIGN-NOTES.interpretation-dispute-model.*` for cases where the disagreement is substantive enough to become a formal interpretation dispute
+- `DESIGN-NOTES.client-non-discretionary-multi-view.*` for the client-side accepted-head rules that consume these governance signals
+
 The goal is to avoid treating "can write content" and "can decide what readers see" as the same authority by default.
 
 ## 0. Goal

@@ -4,6 +4,12 @@ Status: design draft
 
 This note describes how Mycel can model, preserve, and arbitrate interpretation disputes without silently replacing root text or forcing all deployments into one universal reading.
 
+Related notes:
+
+- `DESIGN-NOTES.two-maintainer-role.*` for the split between candidate-head publication and accepted-head governance
+- `DESIGN-NOTES.maintainer-conflict-flow.*` for the ordinary maintainer-conflict path before or alongside formal dispute escalation
+- `DESIGN-NOTES.client-non-discretionary-multi-view.*` for how accepted outputs should be derived and displayed under fixed profile rules
+
 The main design principle is:
 
 - root text and interpretation must remain distinct

@@ -4,6 +4,12 @@
 
 這份文件描述 Mycel 應如何建模、保留並仲裁 interpretation disputes（解釋爭議），同時避免靜默覆蓋 root text，或強迫所有 deployment 收斂成單一 universal reading。
 
+相關文件：
+
+- `DESIGN-NOTES.two-maintainer-role.*`：candidate-head 發布權與 accepted-head governance 的角色拆分
+- `DESIGN-NOTES.maintainer-conflict-flow.*`：進入正式 dispute 前後的一般 maintainer-conflict 路徑
+- `DESIGN-NOTES.client-non-discretionary-multi-view.*`：在固定 profile 規則下如何導出並呈現 accepted outputs
+
 核心設計原則是：
 
 - root text 與 interpretation 必須分離
