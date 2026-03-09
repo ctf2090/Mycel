@@ -11,6 +11,7 @@ It exists to separate simulator structure from implementation choice.
 - `tests/`: simulator test cases and expected assertions
 - `reports/`: machine-readable output shape and report conventions
 - `SCHEMA-CROSS-CHECK.md`: consistency rules between fixture, peer, topology, test case, and report schemas
+- `SCHEMA-CROSS-CHECK.zh-TW.md`: Traditional Chinese version of the schema cross-check note
 - `runtime/`: ignored local runtime state for manual experiments
 
 ## Build Direction
