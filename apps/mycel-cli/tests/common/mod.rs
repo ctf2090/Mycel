@@ -137,3 +137,22 @@ pub fn assert_empty_stderr(output: &Output) {
     let stderr = stderr_text(output);
     assert_eq!(stderr, "", "expected empty stderr, stderr: {stderr}");
 }
+
+pub fn assert_usage_sections(stdout: &str) {
+    assert!(
+        stdout.contains("mycel <command> [path]"),
+        "expected usage header, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Commands:"),
+        "expected Commands section, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Sim options:"),
+        "expected Sim options section, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Validate options:"),
+        "expected Validate options section, stdout: {stdout}"
+    );
+}
