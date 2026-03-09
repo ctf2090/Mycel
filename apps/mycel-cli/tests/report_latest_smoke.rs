@@ -384,6 +384,65 @@ fn report_latest_path_only_filters_to_failed_validation_status() {
 }
 
 #[test]
+fn report_latest_path_only_filters_to_result_and_validation_status_intersection() {
+    let temp_dir = create_temp_dir("report-latest-path-only-result-validation-intersection");
+    let older_matching = temp_dir.path().join("older-matching.report.json");
+    let newer_matching = temp_dir.path().join("newer-matching.report.json");
+    let wrong_result = temp_dir.path().join("wrong-result.report.json");
+    let wrong_validation = temp_dir.path().join("wrong-validation.report.json");
+    write_report_with_result_and_validation_status(
+        &older_matching,
+        "run:older-matching",
+        "2026-03-09T11:00:00+08:00",
+        "2026-03-09T11:00:05+08:00",
+        "pass",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &newer_matching,
+        "run:newer-matching",
+        "2026-03-09T12:00:00+08:00",
+        "2026-03-09T12:00:05+08:00",
+        "pass",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_result,
+        "run:wrong-result",
+        "2026-03-09T13:00:00+08:00",
+        "2026-03-09T13:00:05+08:00",
+        "fail",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_validation,
+        "run:wrong-validation",
+        "2026-03-09T14:00:00+08:00",
+        "2026-03-09T14:00:05+08:00",
+        "pass",
+        "ok",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "latest",
+        &target,
+        "--result",
+        "pass",
+        "--validation-status",
+        "warning",
+        "--path-only",
+    ]);
+
+    assert_success(&output);
+    assert_eq!(
+        stdout_text(&output).trim(),
+        newer_matching.display().to_string()
+    );
+}
+
+#[test]
 fn report_latest_full_json_emits_raw_selected_report() {
     let temp_dir = create_temp_dir("report-latest-full");
     let older = temp_dir.path().join("older.report.json");
