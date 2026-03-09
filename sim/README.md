@@ -402,6 +402,7 @@ Validation output notes:
 - `--json` includes a stable top-level `status`
 - `--strict` treats warnings as failures for CI-oriented validation
 - tools and tests should rely on JSON fields such as `status`, `root`, `target`, `fixture_count`, `peer_count`, `topology_count`, `test_case_count`, `report_count`, `warnings`, and `errors`
+- `peer_count` reports how many peer fixtures were loaded into the current validation scope; it does not count raw topology node entries
 - warning-only validation still emits `status: warning`; `--strict` changes the exit behavior, not the warning payload itself
 - peer-scoped validation now loads related topologies, test cases, and reports from the same repo when they reference the selected peer node IDs
 - fixture-scoped validation now also loads related peer fixtures through matching topologies before reporting scope counts
