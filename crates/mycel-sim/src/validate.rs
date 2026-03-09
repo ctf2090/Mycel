@@ -231,28 +231,97 @@ fn scope_input(root: &Path, input: &ValidationInput, target: &ValidationTarget) 
     match target {
         ValidationTarget::Repo => input.clone(),
         ValidationTarget::Fixture(path) => scope_for_fixture(root, input, path),
-        ValidationTarget::Peer(path) => ValidationInput {
-            fixtures: Vec::new(),
-            peers: filter_by_path(&input.peers, path),
-            topologies: Vec::new(),
-            test_cases: Vec::new(),
-            reports: Vec::new(),
-        },
+        ValidationTarget::Peer(path) => scope_for_peer(root, input, path),
         ValidationTarget::Topology(path) => scope_for_topology(root, input, path),
         ValidationTarget::TestCase(path) => scope_for_test_case(root, input, path),
         ValidationTarget::Report(path) => scope_for_report(root, input, path),
         ValidationTarget::FixturesDir(path) => scope_for_fixtures_dir(root, input, path),
-        ValidationTarget::PeersDir(path) => ValidationInput {
-            fixtures: Vec::new(),
-            peers: filter_by_dir(&input.peers, path),
-            topologies: Vec::new(),
-            test_cases: Vec::new(),
-            reports: Vec::new(),
-        },
+        ValidationTarget::PeersDir(path) => scope_for_peers_dir(root, input, path),
         ValidationTarget::TopologiesDir(path) => scope_for_topologies_dir(root, input, path),
         ValidationTarget::TestsDir(path) => scope_for_tests_dir(root, input, path),
         ValidationTarget::ReportsDir(path) => scope_for_reports_dir(input, path),
     }
+}
+
+fn scope_for_peers(root: &Path, input: &ValidationInput, peers: Vec<NamedPeer>) -> ValidationInput {
+    let peer_node_ids: HashSet<_> = peers
+        .iter()
+        .map(|peer| peer.value.node_id.as_str())
+        .collect();
+
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .any(|peer| peer_node_ids.contains(peer.node_id.as_str()))
+        })
+        .cloned()
+        .collect();
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let topology_paths: HashSet<_> = topologies
+        .iter()
+        .filter_map(|topology| relative_display(root, &topology.path))
+        .collect();
+    let fixture_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| fixture_dir_name(&topology.value.fixture_set))
+        .collect();
+
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(&fixture.value.fixture_id))
+        .cloned()
+        .collect();
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| {
+            topology_ids.contains(test_case.value.topology.as_str())
+                || topology_paths.contains(test_case.value.topology.as_str())
+        })
+        .cloned()
+        .collect();
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            topology_ids.contains(report.value.topology_id.as_str())
+                || report
+                    .value
+                    .test_id
+                    .as_deref()
+                    .is_some_and(|test_id| test_ids.contains(test_id))
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers,
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_peer(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    scope_for_peers(root, input, filter_by_path(&input.peers, path))
+}
+
+fn scope_for_peers_dir(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    scope_for_peers(root, input, filter_by_dir(&input.peers, path))
 }
 
 fn scope_for_fixture(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
