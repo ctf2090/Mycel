@@ -151,6 +151,30 @@ fn head_inspect_json_selects_highest_supported_head() {
     assert_eq!(json["verified_revision_count"], 3);
     assert_eq!(json["verified_view_count"], 3);
     assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("selector_epoch")
+                    && entry["detail"]
+                        .as_str()
+                        .is_some_and(|detail| detail.contains("selector_epoch=0"))
+            })),
+        "expected selector_epoch trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("maintainer_support")
+                    && entry["detail"]
+                        .as_str()
+                        .is_some_and(|detail| detail.contains("pk:ed25519:"))
+            })),
+        "expected maintainer_support trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
         json["eligible_heads"]
             .as_array()
             .is_some_and(|heads| heads.len() == 2),
@@ -258,6 +282,22 @@ fn head_inspect_directory_resolves_input_json() {
     assert_success(&output);
     let json = parse_json_stdout(&output);
     assert_eq!(json["input_path"], path.to_string_lossy().into_owned());
+}
+
+#[test]
+fn head_inspect_text_reports_decision_trace() {
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        "doc:sample",
+        "--input",
+        "minimal-head-selection",
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "trace: selector_epoch:");
+    assert_stdout_contains(&output, "trace: maintainer_support:");
+    assert_stdout_contains(&output, "trace: selected_head:");
 }
 
 #[test]

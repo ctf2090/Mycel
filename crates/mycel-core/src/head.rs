@@ -23,8 +23,15 @@ pub struct HeadInspectSummary {
     pub eligible_heads: Vec<EligibleHeadSummary>,
     pub verified_revision_count: usize,
     pub verified_view_count: usize,
+    pub decision_trace: Vec<DecisionTraceEntry>,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DecisionTraceEntry {
+    pub step: String,
+    pub detail: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -88,6 +95,7 @@ impl HeadInspectSummary {
             eligible_heads: Vec::new(),
             verified_revision_count: 0,
             verified_view_count: 0,
+            decision_trace: Vec::new(),
             notes: Vec::new(),
             errors: Vec::new(),
         }
@@ -100,6 +108,13 @@ impl HeadInspectSummary {
     fn push_error(&mut self, message: impl Into<String>) {
         self.status = "failed".to_string();
         self.errors.push(message.into());
+    }
+
+    fn push_trace(&mut self, step: impl Into<String>, detail: impl Into<String>) {
+        self.decision_trace.push(DecisionTraceEntry {
+            step: step.into(),
+            detail: detail.into(),
+        });
     }
 }
 
@@ -138,6 +153,16 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         input.profile.epoch_seconds,
         input.profile.epoch_zero_timestamp,
     ));
+    summary.push_trace(
+        "selector_epoch",
+        format!(
+            "effective_selection_time={} epoch_seconds={} epoch_zero_timestamp={} selector_epoch={}",
+            input.profile.effective_selection_time,
+            input.profile.epoch_seconds,
+            input.profile.epoch_zero_timestamp,
+            summary.selector_epoch.expect("selector epoch should be set")
+        ),
+    );
     summary.notes.push(
         "minimal selector mode: view-maintainer admission and weighted governance are not implemented yet; each matching maintainer contributes weight 1".to_string(),
     );
@@ -157,18 +182,37 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
 
     summary.verified_revision_count = verified_revisions.len();
     summary.verified_view_count = verified_views.len();
+    summary.push_trace(
+        "verified_inputs",
+        format!(
+            "verified_revisions={} verified_views={}",
+            summary.verified_revision_count, summary.verified_view_count
+        ),
+    );
 
     if !summary.errors.is_empty() {
         return summary;
     }
 
     let eligible_heads = compute_eligible_heads(&verified_revisions);
+    summary.push_trace(
+        "eligible_heads",
+        format!(
+            "count={} revisions={}",
+            eligible_heads.len(),
+            eligible_heads
+                .iter()
+                .map(|revision| revision.revision_id.clone())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    );
     if eligible_heads.is_empty() {
         summary.push_error("NO_ELIGIBLE_HEAD");
         return summary;
     }
 
-    let support_map = latest_support_by_maintainer(
+    let (support_map, support_trace) = latest_support_by_maintainer(
         &verified_views,
         doc_id,
         &eligible_heads,
@@ -177,6 +221,9 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
             .expect("selector epoch should be set"),
         &input.profile,
     );
+    for entry in support_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
 
     let mut eligible_summaries = eligible_heads
         .iter()
@@ -198,6 +245,23 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
 
     eligible_summaries.sort_by(|left, right| left.revision_id.cmp(&right.revision_id));
     summary.eligible_heads = eligible_summaries;
+    summary.push_trace(
+        "selector_scores",
+        summary
+            .eligible_heads
+            .iter()
+            .map(|head| {
+                format!(
+                    "{} score={} supporters={} timestamp={}",
+                    head.revision_id,
+                    head.selector_score,
+                    head.supporter_count,
+                    head.revision_timestamp
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", "),
+    );
 
     let selected = summary
         .eligible_heads
@@ -216,6 +280,17 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     } else {
         "newer_revision_timestamp_or_lexicographic_tiebreak".to_string()
     });
+    summary.push_trace(
+        "selected_head",
+        format!(
+            "selected={} tie_break_reason={}",
+            selected.revision_id,
+            summary
+                .tie_break_reason
+                .as_deref()
+                .expect("tie break reason should be set")
+        ),
+    );
 
     summary
 }
@@ -522,7 +597,7 @@ fn latest_support_by_maintainer(
     eligible_heads: &[VerifiedRevision],
     selector_epoch: i64,
     profile: &HeadInspectProfile,
-) -> HashMap<String, String> {
+) -> (HashMap<String, String>, Vec<DecisionTraceEntry>) {
     let eligible_ids = eligible_heads
         .iter()
         .map(|revision| revision.revision_id.clone())
@@ -549,7 +624,7 @@ fn latest_support_by_maintainer(
         }
     }
 
-    latest_by_maintainer
+    let support_map = latest_by_maintainer
         .into_iter()
         .filter_map(|(maintainer, view)| {
             view.documents
@@ -557,7 +632,24 @@ fn latest_support_by_maintainer(
                 .filter(|revision_id| eligible_ids.contains(*revision_id))
                 .map(|revision_id| (maintainer, revision_id.clone()))
         })
-        .collect()
+        .collect::<HashMap<_, _>>();
+
+    let mut sorted_support = support_map.iter().collect::<Vec<_>>();
+    sorted_support.sort_by(|left, right| left.0.cmp(right.0));
+    let trace = vec![DecisionTraceEntry {
+        step: "maintainer_support".to_string(),
+        detail: if sorted_support.is_empty() {
+            "no eligible maintainer support in the active selector epoch".to_string()
+        } else {
+            sorted_support
+                .into_iter()
+                .map(|(maintainer, revision_id)| format!("{maintainer}->{revision_id}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        },
+    }];
+
+    (support_map, trace)
 }
 
 fn selector_epoch(

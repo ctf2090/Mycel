@@ -82,6 +82,9 @@ fn print_head_inspect_text(summary: &HeadInspectSummary) -> i32 {
     if let Some(tie_break_reason) = &summary.tie_break_reason {
         println!("tie break reason: {tie_break_reason}");
     }
+    for trace in &summary.decision_trace {
+        println!("trace: {}: {}", trace.step, trace.detail);
+    }
     for note in &summary.notes {
         println!("note: {note}");
     }
