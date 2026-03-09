@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+use clap::{Args, Parser, Subcommand};
 use mycel_core::head::inspect_heads_from_path;
 use mycel_core::head::HeadInspectSummary;
 use mycel_core::verify::{verify_object_path, ObjectVerificationSummary};
@@ -11,6 +12,159 @@ use mycel_sim::model::{Report, ReportEvent, ReportFailure};
 use mycel_sim::run::{run_test_case_with_options, RunOptions};
 use mycel_sim::simulator_banner;
 use mycel_sim::validate::validate_path;
+
+#[derive(Parser)]
+#[command(
+    name = "mycel",
+    disable_version_flag = true,
+    disable_help_subcommand = true
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<CliCommand>,
+}
+
+#[derive(Subcommand)]
+enum CliCommand {
+    Head(HeadCliArgs),
+    Info,
+    Object(ObjectCliArgs),
+    Report(ReportCliArgs),
+    Sim(SimCliArgs),
+    Validate(ValidateCliArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Args)]
+struct HeadCliArgs {
+    #[command(subcommand)]
+    command: Option<HeadSubcommand>,
+}
+
+#[derive(Subcommand)]
+enum HeadSubcommand {
+    Inspect(HeadInspectCliArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Args)]
+struct HeadInspectCliArgs {
+    #[arg(allow_hyphen_values = true)]
+    doc_id: Option<String>,
+    #[arg(long, num_args = 0..=1)]
+    input: Option<Option<String>>,
+    #[arg(long)]
+    json: bool,
+    #[arg(allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct ObjectCliArgs {
+    #[command(subcommand)]
+    command: Option<ObjectSubcommand>,
+}
+
+#[derive(Subcommand)]
+enum ObjectSubcommand {
+    Verify(ObjectVerifyCliArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Args)]
+struct ObjectVerifyCliArgs {
+    #[arg(allow_hyphen_values = true)]
+    target: Option<String>,
+    #[arg(long)]
+    json: bool,
+    #[arg(allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct ReportCliArgs {
+    #[command(subcommand)]
+    command: Option<ReportSubcommand>,
+}
+
+#[derive(Subcommand)]
+enum ReportSubcommand {
+    Inspect(ReportInspectCliArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Args)]
+struct ReportInspectCliArgs {
+    #[arg(allow_hyphen_values = true)]
+    target: Option<String>,
+    #[arg(long)]
+    json: bool,
+    #[arg(long)]
+    events: bool,
+    #[arg(long)]
+    failures: bool,
+    #[arg(long)]
+    full: bool,
+    #[arg(long, num_args = 0..=1)]
+    phase: Option<Option<String>>,
+    #[arg(long, num_args = 0..=1)]
+    action: Option<Option<String>>,
+    #[arg(long, num_args = 0..=1)]
+    outcome: Option<Option<String>>,
+    #[arg(long, num_args = 0..=1)]
+    step: Option<Option<String>>,
+    #[arg(long = "step-range", num_args = 0..=1)]
+    step_range: Option<Option<String>>,
+    #[arg(long, num_args = 0..=1)]
+    first: Option<Option<String>>,
+    #[arg(long, num_args = 0..=1)]
+    last: Option<Option<String>>,
+    #[arg(long, num_args = 0..=1)]
+    node: Option<Option<String>>,
+    #[arg(allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct SimCliArgs {
+    #[command(subcommand)]
+    command: Option<SimSubcommand>,
+}
+
+#[derive(Subcommand)]
+enum SimSubcommand {
+    Run(SimRunCliArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Args)]
+struct SimRunCliArgs {
+    #[arg(allow_hyphen_values = true)]
+    target: Option<String>,
+    #[arg(long)]
+    json: bool,
+    #[arg(long, num_args = 0..=1)]
+    seed: Option<Option<String>>,
+    #[arg(allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct ValidateCliArgs {
+    #[arg(allow_hyphen_values = true)]
+    target: Option<String>,
+    #[arg(long)]
+    json: bool,
+    #[arg(long)]
+    strict: bool,
+    #[arg(allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
 
 fn print_usage() {
     println!("mycel <command> [path]");
@@ -742,6 +896,277 @@ fn parse_step_range(value: &str) -> Result<(u64, u64), String> {
     Ok((start, end))
 }
 
+fn parse_usize_flag(value: &str, flag: &str) -> Result<usize, String> {
+    value
+        .parse::<usize>()
+        .map_err(|_| format!("invalid value for {flag}: {value}"))
+}
+
+fn parse_u64_flag(value: &str, flag: &str) -> Result<u64, String> {
+    value
+        .parse::<u64>()
+        .map_err(|_| format!("invalid value for {flag}: {value}"))
+}
+
+fn exit_usage_error(message: impl AsRef<str>) -> ! {
+    eprintln!("{}", message.as_ref());
+    eprintln!();
+    print_usage();
+    std::process::exit(2);
+}
+
+fn require_optional_flag_value(
+    value: Option<Option<String>>,
+    flag: &str,
+) -> Result<Option<String>, String> {
+    match value {
+        Some(Some(value)) => Ok(Some(value)),
+        Some(None) => Err(format!("missing value for {flag}")),
+        None => Ok(None),
+    }
+}
+
+fn unexpected_extra(extra: &[String], context: &str) -> Option<String> {
+    extra
+        .first()
+        .map(|arg| format!("unexpected {context} argument: {arg}"))
+}
+
+fn handle_head_command(command: HeadCliArgs) -> ! {
+    match command.command {
+        Some(HeadSubcommand::Inspect(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "head inspect") {
+                exit_usage_error(message);
+            }
+            let Some(doc_id) = args.doc_id else {
+                exit_usage_error("missing head inspect doc_id");
+            };
+            let input = match require_optional_flag_value(args.input, "--input") {
+                Ok(Some(input)) => PathBuf::from(input),
+                Ok(None) => exit_usage_error("missing --input for head inspect"),
+                Err(message) => exit_usage_error(message),
+            };
+
+            std::process::exit(head_inspect(doc_id, input, args.json));
+        }
+        Some(HeadSubcommand::External(args)) => {
+            let other = args.first().map(String::as_str).unwrap_or("<unknown>");
+            exit_usage_error(format!("unknown head subcommand: {other}"));
+        }
+        None => exit_usage_error("missing head subcommand"),
+    }
+}
+
+fn handle_object_command(command: ObjectCliArgs) -> ! {
+    match command.command {
+        Some(ObjectSubcommand::Verify(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "object verify") {
+                exit_usage_error(message);
+            }
+            let Some(target) = args.target else {
+                exit_usage_error("missing object verify target");
+            };
+
+            std::process::exit(object_verify(PathBuf::from(target), args.json));
+        }
+        Some(ObjectSubcommand::External(args)) => {
+            let other = args.first().map(String::as_str).unwrap_or("<unknown>");
+            exit_usage_error(format!("unknown object subcommand: {other}"));
+        }
+        None => exit_usage_error("missing object subcommand"),
+    }
+}
+
+fn handle_report_command(command: ReportCliArgs) -> ! {
+    match command.command {
+        Some(ReportSubcommand::Inspect(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "report inspect") {
+                exit_usage_error(message);
+            }
+
+            let mut mode = ReportInspectMode::Summary;
+            if args.events {
+                mode = ReportInspectMode::Events;
+            }
+            if args.failures {
+                if mode != ReportInspectMode::Summary {
+                    exit_usage_error(
+                        "report inspect accepts only one of --events, --failures, or --full",
+                    );
+                }
+                mode = ReportInspectMode::Failures;
+            }
+            if args.full {
+                if mode != ReportInspectMode::Summary {
+                    exit_usage_error(
+                        "report inspect accepts only one of --events, --failures, or --full",
+                    );
+                }
+                mode = ReportInspectMode::Full;
+            }
+
+            let phase = require_optional_flag_value(args.phase, "--phase")
+                .unwrap_or_else(|message| exit_usage_error(message));
+            let action = require_optional_flag_value(args.action, "--action")
+                .unwrap_or_else(|message| exit_usage_error(message));
+            let outcome = require_optional_flag_value(args.outcome, "--outcome")
+                .unwrap_or_else(|message| exit_usage_error(message));
+            let step = require_optional_flag_value(args.step, "--step")
+                .unwrap_or_else(|message| exit_usage_error(message))
+                .map(|value| {
+                    parse_u64_flag(&value, "--step")
+                        .unwrap_or_else(|message| exit_usage_error(message))
+                });
+            let step_range = require_optional_flag_value(args.step_range, "--step-range")
+                .unwrap_or_else(|message| exit_usage_error(message))
+                .map(|value| {
+                    parse_step_range(&value).unwrap_or_else(|message| exit_usage_error(message))
+                });
+            let first = require_optional_flag_value(args.first, "--first")
+                .unwrap_or_else(|message| exit_usage_error(message))
+                .map(|value| {
+                    parse_usize_flag(&value, "--first")
+                        .unwrap_or_else(|message| exit_usage_error(message))
+                });
+            let last = require_optional_flag_value(args.last, "--last")
+                .unwrap_or_else(|message| exit_usage_error(message))
+                .map(|value| {
+                    parse_usize_flag(&value, "--last")
+                        .unwrap_or_else(|message| exit_usage_error(message))
+                });
+            let node = require_optional_flag_value(args.node, "--node")
+                .unwrap_or_else(|message| exit_usage_error(message));
+
+            if phase.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --phase cannot be combined with --failures");
+            }
+            if phase.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --phase cannot be combined with --full");
+            }
+            if action.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --action cannot be combined with --failures");
+            }
+            if action.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --action cannot be combined with --full");
+            }
+            if outcome.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --outcome cannot be combined with --failures");
+            }
+            if outcome.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --outcome cannot be combined with --full");
+            }
+            if step.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --step cannot be combined with --failures");
+            }
+            if step.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --step cannot be combined with --full");
+            }
+            if step_range.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --step-range cannot be combined with --failures");
+            }
+            if step_range.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --step-range cannot be combined with --full");
+            }
+            if first.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --first cannot be combined with --failures");
+            }
+            if first.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --first cannot be combined with --full");
+            }
+            if last.is_some() && matches!(mode, ReportInspectMode::Failures) {
+                exit_usage_error("report inspect --last cannot be combined with --failures");
+            }
+            if last.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --last cannot be combined with --full");
+            }
+            if node.is_some() && matches!(mode, ReportInspectMode::Full) {
+                exit_usage_error("report inspect --node cannot be combined with --full");
+            }
+            if step.is_some() && step_range.is_some() {
+                exit_usage_error("report inspect accepts only one of --step or --step-range");
+            }
+
+            let Some(target) = args.target else {
+                exit_usage_error("missing report inspect target");
+            };
+
+            let filters = ReportInspectFilters {
+                phase,
+                action,
+                outcome,
+                step,
+                step_range,
+                first,
+                last,
+                node,
+            };
+            let mode = if matches!(mode, ReportInspectMode::Summary)
+                && (filters.phase.is_some()
+                    || filters.action.is_some()
+                    || filters.outcome.is_some()
+                    || filters.step.is_some()
+                    || filters.step_range.is_some()
+                    || filters.first.is_some()
+                    || filters.last.is_some()
+                    || filters.node.is_some())
+            {
+                ReportInspectMode::Events
+            } else {
+                mode
+            };
+
+            if matches!(mode, ReportInspectMode::Full) && !args.json {
+                exit_usage_error("report inspect --full requires --json");
+            }
+
+            std::process::exit(report_inspect(
+                PathBuf::from(target),
+                args.json,
+                mode,
+                &filters,
+            ));
+        }
+        Some(ReportSubcommand::External(args)) => {
+            let other = args.first().map(String::as_str).unwrap_or("<unknown>");
+            exit_usage_error(format!("unknown report subcommand: {other}"));
+        }
+        None => exit_usage_error("missing report subcommand"),
+    }
+}
+
+fn handle_validate_command(args: ValidateCliArgs) -> ! {
+    if let Some(message) = unexpected_extra(&args.extra, "validate") {
+        exit_usage_error(message);
+    }
+
+    let target = args.target.unwrap_or_else(|| ".".to_owned());
+    std::process::exit(validate(PathBuf::from(target), args.json, args.strict));
+}
+
+fn handle_sim_command(command: SimCliArgs) -> ! {
+    match command.command {
+        Some(SimSubcommand::Run(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "sim run") {
+                exit_usage_error(message);
+            }
+            let seed_override = match require_optional_flag_value(args.seed, "--seed") {
+                Ok(value) => value,
+                Err(message) => exit_usage_error(message),
+            };
+            let Some(target) = args.target else {
+                exit_usage_error("missing sim run target");
+            };
+
+            std::process::exit(sim_run(PathBuf::from(target), args.json, seed_override));
+        }
+        Some(SimSubcommand::External(args)) => {
+            let other = args.first().map(String::as_str).unwrap_or("<unknown>");
+            exit_usage_error(format!("unknown sim subcommand: {other}"));
+        }
+        None => exit_usage_error("missing sim subcommand"),
+    }
+}
+
 fn filter_failures(
     failures: &[ReportFailure],
     filters: &ReportInspectFilters,
@@ -967,665 +1392,34 @@ fn sim_run(target: PathBuf, json: bool, seed_override: Option<String>) -> i32 {
 }
 
 fn main() {
-    let mut args = env::args().skip(1);
-
-    match args.next().as_deref() {
-        Some("head") => match args.next().as_deref() {
-            Some("inspect") => {
-                let mut doc_id = None;
-                let mut input_path = None;
-                let mut json = false;
-                let mut expect_input_path = false;
-
-                for arg in args {
-                    if expect_input_path {
-                        input_path = Some(PathBuf::from(arg));
-                        expect_input_path = false;
-                    } else if arg == "--json" {
-                        json = true;
-                    } else if arg == "--input" {
-                        expect_input_path = true;
-                    } else if doc_id.is_none() {
-                        doc_id = Some(arg);
-                    } else {
-                        eprintln!("unexpected head inspect argument: {arg}");
-                        eprintln!();
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                }
-
-                if expect_input_path {
-                    eprintln!("missing value for --input");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-
-                let Some(doc_id) = doc_id else {
-                    eprintln!("missing head inspect doc_id");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                };
-                let Some(input_path) = input_path else {
-                    eprintln!("missing --input for head inspect");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                };
-
-                std::process::exit(head_inspect(doc_id, input_path, json));
-            }
-            Some(other) => {
-                eprintln!("unknown head subcommand: {other}");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-            None => {
-                eprintln!("missing head subcommand");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-        },
-        Some("info") => print_info(),
-        Some("object") => match args.next().as_deref() {
-            Some("verify") => {
-                let mut target = None;
-                let mut json = false;
-
-                for arg in args {
-                    if arg == "--json" {
-                        json = true;
-                    } else if target.is_none() {
-                        target = Some(PathBuf::from(arg));
-                    } else {
-                        eprintln!("unexpected object verify argument: {arg}");
-                        eprintln!();
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                }
-
-                let Some(target) = target else {
-                    eprintln!("missing object verify target");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                };
-
-                std::process::exit(object_verify(target, json));
-            }
-            Some(other) => {
-                eprintln!("unknown object subcommand: {other}");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-            None => {
-                eprintln!("missing object subcommand");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-        },
-        Some("report") => match args.next().as_deref() {
-            Some("inspect") => {
-                let mut target = None;
-                let mut json = false;
-                let mut mode = ReportInspectMode::Summary;
-                let mut filters = ReportInspectFilters::default();
-                let mut expect_phase_value = false;
-                let mut expect_action_value = false;
-                let mut expect_outcome_value = false;
-                let mut expect_step_value = false;
-                let mut expect_step_range_value = false;
-                let mut expect_first_value = false;
-                let mut expect_last_value = false;
-                let mut expect_node_value = false;
-
-                for arg in args {
-                    if expect_phase_value {
-                        filters.phase = Some(arg);
-                        expect_phase_value = false;
-                    } else if expect_action_value {
-                        filters.action = Some(arg);
-                        expect_action_value = false;
-                    } else if expect_outcome_value {
-                        filters.outcome = Some(arg);
-                        expect_outcome_value = false;
-                    } else if expect_step_value {
-                        let step = match arg.parse::<u64>() {
-                            Ok(step) => step,
-                            Err(_) => {
-                                eprintln!("invalid value for --step: {arg}");
-                                eprintln!();
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        };
-                        filters.step = Some(step);
-                        expect_step_value = false;
-                    } else if expect_step_range_value {
-                        let step_range = match parse_step_range(&arg) {
-                            Ok(step_range) => step_range,
-                            Err(message) => {
-                                eprintln!("{message}");
-                                eprintln!();
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        };
-                        filters.step_range = Some(step_range);
-                        expect_step_range_value = false;
-                    } else if expect_first_value {
-                        let first = match arg.parse::<usize>() {
-                            Ok(first) => first,
-                            Err(_) => {
-                                eprintln!("invalid value for --first: {arg}");
-                                eprintln!();
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        };
-                        filters.first = Some(first);
-                        expect_first_value = false;
-                    } else if expect_last_value {
-                        let last = match arg.parse::<usize>() {
-                            Ok(last) => last,
-                            Err(_) => {
-                                eprintln!("invalid value for --last: {arg}");
-                                eprintln!();
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        };
-                        filters.last = Some(last);
-                        expect_last_value = false;
-                    } else if expect_node_value {
-                        filters.node = Some(arg);
-                        expect_node_value = false;
-                    } else if arg == "--json" {
-                        json = true;
-                    } else if arg == "--full" {
-                        if filters.phase.is_some() {
-                            eprintln!("report inspect --phase cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.action.is_some() {
-                            eprintln!("report inspect --action cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.outcome.is_some() {
-                            eprintln!("report inspect --outcome cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.step.is_some() {
-                            eprintln!("report inspect --step cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.step_range.is_some() {
-                            eprintln!("report inspect --step-range cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.first.is_some() {
-                            eprintln!("report inspect --first cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.last.is_some() {
-                            eprintln!("report inspect --last cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.node.is_some() {
-                            eprintln!("report inspect --node cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode != ReportInspectMode::Summary {
-                            eprintln!(
-                                "report inspect accepts only one of --events, --failures, or --full"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        mode = ReportInspectMode::Full;
-                    } else if arg == "--events" {
-                        if mode != ReportInspectMode::Summary {
-                            eprintln!(
-                                "report inspect accepts only one of --events, --failures, or --full"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        mode = ReportInspectMode::Events;
-                    } else if arg == "--failures" {
-                        if filters.phase.is_some() {
-                            eprintln!("report inspect --phase cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.action.is_some() {
-                            eprintln!("report inspect --action cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.outcome.is_some() {
-                            eprintln!(
-                                "report inspect --outcome cannot be combined with --failures"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.step.is_some() {
-                            eprintln!("report inspect --step cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.step_range.is_some() {
-                            eprintln!(
-                                "report inspect --step-range cannot be combined with --failures"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.first.is_some() {
-                            eprintln!("report inspect --first cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.last.is_some() {
-                            eprintln!("report inspect --last cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode != ReportInspectMode::Summary {
-                            eprintln!(
-                                "report inspect accepts only one of --events, --failures, or --full"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        mode = ReportInspectMode::Failures;
-                    } else if arg == "--phase" {
-                        if expect_phase_value {
-                            eprintln!("missing value for --phase");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --phase cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!("report inspect --phase cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_phase_value = true;
-                    } else if arg == "--action" {
-                        if expect_action_value {
-                            eprintln!("missing value for --action");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --action cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!("report inspect --action cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_action_value = true;
-                    } else if arg == "--outcome" {
-                        if expect_outcome_value {
-                            eprintln!("missing value for --outcome");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --outcome cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!(
-                                "report inspect --outcome cannot be combined with --failures"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_outcome_value = true;
-                    } else if arg == "--step" {
-                        if expect_step_value {
-                            eprintln!("missing value for --step");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --step cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!("report inspect --step cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.step_range.is_some() {
-                            eprintln!("report inspect accepts only one of --step or --step-range");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_step_value = true;
-                    } else if arg == "--step-range" {
-                        if expect_step_range_value {
-                            eprintln!("missing value for --step-range");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --step-range cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!(
-                                "report inspect --step-range cannot be combined with --failures"
-                            );
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if filters.step.is_some() {
-                            eprintln!("report inspect accepts only one of --step or --step-range");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_step_range_value = true;
-                    } else if arg == "--first" {
-                        if expect_first_value {
-                            eprintln!("missing value for --first");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --first cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!("report inspect --first cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_first_value = true;
-                    } else if arg == "--last" {
-                        if expect_last_value {
-                            eprintln!("missing value for --last");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --last cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Failures {
-                            eprintln!("report inspect --last cannot be combined with --failures");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_last_value = true;
-                    } else if arg == "--node" {
-                        if expect_node_value {
-                            eprintln!("missing value for --node");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        if mode == ReportInspectMode::Full {
-                            eprintln!("report inspect --node cannot be combined with --full");
-                            eprintln!();
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        expect_node_value = true;
-                    } else if target.is_none() {
-                        target = Some(PathBuf::from(arg));
-                    } else {
-                        eprintln!("unexpected report inspect argument: {arg}");
-                        eprintln!();
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                }
-
-                if expect_phase_value {
-                    eprintln!("missing value for --phase");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_action_value {
-                    eprintln!("missing value for --action");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_outcome_value {
-                    eprintln!("missing value for --outcome");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_step_value {
-                    eprintln!("missing value for --step");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_step_range_value {
-                    eprintln!("missing value for --step-range");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_first_value {
-                    eprintln!("missing value for --first");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_last_value {
-                    eprintln!("missing value for --last");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-                if expect_node_value {
-                    eprintln!("missing value for --node");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-
-                if mode == ReportInspectMode::Summary
-                    && (filters.phase.is_some()
-                        || filters.action.is_some()
-                        || filters.outcome.is_some()
-                        || filters.step.is_some()
-                        || filters.step_range.is_some()
-                        || filters.first.is_some()
-                        || filters.last.is_some()
-                        || filters.node.is_some())
-                {
-                    mode = ReportInspectMode::Events;
-                }
-
-                let Some(target) = target else {
-                    eprintln!("missing report inspect target");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                };
-
-                if mode == ReportInspectMode::Full && !json {
-                    eprintln!("report inspect --full requires --json");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-
-                std::process::exit(report_inspect(target, json, mode, &filters));
-            }
-            Some(other) => {
-                eprintln!("unknown report subcommand: {other}");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-            None => {
-                eprintln!("missing report subcommand");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-        },
-        Some("validate") => {
-            let mut target = PathBuf::from(".");
-            let mut json = false;
-            let mut strict = false;
-
-            for arg in args {
-                if arg == "--json" {
-                    json = true;
-                } else if arg == "--strict" {
-                    strict = true;
-                } else if target == PathBuf::from(".") {
-                    target = PathBuf::from(arg);
-                } else {
-                    eprintln!("unexpected validate argument: {arg}");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-            }
-
-            std::process::exit(validate(target, json, strict));
-        }
-        Some("sim") => match args.next().as_deref() {
-            Some("run") => {
-                let mut target = None;
-                let mut json = false;
-                let mut seed_override = None;
-                let mut expect_seed_value = false;
-
-                for arg in args {
-                    if expect_seed_value {
-                        seed_override = Some(arg);
-                        expect_seed_value = false;
-                    } else if arg == "--json" {
-                        json = true;
-                    } else if arg == "--seed" {
-                        expect_seed_value = true;
-                    } else if target.is_none() {
-                        target = Some(PathBuf::from(arg));
-                    } else {
-                        eprintln!("unexpected sim run argument: {arg}");
-                        eprintln!();
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                }
-
-                if expect_seed_value {
-                    eprintln!("missing value for --seed");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                }
-
-                let Some(target) = target else {
-                    eprintln!("missing sim run target");
-                    eprintln!();
-                    print_usage();
-                    std::process::exit(2);
-                };
-
-                std::process::exit(sim_run(target, json, seed_override));
-            }
-            Some(other) => {
-                eprintln!("unknown sim subcommand: {other}");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-            None => {
-                eprintln!("missing sim subcommand");
-                eprintln!();
-                print_usage();
-                std::process::exit(2);
-            }
-        },
-        Some("help") | None => print_usage(),
-        Some(other) => {
-            eprintln!("unknown command: {other}");
-            eprintln!();
+    let args: Vec<String> = env::args().collect();
+    match args.get(1).map(String::as_str) {
+        None | Some("help") | Some("-h") | Some("--help") => {
             print_usage();
-            std::process::exit(2);
+            return;
         }
+        _ => {}
+    }
+
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            eprintln!("{err}");
+            std::process::exit(err.exit_code());
+        }
+    };
+
+    match cli.command {
+        Some(CliCommand::Head(command)) => handle_head_command(command),
+        Some(CliCommand::Info) => print_info(),
+        Some(CliCommand::Object(command)) => handle_object_command(command),
+        Some(CliCommand::Report(command)) => handle_report_command(command),
+        Some(CliCommand::Sim(command)) => handle_sim_command(command),
+        Some(CliCommand::Validate(command)) => handle_validate_command(command),
+        Some(CliCommand::External(args)) => {
+            let other = args.first().map(String::as_str).unwrap_or("<unknown>");
+            exit_usage_error(format!("unknown command: {other}"));
+        }
+        None => print_usage(),
     }
 }
