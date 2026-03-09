@@ -71,7 +71,8 @@ Negative validation notes:
 - `sim/negative-validation/README.md` indexes intentionally invalid artifacts without mixing them into normal simulator examples
 - `sim/negative-validation/test-matrix.md` tracks current and planned validator failure cases
 - `sim/negative-validation/smoke.sh` runs one positive and one intentional negative validation path together
-- `apps/mycel-cli/tests/common/mod.rs` provides shared CLI test helpers for command execution, JSON parsing, report loading, exit-code checks, JSON status checks, stdout/stderr assertions, and usage/help section assertions
+- `apps/mycel-cli/tests/common/mod.rs` provides shared CLI test helpers for command execution, JSON parsing, report loading, exit-code checks, JSON status checks, stdout/stderr assertions, and shared section assertions for usage/help and info output
+- `apps/mycel-cli/tests/info_smoke.rs` fixes the `info` command contract for workspace banner and scaffold path output
 - `apps/mycel-cli/tests/cli_usage_smoke.rs` fixes the top-level help and usage contract for `help`, no-arg, and unknown-command flows
 - `apps/mycel-cli/tests/validate_smoke.rs` covers core validator smoke cases plus path-targeted and argument-parsing edge cases for directory, schema-file, missing-path, and unexpected-argument targets
 - `apps/mycel-cli/tests/sim_run_smoke.rs` covers baseline `sim run` behavior for positive, negative, and recovery paths, including generated-report round-trip validation, `random` / `auto` seed modes, and CLI edge cases for subcommands, targets, and invalid arguments

@@ -156,3 +156,34 @@ pub fn assert_usage_sections(stdout: &str) {
         "expected Validate options section, stdout: {stdout}"
     );
 }
+
+pub fn assert_info_sections(stdout: &str) {
+    assert!(
+        stdout.contains("Mycel Rust workspace"),
+        "expected workspace banner, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Mycel simulator scaffold"),
+        "expected simulator banner, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("fixtures:"),
+        "expected fixtures path, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("peers:"),
+        "expected peers path, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("topologies:"),
+        "expected topologies path, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("tests:"),
+        "expected tests path, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("reports:"),
+        "expected reports path, stdout: {stdout}"
+    );
+}
