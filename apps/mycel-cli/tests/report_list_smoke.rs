@@ -424,6 +424,53 @@ fn report_list_path_only_filters_to_failed_validation_status() {
 }
 
 #[test]
+fn report_list_path_only_filters_to_result_and_validation_status_intersection() {
+    let temp_dir = create_temp_dir("report-list-path-only-result-validation-intersection");
+    let matching_report = temp_dir.path().join("matching.report.json");
+    let wrong_result_report = temp_dir.path().join("wrong-result.report.json");
+    let wrong_validation_report = temp_dir.path().join("wrong-validation.report.json");
+    write_report_with_result_and_validation_status(
+        &matching_report,
+        "run:matching",
+        "2026-03-09T13:00:05+08:00",
+        "pass",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_result_report,
+        "run:wrong-result",
+        "2026-03-09T12:00:05+08:00",
+        "fail",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_validation_report,
+        "run:wrong-validation",
+        "2026-03-09T11:00:05+08:00",
+        "pass",
+        "ok",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "list",
+        &target,
+        "--result",
+        "pass",
+        "--validation-status",
+        "warning",
+        "--path-only",
+    ]);
+
+    assert_success(&output);
+    assert_eq!(
+        stdout_text(&output).trim(),
+        matching_report.display().to_string()
+    );
+}
+
+#[test]
 fn report_list_json_returns_empty_valid_results_when_no_report_matches_filter() {
     let temp_dir = create_temp_dir("report-list-result-miss");
     let pass_report = temp_dir.path().join("pass.report.json");
