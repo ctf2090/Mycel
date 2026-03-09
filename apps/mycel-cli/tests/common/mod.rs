@@ -364,6 +364,10 @@ pub fn assert_report_stats_help(stdout: &str) {
         "expected json flag in report stats help, stdout: {stdout}"
     );
     assert!(
+        stdout.contains("--path-only-latest"),
+        "expected path-only-latest flag in report stats help, stdout: {stdout}"
+    );
+    assert!(
         stdout.contains("--result <RESULT>"),
         "expected result flag in report stats help, stdout: {stdout}"
     );

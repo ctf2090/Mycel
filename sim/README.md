@@ -54,6 +54,7 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- report latest <path> --json`
 - `cargo run -p mycel-cli -- report stats`
 - `cargo run -p mycel-cli -- report stats --json`
+- `cargo run -p mycel-cli -- report stats --path-only-latest`
 - `cargo run -p mycel-cli -- report stats --result pass --json`
 - `cargo run -p mycel-cli -- report stats --validation-status warning --json`
 - `cargo run -p mycel-cli -- report stats <path> --json`
@@ -96,6 +97,7 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report latest sim/reports/out --json`
 - `cargo run -p mycel-cli -- report stats`
 - `cargo run -p mycel-cli -- report stats --json`
+- `cargo run -p mycel-cli -- report stats --path-only-latest`
 - `cargo run -p mycel-cli -- report stats --result pass --json`
 - `cargo run -p mycel-cli -- report stats --validation-status warning --json`
 - `cargo run -p mycel-cli -- report stats sim/reports/out --json`
@@ -141,6 +143,7 @@ Report-inspection output notes:
 - invalid reports do not block `report latest` if at least one valid report exists; they downgrade the top-level status to `warning`
 - `report stats` summarizes one report directory or file and aggregates counts across valid reports
 - `report stats --json` emits a stable summary with `root`, `status`, counts, `result_counts`, `validation_status_counts`, `latest_finished_at`, `latest_valid_report`, and `errors`
+- `report stats --path-only-latest` prints only the latest matching valid report path and is intended for shell-script handoff
 - `report stats --result <pass|fail>` narrows the aggregated valid-report set to one result while still retaining invalid parse entries in the top-level counts and status
 - `report stats --validation-status <ok|warning|failed>` narrows the aggregated valid-report set to one validation status while still retaining invalid parse entries in the top-level counts and status
 - `report stats` counts valid reports by `result` and `validation_status`, while still surfacing invalid parse entries through the shared top-level status and counts

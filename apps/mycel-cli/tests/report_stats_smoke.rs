@@ -3,7 +3,8 @@ use std::fs;
 mod common;
 
 use common::{
-    assert_exit_code, assert_success, create_temp_dir, parse_json_stdout, run_report, stdout_text,
+    assert_exit_code, assert_stderr_contains, assert_success, create_temp_dir, parse_json_stdout,
+    run_report, stdout_text,
 };
 use serde_json::json;
 
@@ -219,6 +220,85 @@ fn report_stats_text_reports_active_filters() {
 }
 
 #[test]
+fn report_stats_path_only_latest_prints_matching_latest_path() {
+    let temp_dir = create_temp_dir("report-stats-path-only-latest");
+    let older_matching = temp_dir.path().join("older-matching.report.json");
+    let newer_matching = temp_dir.path().join("newer-matching.report.json");
+    let wrong_result = temp_dir.path().join("wrong-result.report.json");
+    write_report_with_result_and_validation_status(
+        &older_matching,
+        "run:older-matching",
+        "2026-03-09T11:00:05+08:00",
+        "pass",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &newer_matching,
+        "run:newer-matching",
+        "2026-03-09T12:00:05+08:00",
+        "pass",
+        "warning",
+    );
+    write_report_with_result_and_validation_status(
+        &wrong_result,
+        "run:wrong-result",
+        "2026-03-09T13:00:05+08:00",
+        "fail",
+        "warning",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "stats",
+        &target,
+        "--result",
+        "pass",
+        "--validation-status",
+        "warning",
+        "--path-only-latest",
+    ]);
+
+    assert_success(&output);
+    assert_eq!(
+        stdout_text(&output).trim(),
+        newer_matching.display().to_string()
+    );
+}
+
+#[test]
+fn report_stats_path_only_latest_fails_when_no_report_matches_filters() {
+    let temp_dir = create_temp_dir("report-stats-path-only-latest-miss");
+    let pass_report = temp_dir.path().join("pass.report.json");
+    write_report_with_result_and_validation_status(
+        &pass_report,
+        "run:pass",
+        "2026-03-09T11:00:05+08:00",
+        "pass",
+        "ok",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "stats",
+        &target,
+        "--result",
+        "fail",
+        "--validation-status",
+        "warning",
+        "--path-only-latest",
+    ]);
+
+    assert_exit_code(&output, 1);
+    assert!(stdout_text(&output).trim().is_empty());
+    assert_stderr_contains(
+        &output,
+        "no valid reports found under target with result=fail, validation_status=warning",
+    );
+}
+
+#[test]
 fn report_stats_json_reports_missing_target_as_failed() {
     let output = run_report(&["report", "stats", "sim/reports/missing-directory", "--json"]);
 
@@ -230,4 +310,20 @@ fn report_stats_json_reports_missing_target_as_failed() {
         json["errors"][0],
         "report list target does not exist: sim/reports/missing-directory"
     );
+}
+
+#[test]
+fn report_stats_rejects_path_only_latest_with_json() {
+    let output = run_report(&[
+        "report",
+        "stats",
+        "sim/reports",
+        "--path-only-latest",
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "cannot be used with");
+    assert_stderr_contains(&output, "--path-only-latest");
+    assert_stderr_contains(&output, "--json");
 }

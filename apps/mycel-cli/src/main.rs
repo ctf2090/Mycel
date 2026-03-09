@@ -336,6 +336,12 @@ struct ReportStatsCliArgs {
     #[arg(long, help = "Emit machine-readable report statistics output")]
     json: bool,
     #[arg(
+        long = "path-only-latest",
+        help = "Print only the latest matching valid report path",
+        conflicts_with = "json"
+    )]
+    path_only_latest: bool,
+    #[arg(
         long,
         value_name = "RESULT",
         help = "Summarize only reports with one result",
@@ -1770,6 +1776,26 @@ fn print_report_stats_json(summary: &ReportStatsSummary) -> Result<i32, CliError
     }
 }
 
+fn print_report_stats_latest_path(summary: &ReportStatsSummary) -> i32 {
+    match summary.latest_valid_report.as_ref() {
+        Some(report) => {
+            println!("{}", report.path.display());
+            0
+        }
+        None => {
+            if !summary.errors.is_empty() {
+                return finish_report_query_paths(ReportQuerySummaryView::from(summary));
+            }
+
+            emit_error_line(
+                ReportQuery::new(summary.result_filter, summary.validation_status_filter)
+                    .describe_missing(),
+            );
+            1
+        }
+    }
+}
+
 fn print_report_summary_json(summary: &ReportInspectSummary) -> Result<i32, CliError> {
     let json = serde_json::json!({
         "path": summary.path,
@@ -2106,6 +2132,7 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             report_stats(
                 PathBuf::from(target),
                 args.json,
+                args.path_only_latest,
                 args.result,
                 args.validation_status,
             )
@@ -2353,6 +2380,7 @@ fn report_latest(
 fn report_stats(
     target: PathBuf,
     json: bool,
+    path_only_latest: bool,
     result_filter: Option<ReportResultFilter>,
     validation_status_filter: Option<ReportValidationStatusFilter>,
 ) -> Result<i32, CliError> {
@@ -2360,7 +2388,9 @@ fn report_stats(
         target,
         ReportQuery::new(result_filter, validation_status_filter),
     ));
-    if json {
+    if path_only_latest {
+        Ok(print_report_stats_latest_path(&summary))
+    } else if json {
         print_report_stats_json(&summary)
     } else {
         Ok(print_report_stats_text(&summary))
