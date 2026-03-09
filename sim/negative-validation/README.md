@@ -24,6 +24,20 @@ This directory is the index and matrix for those cases.
 cargo run -p mycel-cli -- validate sim/reports/invalid/random-seed-prefix-mismatch.example.json --json
 ```
 
+## Smoke Script
+
+Run both the positive and negative validation path in one command:
+
+```bash
+./sim/negative-validation/smoke.sh
+```
+
+The script expects:
+
+- repo-wide `mycel validate --json` returns `status: "ok"`
+- the intentional invalid report returns `status: "failed"`
+- the failure message mentions the `seed_source` mismatch
+
 ## Why This Directory Exists
 
 - keep negative validation examples discoverable

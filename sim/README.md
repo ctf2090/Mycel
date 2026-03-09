@@ -70,3 +70,4 @@ Negative validation notes:
 
 - `sim/negative-validation/README.md` indexes intentionally invalid artifacts without mixing them into normal simulator examples
 - `sim/negative-validation/test-matrix.md` tracks current and planned validator failure cases
+- `sim/negative-validation/smoke.sh` runs one positive and one intentional negative validation path together

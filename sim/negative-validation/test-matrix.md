@@ -38,3 +38,9 @@ Run the whole repo and confirm the invalid artifacts are not part of normal vali
 ```bash
 cargo run -p mycel-cli -- validate --json
 ```
+
+Run the smoke check for both paths together:
+
+```bash
+./sim/negative-validation/smoke.sh
+```
