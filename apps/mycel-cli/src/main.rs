@@ -771,6 +771,54 @@ struct ReportLatestSummary {
     errors: Vec<String>,
 }
 
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+struct ReportQuery {
+    result_filter: Option<ReportResultFilter>,
+    validation_status_filter: Option<ReportValidationStatusFilter>,
+}
+
+impl ReportQuery {
+    fn new(
+        result_filter: Option<ReportResultFilter>,
+        validation_status_filter: Option<ReportValidationStatusFilter>,
+    ) -> Self {
+        Self {
+            result_filter,
+            validation_status_filter,
+        }
+    }
+
+    fn matches_valid_report(self, report: &ReportListEntry) -> bool {
+        self.result_filter
+            .is_none_or(|expected| report.result.as_deref() == Some(expected.as_str()))
+            && self.validation_status_filter.is_none_or(|expected| {
+                report.validation_status.as_deref() == Some(expected.as_str())
+            })
+    }
+
+    fn describe_missing(self) -> String {
+        let mut filters = Vec::new();
+        if let Some(result_filter) = self.result_filter {
+            filters.push(format!("result={}", result_filter.as_str()));
+        }
+        if let Some(validation_status_filter) = self.validation_status_filter {
+            filters.push(format!(
+                "validation_status={}",
+                validation_status_filter.as_str()
+            ));
+        }
+
+        if filters.is_empty() {
+            "no valid reports found under target".to_string()
+        } else {
+            format!(
+                "no valid reports found under target with {}",
+                filters.join(", ")
+            )
+        }
+    }
+}
+
 impl ReportLatestSummary {
     fn is_ok(&self) -> bool {
         self.errors.is_empty()
@@ -1063,26 +1111,17 @@ fn list_reports(target: PathBuf) -> ReportListSummary {
     summary
 }
 
-fn filter_report_list(
-    mut summary: ReportListSummary,
-    result_filter: Option<ReportResultFilter>,
-    validation_status_filter: Option<ReportValidationStatusFilter>,
-) -> ReportListSummary {
-    summary.result_filter = result_filter;
-    summary.validation_status_filter = validation_status_filter;
+fn apply_report_query(mut summary: ReportListSummary, query: ReportQuery) -> ReportListSummary {
+    summary.result_filter = query.result_filter;
+    summary.validation_status_filter = query.validation_status_filter;
 
-    if result_filter.is_none() && validation_status_filter.is_none() {
+    if query == ReportQuery::default() {
         return summary;
     }
 
-    summary.reports.retain(|report| {
-        report.status != "ok"
-            || (result_filter
-                .is_none_or(|expected| report.result.as_deref() == Some(expected.as_str()))
-                && validation_status_filter.is_none_or(|expected| {
-                    report.validation_status.as_deref() == Some(expected.as_str())
-                }))
-    });
+    summary
+        .reports
+        .retain(|report| report.status != "ok" || query.matches_valid_report(report));
     summary.report_count = summary.reports.len();
     summary.valid_report_count = summary
         .reports
@@ -1098,6 +1137,10 @@ fn filter_report_list(
     summary
 }
 
+fn query_reports(target: PathBuf, query: ReportQuery) -> ReportListSummary {
+    apply_report_query(list_reports(target), query)
+}
+
 fn latest_report_sort_key(report: &ReportListEntry) -> (Option<&str>, Option<&str>, String) {
     (
         report.finished_at.as_deref(),
@@ -1106,17 +1149,13 @@ fn latest_report_sort_key(report: &ReportListEntry) -> (Option<&str>, Option<&st
     )
 }
 
-fn latest_report(
-    summary: ReportListSummary,
-    result_filter: Option<ReportResultFilter>,
-    validation_status_filter: Option<ReportValidationStatusFilter>,
-) -> ReportLatestSummary {
+fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
     if !summary.is_ok() {
         return ReportLatestSummary {
             root: summary.root,
             status: "failed".to_string(),
-            result_filter,
-            validation_status_filter,
+            result_filter: summary.result_filter,
+            validation_status_filter: summary.validation_status_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
@@ -1126,16 +1165,21 @@ fn latest_report(
     }
 
     if summary.report_count == 0 {
+        let query = ReportQuery::new(summary.result_filter, summary.validation_status_filter);
         return ReportLatestSummary {
             root: summary.root,
             status: "failed".to_string(),
-            result_filter,
-            validation_status_filter,
+            result_filter: summary.result_filter,
+            validation_status_filter: summary.validation_status_filter,
             report_count: 0,
             valid_report_count: 0,
             invalid_report_count: 0,
             selected: None,
-            errors: vec!["no reports found under target".to_string()],
+            errors: vec![if query == ReportQuery::default() {
+                "no reports found under target".to_string()
+            } else {
+                query.describe_missing()
+            }],
         };
     }
 
@@ -1143,14 +1187,6 @@ fn latest_report(
         .reports
         .iter()
         .filter(|report| report.status == "ok")
-        .filter(|report| {
-            result_filter.is_none_or(|expected| report.result.as_deref() == Some(expected.as_str()))
-        })
-        .filter(|report| {
-            validation_status_filter.is_none_or(|expected| {
-                report.validation_status.as_deref() == Some(expected.as_str())
-            })
-        })
         .max_by_key(|report| latest_report_sort_key(report))
         .cloned();
 
@@ -1162,8 +1198,8 @@ fn latest_report(
             } else {
                 "ok".to_string()
             },
-            result_filter,
-            validation_status_filter,
+            result_filter: summary.result_filter,
+            validation_status_filter: summary.validation_status_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
@@ -1173,42 +1209,17 @@ fn latest_report(
         None => ReportLatestSummary {
             root: summary.root,
             status: "failed".to_string(),
-            result_filter,
-            validation_status_filter,
+            result_filter: summary.result_filter,
+            validation_status_filter: summary.validation_status_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
             selected: None,
-            errors: vec![describe_missing_latest_report_filters(
-                result_filter,
-                validation_status_filter,
-            )],
+            errors: vec![
+                ReportQuery::new(summary.result_filter, summary.validation_status_filter)
+                    .describe_missing(),
+            ],
         },
-    }
-}
-
-fn describe_missing_latest_report_filters(
-    result_filter: Option<ReportResultFilter>,
-    validation_status_filter: Option<ReportValidationStatusFilter>,
-) -> String {
-    let mut filters = Vec::new();
-    if let Some(result_filter) = result_filter {
-        filters.push(format!("result={}", result_filter.as_str()));
-    }
-    if let Some(validation_status_filter) = validation_status_filter {
-        filters.push(format!(
-            "validation_status={}",
-            validation_status_filter.as_str()
-        ));
-    }
-
-    if filters.is_empty() {
-        "no valid reports found under target".to_string()
-    } else {
-        format!(
-            "no valid reports found under target with {}",
-            filters.join(", ")
-        )
     }
 }
 
@@ -2021,10 +2032,9 @@ fn report_list(
     result_filter: Option<ReportResultFilter>,
     validation_status_filter: Option<ReportValidationStatusFilter>,
 ) -> Result<i32, CliError> {
-    let summary = filter_report_list(
-        list_reports(target),
-        result_filter,
-        validation_status_filter,
+    let summary = query_reports(
+        target,
+        ReportQuery::new(result_filter, validation_status_filter),
     );
     if path_only {
         Ok(print_report_list_paths(&summary))
@@ -2043,11 +2053,10 @@ fn report_latest(
     result_filter: Option<ReportResultFilter>,
     validation_status_filter: Option<ReportValidationStatusFilter>,
 ) -> Result<i32, CliError> {
-    let summary = latest_report(
-        list_reports(target),
-        result_filter,
-        validation_status_filter,
-    );
+    let summary = latest_report(query_reports(
+        target,
+        ReportQuery::new(result_filter, validation_status_filter),
+    ));
     if path_only {
         return match latest_report_path(&summary) {
             Some(path) => {
