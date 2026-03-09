@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use mycel_core::head::inspect_heads_from_path;
 use mycel_core::head::HeadInspectSummary;
 use mycel_core::verify::{verify_object_path, ObjectVerificationSummary};
@@ -274,6 +274,13 @@ struct ReportLatestCliArgs {
     json: bool,
     #[arg(
         long,
+        value_name = "RESULT",
+        help = "Select only reports with one result",
+        value_enum
+    )]
+    result: Option<ReportResultFilter>,
+    #[arg(
+        long,
         help = "Print only the selected report path",
         conflicts_with_all = ["json", "full"]
     )]
@@ -286,6 +293,21 @@ struct ReportLatestCliArgs {
     full: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum ReportResultFilter {
+    Pass,
+    Fail,
+}
+
+impl ReportResultFilter {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Pass => "pass",
+            Self::Fail => "fail",
+        }
+    }
 }
 
 #[derive(Args)]
@@ -694,6 +716,7 @@ struct ReportListSummary {
 struct ReportLatestSummary {
     root: PathBuf,
     status: String,
+    result_filter: Option<ReportResultFilter>,
     report_count: usize,
     valid_report_count: usize,
     invalid_report_count: usize,
@@ -999,11 +1022,15 @@ fn latest_report_sort_key(report: &ReportListEntry) -> (Option<&str>, Option<&st
     )
 }
 
-fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
+fn latest_report(
+    summary: ReportListSummary,
+    result_filter: Option<ReportResultFilter>,
+) -> ReportLatestSummary {
     if !summary.is_ok() {
         return ReportLatestSummary {
             root: summary.root,
             status: "failed".to_string(),
+            result_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
@@ -1016,6 +1043,7 @@ fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
         return ReportLatestSummary {
             root: summary.root,
             status: "failed".to_string(),
+            result_filter,
             report_count: 0,
             valid_report_count: 0,
             invalid_report_count: 0,
@@ -1028,6 +1056,9 @@ fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
         .reports
         .iter()
         .filter(|report| report.status == "ok")
+        .filter(|report| {
+            result_filter.is_none_or(|expected| report.result.as_deref() == Some(expected.as_str()))
+        })
         .max_by_key(|report| latest_report_sort_key(report))
         .cloned();
 
@@ -1039,6 +1070,7 @@ fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
             } else {
                 "ok".to_string()
             },
+            result_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
@@ -1048,11 +1080,20 @@ fn latest_report(summary: ReportListSummary) -> ReportLatestSummary {
         None => ReportLatestSummary {
             root: summary.root,
             status: "failed".to_string(),
+            result_filter,
             report_count: summary.report_count,
             valid_report_count: summary.valid_report_count,
             invalid_report_count: summary.invalid_report_count,
             selected: None,
-            errors: vec!["no valid reports found under target".to_string()],
+            errors: vec![match result_filter {
+                Some(expected) => {
+                    format!(
+                        "no valid reports found under target with result={}",
+                        expected.as_str()
+                    )
+                }
+                None => "no valid reports found under target".to_string(),
+            }],
         },
     }
 }
@@ -1177,6 +1218,9 @@ fn print_report_list_text(summary: &ReportListSummary) -> i32 {
 fn print_report_latest_text(summary: &ReportLatestSummary) -> i32 {
     println!("reports root: {}", summary.root.display());
     println!("status: {}", summary.status);
+    if let Some(result_filter) = summary.result_filter {
+        println!("result filter: {}", result_filter.as_str());
+    }
     println!("reports: {}", summary.report_count);
     println!("valid reports: {}", summary.valid_report_count);
     println!("invalid reports: {}", summary.invalid_report_count);
@@ -1243,6 +1287,7 @@ fn print_report_latest_json(summary: &ReportLatestSummary) -> Result<i32, CliErr
     let json = serde_json::json!({
         "root": summary.root,
         "status": summary.status,
+        "result_filter": summary.result_filter.map(ReportResultFilter::as_str),
         "report_count": summary.report_count,
         "valid_report_count": summary.valid_report_count,
         "invalid_report_count": summary.invalid_report_count,
@@ -1621,7 +1666,13 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             }
 
             let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_latest(PathBuf::from(target), args.json, args.full, args.path_only)
+            report_latest(
+                PathBuf::from(target),
+                args.json,
+                args.full,
+                args.path_only,
+                args.result,
+            )
         }
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
@@ -1817,8 +1868,9 @@ fn report_latest(
     json: bool,
     full: bool,
     path_only: bool,
+    result_filter: Option<ReportResultFilter>,
 ) -> Result<i32, CliError> {
-    let summary = latest_report(list_reports(target));
+    let summary = latest_report(list_reports(target), result_filter);
     if path_only {
         return match latest_report_path(&summary) {
             Some(path) => {

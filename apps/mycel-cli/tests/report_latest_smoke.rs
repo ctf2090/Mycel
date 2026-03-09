@@ -8,7 +8,13 @@ use common::{
 };
 use serde_json::json;
 
-fn write_report(path: &std::path::Path, run_id: &str, started_at: &str, finished_at: &str) {
+fn write_report_with_result(
+    path: &std::path::Path,
+    run_id: &str,
+    started_at: &str,
+    finished_at: &str,
+    result: &str,
+) {
     let report = json!({
         "$schema": "../report.schema.json",
         "run_id": run_id,
@@ -27,7 +33,7 @@ fn write_report(path: &std::path::Path, run_id: &str, started_at: &str, finished
                 "notes": []
             }
         ],
-        "result": "pass",
+        "result": result,
         "events": [
             {
                 "step": 1,
@@ -55,6 +61,10 @@ fn write_report(path: &std::path::Path, run_id: &str, started_at: &str, finished
         serde_json::to_vec_pretty(&report).expect("report should serialize"),
     )
     .expect("report should be written");
+}
+
+fn write_report(path: &std::path::Path, run_id: &str, started_at: &str, finished_at: &str) {
+    write_report_with_result(path, run_id, started_at, finished_at, "pass");
 }
 
 #[test]
@@ -85,6 +95,83 @@ fn report_latest_json_selects_latest_finished_at_from_directory() {
     assert_eq!(json["selected"]["path"], newer.display().to_string());
     assert_eq!(json["selected"]["run_id"], "run:newer");
     assert_eq!(json["selected"]["finished_at"], "2026-03-09T11:00:05+08:00");
+}
+
+#[test]
+fn report_latest_json_filters_to_pass_result() {
+    let temp_dir = create_temp_dir("report-latest-result-pass");
+    let pass_report = temp_dir.path().join("pass.report.json");
+    let fail_report = temp_dir.path().join("fail.report.json");
+    write_report(
+        &pass_report,
+        "run:pass",
+        "2026-03-09T11:00:00+08:00",
+        "2026-03-09T11:00:05+08:00",
+    );
+    write_report(
+        &fail_report,
+        "run:fail",
+        "2026-03-09T12:00:00+08:00",
+        "2026-03-09T12:00:05+08:00",
+    );
+    write_report_with_result(
+        &fail_report,
+        "run:fail",
+        "2026-03-09T12:00:00+08:00",
+        "2026-03-09T12:00:05+08:00",
+        "fail",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&["report", "latest", &target, "--result", "pass", "--json"]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["result_filter"], "pass");
+    assert_eq!(json["selected"]["run_id"], "run:pass");
+    assert_eq!(json["selected"]["result"], "pass");
+}
+
+#[test]
+fn report_latest_path_only_filters_to_fail_result() {
+    let temp_dir = create_temp_dir("report-latest-result-fail");
+    let pass_report = temp_dir.path().join("pass.report.json");
+    let fail_report = temp_dir.path().join("fail.report.json");
+    write_report(
+        &pass_report,
+        "run:pass",
+        "2026-03-09T11:00:00+08:00",
+        "2026-03-09T11:00:05+08:00",
+    );
+    write_report(
+        &fail_report,
+        "run:fail",
+        "2026-03-09T12:00:00+08:00",
+        "2026-03-09T12:00:05+08:00",
+    );
+    write_report_with_result(
+        &fail_report,
+        "run:fail",
+        "2026-03-09T12:00:00+08:00",
+        "2026-03-09T12:00:05+08:00",
+        "fail",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&[
+        "report",
+        "latest",
+        &target,
+        "--result",
+        "fail",
+        "--path-only",
+    ]);
+
+    assert_success(&output);
+    assert_eq!(
+        stdout_text(&output).trim(),
+        fail_report.display().to_string()
+    );
 }
 
 #[test]
@@ -233,6 +320,30 @@ fn report_latest_json_fails_when_no_valid_reports_exist() {
     assert_eq!(json["status"], "failed");
     assert_eq!(json["selected"], serde_json::Value::Null);
     assert_eq!(json["errors"][0], "no valid reports found under target");
+}
+
+#[test]
+fn report_latest_json_fails_when_no_report_matches_result_filter() {
+    let temp_dir = create_temp_dir("report-latest-result-miss");
+    let pass_report = temp_dir.path().join("pass.report.json");
+    write_report(
+        &pass_report,
+        "run:pass",
+        "2026-03-09T11:00:00+08:00",
+        "2026-03-09T11:00:05+08:00",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&["report", "latest", &target, "--result", "fail", "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "failed");
+    assert_eq!(json["result_filter"], "fail");
+    assert_eq!(
+        json["errors"][0],
+        "no valid reports found under target with result=fail"
+    );
 }
 
 #[test]

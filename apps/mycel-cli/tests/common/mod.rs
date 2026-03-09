@@ -324,6 +324,10 @@ pub fn assert_report_latest_help(stdout: &str) {
         stdout.contains("--path-only"),
         "expected path-only flag in report latest help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--result <RESULT>"),
+        "expected result flag in report latest help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_object_verify_help(stdout: &str) {
