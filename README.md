@@ -67,6 +67,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 ### Meta
 
 - [PROJECT-INTENT.md](./PROJECT-INTENT.md): Project intent and protocol-boundary notes
+- [CONTRIBUTING.md](./CONTRIBUTING.md): Contribution expectations for scope, docs, tests, and license terms
 - [AGENTS.md](./AGENTS.md): Repository collaboration rules
 
 ### Implementation Scaffold
@@ -102,4 +103,4 @@ This repository is licensed under the [MIT License](./LICENSE), unless a future 
 
 ## Contributing and License Expectations
 
-Unless a future contributing guide says otherwise, contributions submitted to this repository are expected to be offered under the same MIT terms as the rest of the repository.
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Unless that guide is revised in the future, contributions submitted to this repository are expected to be offered under the same MIT terms as the rest of the repository.
