@@ -43,6 +43,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [docs/design-notes/DESIGN-NOTES.qa-app-layer.en.md](./docs/design-notes/DESIGN-NOTES.qa-app-layer.en.md): Design draft for a Q&A app carried by Mycel
 - [docs/design-notes/DESIGN-NOTES.qa-minimal-schema.en.md](./docs/design-notes/DESIGN-NOTES.qa-minimal-schema.en.md): Minimal schema draft for a Q&A app
 - [docs/design-notes/DESIGN-NOTES.commentary-citation-schema.en.md](./docs/design-notes/DESIGN-NOTES.commentary-citation-schema.en.md): Design draft for maintainer-authored commentary works that heavily cite source documents
+- [docs/design-notes/DESIGN-NOTES.app-signing-model.en.md](./docs/design-notes/DESIGN-NOTES.app-signing-model.en.md): Design draft for separating object signing, release signing, and execution-evidence signing
 - [docs/design-notes/DESIGN-NOTES.donation-app-layer.en.md](./docs/design-notes/DESIGN-NOTES.donation-app-layer.en.md): Design draft for a donation-oriented app carried by Mycel
 - [docs/design-notes/DESIGN-NOTES.canonical-text-profile.en.md](./docs/design-notes/DESIGN-NOTES.canonical-text-profile.en.md): Design draft for a neutral canonical-text profile with witnesses, anchors, commentary, and accepted readings
 - [docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.en.md](./docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.en.md): Design draft for preserving and governing rival interpretations without overwriting root text
