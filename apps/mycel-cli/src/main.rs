@@ -12,6 +12,49 @@ use mycel_sim::model::{Report, ReportEvent, ReportFailure};
 use mycel_sim::run::{run_test_case_with_options, RunOptions};
 use mycel_sim::simulator_banner;
 use mycel_sim::validate::validate_path;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+enum CliError {
+    #[error("{0}")]
+    Usage(String),
+    #[error("failed to serialize {context}: {source}")]
+    Serialization {
+        context: &'static str,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("sim run failed: {0}")]
+    SimRun(String),
+}
+
+impl CliError {
+    fn usage(message: impl Into<String>) -> Self {
+        Self::Usage(message.into())
+    }
+
+    fn serialization(context: &'static str, source: serde_json::Error) -> Self {
+        Self::Serialization { context, source }
+    }
+
+    fn exit_code(&self) -> i32 {
+        match self {
+            Self::Usage(_) | Self::Serialization { .. } => 2,
+            Self::SimRun(_) => 1,
+        }
+    }
+
+    fn emit(&self) {
+        match self {
+            Self::Usage(message) => {
+                eprintln!("{message}");
+                eprintln!();
+                print_usage();
+            }
+            _ => eprintln!("{self}"),
+        }
+    }
+}
 
 #[derive(Parser)]
 #[command(
@@ -312,29 +355,26 @@ fn print_head_inspect_text(summary: &HeadInspectSummary) -> i32 {
     }
 }
 
-fn print_head_inspect_json(summary: &HeadInspectSummary) -> i32 {
+fn print_head_inspect_json(summary: &HeadInspectSummary) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             println!("{json}");
             if summary.is_ok() {
-                0
+                Ok(0)
             } else {
-                1
+                Ok(1)
             }
         }
-        Err(err) => {
-            eprintln!("failed to serialize head inspection summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization("head inspection summary", source)),
     }
 }
 
-fn head_inspect(doc_id: String, input_path: PathBuf, json: bool) -> i32 {
+fn head_inspect(doc_id: String, input_path: PathBuf, json: bool) -> Result<i32, CliError> {
     let summary = inspect_heads_from_path(&input_path, &doc_id);
     if json {
         print_head_inspect_json(&summary)
     } else {
-        print_head_inspect_text(&summary)
+        Ok(print_head_inspect_text(&summary))
     }
 }
 
@@ -379,29 +419,29 @@ fn print_object_verification_text(summary: &ObjectVerificationSummary) -> i32 {
     }
 }
 
-fn print_object_verification_json(summary: &ObjectVerificationSummary) -> i32 {
+fn print_object_verification_json(summary: &ObjectVerificationSummary) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             println!("{json}");
             if summary.is_ok() {
-                0
+                Ok(0)
             } else {
-                1
+                Ok(1)
             }
         }
-        Err(err) => {
-            eprintln!("failed to serialize object verification summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization(
+            "object verification summary",
+            source,
+        )),
     }
 }
 
-fn object_verify(target: PathBuf, json: bool) -> i32 {
+fn object_verify(target: PathBuf, json: bool) -> Result<i32, CliError> {
     let summary = verify_object_path(&target);
     if json {
         print_object_verification_json(&summary)
     } else {
-        print_object_verification_text(&summary)
+        Ok(print_object_verification_text(&summary))
     }
 }
 
@@ -440,24 +480,23 @@ fn print_validation_text(summary: &mycel_sim::validate::ValidationSummary) -> i3
     }
 }
 
-fn print_validation_json(summary: &mycel_sim::validate::ValidationSummary) -> i32 {
+fn print_validation_json(
+    summary: &mycel_sim::validate::ValidationSummary,
+) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             println!("{json}");
             if summary.is_ok() {
-                0
+                Ok(0)
             } else {
-                1
+                Ok(1)
             }
         }
-        Err(err) => {
-            eprintln!("failed to serialize validation summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization("validation summary", source)),
     }
 }
 
-fn validate(target: PathBuf, json: bool, strict: bool) -> i32 {
+fn validate(target: PathBuf, json: bool, strict: bool) -> Result<i32, CliError> {
     let summary = validate_path(&target);
     let exit_code = if !summary.is_ok() {
         1
@@ -470,13 +509,15 @@ fn validate(target: PathBuf, json: bool, strict: bool) -> i32 {
     let print_code = if json {
         print_validation_json(&summary)
     } else {
-        print_validation_text(&summary)
+        Ok(print_validation_text(&summary))
     };
 
+    let print_code = print_code?;
+
     if print_code != 0 {
-        print_code
+        Ok(print_code)
     } else {
-        exit_code
+        Ok(exit_code)
     }
 }
 
@@ -761,7 +802,7 @@ fn print_report_text(summary: &ReportInspectSummary) -> i32 {
     }
 }
 
-fn print_report_summary_json(summary: &ReportInspectSummary) -> i32 {
+fn print_report_summary_json(summary: &ReportInspectSummary) -> Result<i32, CliError> {
     let json = serde_json::json!({
         "path": summary.path,
         "status": summary.status,
@@ -791,15 +832,12 @@ fn print_report_summary_json(summary: &ReportInspectSummary) -> i32 {
         Ok(json) => {
             println!("{json}");
             if summary.is_ok() {
-                0
+                Ok(0)
             } else {
-                1
+                Ok(1)
             }
         }
-        Err(err) => {
-            eprintln!("failed to serialize report inspection summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization("report inspection summary", source)),
     }
 }
 
@@ -838,7 +876,10 @@ fn print_report_events_text(summary: &ReportInspectSummary, events: &[ReportEven
     }
 }
 
-fn print_report_events_json(summary: &ReportInspectSummary, events: &[ReportEvent]) -> i32 {
+fn print_report_events_json(
+    summary: &ReportInspectSummary,
+    events: &[ReportEvent],
+) -> Result<i32, CliError> {
     let json = serde_json::json!({
         "path": summary.path,
         "status": summary.status,
@@ -853,15 +894,15 @@ fn print_report_events_json(summary: &ReportInspectSummary, events: &[ReportEven
         Ok(json) => {
             println!("{json}");
             if summary.is_ok() {
-                0
+                Ok(0)
             } else {
-                1
+                Ok(1)
             }
         }
-        Err(err) => {
-            eprintln!("failed to serialize report event inspection summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization(
+            "report event inspection summary",
+            source,
+        )),
     }
 }
 
@@ -959,62 +1000,53 @@ fn parse_report_last(value: &str) -> Result<usize, String> {
     parse_usize_flag(value, "--last")
 }
 
-fn exit_usage_error(message: impl AsRef<str>) -> ! {
-    eprintln!("{}", message.as_ref());
-    eprintln!();
-    print_usage();
-    std::process::exit(2);
-}
-
 fn unexpected_extra(extra: &[String], context: &str) -> Option<String> {
     extra
         .first()
         .map(|arg| format!("unexpected {context} argument: {arg}"))
 }
 
-fn handle_head_command(command: HeadCliArgs) -> ! {
+fn handle_head_command(command: HeadCliArgs) -> Result<i32, CliError> {
     match command.command {
         Some(HeadSubcommand::Inspect(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "head inspect") {
-                exit_usage_error(message);
+                return Err(CliError::usage(message));
             }
 
-            std::process::exit(head_inspect(
-                args.doc_id,
-                PathBuf::from(args.input),
-                args.json,
-            ));
+            head_inspect(args.doc_id, PathBuf::from(args.input), args.json)
         }
         Some(HeadSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
-            exit_usage_error(format!("unknown head subcommand: {other}"));
+            Err(CliError::usage(format!("unknown head subcommand: {other}")))
         }
-        None => exit_usage_error("missing head subcommand"),
+        None => Err(CliError::usage("missing head subcommand")),
     }
 }
 
-fn handle_object_command(command: ObjectCliArgs) -> ! {
+fn handle_object_command(command: ObjectCliArgs) -> Result<i32, CliError> {
     match command.command {
         Some(ObjectSubcommand::Verify(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "object verify") {
-                exit_usage_error(message);
+                return Err(CliError::usage(message));
             }
 
-            std::process::exit(object_verify(PathBuf::from(args.target), args.json));
+            object_verify(PathBuf::from(args.target), args.json)
         }
         Some(ObjectSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
-            exit_usage_error(format!("unknown object subcommand: {other}"));
+            Err(CliError::usage(format!(
+                "unknown object subcommand: {other}"
+            )))
         }
-        None => exit_usage_error("missing object subcommand"),
+        None => Err(CliError::usage("missing object subcommand")),
     }
 }
 
-fn handle_report_command(command: ReportCliArgs) -> ! {
+fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
     match command.command {
         Some(ReportSubcommand::Inspect(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "report inspect") {
-                exit_usage_error(message);
+                return Err(CliError::usage(message));
             }
 
             let mut mode = ReportInspectMode::Summary;
@@ -1038,7 +1070,7 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
             let node = args.node;
 
             let Some(target) = args.target else {
-                exit_usage_error("missing report inspect target");
+                return Err(CliError::usage("missing report inspect target"));
             };
 
             let filters = ReportInspectFilters {
@@ -1066,44 +1098,41 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
                 mode
             };
 
-            std::process::exit(report_inspect(
-                PathBuf::from(target),
-                args.json,
-                mode,
-                &filters,
-            ));
+            report_inspect(PathBuf::from(target), args.json, mode, &filters)
         }
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
-            exit_usage_error(format!("unknown report subcommand: {other}"));
+            Err(CliError::usage(format!(
+                "unknown report subcommand: {other}"
+            )))
         }
-        None => exit_usage_error("missing report subcommand"),
+        None => Err(CliError::usage("missing report subcommand")),
     }
 }
 
-fn handle_validate_command(args: ValidateCliArgs) -> ! {
+fn handle_validate_command(args: ValidateCliArgs) -> Result<i32, CliError> {
     if let Some(message) = unexpected_extra(&args.extra, "validate") {
-        exit_usage_error(message);
+        return Err(CliError::usage(message));
     }
 
     let target = args.target.unwrap_or_else(|| ".".to_owned());
-    std::process::exit(validate(PathBuf::from(target), args.json, args.strict));
+    validate(PathBuf::from(target), args.json, args.strict)
 }
 
-fn handle_sim_command(command: SimCliArgs) -> ! {
+fn handle_sim_command(command: SimCliArgs) -> Result<i32, CliError> {
     match command.command {
         Some(SimSubcommand::Run(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "sim run") {
-                exit_usage_error(message);
+                return Err(CliError::usage(message));
             }
 
-            std::process::exit(sim_run(PathBuf::from(args.target), args.json, args.seed));
+            sim_run(PathBuf::from(args.target), args.json, args.seed)
         }
         Some(SimSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
-            exit_usage_error(format!("unknown sim subcommand: {other}"));
+            Err(CliError::usage(format!("unknown sim subcommand: {other}")))
         }
-        None => exit_usage_error("missing sim subcommand"),
+        None => Err(CliError::usage("missing sim subcommand")),
     }
 }
 
@@ -1154,7 +1183,10 @@ fn print_report_failures_text(summary: &ReportInspectSummary, failures: &[Report
     }
 }
 
-fn print_report_failures_json(summary: &ReportInspectSummary, failures: &[ReportFailure]) -> i32 {
+fn print_report_failures_json(
+    summary: &ReportInspectSummary,
+    failures: &[ReportFailure],
+) -> Result<i32, CliError> {
     let json = serde_json::json!({
         "path": summary.path,
         "status": summary.status,
@@ -1169,19 +1201,22 @@ fn print_report_failures_json(summary: &ReportInspectSummary, failures: &[Report
         Ok(json) => {
             println!("{json}");
             if summary.is_ok() {
-                0
+                Ok(0)
             } else {
-                1
+                Ok(1)
             }
         }
-        Err(err) => {
-            eprintln!("failed to serialize report failure inspection summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization(
+            "report failure inspection summary",
+            source,
+        )),
     }
 }
 
-fn print_report_full_json(summary: &ReportInspectSummary, report: &Report) -> i32 {
+fn print_report_full_json(
+    summary: &ReportInspectSummary,
+    report: &Report,
+) -> Result<i32, CliError> {
     if !summary.is_ok() {
         return print_report_summary_json(summary);
     }
@@ -1189,12 +1224,9 @@ fn print_report_full_json(summary: &ReportInspectSummary, report: &Report) -> i3
     match serde_json::to_string_pretty(report) {
         Ok(json) => {
             println!("{json}");
-            0
+            Ok(0)
         }
-        Err(err) => {
-            eprintln!("failed to serialize full report JSON: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization("full report JSON", source)),
     }
 }
 
@@ -1203,14 +1235,14 @@ fn report_inspect(
     json: bool,
     mode: ReportInspectMode,
     filters: &ReportInspectFilters,
-) -> i32 {
+) -> Result<i32, CliError> {
     let inspected = inspect_report(target);
     match mode {
         ReportInspectMode::Summary => {
             if json {
                 print_report_summary_json(&inspected.summary)
             } else {
-                print_report_text(&inspected.summary)
+                Ok(print_report_text(&inspected.summary))
             }
         }
         ReportInspectMode::Events => {
@@ -1218,7 +1250,10 @@ fn report_inspect(
             if json {
                 print_report_events_json(&inspected.summary, &filtered_events)
             } else {
-                print_report_events_text(&inspected.summary, &filtered_events)
+                Ok(print_report_events_text(
+                    &inspected.summary,
+                    &filtered_events,
+                ))
             }
         }
         ReportInspectMode::Failures => {
@@ -1226,7 +1261,10 @@ fn report_inspect(
             if json {
                 print_report_failures_json(&inspected.summary, &filtered_failures)
             } else {
-                print_report_failures_text(&inspected.summary, &filtered_failures)
+                Ok(print_report_failures_text(
+                    &inspected.summary,
+                    &filtered_failures,
+                ))
             }
         }
         ReportInspectMode::Full => {
@@ -1236,8 +1274,7 @@ fn report_inspect(
                     None => print_report_summary_json(&inspected.summary),
                 }
             } else {
-                eprintln!("report inspect --full requires --json");
-                2
+                Err(CliError::usage("report inspect --full requires --json"))
             }
         }
     }
@@ -1301,33 +1338,27 @@ fn print_run_text(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     0
 }
 
-fn print_run_json(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
+fn print_run_json(summary: &mycel_sim::run::SimulationRunSummary) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             println!("{json}");
-            0
+            Ok(0)
         }
-        Err(err) => {
-            eprintln!("failed to serialize run summary: {err}");
-            2
-        }
+        Err(source) => Err(CliError::serialization("run summary", source)),
     }
 }
 
-fn sim_run(target: PathBuf, json: bool, seed_override: Option<String>) -> i32 {
+fn sim_run(target: PathBuf, json: bool, seed_override: Option<String>) -> Result<i32, CliError> {
     let options = RunOptions { seed_override };
     match run_test_case_with_options(&target, &options) {
         Ok(summary) => {
             if json {
                 print_run_json(&summary)
             } else {
-                print_run_text(&summary)
+                Ok(print_run_text(&summary))
             }
         }
-        Err(message) => {
-            eprintln!("sim run failed: {message}");
-            1
-        }
+        Err(message) => Err(CliError::SimRun(message)),
     }
 }
 
@@ -1356,17 +1387,31 @@ fn main() {
         }
     };
 
-    match cli.command {
+    let result = match cli.command {
         Some(CliCommand::Head(command)) => handle_head_command(command),
-        Some(CliCommand::Info) => print_info(),
+        Some(CliCommand::Info) => {
+            print_info();
+            Ok(0)
+        }
         Some(CliCommand::Object(command)) => handle_object_command(command),
         Some(CliCommand::Report(command)) => handle_report_command(command),
         Some(CliCommand::Sim(command)) => handle_sim_command(command),
         Some(CliCommand::Validate(command)) => handle_validate_command(command),
         Some(CliCommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
-            exit_usage_error(format!("unknown command: {other}"));
+            Err(CliError::usage(format!("unknown command: {other}")))
         }
-        None => print_usage(),
+        None => {
+            print_usage();
+            Ok(0)
+        }
+    };
+
+    match result {
+        Ok(exit_code) => std::process::exit(exit_code),
+        Err(error) => {
+            error.emit();
+            std::process::exit(error.exit_code());
+        }
     }
 }
