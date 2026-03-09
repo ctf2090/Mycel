@@ -23,6 +23,9 @@ pub struct HeadInspectSummary {
     pub eligible_heads: Vec<EligibleHeadSummary>,
     pub verified_revision_count: usize,
     pub verified_view_count: usize,
+    pub critical_violations: Vec<CriticalViolationSummary>,
+    pub effective_weights: Vec<EffectiveWeightSummary>,
+    pub maintainer_support: Vec<MaintainerSupportSummary>,
     pub decision_trace: Vec<DecisionTraceEntry>,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
@@ -32,6 +35,36 @@ pub struct HeadInspectSummary {
 pub struct DecisionTraceEntry {
     pub step: String,
     pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CriticalViolationSummary {
+    pub maintainer: String,
+    pub timestamp: u64,
+    pub selector_epoch: i64,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EffectiveWeightSummary {
+    pub maintainer: String,
+    pub admitted: bool,
+    pub effective_weight: u64,
+    pub valid_view_counts: Vec<EpochCountSummary>,
+    pub critical_violation_counts: Vec<EpochCountSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MaintainerSupportSummary {
+    pub maintainer: String,
+    pub revision_id: String,
+    pub effective_weight: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EpochCountSummary {
+    pub epoch: i64,
+    pub count: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -109,6 +142,9 @@ impl HeadInspectSummary {
             eligible_heads: Vec::new(),
             verified_revision_count: 0,
             verified_view_count: 0,
+            critical_violations: Vec::new(),
+            effective_weights: Vec::new(),
+            maintainer_support: Vec::new(),
             decision_trace: Vec::new(),
             notes: Vec::new(),
             errors: Vec::new(),
@@ -227,6 +263,20 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
                 .join(", ")
         },
     );
+    summary.critical_violations = input
+        .critical_violations
+        .iter()
+        .map(|violation| CriticalViolationSummary {
+            maintainer: violation.maintainer.clone(),
+            timestamp: violation.timestamp,
+            selector_epoch: selector_epoch_for_view(
+                violation.timestamp,
+                input.profile.epoch_seconds,
+                input.profile.epoch_zero_timestamp,
+            ),
+            reason: violation.reason.clone(),
+        })
+        .collect();
 
     if !summary.errors.is_empty() {
         return summary;
@@ -250,7 +300,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         return summary;
     }
 
-    let (effective_weights, weight_trace) = compute_effective_weights(
+    let (effective_weights, effective_weight_summaries, weight_trace) = compute_effective_weights(
         &verified_views,
         &input.critical_violations,
         summary
@@ -258,11 +308,12 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
             .expect("selector epoch should be set"),
         &input.profile,
     );
+    summary.effective_weights = effective_weight_summaries;
     for entry in weight_trace {
         summary.push_trace(entry.step, entry.detail);
     }
 
-    let (support_map, support_trace) = latest_support_by_maintainer(
+    let (support_map, support_summaries, support_trace) = latest_support_by_maintainer(
         &verified_views,
         doc_id,
         &eligible_heads,
@@ -272,6 +323,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         &input.profile,
         &effective_weights,
     );
+    summary.maintainer_support = support_summaries;
     for entry in support_trace {
         summary.push_trace(entry.step, entry.detail);
     }
@@ -657,7 +709,11 @@ fn latest_support_by_maintainer(
     selector_epoch: i64,
     profile: &HeadInspectProfile,
     effective_weights: &HashMap<String, u64>,
-) -> (HashMap<String, MaintainerSupport>, Vec<DecisionTraceEntry>) {
+) -> (
+    HashMap<String, MaintainerSupport>,
+    Vec<MaintainerSupportSummary>,
+    Vec<DecisionTraceEntry>,
+) {
     let eligible_ids = eligible_heads
         .iter()
         .map(|revision| revision.revision_id.clone())
@@ -703,18 +759,27 @@ fn latest_support_by_maintainer(
         })
         .collect::<HashMap<_, _>>();
 
-    let mut sorted_support = support_map.iter().collect::<Vec<_>>();
-    sorted_support.sort_by(|left, right| left.0.cmp(right.0));
+    let mut support_summaries = support_map
+        .iter()
+        .map(|(maintainer, support)| MaintainerSupportSummary {
+            maintainer: maintainer.clone(),
+            revision_id: support.revision_id.clone(),
+            effective_weight: support.effective_weight,
+        })
+        .collect::<Vec<_>>();
+    support_summaries.sort_by(|left, right| left.maintainer.cmp(&right.maintainer));
+
     let trace = vec![DecisionTraceEntry {
         step: "maintainer_support".to_string(),
-        detail: if sorted_support.is_empty() {
+        detail: if support_summaries.is_empty() {
             "no eligible maintainer support in the active selector epoch".to_string()
         } else {
-            sorted_support
-                .into_iter()
-                .map(|(maintainer, support)| {
+            support_summaries
+                .iter()
+                .map(|support| {
                     format!(
                         "{maintainer}->{revision_id} weight={weight}",
+                        maintainer = support.maintainer,
                         revision_id = support.revision_id,
                         weight = support.effective_weight
                     )
@@ -724,7 +789,7 @@ fn latest_support_by_maintainer(
         },
     }];
 
-    (support_map, trace)
+    (support_map, support_summaries, trace)
 }
 
 fn compute_effective_weights(
@@ -732,7 +797,11 @@ fn compute_effective_weights(
     critical_violations: &[HeadInspectCriticalViolation],
     selector_epoch: i64,
     profile: &HeadInspectProfile,
-) -> (HashMap<String, u64>, Vec<DecisionTraceEntry>) {
+) -> (
+    HashMap<String, u64>,
+    Vec<EffectiveWeightSummary>,
+    Vec<DecisionTraceEntry>,
+) {
     let mut per_epoch_counts: HashMap<String, BTreeMap<i64, u64>> = HashMap::new();
     let mut per_epoch_violations: HashMap<String, BTreeMap<i64, u64>> = HashMap::new();
 
@@ -774,6 +843,7 @@ fn compute_effective_weights(
     maintainers.sort();
 
     let mut weights = HashMap::new();
+    let mut summaries = Vec::new();
     let mut trace = Vec::new();
 
     for maintainer in maintainers {
@@ -787,7 +857,15 @@ fn compute_effective_weights(
             .unwrap_or_default();
         let effective_weight =
             effective_weight_for_epoch(&counts, &violations, selector_epoch, profile);
+        let admitted = is_admitted_in_epoch(&counts, &violations, selector_epoch, profile);
         weights.insert(maintainer.clone(), effective_weight);
+        summaries.push(EffectiveWeightSummary {
+            maintainer: maintainer.clone(),
+            admitted,
+            effective_weight,
+            valid_view_counts: to_epoch_count_summaries(&counts),
+            critical_violation_counts: to_epoch_count_summaries(&violations),
+        });
 
         let mut count_parts = counts
             .iter()
@@ -808,7 +886,7 @@ fn compute_effective_weights(
             step: "effective_weight".to_string(),
             detail: format!(
                 "{maintainer} admitted={admitted} weight={weight} counts=[{counts}] violations=[{violations}]",
-                admitted = is_admitted_in_epoch(&counts, &violations, selector_epoch, profile),
+                admitted = admitted,
                 weight = effective_weight,
                 counts = count_parts.join(", "),
                 violations = violation_parts.join(", ")
@@ -816,7 +894,17 @@ fn compute_effective_weights(
         });
     }
 
-    (weights, trace)
+    (weights, summaries, trace)
+}
+
+fn to_epoch_count_summaries(counts: &BTreeMap<i64, u64>) -> Vec<EpochCountSummary> {
+    counts
+        .iter()
+        .map(|(epoch, count)| EpochCountSummary {
+            epoch: *epoch,
+            count: *count,
+        })
+        .collect()
 }
 
 fn effective_weight_for_epoch(

@@ -197,6 +197,33 @@ fn head_inspect_json_selects_highest_supported_head() {
     assert_eq!(json["tie_break_reason"], "higher_selector_score");
     assert_eq!(json["verified_revision_count"], 3);
     assert_eq!(json["verified_view_count"], 3);
+    assert_eq!(
+        json["critical_violations"]
+            .as_array()
+            .expect("critical_violations should be array")
+            .len(),
+        0
+    );
+    let effective_weights = json["effective_weights"]
+        .as_array()
+        .expect("effective_weights should be array");
+    assert_eq!(effective_weights.len(), 3);
+    assert!(effective_weights.iter().all(|entry| {
+        entry["admitted"] == Value::Bool(true)
+            && entry["effective_weight"] == Value::from(1)
+            && entry["critical_violation_counts"]
+                .as_array()
+                .is_some_and(|counts| counts.is_empty())
+    }));
+    let maintainer_support = json["maintainer_support"]
+        .as_array()
+        .expect("maintainer_support should be array");
+    assert_eq!(maintainer_support.len(), 3);
+    assert!(maintainer_support.iter().all(|entry| {
+        entry["effective_weight"] == Value::from(1)
+            && entry["maintainer"].as_str().is_some()
+            && entry["revision_id"].as_str().is_some()
+    }));
     assert!(
         json["decision_trace"]
             .as_array()
@@ -446,6 +473,34 @@ fn head_inspect_uses_effective_weight_in_selector_score() {
     assert_eq!(selected["weighted_support"], 2);
     assert_eq!(selected["supporter_count"], 1);
     assert_eq!(alternative["weighted_support"], 1);
+    let effective_weights = json["effective_weights"]
+        .as_array()
+        .expect("effective_weights should be array");
+    let promoted = effective_weights
+        .iter()
+        .find(|entry| entry["effective_weight"] == Value::from(2))
+        .expect("expected promoted effective weight entry");
+    assert_eq!(promoted["admitted"], Value::Bool(true));
+    assert!(
+        promoted["valid_view_counts"]
+            .as_array()
+            .is_some_and(|counts| counts.iter().any(|entry| {
+                entry["epoch"] == Value::from(1) && entry["count"] == Value::from(2)
+            })),
+        "expected epoch 1 valid_view_counts entry, stdout: {}",
+        stdout_text(&output)
+    );
+    let maintainer_support = json["maintainer_support"]
+        .as_array()
+        .expect("maintainer_support should be array");
+    assert!(
+        maintainer_support.iter().any(|entry| {
+            entry["revision_id"] == revision_a["revision_id"]
+                && entry["effective_weight"] == Value::from(2)
+        }),
+        "expected weighted maintainer_support entry, stdout: {}",
+        stdout_text(&output)
+    );
     assert!(
         json["decision_trace"]
             .as_array()
@@ -556,6 +611,42 @@ fn head_inspect_penalizes_critical_violations() {
         .expect("surviving head summary should exist");
     assert_eq!(penalized["weighted_support"], 0);
     assert_eq!(surviving["weighted_support"], 1);
+    let critical_violations = json["critical_violations"]
+        .as_array()
+        .expect("critical_violations should be array");
+    assert_eq!(critical_violations.len(), 1);
+    assert_eq!(critical_violations[0]["selector_epoch"], Value::from(1));
+    assert_eq!(
+        critical_violations[0]["reason"],
+        Value::String("equivocated view publication".to_string())
+    );
+    let effective_weights = json["effective_weights"]
+        .as_array()
+        .expect("effective_weights should be array");
+    let penalized_weight = effective_weights
+        .iter()
+        .find(|entry| {
+            entry["critical_violation_counts"]
+                .as_array()
+                .is_some_and(|counts| {
+                    counts.iter().any(|count| {
+                        count["epoch"] == Value::from(1) && count["count"] == Value::from(1)
+                    })
+                })
+        })
+        .expect("expected penalized effective weight entry");
+    assert_eq!(penalized_weight["admitted"], Value::Bool(false));
+    assert_eq!(penalized_weight["effective_weight"], Value::from(0));
+    let maintainer_support = json["maintainer_support"]
+        .as_array()
+        .expect("maintainer_support should be array");
+    assert!(
+        maintainer_support
+            .iter()
+            .all(|entry| entry["effective_weight"] != Value::from(0)),
+        "expected penalized maintainer to be absent from maintainer_support, stdout: {}",
+        stdout_text(&output)
+    );
     assert!(
         json["decision_trace"]
             .as_array()
