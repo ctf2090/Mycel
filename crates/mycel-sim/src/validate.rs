@@ -239,7 +239,7 @@ fn scope_input(root: &Path, input: &ValidationInput, target: &ValidationTarget) 
         ValidationTarget::PeersDir(path) => scope_for_peers_dir(root, input, path),
         ValidationTarget::TopologiesDir(path) => scope_for_topologies_dir(root, input, path),
         ValidationTarget::TestsDir(path) => scope_for_tests_dir(root, input, path),
-        ValidationTarget::ReportsDir(path) => scope_for_reports_dir(input, path),
+        ValidationTarget::ReportsDir(path) => scope_for_reports_dir(root, input, path),
     }
 }
 
@@ -391,7 +391,13 @@ fn scope_for_topology(root: &Path, input: &ValidationInput, path: &Path) -> Vali
     let topologies = filter_by_path(&input.topologies, path);
     let peer_node_ids: HashSet<_> = topologies
         .iter()
-        .flat_map(|topology| topology.value.peers.iter().map(|peer| peer.node_id.as_str()))
+        .flat_map(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .map(|peer| peer.node_id.as_str())
+        })
         .collect();
     let topology_ids: HashSet<_> = topologies
         .iter()
@@ -481,7 +487,13 @@ fn scope_for_test_case(root: &Path, input: &ValidationInput, path: &Path) -> Val
         .collect();
     let peer_node_ids: HashSet<_> = topologies
         .iter()
-        .flat_map(|topology| topology.value.peers.iter().map(|peer| peer.node_id.as_str()))
+        .flat_map(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .map(|peer| peer.node_id.as_str())
+        })
         .collect();
     let topology_ids: HashSet<_> = topologies
         .iter()
@@ -589,6 +601,16 @@ fn build_report_scope(
         })
         .cloned()
         .collect();
+    let peer_node_ids: HashSet<_> = topologies
+        .iter()
+        .flat_map(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .map(|peer| peer.node_id.as_str())
+        })
+        .collect();
     let topology_fixture_refs: HashSet<_> = topologies
         .iter()
         .map(|topology| fixture_dir_name(&topology.value.fixture_set))
@@ -603,10 +625,16 @@ fn build_report_scope(
         })
         .cloned()
         .collect();
+    let peers: Vec<_> = input
+        .peers
+        .iter()
+        .filter(|peer| peer_node_ids.contains(peer.value.node_id.as_str()))
+        .cloned()
+        .collect();
 
     ValidationInput {
         fixtures,
-        peers: Vec::new(),
+        peers,
         topologies,
         test_cases,
         reports,
@@ -691,7 +719,13 @@ fn scope_for_topologies_dir(root: &Path, input: &ValidationInput, path: &Path) -
     let topologies = filter_by_dir(&input.topologies, path);
     let peer_node_ids: HashSet<_> = topologies
         .iter()
-        .flat_map(|topology| topology.value.peers.iter().map(|peer| peer.node_id.as_str()))
+        .flat_map(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .map(|peer| peer.node_id.as_str())
+        })
         .collect();
     let topology_ids: HashSet<_> = topologies
         .iter()
@@ -779,7 +813,13 @@ fn scope_for_tests_dir(root: &Path, input: &ValidationInput, path: &Path) -> Val
         .collect();
     let peer_node_ids: HashSet<_> = topologies
         .iter()
-        .flat_map(|topology| topology.value.peers.iter().map(|peer| peer.node_id.as_str()))
+        .flat_map(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .map(|peer| peer.node_id.as_str())
+        })
         .collect();
     let topology_ids: HashSet<_> = topologies
         .iter()
@@ -820,7 +860,7 @@ fn scope_for_tests_dir(root: &Path, input: &ValidationInput, path: &Path) -> Val
     }
 }
 
-fn scope_for_reports_dir(input: &ValidationInput, path: &Path) -> ValidationInput {
+fn scope_for_reports_dir(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
     let reports = filter_by_dir(&input.reports, path);
     let fixture_ids: HashSet<_> = reports
         .iter()
@@ -843,8 +883,22 @@ fn scope_for_reports_dir(input: &ValidationInput, path: &Path) -> ValidationInpu
     let topologies: Vec<_> = input
         .topologies
         .iter()
-        .filter(|topology| topology_ids.contains(topology.value.topology_id.as_str()))
+        .filter(|topology| {
+            topology_ids.contains(topology.value.topology_id.as_str())
+                || relative_display(root, &topology.path)
+                    .is_some_and(|path| topology_ids.contains(path.as_str()))
+        })
         .cloned()
+        .collect();
+    let peer_node_ids: HashSet<_> = topologies
+        .iter()
+        .flat_map(|topology| {
+            topology
+                .value
+                .peers
+                .iter()
+                .map(|peer| peer.node_id.as_str())
+        })
         .collect();
     let test_cases: Vec<_> = input
         .test_cases
@@ -852,10 +906,16 @@ fn scope_for_reports_dir(input: &ValidationInput, path: &Path) -> ValidationInpu
         .filter(|test_case| test_ids.contains(test_case.value.test_id.as_str()))
         .cloned()
         .collect();
+    let peers: Vec<_> = input
+        .peers
+        .iter()
+        .filter(|peer| peer_node_ids.contains(peer.value.node_id.as_str()))
+        .cloned()
+        .collect();
 
     ValidationInput {
         fixtures,
-        peers: Vec::new(),
+        peers,
         topologies,
         test_cases,
         reports,

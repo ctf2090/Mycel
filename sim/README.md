@@ -405,6 +405,7 @@ Validation output notes:
 - warning-only validation still emits `status: warning`; `--strict` changes the exit behavior, not the warning payload itself
 - peer-scoped validation now loads related topologies, test cases, and reports from the same repo when they reference the selected peer node IDs
 - test-case-scoped validation now also loads related peer fixtures through the selected topology before reporting scope counts
+- report-scoped validation now also loads related peer fixtures through the selected topology before reporting scope counts
 - for example, `validate sim/peers --json` no longer treats `peer.example.json` as an isolated standalone input; it pulls in the matching topologies and reports before deciding whether the peer is unused
 
 Minimal JSON shape example:
@@ -415,7 +416,7 @@ Minimal JSON shape example:
   "root": "/workspaces/Mycel",
   "target": "/workspaces/Mycel/sim/reports/invalid/missing-seed-source.example.json",
   "fixture_count": 1,
-  "peer_count": 0,
+  "peer_count": 1,
   "topology_count": 1,
   "test_case_count": 1,
   "report_count": 1,
