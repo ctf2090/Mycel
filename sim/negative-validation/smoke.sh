@@ -55,4 +55,44 @@ validate_expected_failure \
   "sim/reports/invalid/auto-seed-prefix-mismatch.example.json" \
   "auto"
 
+echo "[smoke] validating intentional warning report should warn by default"
+warning_output="$(cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json)"
+echo "$warning_output"
+
+if [[ "$warning_output" != *'"status": "warning"'* ]]; then
+  echo "[smoke] expected missing-seed-source validation status warning" >&2
+  exit 1
+fi
+
+if [[ "$warning_output" != *"does not include seed_source"* ]]; then
+  echo "[smoke] expected missing-seed-source warning message" >&2
+  exit 1
+fi
+
+echo
+echo "[smoke] validating intentional warning report should fail under --strict"
+
+set +e
+strict_warning_output="$(cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json --strict 2>&1)"
+strict_warning_exit=$?
+set -e
+
+echo "$strict_warning_output"
+
+if [[ $strict_warning_exit -eq 0 ]]; then
+  echo "[smoke] expected missing-seed-source strict validation to fail" >&2
+  exit 1
+fi
+
+if [[ "$strict_warning_output" != *'"status": "warning"'* ]]; then
+  echo "[smoke] expected missing-seed-source strict validation status warning" >&2
+  exit 1
+fi
+
+if [[ "$strict_warning_output" != *"does not include seed_source"* ]]; then
+  echo "[smoke] expected missing-seed-source strict warning message" >&2
+  exit 1
+fi
+
+echo
 echo "[smoke] negative validation smoke passed"

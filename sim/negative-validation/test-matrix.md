@@ -50,3 +50,11 @@ Run the smoke check for both paths together:
 ```bash
 ./sim/negative-validation/smoke.sh
 ```
+
+The smoke script currently covers:
+
+- repo-wide success
+- `random-seed-prefix-mismatch` hard failure
+- `auto-seed-prefix-mismatch` hard failure
+- `missing-seed-source` warning in normal mode
+- `missing-seed-source` non-zero exit under `--strict`

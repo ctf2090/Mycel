@@ -47,6 +47,8 @@ The script expects:
 - repo-wide `mycel validate --json` returns `status: "ok"`
 - the intentional invalid `random` and `auto` reports return `status: "failed"`
 - each failure message mentions the matching `seed_source` mismatch
+- the `missing-seed-source` report returns `status: "warning"` by default
+- the same `missing-seed-source` report returns a non-zero exit code under `--strict`
 
 ## Why This Directory Exists
 
