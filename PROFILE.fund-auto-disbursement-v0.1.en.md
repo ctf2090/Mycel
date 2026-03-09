@@ -2,7 +2,7 @@
 
 Status: profile draft
 
-This profile defines a narrow interoperable model for automatic fund disbursement built on top of Mycel app-layer records, accepted-state selection, and policy-driven threshold custody.
+This profile defines a narrow interoperable model for automatic fund disbursement built on top of Mycel app-layer records, accepted-state selection, and policy-driven m-of-n custody.
 
 This profile is intentionally conservative.
 
@@ -10,7 +10,7 @@ It constrains:
 
 - how an accepted trigger becomes a disbursement candidate
 - how policy checks are applied
-- how automatic threshold signing may proceed
+- how automatic m-of-n signing may proceed
 - which records must exist for audit and rebuild
 
 It does not redefine the core protocol.
@@ -22,7 +22,7 @@ This profile assumes the underlying implementation already supports:
 - the Mycel core protocol
 - accepted-head selection
 - app-layer records
-- policy-driven threshold custody
+- policy-driven m-of-n custody
 - signer enrollment and consent tracking
 
 This profile applies to:
@@ -146,7 +146,7 @@ Allowed `status` values in this profile:
 
 The `intent_hash` must be stable for the exact outputs and amount being signed.
 
-## 7. Automatic Threshold Signing
+## 7. Automatic m-of-n Signing
 
 This profile allows automatic signing only under these rules:
 
@@ -189,9 +189,11 @@ Allowed `outcome` values in this profile:
 
 The implementation must preserve both successful and unsuccessful outcomes.
 
-## 9. Threshold Rule
+## 9. m-of-n Rule
 
-This profile assumes one fixed threshold per active signer-set version.
+This profile assumes one fixed m-of-n rule per active signer-set version.
+
+In this profile, `m-of-n = members + threshold`.
 
 Required rule:
 

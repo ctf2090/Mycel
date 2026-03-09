@@ -2,7 +2,7 @@
 
 狀態：profile draft
 
-這份 profile 定義一個收斂且可互通的 automatic fund disbursement（資金池自動撥款）模型。它建立在 Mycel app-layer records、accepted-state selection，以及 policy-driven threshold custody 之上。
+這份 profile 定義一個收斂且可互通的 automatic fund disbursement（資金池自動撥款）模型。它建立在 Mycel app-layer records、accepted-state selection，以及 policy-driven m-of-n custody 之上。
 
 這份 profile 刻意採取保守設計。
 
@@ -10,7 +10,7 @@
 
 - accepted trigger 如何變成 disbursement candidate（撥款候選）
 - policy checks（政策檢查）如何套用
-- automatic threshold signing（自動門檻簽章）如何進行
+- automatic m-of-n signing（m-of-n 自動簽章）如何進行
 - 哪些 records 必須存在，才能支撐 audit 與 rebuild
 
 它不重新定義核心協議。
@@ -22,7 +22,7 @@
 - Mycel core protocol
 - accepted-head selection
 - app-layer records
-- policy-driven threshold custody
+- policy-driven m-of-n custody
 - signer enrollment 與 consent tracking
 
 這份 profile 適用於：
@@ -146,7 +146,7 @@ active policy bundle 必須定義：
 
 `intent_hash` 必須能穩定對應到當次要簽出的 outputs 與 amount。
 
-## 7. Automatic Threshold Signing
+## 7. Automatic m-of-n Signing
 
 這份 profile 只在以下規則下允許 automatic signing：
 
@@ -189,9 +189,11 @@ active policy bundle 必須定義：
 
 實作必須同時保留成功與失敗的結果。
 
-## 9. Threshold Rule
+## 9. m-of-n Rule
 
-這份 profile 假設每個 active signer-set version 只有一個固定 threshold。
+這份 profile 假設每個 active signer-set version 只有一個固定 m-of-n 規則。
+
+在這份 profile 中，`m-of-n = members + threshold`。
 
 必要規則：
 

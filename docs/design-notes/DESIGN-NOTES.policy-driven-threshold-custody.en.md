@@ -1,14 +1,16 @@
-# Policy-driven Threshold Custody
+# Policy-driven m-of-n Custody
 
 Status: design draft
 
-This note describes a custody model where Mycel carries the policy and governance history for fund movements, while a threshold signer network executes approved transactions automatically under fixed policy constraints.
+This note describes a custody model where Mycel carries the policy and governance history for fund movements, while an m-of-n signer network executes approved transactions automatically under fixed policy constraints.
+
+In this note, `m-of-n = members + threshold`.
 
 The main design principle is:
 
 - Mycel carries signer enrollment state, signer-set versions, policy bundles, trigger records, execution intent, and audit history
 - signer-pool members knowingly enroll, but do not manually approve each transaction
-- transaction execution is authorized in advance by accepted policy, then executed automatically by threshold signers
+- transaction execution is authorized in advance by accepted policy, then executed automatically by m-of-n signers
 - the core protocol remains neutral and purely technical
 
 ## 0. Goal
@@ -37,7 +39,7 @@ This model is not traditional human-reviewed multisig.
 It is:
 
 - policy-authorized
-- threshold-executed
+- m-of-n-executed
 - audit-preserving
 - signer-aware but not per-transaction interactive
 
@@ -160,7 +162,7 @@ Typical `status` values:
 
 ### 4.2 Signer Set
 
-Defines one threshold signer group.
+Defines one m-of-n signer group.
 
 Suggested fields:
 

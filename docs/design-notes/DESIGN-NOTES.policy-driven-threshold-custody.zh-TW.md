@@ -1,14 +1,16 @@
-# Policy-driven Threshold Custody
+# Policy-driven m-of-n Custody
 
 狀態：design draft
 
-這份文件描述一種保管模型：由 Mycel 承載 fund movement（資金移動）的 policy（政策）與 governance history（治理歷史），再由 threshold signer network（門檻簽章網路）依固定 policy 約束自動執行交易。
+這份文件描述一種保管模型：由 Mycel 承載 fund movement（資金移動）的 policy（政策）與 governance history（治理歷史），再由 m-of-n signer network（m-of-n 簽章網路）依固定 policy 約束自動執行交易。
+
+在這份文件中，`m-of-n = members + threshold`。
 
 核心設計原則是：
 
 - Mycel 承載 signer enrollment state（簽署者加入狀態）、signer-set versions（簽署者集合版本）、policy bundles（政策包）、trigger records（觸發紀錄）、execution intent（執行意圖）與 audit history（審計歷史）
 - signer pool 成員會明確知道自己已加入，但不需要逐筆手動批准交易
-- 交易執行先由已接受的 policy 做事前授權，再由 threshold signers 自動執行
+- 交易執行先由已接受的 policy 做事前授權，再由 m-of-n signers 自動執行
 - 核心協議維持中立且純技術化
 
 ## 0. Goal
@@ -37,7 +39,7 @@
 它的特性是：
 
 - policy-authorized（政策授權）
-- threshold-executed（門檻執行）
+- m-of-n-executed（m-of-n 執行）
 - audit-preserving（保留審計鏈）
 - signer-aware but not per-transaction interactive（簽署者知道自己參與，但不逐筆互動）
 
@@ -160,7 +162,7 @@ signer 同意的是 policy envelope（政策邊界），不是未來每一筆執
 
 ### 4.2 Signer Set
 
-定義一個 threshold signer group（門檻簽署群組）。
+定義一個 m-of-n signer group（m-of-n 簽署群組）。
 
 建議欄位：
 

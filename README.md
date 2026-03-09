@@ -32,7 +32,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [PROTOCOL.en.md](./PROTOCOL.en.md): Full protocol specification
 - [WIRE-PROTOCOL.en.md](./WIRE-PROTOCOL.en.md): Wire protocol draft
 - [IMPLEMENTATION-CHECKLIST.en.md](./IMPLEMENTATION-CHECKLIST.en.md): Implementation checklist for a minimal v0.1 client
-- [PROFILE.fund-auto-disbursement-v0.1.en.md](./PROFILE.fund-auto-disbursement-v0.1.en.md): Narrow v0.1 profile draft for automatic fund disbursement
+- [PROFILE.fund-auto-disbursement-v0.1.en.md](./PROFILE.fund-auto-disbursement-v0.1.en.md): Narrow v0.1 profile draft for automatic fund disbursement with m-of-n custody
 - [PROFILE.mycel-over-tor-v0.1.en.md](./PROFILE.mycel-over-tor-v0.1.en.md): Narrow v0.1 deployment profile for Tor-routed Mycel transport
 
 ### Design Notes
@@ -47,7 +47,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - [docs/design-notes/DESIGN-NOTES.canonical-text-profile.en.md](./docs/design-notes/DESIGN-NOTES.canonical-text-profile.en.md): Design draft for a neutral canonical-text profile with witnesses, anchors, commentary, and accepted readings
 - [docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.en.md](./docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.en.md): Design draft for preserving and governing rival interpretations without overwriting root text
 - [docs/design-notes/DESIGN-NOTES.auto-signer-consent-model.en.md](./docs/design-notes/DESIGN-NOTES.auto-signer-consent-model.en.md): Design draft for enrollment and consent boundaries in automatic signer systems
-- [docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.en.md](./docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.en.md): Design draft for policy-authorized automatic threshold custody
+- [docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.en.md](./docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.en.md): Design draft for policy-authorized automatic m-of-n custody
 - [docs/design-notes/DESIGN-NOTES.mycel-anonymity-model.en.md](./docs/design-notes/DESIGN-NOTES.mycel-anonymity-model.en.md): Design draft for analyzing anonymity across transport, metadata, client, runtime, and replication layers
 - [docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md](./docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md): Design draft for the narrow first-client target and what it must deliberately defer
 - [docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md](./docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md): Design draft mapping the current Mycel documents into one layered full-stack system view
