@@ -43,6 +43,7 @@ fn print_usage() {
     println!("  --phase <name>  Filter event inspection to one phase");
     println!("  --action <name> Filter event inspection to one action");
     println!("  --outcome <name> Filter event inspection to one outcome");
+    println!("  --step <n>      Filter event inspection to one step number");
     println!("  --node <id>     Filter event or failure inspection to one node");
     println!();
     println!("Sim options:");
@@ -296,6 +297,7 @@ struct ReportInspectFilters {
     phase: Option<String>,
     action: Option<String>,
     outcome: Option<String>,
+    step: Option<u64>,
     node: Option<String>,
 }
 
@@ -685,6 +687,7 @@ fn filter_events(events: &[ReportEvent], filters: &ReportInspectFilters) -> Vec<
                 .as_deref()
                 .is_none_or(|outcome| event.outcome == outcome)
         })
+        .filter(|event| filters.step.is_none_or(|step| event.step == step))
         .filter(|event| {
             filters.node.as_deref().is_none_or(|node| {
                 event
@@ -1035,6 +1038,7 @@ fn main() {
                 let mut expect_phase_value = false;
                 let mut expect_action_value = false;
                 let mut expect_outcome_value = false;
+                let mut expect_step_value = false;
                 let mut expect_node_value = false;
 
                 for arg in args {
@@ -1047,6 +1051,18 @@ fn main() {
                     } else if expect_outcome_value {
                         filters.outcome = Some(arg);
                         expect_outcome_value = false;
+                    } else if expect_step_value {
+                        let step = match arg.parse::<u64>() {
+                            Ok(step) => step,
+                            Err(_) => {
+                                eprintln!("invalid value for --step: {arg}");
+                                eprintln!();
+                                print_usage();
+                                std::process::exit(2);
+                            }
+                        };
+                        filters.step = Some(step);
+                        expect_step_value = false;
                     } else if expect_node_value {
                         filters.node = Some(arg);
                         expect_node_value = false;
@@ -1067,6 +1083,12 @@ fn main() {
                         }
                         if filters.outcome.is_some() {
                             eprintln!("report inspect --outcome cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.step.is_some() {
+                            eprintln!("report inspect --step cannot be combined with --full");
                             eprintln!();
                             print_usage();
                             std::process::exit(2);
@@ -1113,6 +1135,12 @@ fn main() {
                             eprintln!(
                                 "report inspect --outcome cannot be combined with --failures"
                             );
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if filters.step.is_some() {
+                            eprintln!("report inspect --step cannot be combined with --failures");
                             eprintln!();
                             print_usage();
                             std::process::exit(2);
@@ -1188,6 +1216,26 @@ fn main() {
                             std::process::exit(2);
                         }
                         expect_outcome_value = true;
+                    } else if arg == "--step" {
+                        if expect_step_value {
+                            eprintln!("missing value for --step");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Full {
+                            eprintln!("report inspect --step cannot be combined with --full");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        if mode == ReportInspectMode::Failures {
+                            eprintln!("report inspect --step cannot be combined with --failures");
+                            eprintln!();
+                            print_usage();
+                            std::process::exit(2);
+                        }
+                        expect_step_value = true;
                     } else if arg == "--node" {
                         if expect_node_value {
                             eprintln!("missing value for --node");
@@ -1230,6 +1278,12 @@ fn main() {
                     print_usage();
                     std::process::exit(2);
                 }
+                if expect_step_value {
+                    eprintln!("missing value for --step");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                }
                 if expect_node_value {
                     eprintln!("missing value for --node");
                     eprintln!();
@@ -1241,6 +1295,7 @@ fn main() {
                     && (filters.phase.is_some()
                         || filters.action.is_some()
                         || filters.outcome.is_some()
+                        || filters.step.is_some()
                         || filters.node.is_some())
                 {
                     mode = ReportInspectMode::Events;
