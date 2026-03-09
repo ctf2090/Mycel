@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use serde_json::json;
 
-use crate::model::{Fixture, Report, ReportPeer, ReportSummary, TestCase, Topology};
+use crate::model::{Fixture, Report, ReportEvent, ReportPeer, ReportSummary, TestCase, Topology};
 use crate::validate::{validate_path, ValidationStatus};
 
 #[derive(Debug, Clone, Serialize)]
@@ -19,6 +19,7 @@ pub struct SimulationRunSummary {
     pub validation_warnings: Vec<String>,
     pub result: String,
     pub peer_count: usize,
+    pub event_count: usize,
     pub verified_object_count: usize,
     pub rejected_object_count: usize,
     pub matched_expected_outcomes: Vec<String>,
@@ -98,6 +99,7 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
             .collect(),
         result: report.result.clone(),
         peer_count: report.peers.len(),
+        event_count: report.events.len(),
         verified_object_count: report
             .summary
             .as_ref()
@@ -142,6 +144,7 @@ fn simulate_report(
     let verified_object_ids = build_verified_object_ids(fixture);
     let rejected_object_ids = build_rejected_object_ids(fixture);
     let matched_expected_outcomes = matched_expected_outcomes(test_case, topology, fixture);
+    let mut events = Vec::new();
 
     let has_hash_failure = fixture
         .expected_outcomes
@@ -155,6 +158,29 @@ fn simulate_report(
         .expected_outcomes
         .iter()
         .any(|outcome| outcome.contains("recovery"));
+
+    push_event(
+        &mut events,
+        "load",
+        "load-fixture",
+        "ok",
+        None,
+        build_fixture_object_refs(fixture),
+        Some(format!("Loaded fixture '{}'.", fixture.fixture_id)),
+    );
+    push_event(
+        &mut events,
+        "init",
+        "build-topology",
+        "ok",
+        None,
+        Vec::new(),
+        Some(format!(
+            "Prepared topology '{}' with {} peers.",
+            topology.topology_id,
+            topology.peers.len()
+        )),
+    );
 
     let mut peers = Vec::with_capacity(topology.peers.len());
     for peer in &topology.peers {
@@ -170,12 +196,31 @@ fn simulate_report(
         let is_reader = reader_node_ids.contains(peer.node_id.as_str()) || peer.role == "reader";
         let is_seed = peer.node_id == seed_node_id || peer.role == "seed";
 
+        push_event(
+            &mut events,
+            "init",
+            "init-peer",
+            "ok",
+            Some(peer.node_id.clone()),
+            Vec::new(),
+            Some(format!("Initialized peer with role '{}'.", peer.role)),
+        );
+
         if is_fault {
             report_peer.status = "failed".to_owned();
             report_peer.rejected_object_ids = rejected_object_ids.clone();
             report_peer
                 .notes
                 .push("Fixture declares this peer as the injected fault source.".to_owned());
+            push_event(
+                &mut events,
+                "sync",
+                "inject-fault",
+                "failed",
+                Some(peer.node_id.clone()),
+                rejected_object_ids.clone(),
+                Some("Fixture routed the invalid object set through this peer.".to_owned()),
+            );
         } else if has_hash_failure || has_signature_failure {
             if is_reader {
                 report_peer.rejected_object_ids = rejected_object_ids.clone();
@@ -183,8 +228,26 @@ fn simulate_report(
                     "Reader rejected the advertised object set during deterministic validation."
                         .to_owned(),
                 );
+                push_event(
+                    &mut events,
+                    "verify",
+                    "reject-object-set",
+                    "ok",
+                    Some(peer.node_id.clone()),
+                    rejected_object_ids.clone(),
+                    Some("Reader rejected the injected invalid object set.".to_owned()),
+                );
             } else if is_seed {
                 report_peer.verified_object_ids = verified_object_ids.clone();
+                push_event(
+                    &mut events,
+                    "sync",
+                    "seed-advertise",
+                    "ok",
+                    Some(peer.node_id.clone()),
+                    verified_object_ids.clone(),
+                    Some("Seed advertised the current verified object set.".to_owned()),
+                );
             }
         } else if has_recovery {
             report_peer.verified_object_ids = verified_object_ids.clone();
@@ -192,15 +255,67 @@ fn simulate_report(
                 report_peer
                     .notes
                     .push("Reader completed WANT-based recovery before replay.".to_owned());
+                push_event(
+                    &mut events,
+                    "sync",
+                    "request-missing-objects",
+                    "ok",
+                    Some(peer.node_id.clone()),
+                    verified_object_ids.clone(),
+                    Some("Reader completed WANT-based recovery.".to_owned()),
+                );
+            } else if is_seed {
+                push_event(
+                    &mut events,
+                    "sync",
+                    "seed-advertise",
+                    "ok",
+                    Some(peer.node_id.clone()),
+                    verified_object_ids.clone(),
+                    Some("Seed supplied missing objects for recovery.".to_owned()),
+                );
             }
         } else {
             if is_seed || is_reader {
                 report_peer.verified_object_ids = verified_object_ids.clone();
+                let action = if is_seed {
+                    "seed-advertise"
+                } else {
+                    "reader-accept"
+                };
+                push_event(
+                    &mut events,
+                    "sync",
+                    action,
+                    "ok",
+                    Some(peer.node_id.clone()),
+                    verified_object_ids.clone(),
+                    Some("Peer accepted the deterministic object set.".to_owned()),
+                );
             }
         }
 
         peers.push(report_peer);
     }
+
+    push_event(
+        &mut events,
+        "replay",
+        "compare-replay-results",
+        "ok",
+        None,
+        verified_object_ids.clone(),
+        Some("Reader-visible replay results converged for this deterministic run.".to_owned()),
+    );
+    push_event(
+        &mut events,
+        "finalize",
+        "write-report",
+        "ok",
+        None,
+        Vec::new(),
+        Some("Prepared machine-readable simulator report.".to_owned()),
+    );
 
     let report = Report {
         schema: Some("../report.schema.json".to_owned()),
@@ -213,6 +328,7 @@ fn simulate_report(
         finished_at: None,
         peers,
         result: test_case.expected_result.clone(),
+        events,
         failures: Vec::new(),
         summary: Some(ReportSummary {
             verified_object_count: Some(verified_object_ids.len() as u64),
@@ -227,6 +343,20 @@ fn simulate_report(
     };
 
     Ok(report)
+}
+
+fn build_fixture_object_refs(fixture: &Fixture) -> Vec<String> {
+    let mut refs = BTreeSet::new();
+
+    for document in &fixture.documents {
+        refs.insert(document.doc_id.clone());
+    }
+
+    if refs.is_empty() {
+        refs.insert(format!("fixture:{}", fixture.fixture_id));
+    }
+
+    refs.into_iter().collect()
 }
 
 fn build_verified_object_ids(fixture: &Fixture) -> Vec<String> {
@@ -300,4 +430,24 @@ where
     let body = fs::read_to_string(path)
         .map_err(|err| format!("failed to read {}: {err}", path.display()))?;
     serde_json::from_str(&body).map_err(|err| format!("failed to parse {}: {err}", path.display()))
+}
+
+fn push_event(
+    events: &mut Vec<ReportEvent>,
+    phase: &str,
+    action: &str,
+    outcome: &str,
+    node_id: Option<String>,
+    object_ids: Vec<String>,
+    detail: Option<String>,
+) {
+    events.push(ReportEvent {
+        step: events.len() as u64 + 1,
+        phase: phase.to_owned(),
+        action: action.to_owned(),
+        outcome: outcome.to_owned(),
+        node_id,
+        object_ids,
+        detail,
+    });
 }

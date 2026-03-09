@@ -46,3 +46,4 @@ Simulator run notes:
 
 - `sim run` currently supports only `single-process` test-cases
 - generated reports are written under `sim/reports/out/`
+- generated reports now include a step-by-step `events` trace

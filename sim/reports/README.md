@@ -6,6 +6,7 @@ Tracked outputs should eventually include:
 
 - per-peer received object IDs
 - verification outcomes
+- per-step event traces for load, sync, verify, replay, and finalize phases
 - final heads by document
 - replay results
 - accepted-head comparison when enabled
@@ -18,4 +19,4 @@ Generated reports under `sim/reports/out/` can also be validated with `mycel val
 
 - `report.schema.json` is the formal contract for machine-readable simulator run reports.
 - `report.example.json` is the first example bound to that schema.
-- The schema keeps report output narrow enough for early harness work while leaving room for future summary and failure fields.
+- The schema now includes an `events` trace so early runs can expose step-by-step behavior without requiring a full wire implementation.

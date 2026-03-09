@@ -122,6 +122,20 @@ pub struct ReportFailure {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ReportEvent {
+    pub step: u64,
+    pub phase: String,
+    pub action: String,
+    pub outcome: String,
+    #[serde(default)]
+    pub node_id: Option<String>,
+    #[serde(default)]
+    pub object_ids: Vec<String>,
+    #[serde(default)]
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ReportSummary {
     #[serde(default)]
     pub verified_object_count: Option<u64>,
@@ -148,6 +162,8 @@ pub struct Report {
     pub finished_at: Option<String>,
     pub peers: Vec<ReportPeer>,
     pub result: String,
+    #[serde(default)]
+    pub events: Vec<ReportEvent>,
     #[serde(default)]
     pub failures: Vec<ReportFailure>,
     #[serde(default)]

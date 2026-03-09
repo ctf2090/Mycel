@@ -18,8 +18,34 @@
     }
   ],
   "result": "pass",
+  "events": [
+    {
+      "step": 1,
+      "phase": "load",
+      "action": "load-fixture",
+      "outcome": "ok",
+      "detail": "Loaded minimal-valid fixture for baseline sync testing."
+    },
+    {
+      "step": 2,
+      "phase": "sync",
+      "action": "seed-advertise",
+      "outcome": "ok",
+      "node_id": "node:peer-seed",
+      "object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ]
+    },
+    {
+      "step": 3,
+      "phase": "replay",
+      "action": "reader-compare",
+      "outcome": "ok",
+      "detail": "Reader peers converged on the same verified object set and replay result."
+    }
+  ],
   "summary": {
-    "verified_object_count": 0,
+    "verified_object_count": 1,
     "rejected_object_count": 0,
     "matched_expected_outcomes": [
       "sync-success",

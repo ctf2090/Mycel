@@ -60,6 +60,7 @@ Current `sim run` behavior:
 - supports only `single-process` test-cases
 - loads one `test-case -> topology -> fixture` chain
 - writes a machine-readable report to `sim/reports/out/`
+- emits a deterministic per-step event trace inside the generated report
 - uses deterministic placeholder object IDs instead of real wire sync
 
 Recommended next:

@@ -1376,6 +1376,17 @@ fn validate_quality_hints(
                 ),
             );
         }
+
+        if report.value.events.is_empty() {
+            push_warning(
+                summary,
+                &report.path,
+                format!(
+                    "report '{}' does not include any event trace entries",
+                    report.value.run_id
+                ),
+            );
+        }
     }
 }
 

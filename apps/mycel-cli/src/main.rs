@@ -119,6 +119,7 @@ fn print_run_text(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     println!("report path: {}", summary.report_path.display());
     println!("result: {}", summary.result);
     println!("peers: {}", summary.peer_count);
+    println!("events: {}", summary.event_count);
     println!("verified objects: {}", summary.verified_object_count);
     println!("rejected objects: {}", summary.rejected_object_count);
 
