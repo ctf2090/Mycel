@@ -280,6 +280,25 @@ pub fn assert_report_inspect_help(stdout: &str) {
     );
 }
 
+pub fn assert_report_list_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel report list"),
+        "expected report list usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("List simulator reports under a directory or one file"),
+        "expected report list description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("[PATH]"),
+        "expected optional report list path, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in report list help, stdout: {stdout}"
+    );
+}
+
 pub fn assert_object_verify_help(stdout: &str) {
     assert!(
         stdout.contains("Usage: mycel object verify"),

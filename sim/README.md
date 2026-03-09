@@ -39,6 +39,9 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- report inspect <path>`
 - `cargo run -p mycel-cli -- report inspect <path> --json`
 - `cargo run -p mycel-cli -- report inspect <path> --full --json`
+- `cargo run -p mycel-cli -- report list`
+- `cargo run -p mycel-cli -- report list --json`
+- `cargo run -p mycel-cli -- report list <path> --json`
 - `cargo run -p mycel-cli -- report inspect <path> --events`
 - `cargo run -p mycel-cli -- report inspect <path> --failures`
 - `cargo run -p mycel-cli -- report inspect <path> --phase <name>`
@@ -63,6 +66,9 @@ Runnable examples:
 
 - `cargo run -p mycel-cli -- info`
 - `cargo run -p mycel-cli -- help`
+- `cargo run -p mycel-cli -- report list`
+- `cargo run -p mycel-cli -- report list --json`
+- `cargo run -p mycel-cli -- report list sim/reports/report.example.json --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --full --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json --events`
@@ -87,6 +93,11 @@ Info/help output notes:
 
 Report-inspection output notes:
 
+- `report list` discovers report JSON files under `sim/reports/` by default, recursively skipping `report.schema.json`
+- `report list --json` emits a stable listing summary with `root`, `status`, `report_count`, `valid_report_count`, `invalid_report_count`, `reports[]`, and `errors`
+- `report list <path>` accepts either one directory or one explicit report file
+- list entries carry stable fields such as `path`, `status`, `run_id`, `topology_id`, `fixture_id`, `test_id`, `validation_status`, `result`, `peer_count`, `event_count`, `failure_count`, and `parse_error`
+- parse failures inside a listing downgrade the overall list status to `warning` but do not fail the command; target resolution failures still return `status: failed`
 - `report inspect <path>` prints a human-readable summary for one simulator report
 - `report inspect <path> --json` emits a stable inspection summary including run identity, result, counts, selected metadata, and errors
 - `report inspect <path> --full --json` emits the raw report JSON without summary reshaping

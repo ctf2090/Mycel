@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use mycel_core::head::inspect_heads_from_path;
@@ -169,6 +169,8 @@ struct ReportCliArgs {
 enum ReportSubcommand {
     #[command(about = "Inspect one simulator report")]
     Inspect(ReportInspectCliArgs),
+    #[command(about = "List simulator reports under a directory or one file")]
+    List(ReportListCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
 }
@@ -240,6 +242,20 @@ struct ReportInspectCliArgs {
         conflicts_with = "full"
     )]
     node: Option<String>,
+    #[arg(hide = true, allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct ReportListCliArgs {
+    #[arg(
+        value_name = "PATH",
+        help = "Report directory or one report file to list",
+        allow_hyphen_values = true
+    )]
+    target: Option<String>,
+    #[arg(long, help = "Emit machine-readable report listing output")]
+    json: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -619,6 +635,75 @@ struct InspectedReport {
     failures: Vec<ReportFailure>,
 }
 
+struct ReportListEntry {
+    path: PathBuf,
+    status: String,
+    run_id: Option<String>,
+    topology_id: Option<String>,
+    fixture_id: Option<String>,
+    test_id: Option<String>,
+    validation_status: Option<String>,
+    result: Option<String>,
+    peer_count: usize,
+    event_count: usize,
+    failure_count: usize,
+    parse_error: Option<String>,
+}
+
+struct ReportListSummary {
+    root: PathBuf,
+    status: String,
+    report_count: usize,
+    valid_report_count: usize,
+    invalid_report_count: usize,
+    reports: Vec<ReportListEntry>,
+    errors: Vec<String>,
+}
+
+impl ReportListSummary {
+    fn new(root: PathBuf) -> Self {
+        Self {
+            root,
+            status: "ok".to_string(),
+            report_count: 0,
+            valid_report_count: 0,
+            invalid_report_count: 0,
+            reports: Vec::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    fn is_ok(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    fn refresh_status(&mut self) {
+        self.status = if !self.errors.is_empty() {
+            "failed".to_string()
+        } else if self.invalid_report_count > 0 {
+            "warning".to_string()
+        } else {
+            "ok".to_string()
+        };
+    }
+
+    fn push_error(&mut self, message: impl Into<String>) {
+        self.errors.push(message.into());
+        self.refresh_status();
+    }
+
+    fn push_report(&mut self, entry: ReportListEntry) {
+        self.report_count += 1;
+        if entry.status == "ok" {
+            self.valid_report_count += 1;
+        } else {
+            self.invalid_report_count += 1;
+        }
+        self.reports.push(entry);
+        self.refresh_status();
+    }
+}
+
 fn metadata_string(report: &Report, key: &str) -> Option<String> {
     report
         .metadata
@@ -653,6 +738,14 @@ fn metadata_array_len(report: &Report, key: &str) -> usize {
         .unwrap_or(0)
 }
 
+fn is_report_schema_file(path: &Path) -> bool {
+    path.file_name().and_then(|name| name.to_str()) == Some("report.schema.json")
+}
+
+fn is_json_file(path: &Path) -> bool {
+    path.extension().and_then(|extension| extension.to_str()) == Some("json")
+}
+
 fn inspect_report(target: PathBuf) -> InspectedReport {
     let mut inspected = InspectedReport {
         summary: ReportInspectSummary::new(target.clone()),
@@ -676,7 +769,7 @@ fn inspect_report(target: PathBuf) -> InspectedReport {
         return inspected;
     }
 
-    if target.file_name().and_then(|name| name.to_str()) == Some("report.schema.json") {
+    if is_report_schema_file(&target) {
         inspected
             .summary
             .push_error("report schema files are not inspect targets");
@@ -737,6 +830,116 @@ fn inspect_report(target: PathBuf) -> InspectedReport {
     inspected.report = Some(report);
 
     inspected
+}
+
+fn collect_report_targets(target: &Path) -> Result<Vec<PathBuf>, String> {
+    if !target.exists() {
+        return Err(format!(
+            "report list target does not exist: {}",
+            target.display()
+        ));
+    }
+
+    if target.is_file() {
+        if is_report_schema_file(target) {
+            return Err("report schema files are not list targets".to_string());
+        }
+        if !is_json_file(target) {
+            return Err(format!(
+                "report list target is not a JSON file: {}",
+                target.display()
+            ));
+        }
+        return Ok(vec![target.to_path_buf()]);
+    }
+
+    if !target.is_dir() {
+        return Err(format!(
+            "report list target is not a file or directory: {}",
+            target.display()
+        ));
+    }
+
+    let mut targets = Vec::new();
+    collect_report_targets_from_dir(target, &mut targets)?;
+    targets.sort();
+    Ok(targets)
+}
+
+fn collect_report_targets_from_dir(
+    target: &Path,
+    targets: &mut Vec<PathBuf>,
+) -> Result<(), String> {
+    let mut entries = fs::read_dir(target)
+        .map_err(|err| {
+            format!(
+                "failed to read report directory {}: {err}",
+                target.display()
+            )
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| {
+            format!(
+                "failed to read report directory {}: {err}",
+                target.display()
+            )
+        })?;
+    entries.sort_by_key(|entry| entry.path());
+
+    for entry in entries {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_report_targets_from_dir(&path, targets)?;
+            continue;
+        }
+        if is_json_file(&path) && !is_report_schema_file(&path) {
+            targets.push(path);
+        }
+    }
+
+    Ok(())
+}
+
+fn build_report_list_entry(path: PathBuf) -> ReportListEntry {
+    let inspected = inspect_report(path.clone());
+    let parse_error = (!inspected.summary.is_ok()).then(|| inspected.summary.errors.join("; "));
+
+    ReportListEntry {
+        path,
+        status: if parse_error.is_some() {
+            "failed".to_string()
+        } else {
+            "ok".to_string()
+        },
+        run_id: inspected.summary.run_id,
+        topology_id: inspected.summary.topology_id,
+        fixture_id: inspected.summary.fixture_id,
+        test_id: inspected.summary.test_id,
+        validation_status: inspected.summary.validation_status,
+        result: inspected.summary.result,
+        peer_count: inspected.summary.peer_count,
+        event_count: inspected.summary.event_count,
+        failure_count: inspected.summary.failure_count,
+        parse_error,
+    }
+}
+
+fn list_reports(target: PathBuf) -> ReportListSummary {
+    let mut summary = ReportListSummary::new(target.clone());
+
+    let targets = match collect_report_targets(&target) {
+        Ok(targets) => targets,
+        Err(message) => {
+            summary.push_error(message);
+            return summary;
+        }
+    };
+
+    for report_target in targets {
+        summary.push_report(build_report_list_entry(report_target));
+    }
+
+    summary
 }
 
 fn print_report_text(summary: &ReportInspectSummary) -> i32 {
@@ -807,6 +1010,86 @@ fn print_report_text(summary: &ReportInspectSummary) -> i32 {
             emit_error_line(error);
         }
         1
+    }
+}
+
+fn print_report_list_text(summary: &ReportListSummary) -> i32 {
+    println!("reports root: {}", summary.root.display());
+    println!("status: {}", summary.status);
+    println!("reports: {}", summary.report_count);
+    println!("valid reports: {}", summary.valid_report_count);
+    println!("invalid reports: {}", summary.invalid_report_count);
+
+    for report in &summary.reports {
+        print!("report: {} status={}", report.path.display(), report.status);
+        if let Some(run_id) = &report.run_id {
+            print!(" run_id={run_id}");
+        }
+        if let Some(result) = &report.result {
+            print!(" result={result}");
+        }
+        if let Some(validation_status) = &report.validation_status {
+            print!(" validation_status={validation_status}");
+        }
+        if let Some(parse_error) = &report.parse_error {
+            print!(" parse_error={parse_error}");
+        }
+        println!();
+    }
+
+    if summary.is_ok() {
+        println!("report listing: {}", summary.status);
+        0
+    } else {
+        println!("report listing: failed");
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    }
+}
+
+fn print_report_list_json(summary: &ReportListSummary) -> Result<i32, CliError> {
+    let reports = summary
+        .reports
+        .iter()
+        .map(|report| {
+            serde_json::json!({
+                "path": report.path,
+                "status": report.status,
+                "run_id": report.run_id,
+                "topology_id": report.topology_id,
+                "fixture_id": report.fixture_id,
+                "test_id": report.test_id,
+                "validation_status": report.validation_status,
+                "result": report.result,
+                "peer_count": report.peer_count,
+                "event_count": report.event_count,
+                "failure_count": report.failure_count,
+                "parse_error": report.parse_error,
+            })
+        })
+        .collect::<Vec<_>>();
+    let json = serde_json::json!({
+        "root": summary.root,
+        "status": summary.status,
+        "report_count": summary.report_count,
+        "valid_report_count": summary.valid_report_count,
+        "invalid_report_count": summary.invalid_report_count,
+        "reports": reports,
+        "errors": summary.errors,
+    });
+
+    match serde_json::to_string_pretty(&json) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                Ok(0)
+            } else {
+                Ok(1)
+            }
+        }
+        Err(source) => Err(CliError::serialization("report listing summary", source)),
     }
 }
 
@@ -1108,6 +1391,14 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
 
             report_inspect(PathBuf::from(target), args.json, mode, &filters)
         }
+        Some(ReportSubcommand::List(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "report list") {
+                return Err(CliError::usage(message));
+            }
+
+            let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
+            report_list(PathBuf::from(target), args.json)
+        }
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
             Err(CliError::usage(format!(
@@ -1285,6 +1576,15 @@ fn report_inspect(
                 Err(CliError::usage("report inspect --full requires --json"))
             }
         }
+    }
+}
+
+fn report_list(target: PathBuf, json: bool) -> Result<i32, CliError> {
+    let summary = list_reports(target);
+    if json {
+        print_report_list_json(&summary)
+    } else {
+        Ok(print_report_list_text(&summary))
     }
 }
 
