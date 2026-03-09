@@ -167,6 +167,37 @@ fn object_verify_text_reports_ok_for_document_without_signature() {
 }
 
 #[test]
+fn object_verify_json_fails_for_document_missing_doc_id() {
+    let object = write_object_file(
+        "object-verify-document-missing-doc-id",
+        "document.json",
+        json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "title": "Plain document"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "document");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(
+                |errors| errors
+                    .iter()
+                    .any(|entry| entry.as_str().is_some_and(|message| message
+                        .contains("document object is missing string field 'doc_id'")))
+            ),
+        "expected missing doc_id error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_mismatched_revision_id() {
     let mut revision = signed_object(
         json!({

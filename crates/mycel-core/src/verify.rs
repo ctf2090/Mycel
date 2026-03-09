@@ -209,6 +209,19 @@ fn verify_object_value_with_summary(
         summary.signer_field = Some(signer_field.to_string());
     }
 
+    if let Some(logical_id_field) = schema.logical_id_field() {
+        match envelope.logical_id() {
+            Ok(Some(_)) => {}
+            Err(StringFieldError::Missing) => summary.push_error(format!(
+                "{object_type} object is missing string field '{logical_id_field}'"
+            )),
+            Err(StringFieldError::WrongType) => {
+                summary.push_error(format!("top-level '{logical_id_field}' must be a string"))
+            }
+            Ok(None) => {}
+        }
+    }
+
     if schema.signature_rule.is_required() {
         let Some(signature) = object.get("signature") else {
             summary.push_error(format!(
@@ -327,6 +340,19 @@ fn inspect_object_value_with_summary(
     summary.object_type = Some(object_type.to_string());
 
     summary.signature_rule = Some(schema.signature_rule.to_string());
+    if let Some(logical_id_field) = schema.logical_id_field() {
+        match envelope.logical_id() {
+            Ok(Some(_)) => {}
+            Err(StringFieldError::WrongType) => {
+                summary.push_note(format!("top-level '{logical_id_field}' should be a string"))
+            }
+            Err(StringFieldError::Missing) => summary.push_note(format!(
+                "{object_type} object is missing string field '{logical_id_field}'"
+            )),
+            Ok(None) => {}
+        }
+    }
+
     if let Some(signer_field) = schema.signer_field {
         summary.signer_field = Some(signer_field.to_string());
         match envelope.signer() {
@@ -546,7 +572,7 @@ mod tests {
     use ed25519_dalek::{Signer, SigningKey};
     use serde_json::{json, Value};
 
-    use super::verify_object_path;
+    use super::{inspect_object_path, verify_object_path};
 
     fn write_test_file(name: &str, content: &str) -> std::path::PathBuf {
         let unique = std::time::SystemTime::now()
@@ -668,6 +694,58 @@ mod tests {
                 .iter()
                 .any(|message| message.contains("Ed25519 signature verification failed")),
             "expected signature failure, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn document_missing_logical_id_is_rejected() {
+        let path = write_test_file(
+            "document-missing-doc-id",
+            &serde_json::to_string_pretty(&json!({
+                "type": "document",
+                "version": "mycel/0.1",
+                "title": "Plain document"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary.errors.iter().any(|message| {
+                message.contains("document object is missing string field 'doc_id'")
+            }),
+            "expected missing logical ID error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn inspect_warns_when_block_logical_id_has_wrong_type() {
+        let path = write_test_file(
+            "block-wrong-block-id-type",
+            &serde_json::to_string_pretty(&json!({
+                "type": "block",
+                "version": "mycel/0.1",
+                "block_id": 7,
+                "text": "Hello"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = inspect_object_path(&path);
+
+        assert_eq!(summary.status, "warning");
+        assert!(
+            summary
+                .notes
+                .iter()
+                .any(|message| message.contains("top-level 'block_id' should be a string")),
+            "expected logical ID warning, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);

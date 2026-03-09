@@ -84,6 +84,7 @@ impl ObjectKind {
                 kind: self,
                 signature_rule: SignatureRule::Forbidden,
                 signer_field: None,
+                logical_id_field: Some("doc_id"),
                 derived_id_field: None,
                 derived_id_prefix: None,
             },
@@ -91,6 +92,7 @@ impl ObjectKind {
                 kind: self,
                 signature_rule: SignatureRule::Forbidden,
                 signer_field: None,
+                logical_id_field: Some("block_id"),
                 derived_id_field: None,
                 derived_id_prefix: None,
             },
@@ -98,6 +100,7 @@ impl ObjectKind {
                 kind: self,
                 signature_rule: SignatureRule::Required,
                 signer_field: Some("author"),
+                logical_id_field: None,
                 derived_id_field: Some("patch_id"),
                 derived_id_prefix: Some("patch"),
             },
@@ -105,6 +108,7 @@ impl ObjectKind {
                 kind: self,
                 signature_rule: SignatureRule::Required,
                 signer_field: Some("author"),
+                logical_id_field: None,
                 derived_id_field: Some("revision_id"),
                 derived_id_prefix: Some("rev"),
             },
@@ -112,6 +116,7 @@ impl ObjectKind {
                 kind: self,
                 signature_rule: SignatureRule::Required,
                 signer_field: Some("maintainer"),
+                logical_id_field: None,
                 derived_id_field: Some("view_id"),
                 derived_id_prefix: Some("view"),
             },
@@ -119,6 +124,7 @@ impl ObjectKind {
                 kind: self,
                 signature_rule: SignatureRule::Required,
                 signer_field: Some("created_by"),
+                logical_id_field: None,
                 derived_id_field: Some("snapshot_id"),
                 derived_id_prefix: Some("snap"),
             },
@@ -153,11 +159,16 @@ pub struct ObjectSchema {
     pub kind: ObjectKind,
     pub signature_rule: SignatureRule,
     pub signer_field: Option<&'static str>,
+    pub logical_id_field: Option<&'static str>,
     pub derived_id_field: Option<&'static str>,
     pub derived_id_prefix: Option<&'static str>,
 }
 
 impl ObjectSchema {
+    pub fn logical_id_field(self) -> Option<&'static str> {
+        self.logical_id_field
+    }
+
     pub fn derived_id(self) -> Option<(&'static str, &'static str)> {
         match (self.derived_id_field, self.derived_id_prefix) {
             (Some(field), Some(prefix)) => Some((field, prefix)),
@@ -248,6 +259,13 @@ impl<'a> ParsedObjectEnvelope<'a> {
         }
     }
 
+    pub fn logical_id(&self) -> Result<Option<&'a str>, StringFieldError> {
+        match self.schema.logical_id_field {
+            Some(field) => required_string_field(self.object, field).map(Some),
+            None => Ok(None),
+        }
+    }
+
     pub fn declared_id(&self) -> Result<Option<&'a str>, StringFieldError> {
         match self.schema.derived_id_field {
             Some(field) => required_string_field(self.object, field).map(Some),
@@ -323,7 +341,17 @@ mod tests {
         assert_eq!(schema.kind, ObjectKind::Patch);
         assert_eq!(schema.signature_rule, SignatureRule::Required);
         assert_eq!(schema.signer_field, Some("author"));
+        assert_eq!(schema.logical_id_field(), None);
         assert_eq!(schema.derived_id(), Some(("patch_id", "patch")));
+    }
+
+    #[test]
+    fn document_schema_uses_doc_id_as_logical_id() {
+        let schema = object_schema("document").expect("document schema should exist");
+        assert_eq!(schema.kind, ObjectKind::Document);
+        assert_eq!(schema.signature_rule, SignatureRule::Forbidden);
+        assert_eq!(schema.logical_id_field(), Some("doc_id"));
+        assert_eq!(schema.derived_id(), None);
     }
 
     #[test]
@@ -349,7 +377,35 @@ mod tests {
             Ok(Some("mycel/0.1"))
         );
         assert_eq!(envelope.signer(), Ok(Some("pk:ed25519:test")));
+        assert_eq!(envelope.logical_id(), Ok(None));
         assert_eq!(envelope.declared_id(), Ok(Some("view:test")));
+    }
+
+    #[test]
+    fn parse_document_envelope_exposes_logical_id() {
+        let value = json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test"
+        });
+
+        let envelope = parse_object_envelope(&value).expect("document envelope should parse");
+        assert_eq!(envelope.kind(), ObjectKind::Document);
+        assert_eq!(envelope.logical_id(), Ok(Some("doc:test")));
+        assert_eq!(envelope.declared_id(), Ok(None));
+    }
+
+    #[test]
+    fn parse_block_envelope_reports_wrong_logical_id_type() {
+        let value = json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": 7
+        });
+
+        let envelope = parse_object_envelope(&value).expect("block envelope should parse");
+        assert_eq!(envelope.kind(), ObjectKind::Block);
+        assert_eq!(envelope.logical_id(), Err(StringFieldError::WrongType));
     }
 
     #[test]
