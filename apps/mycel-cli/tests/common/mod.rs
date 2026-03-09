@@ -297,6 +297,10 @@ pub fn assert_report_list_help(stdout: &str) {
         stdout.contains("--json"),
         "expected json flag in report list help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--result <RESULT>"),
+        "expected result flag in report list help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_report_latest_help(stdout: &str) {

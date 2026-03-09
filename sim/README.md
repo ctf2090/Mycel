@@ -41,6 +41,7 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- report inspect <path> --full --json`
 - `cargo run -p mycel-cli -- report list`
 - `cargo run -p mycel-cli -- report list --json`
+- `cargo run -p mycel-cli -- report list --result pass --json`
 - `cargo run -p mycel-cli -- report list <path> --json`
 - `cargo run -p mycel-cli -- report latest`
 - `cargo run -p mycel-cli -- report latest --json`
@@ -74,6 +75,7 @@ Runnable examples:
 - `cargo run -p mycel-cli -- help`
 - `cargo run -p mycel-cli -- report list`
 - `cargo run -p mycel-cli -- report list --json`
+- `cargo run -p mycel-cli -- report list --result fail --json`
 - `cargo run -p mycel-cli -- report list sim/reports/report.example.json --json`
 - `cargo run -p mycel-cli -- report latest`
 - `cargo run -p mycel-cli -- report latest --json`
@@ -107,6 +109,7 @@ Report-inspection output notes:
 
 - `report list` discovers report JSON files under `sim/reports/` by default, recursively skipping `report.schema.json`
 - `report list --json` emits a stable listing summary with `root`, `status`, `report_count`, `valid_report_count`, `invalid_report_count`, `reports[]`, and `errors`
+- `report list --result <pass|fail>` narrows listed valid reports to one result while still keeping invalid parse entries visible as warnings
 - `report list <path>` accepts either one directory or one explicit report file
 - list entries carry stable fields such as `path`, `status`, `run_id`, `topology_id`, `fixture_id`, `test_id`, `started_at`, `finished_at`, `validation_status`, `result`, `peer_count`, `event_count`, `failure_count`, and `parse_error`
 - parse failures inside a listing downgrade the overall list status to `warning` but do not fail the command; target resolution failures still return `status: failed`

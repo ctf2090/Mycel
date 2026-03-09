@@ -258,6 +258,13 @@ struct ReportListCliArgs {
     target: Option<String>,
     #[arg(long, help = "Emit machine-readable report listing output")]
     json: bool,
+    #[arg(
+        long,
+        value_name = "RESULT",
+        help = "List only reports with one result",
+        value_enum
+    )]
+    result: Option<ReportResultFilter>,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -706,6 +713,7 @@ struct ReportListEntry {
 struct ReportListSummary {
     root: PathBuf,
     status: String,
+    result_filter: Option<ReportResultFilter>,
     report_count: usize,
     valid_report_count: usize,
     invalid_report_count: usize,
@@ -735,6 +743,7 @@ impl ReportListSummary {
         Self {
             root,
             status: "ok".to_string(),
+            result_filter: None,
             report_count: 0,
             valid_report_count: 0,
             invalid_report_count: 0,
@@ -1014,6 +1023,34 @@ fn list_reports(target: PathBuf) -> ReportListSummary {
     summary
 }
 
+fn filter_report_list(
+    mut summary: ReportListSummary,
+    result_filter: Option<ReportResultFilter>,
+) -> ReportListSummary {
+    summary.result_filter = result_filter;
+
+    let Some(result_filter) = result_filter else {
+        return summary;
+    };
+
+    summary.reports.retain(|report| {
+        report.status != "ok" || report.result.as_deref() == Some(result_filter.as_str())
+    });
+    summary.report_count = summary.reports.len();
+    summary.valid_report_count = summary
+        .reports
+        .iter()
+        .filter(|report| report.status == "ok")
+        .count();
+    summary.invalid_report_count = summary
+        .reports
+        .iter()
+        .filter(|report| report.status != "ok")
+        .count();
+    summary.refresh_status();
+    summary
+}
+
 fn latest_report_sort_key(report: &ReportListEntry) -> (Option<&str>, Option<&str>, String) {
     (
         report.finished_at.as_deref(),
@@ -1179,6 +1216,9 @@ fn print_report_text(summary: &ReportInspectSummary) -> i32 {
 fn print_report_list_text(summary: &ReportListSummary) -> i32 {
     println!("reports root: {}", summary.root.display());
     println!("status: {}", summary.status);
+    if let Some(result_filter) = summary.result_filter {
+        println!("result filter: {}", result_filter.as_str());
+    }
     println!("reports: {}", summary.report_count);
     println!("valid reports: {}", summary.valid_report_count);
     println!("invalid reports: {}", summary.invalid_report_count);
@@ -1334,6 +1374,7 @@ fn print_report_list_json(summary: &ReportListSummary) -> Result<i32, CliError> 
     let json = serde_json::json!({
         "root": summary.root,
         "status": summary.status,
+        "result_filter": summary.result_filter.map(ReportResultFilter::as_str),
         "report_count": summary.report_count,
         "valid_report_count": summary.valid_report_count,
         "invalid_report_count": summary.invalid_report_count,
@@ -1658,7 +1699,7 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             }
 
             let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_list(PathBuf::from(target), args.json)
+            report_list(PathBuf::from(target), args.json, args.result)
         }
         Some(ReportSubcommand::Latest(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "report latest") {
@@ -1854,8 +1895,12 @@ fn report_inspect(
     }
 }
 
-fn report_list(target: PathBuf, json: bool) -> Result<i32, CliError> {
-    let summary = list_reports(target);
+fn report_list(
+    target: PathBuf,
+    json: bool,
+    result_filter: Option<ReportResultFilter>,
+) -> Result<i32, CliError> {
+    let summary = filter_report_list(list_reports(target), result_filter);
     if json {
         print_report_list_json(&summary)
     } else {
