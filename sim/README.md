@@ -179,6 +179,29 @@ Report-inspection output notes:
 - `--full` requires `--json`
 - schema files are not valid inspect targets; use an actual report file such as `sim/reports/report.example.json` or one generated under `sim/reports/out/`
 
+Minimal `report stats --counts-only --json` shape example:
+
+```json
+{
+  "root": "sim/reports",
+  "status": "warning",
+  "result_filter": null,
+  "validation_status_filter": null,
+  "report_count": 3,
+  "valid_report_count": 2,
+  "invalid_report_count": 1,
+  "result_counts": {
+    "fail": 1,
+    "pass": 1
+  },
+  "validation_status_counts": {
+    "ok": 1,
+    "warning": 1
+  },
+  "errors": []
+}
+```
+
 Validation output notes:
 
 - `--json` includes a stable top-level `status`
