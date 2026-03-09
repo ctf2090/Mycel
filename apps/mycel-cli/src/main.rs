@@ -174,14 +174,14 @@ struct ReportInspectCliArgs {
     action: Option<String>,
     #[arg(long, value_name = "NAME", help = "Filter event inspection to one outcome", conflicts_with_all = ["failures", "full"])]
     outcome: Option<String>,
-    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", conflicts_with_all = ["failures", "full", "step_range"])]
-    step: Option<String>,
-    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", conflicts_with_all = ["failures", "full", "step"])]
-    step_range: Option<String>,
-    #[arg(long, value_name = "N", help = "Keep the first N matching events", conflicts_with_all = ["failures", "full"])]
-    first: Option<String>,
-    #[arg(long, value_name = "N", help = "Keep the last N matching events", conflicts_with_all = ["failures", "full"])]
-    last: Option<String>,
+    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", value_parser = parse_report_step, conflicts_with_all = ["failures", "full", "step_range"])]
+    step: Option<u64>,
+    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", value_parser = parse_step_range, conflicts_with_all = ["failures", "full", "step"])]
+    step_range: Option<(u64, u64)>,
+    #[arg(long, value_name = "N", help = "Keep the first N matching events", value_parser = parse_report_first, conflicts_with_all = ["failures", "full"])]
+    first: Option<usize>,
+    #[arg(long, value_name = "N", help = "Keep the last N matching events", value_parser = parse_report_last, conflicts_with_all = ["failures", "full"])]
+    last: Option<usize>,
     #[arg(
         long,
         value_name = "NODE_ID",
@@ -947,6 +947,18 @@ fn parse_u64_flag(value: &str, flag: &str) -> Result<u64, String> {
         .map_err(|_| format!("invalid value for {flag}: {value}"))
 }
 
+fn parse_report_step(value: &str) -> Result<u64, String> {
+    parse_u64_flag(value, "--step")
+}
+
+fn parse_report_first(value: &str) -> Result<usize, String> {
+    parse_usize_flag(value, "--first")
+}
+
+fn parse_report_last(value: &str) -> Result<usize, String> {
+    parse_usize_flag(value, "--last")
+}
+
 fn exit_usage_error(message: impl AsRef<str>) -> ! {
     eprintln!("{}", message.as_ref());
     eprintln!();
@@ -1019,20 +1031,10 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
             let phase = args.phase;
             let action = args.action;
             let outcome = args.outcome;
-            let step = args.step.map(|value| {
-                parse_u64_flag(&value, "--step").unwrap_or_else(|message| exit_usage_error(message))
-            });
-            let step_range = args.step_range.map(|value| {
-                parse_step_range(&value).unwrap_or_else(|message| exit_usage_error(message))
-            });
-            let first = args.first.map(|value| {
-                parse_usize_flag(&value, "--first")
-                    .unwrap_or_else(|message| exit_usage_error(message))
-            });
-            let last = args.last.map(|value| {
-                parse_usize_flag(&value, "--last")
-                    .unwrap_or_else(|message| exit_usage_error(message))
-            });
+            let step = args.step;
+            let step_range = args.step_range;
+            let first = args.first;
+            let last = args.last;
             let node = args.node;
 
             let Some(target) = args.target else {
