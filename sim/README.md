@@ -262,6 +262,7 @@ Minimal `report diff --events --json` shape example:
 {
   "status": "ok",
   "comparison": "different",
+  "event_alignment": "trace",
   "event_difference_count": 1,
   "left": {
     "path": "sim/reports/report.example.json",
@@ -276,6 +277,15 @@ Minimal `report diff --events --json` shape example:
   "event_differences": [
     {
       "step": 1,
+      "left_step": 1,
+      "right_step": 1,
+      "trace_identity": {
+        "phase": "load",
+        "action": "load-fixture",
+        "node_id": null,
+        "object_ids": [],
+        "occurrence": 1
+      },
       "change": "changed",
       "left": {
         "step": 1,
@@ -290,6 +300,70 @@ Minimal `report diff --events --json` shape example:
         "action": "load-fixture",
         "outcome": "ok",
         "detail": "Loaded minimal-valid fixture for missing-seed-source warning demonstration."
+      }
+    }
+  ],
+  "errors": []
+}
+```
+
+Minimal `report diff --events --event-align step --json` shape example:
+
+```json
+{
+  "status": "ok",
+  "comparison": "different",
+  "event_alignment": "step",
+  "event_difference_count": 2,
+  "left": {
+    "path": "/tmp/left.json",
+    "event_count": 3,
+    "errors": []
+  },
+  "right": {
+    "path": "/tmp/right.json",
+    "event_count": 3,
+    "errors": []
+  },
+  "event_differences": [
+    {
+      "step": 1,
+      "left_step": 1,
+      "right_step": null,
+      "trace_identity": {
+        "phase": "load",
+        "action": "load-fixture",
+        "node_id": null,
+        "object_ids": [],
+        "occurrence": 1
+      },
+      "change": "left_only",
+      "left": {
+        "step": 1,
+        "phase": "load",
+        "action": "load-fixture",
+        "outcome": "ok"
+      },
+      "right": null
+    },
+    {
+      "step": 11,
+      "left_step": null,
+      "right_step": 11,
+      "trace_identity": {
+        "phase": "load",
+        "action": "load-fixture",
+        "node_id": null,
+        "object_ids": [],
+        "occurrence": 1
+      },
+      "change": "right_only",
+      "left": null,
+      "right": {
+        "step": 11,
+        "phase": "load",
+        "action": "load-fixture",
+        "outcome": "ok"
       }
     }
   ],
