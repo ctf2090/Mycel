@@ -242,25 +242,18 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     summary.push_trace(
         "critical_violations",
         if input.critical_violations.is_empty() {
-            "no bundle-provided critical violations".to_string()
+            "count=0 affected_maintainers=0".to_string()
         } else {
-            input
+            let affected_maintainers = input
                 .critical_violations
                 .iter()
-                .map(|violation| {
-                    format!(
-                        "{}@{}{}",
-                        violation.maintainer,
-                        violation.timestamp,
-                        violation
-                            .reason
-                            .as_deref()
-                            .map(|reason| format!(" reason={reason}"))
-                            .unwrap_or_default()
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
+                .map(|violation| violation.maintainer.clone())
+                .collect::<BTreeSet<_>>()
+                .len();
+            format!(
+                "count={} affected_maintainers={affected_maintainers}",
+                input.critical_violations.len()
+            )
         },
     );
     summary.critical_violations = input
@@ -283,18 +276,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     }
 
     let eligible_heads = compute_eligible_heads(&verified_revisions);
-    summary.push_trace(
-        "eligible_heads",
-        format!(
-            "count={} revisions={}",
-            eligible_heads.len(),
-            eligible_heads
-                .iter()
-                .map(|revision| revision.revision_id.clone())
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-    );
+    summary.push_trace("eligible_heads", format!("count={}", eligible_heads.len()));
     if eligible_heads.is_empty() {
         summary.push_error("NO_ELIGIBLE_HEAD");
         return summary;
@@ -358,20 +340,21 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     summary.eligible_heads = eligible_summaries;
     summary.push_trace(
         "selector_scores",
-        summary
-            .eligible_heads
-            .iter()
-            .map(|head| {
-                format!(
-                    "{} score={} supporters={} timestamp={}",
-                    head.revision_id,
-                    head.selector_score,
-                    head.supporter_count,
-                    head.revision_timestamp
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(", "),
+        format!(
+            "head_count={} max_selector_score={} supported_head_count={}",
+            summary.eligible_heads.len(),
+            summary
+                .eligible_heads
+                .iter()
+                .map(|head| head.selector_score)
+                .max()
+                .unwrap_or(0),
+            summary
+                .eligible_heads
+                .iter()
+                .filter(|head| head.supporter_count > 0)
+                .count()
+        ),
     );
 
     let selected = summary
@@ -771,22 +754,16 @@ fn latest_support_by_maintainer(
 
     let trace = vec![DecisionTraceEntry {
         step: "maintainer_support".to_string(),
-        detail: if support_summaries.is_empty() {
-            "no eligible maintainer support in the active selector epoch".to_string()
-        } else {
+        detail: format!(
+            "supporting_maintainers={} supported_heads={} active_epoch={}",
+            support_summaries.len(),
             support_summaries
                 .iter()
-                .map(|support| {
-                    format!(
-                        "{maintainer}->{revision_id} weight={weight}",
-                        maintainer = support.maintainer,
-                        revision_id = support.revision_id,
-                        weight = support.effective_weight
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        },
+                .map(|support| support.revision_id.clone())
+                .collect::<BTreeSet<_>>()
+                .len(),
+            selector_epoch
+        ),
     }];
 
     (support_map, support_summaries, trace)
@@ -844,7 +821,10 @@ fn compute_effective_weights(
 
     let mut weights = HashMap::new();
     let mut summaries = Vec::new();
-    let mut trace = Vec::new();
+    let mut admitted_maintainers = 0_usize;
+    let mut penalized_maintainers = 0_usize;
+    let mut zero_weight_maintainers = 0_usize;
+    let mut max_effective_weight = 0_u64;
 
     for maintainer in maintainers {
         let counts = per_epoch_counts
@@ -858,6 +838,16 @@ fn compute_effective_weights(
         let effective_weight =
             effective_weight_for_epoch(&counts, &violations, selector_epoch, profile);
         let admitted = is_admitted_in_epoch(&counts, &violations, selector_epoch, profile);
+        if admitted {
+            admitted_maintainers += 1;
+        }
+        if !violations.is_empty() {
+            penalized_maintainers += 1;
+        }
+        if effective_weight == 0 {
+            zero_weight_maintainers += 1;
+        }
+        max_effective_weight = max_effective_weight.max(effective_weight);
         weights.insert(maintainer.clone(), effective_weight);
         summaries.push(EffectiveWeightSummary {
             maintainer: maintainer.clone(),
@@ -866,33 +856,19 @@ fn compute_effective_weights(
             valid_view_counts: to_epoch_count_summaries(&counts),
             critical_violation_counts: to_epoch_count_summaries(&violations),
         });
-
-        let mut count_parts = counts
-            .iter()
-            .map(|(epoch, count)| format!("epoch{epoch}={count}"))
-            .collect::<Vec<_>>();
-        if count_parts.is_empty() {
-            count_parts.push("no_views".to_string());
-        }
-        let mut violation_parts = violations
-            .iter()
-            .map(|(epoch, count)| format!("epoch{epoch}={count}"))
-            .collect::<Vec<_>>();
-        if violation_parts.is_empty() {
-            violation_parts.push("none".to_string());
-        }
-
-        trace.push(DecisionTraceEntry {
-            step: "effective_weight".to_string(),
-            detail: format!(
-                "{maintainer} admitted={admitted} weight={weight} counts=[{counts}] violations=[{violations}]",
-                admitted = admitted,
-                weight = effective_weight,
-                counts = count_parts.join(", "),
-                violations = violation_parts.join(", ")
-            ),
-        });
     }
+
+    let trace = vec![DecisionTraceEntry {
+        step: "effective_weight".to_string(),
+        detail: format!(
+            "maintainers={} admitted={} penalized={} zero_weight={} max_effective_weight={}",
+            summaries.len(),
+            admitted_maintainers,
+            penalized_maintainers,
+            zero_weight_maintainers,
+            max_effective_weight
+        ),
+    }];
 
     (weights, summaries, trace)
 }

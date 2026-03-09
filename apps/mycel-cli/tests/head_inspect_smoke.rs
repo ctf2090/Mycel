@@ -224,30 +224,35 @@ fn head_inspect_json_selects_highest_supported_head() {
             && entry["maintainer"].as_str().is_some()
             && entry["revision_id"].as_str().is_some()
     }));
-    assert!(
-        json["decision_trace"]
-            .as_array()
-            .is_some_and(|trace| trace.iter().any(|entry| {
-                entry["step"].as_str() == Some("selector_epoch")
-                    && entry["detail"]
-                        .as_str()
-                        .is_some_and(|detail| detail.contains("selector_epoch=0"))
-            })),
-        "expected selector_epoch trace entry, stdout: {}",
-        stdout_text(&output)
+    let decision_trace = json["decision_trace"]
+        .as_array()
+        .expect("decision_trace should be array");
+    let trace_steps = decision_trace
+        .iter()
+        .map(|entry| {
+            entry["step"]
+                .as_str()
+                .expect("decision_trace step should be a string")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        trace_steps,
+        vec![
+            "selector_epoch",
+            "verified_inputs",
+            "critical_violations",
+            "eligible_heads",
+            "effective_weight",
+            "maintainer_support",
+            "selector_scores",
+            "selected_head"
+        ]
     );
-    assert!(
-        json["decision_trace"]
-            .as_array()
-            .is_some_and(|trace| trace.iter().any(|entry| {
-                entry["step"].as_str() == Some("maintainer_support")
-                    && entry["detail"]
-                        .as_str()
-                        .is_some_and(|detail| detail.contains("pk:ed25519:"))
-            })),
-        "expected maintainer_support trace entry, stdout: {}",
-        stdout_text(&output)
-    );
+    assert!(decision_trace.iter().all(|entry| {
+        entry["detail"]
+            .as_str()
+            .is_some_and(|detail| !detail.contains("pk:ed25519:"))
+    }));
     assert!(
         json["eligible_heads"]
             .as_array()
@@ -368,6 +373,11 @@ fn head_inspect_text_reports_decision_trace() {
     assert_stdout_contains(&output, "trace: selector_epoch:");
     assert_stdout_contains(&output, "trace: maintainer_support:");
     assert_stdout_contains(&output, "trace: selected_head:");
+    assert!(
+        !stdout_text(&output).contains("pk:ed25519:"),
+        "expected high-level decision trace only, stdout: {}",
+        stdout_text(&output)
+    );
 }
 
 #[test]
@@ -506,9 +516,11 @@ fn head_inspect_uses_effective_weight_in_selector_score() {
             .as_array()
             .is_some_and(|trace| trace.iter().any(|entry| {
                 entry["step"].as_str() == Some("effective_weight")
-                    && entry["detail"]
-                        .as_str()
-                        .is_some_and(|detail| detail.contains("weight=2"))
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("admitted=2")
+                            && detail.contains("zero_weight=1")
+                            && detail.contains("max_effective_weight=2")
+                    })
             })),
         "expected effective_weight trace entry, stdout: {}",
         stdout_text(&output)
@@ -653,10 +665,24 @@ fn head_inspect_penalizes_critical_violations() {
             .is_some_and(|trace| trace.iter().any(|entry| {
                 entry["step"].as_str() == Some("effective_weight")
                     && entry["detail"].as_str().is_some_and(|detail| {
-                        detail.contains("violations=[epoch1=1]") && detail.contains("weight=0")
+                        detail.contains("penalized=1")
+                            && detail.contains("zero_weight=1")
+                            && detail.contains("max_effective_weight=1")
                     })
             })),
         "expected penalty trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("critical_violations")
+                    && entry["detail"]
+                        .as_str()
+                        .is_some_and(|detail| detail == "count=1 affected_maintainers=1")
+            })),
+        "expected critical_violations trace summary, stdout: {}",
         stdout_text(&output)
     );
 }
