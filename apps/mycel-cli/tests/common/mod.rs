@@ -305,6 +305,10 @@ pub fn assert_report_diff_help(stdout: &str) {
         stdout.contains("--events"),
         "expected events flag in report diff help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--fail-on-diff"),
+        "expected fail-on-diff flag in report diff help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_report_list_help(stdout: &str) {

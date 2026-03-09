@@ -225,6 +225,11 @@ struct ReportDiffCliArgs {
         help = "Compare event traces step-by-step instead of summary fields"
     )]
     events: bool,
+    #[arg(
+        long,
+        help = "Exit with failure when the compared reports are different"
+    )]
+    fail_on_diff: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -1550,6 +1555,14 @@ fn format_report_event_text(event: &ReportEvent) -> String {
     )
 }
 
+fn report_diff_exit_code(status: &str, comparison: &str, fail_on_diff: bool) -> i32 {
+    if status == "failed" || (fail_on_diff && comparison == "different") {
+        1
+    } else {
+        0
+    }
+}
+
 fn is_report_schema_file(path: &Path) -> bool {
     path.file_name().and_then(|name| name.to_str()) == Some("report.schema.json")
 }
@@ -2637,6 +2650,7 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
                 PathBuf::from(args.right),
                 args.json,
                 args.events,
+                args.fail_on_diff,
             )
         }
         Some(ReportSubcommand::Inspect(args)) => {
@@ -2870,7 +2884,7 @@ fn print_report_full_json(
     }
 }
 
-fn print_report_diff_text(summary: &ReportDiffSummary) -> i32 {
+fn print_report_diff_text(summary: &ReportDiffSummary, fail_on_diff: bool) -> i32 {
     println!("left report: {}", summary.left.path.display());
     println!("right report: {}", summary.right.path.display());
     println!("comparison: {}", summary.comparison);
@@ -2885,19 +2899,21 @@ fn print_report_diff_text(summary: &ReportDiffSummary) -> i32 {
         );
     }
 
+    let exit_code = report_diff_exit_code(&summary.status, &summary.comparison, fail_on_diff);
+
     if summary.status == "failed" {
         println!("report diff: failed");
         for error in &summary.errors {
             emit_error_line(error);
         }
-        1
     } else {
         println!("report diff: {}", summary.comparison);
-        0
     }
+
+    exit_code
 }
 
-fn print_report_event_diff_text(summary: &ReportEventDiffSummary) -> i32 {
+fn print_report_event_diff_text(summary: &ReportEventDiffSummary, fail_on_diff: bool) -> i32 {
     println!("left report: {}", summary.left.path.display());
     println!("right report: {}", summary.right.path.display());
     println!("comparison: {}", summary.comparison);
@@ -2913,60 +2929,74 @@ fn print_report_event_diff_text(summary: &ReportEventDiffSummary) -> i32 {
         }
     }
 
+    let exit_code = report_diff_exit_code(&summary.status, &summary.comparison, fail_on_diff);
+
     if summary.status == "failed" {
         println!("report diff: failed");
         for error in &summary.errors {
             emit_error_line(error);
         }
-        1
     } else {
         println!("report diff: {}", summary.comparison);
-        0
     }
+
+    exit_code
 }
 
-fn print_report_diff_json(summary: &ReportDiffSummary) -> Result<i32, CliError> {
+fn print_report_diff_json(
+    summary: &ReportDiffSummary,
+    fail_on_diff: bool,
+) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             println!("{json}");
-            if summary.status == "failed" {
-                Ok(1)
-            } else {
-                Ok(0)
-            }
+            Ok(report_diff_exit_code(
+                &summary.status,
+                &summary.comparison,
+                fail_on_diff,
+            ))
         }
         Err(source) => Err(CliError::serialization("report diff summary", source)),
     }
 }
 
-fn print_report_event_diff_json(summary: &ReportEventDiffSummary) -> Result<i32, CliError> {
+fn print_report_event_diff_json(
+    summary: &ReportEventDiffSummary,
+    fail_on_diff: bool,
+) -> Result<i32, CliError> {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             println!("{json}");
-            if summary.status == "failed" {
-                Ok(1)
-            } else {
-                Ok(0)
-            }
+            Ok(report_diff_exit_code(
+                &summary.status,
+                &summary.comparison,
+                fail_on_diff,
+            ))
         }
         Err(source) => Err(CliError::serialization("report event diff summary", source)),
     }
 }
 
-fn report_diff(left: PathBuf, right: PathBuf, json: bool, events: bool) -> Result<i32, CliError> {
+fn report_diff(
+    left: PathBuf,
+    right: PathBuf,
+    json: bool,
+    events: bool,
+    fail_on_diff: bool,
+) -> Result<i32, CliError> {
     if events {
         let summary = diff_report_events(left, right);
         if json {
-            print_report_event_diff_json(&summary)
+            print_report_event_diff_json(&summary, fail_on_diff)
         } else {
-            Ok(print_report_event_diff_text(&summary))
+            Ok(print_report_event_diff_text(&summary, fail_on_diff))
         }
     } else {
         let summary = diff_reports(left, right);
         if json {
-            print_report_diff_json(&summary)
+            print_report_diff_json(&summary, fail_on_diff)
         } else {
-            Ok(print_report_diff_text(&summary))
+            Ok(print_report_diff_text(&summary, fail_on_diff))
         }
     }
 }

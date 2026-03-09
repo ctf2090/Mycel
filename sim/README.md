@@ -40,6 +40,7 @@ The Rust workspace currently exposes:
 - `cargo run -p mycel-cli -- object verify <path> --json`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report>`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --json`
+- `cargo run -p mycel-cli -- report diff <left-report> <right-report> --fail-on-diff`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --events`
 - `cargo run -p mycel-cli -- report diff <left-report> <right-report> --events --json`
 - `cargo run -p mycel-cli -- report inspect <path>`
@@ -113,6 +114,7 @@ Runnable examples:
 - `cargo run -p mycel-cli -- report stats sim/reports/out --json`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --json`
+- `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --fail-on-diff`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --events`
 - `cargo run -p mycel-cli -- report diff sim/reports/report.example.json sim/reports/invalid/missing-seed-source.example.json --events --json`
 - `cargo run -p mycel-cli -- report inspect sim/reports/report.example.json`
@@ -165,6 +167,7 @@ Report-inspection output notes:
 - `report stats` counts valid reports by `result` and `validation_status`, while still surfacing invalid parse entries through the shared top-level status and counts
 - `report diff <left> <right>` compares two reports at the summary level and prints a human-readable difference list
 - `report diff <left> <right> --json` emits a stable diff summary with `status`, `comparison`, `difference_count`, `left`, `right`, `differences`, and `errors`
+- `report diff <left> <right> --fail-on-diff` keeps the same payload but exits with failure when `comparison` is `different`
 - `report diff <left> <right> --events` compares event traces step-by-step and prints event-level differences instead of summary-field differences
 - `report diff <left> <right> --events --json` emits `event_difference_count` plus `event_differences[]`, where each entry is `changed`, `left_only`, or `right_only`
 - `status: ok` means both inputs parsed as report targets successfully; use `comparison: match|different` to tell whether the summaries differ

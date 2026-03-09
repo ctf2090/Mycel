@@ -74,6 +74,23 @@ fn report_diff_json_reports_summary_level_differences() {
 }
 
 #[test]
+fn report_diff_json_can_fail_on_summary_differences() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--json",
+        "--fail-on-diff",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["comparison"], "different");
+}
+
+#[test]
 fn report_diff_events_json_reports_match_for_same_report() {
     let output = run_report(&[
         "report",
@@ -132,6 +149,31 @@ fn report_diff_events_json_reports_step_level_differences() {
 }
 
 #[test]
+fn report_diff_events_json_can_fail_on_event_differences() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--events",
+        "--json",
+        "--fail-on-diff",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["comparison"], "different");
+    assert!(
+        json["event_difference_count"]
+            .as_u64()
+            .is_some_and(|count| count >= 1),
+        "expected event differences, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn report_diff_text_reports_human_summary() {
     let output = run_report(&[
         "report",
@@ -152,6 +194,21 @@ fn report_diff_text_reports_human_summary() {
 }
 
 #[test]
+fn report_diff_text_can_fail_on_summary_differences() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--fail-on-diff",
+    ]);
+
+    assert_exit_code(&output, 1);
+    assert_stdout_contains(&output, "comparison: different");
+    assert_stdout_contains(&output, "report diff: different");
+}
+
+#[test]
 fn report_diff_events_text_reports_human_event_summary() {
     let output = run_report(&[
         "report",
@@ -165,6 +222,22 @@ fn report_diff_events_text_reports_human_event_summary() {
     assert_stdout_contains(&output, "comparison: different");
     assert_stdout_contains(&output, "event difference count:");
     assert_stdout_contains(&output, "event step 1: changed");
+    assert_stdout_contains(&output, "report diff: different");
+}
+
+#[test]
+fn report_diff_events_text_can_fail_on_event_differences() {
+    let output = run_report(&[
+        "report",
+        "diff",
+        "sim/reports/report.example.json",
+        "sim/reports/invalid/missing-seed-source.example.json",
+        "--events",
+        "--fail-on-diff",
+    ]);
+
+    assert_exit_code(&output, 1);
+    assert_stdout_contains(&output, "comparison: different");
     assert_stdout_contains(&output, "report diff: different");
 }
 
