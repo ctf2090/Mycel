@@ -33,3 +33,19 @@ npm run compile
 ```
 
 Then open this folder in VS Code and press `F5` to launch the extension host.
+
+## Package As VSIX
+
+```bash
+npm install
+npm run package
+```
+
+This produces a `.vsix` file in the extension folder.
+
+To install it in VS Code:
+
+1. open the Extensions view
+2. select `...` in the top-right corner
+3. choose `Install from VSIX...`
+4. pick the generated `.vsix` file
