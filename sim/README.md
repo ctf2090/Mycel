@@ -57,6 +57,30 @@ Validation output notes:
 - `--json` includes a stable top-level `status`
 - `--strict` treats warnings as failures for CI-oriented validation
 
+Object-verification output notes:
+
+- text output is intended for human inspection
+- `--json` is the stable machine-consumable surface
+- tools and tests should rely on fields such as `status`, `object_type`, `signature_rule`, `signature_verification`, `declared_id`, `recomputed_id`, `notes`, and `errors`
+- `declared_id` and `recomputed_id` are the primary fields for derived-ID mismatch checks
+
+Minimal JSON shape example:
+
+```json
+{
+  "status": "ok",
+  "object_type": "patch",
+  "signature_rule": "required",
+  "signer_field": "author",
+  "signer": "pk:ed25519:...",
+  "signature_verification": "verified",
+  "declared_id": "patch:...",
+  "recomputed_id": "patch:...",
+  "notes": [],
+  "errors": []
+}
+```
+
 Head-inspection output notes:
 
 - `decision_trace` is intentionally kept as a high-level explanatory summary for humans
