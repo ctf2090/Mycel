@@ -1,0 +1,107 @@
+{
+  "$schema": "../report.schema.json",
+  "run_id": "run:invalid-auto-seed-prefix-001",
+  "topology_id": "hash-mismatch",
+  "fixture_id": "hash-mismatch",
+  "test_id": "hash-mismatch",
+  "execution_mode": "single-process",
+  "started_at": "2026-03-09T16:11:00+08:00",
+  "finished_at": "2026-03-09T16:11:01+08:00",
+  "peers": [
+    {
+      "node_id": "node:peer-fault",
+      "status": "failed",
+      "verified_object_ids": [],
+      "rejected_object_ids": [
+        "obj:doc:sample-hash-mismatch:rejected-invalid-hash"
+      ]
+    },
+    {
+      "node_id": "node:peer-reader-a",
+      "status": "ok",
+      "verified_object_ids": [
+        "obj:doc:sample-hash-mismatch:accepted-head"
+      ],
+      "rejected_object_ids": [
+        "obj:doc:sample-hash-mismatch:rejected-invalid-hash"
+      ]
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "status": "ok",
+      "verified_object_ids": [
+        "obj:doc:sample-hash-mismatch:accepted-head"
+      ]
+    }
+  ],
+  "result": "fail",
+  "events": [
+    {
+      "step": 1,
+      "phase": "load",
+      "action": "load-fixture",
+      "outcome": "ok",
+      "detail": "Loaded hash-mismatch fixture for validation failure demonstration."
+    },
+    {
+      "step": 2,
+      "phase": "sync",
+      "action": "inject-fault",
+      "outcome": "failed",
+      "node_id": "node:peer-fault",
+      "object_ids": [
+        "obj:doc:sample-hash-mismatch:rejected-invalid-hash"
+      ],
+      "detail": "Injected a hash-mismatch object toward node:peer-reader-a."
+    },
+    {
+      "step": 3,
+      "phase": "verify",
+      "action": "reject-object-set",
+      "outcome": "ok",
+      "node_id": "node:peer-reader-a",
+      "object_ids": [
+        "obj:doc:sample-hash-mismatch:rejected-invalid-hash"
+      ],
+      "detail": "Reader rejected the mismatched object during deterministic validation."
+    }
+  ],
+  "summary": {
+    "verified_object_count": 1,
+    "rejected_object_count": 1,
+    "matched_expected_outcomes": [
+      "object-rejected-hash-mismatch",
+      "no-invalid-index-write"
+    ]
+  },
+  "metadata": {
+    "generator": "mycel-cli/sim-run-v0",
+    "deterministic": true,
+    "run_mode": "deterministic-placeholder",
+    "trace_version": "v0",
+    "timezone": "Asia/Taipei (UTC+8)",
+    "validation_status": "ok",
+    "run_duration_ms": 1000,
+    "deterministic_seed": "custom-seed",
+    "seed_source": "auto",
+    "events_per_second": 3.0,
+    "ms_per_event": 333.333,
+    "scheduled_peer_order": [
+      "node:peer-fault",
+      "node:peer-reader-a",
+      "node:peer-reader-b"
+    ],
+    "fault_plan": [
+      {
+        "order": 1,
+        "fault": "hash-mismatch",
+        "phase": "sync",
+        "source_node_id": "node:peer-fault",
+        "target_node_id": "node:peer-reader-a"
+      }
+    ],
+    "source_test_case": "sim/tests/hash-mismatch.example.json",
+    "source_topology": "sim/topologies/hash-mismatch.example.json",
+    "source_fixture": "fixtures/object-sets/hash-mismatch/fixture.json"
+  }
+}

@@ -12,16 +12,20 @@ This directory is the index and matrix for those cases.
 - report metadata self-contradiction
 - seed-source and deterministic-seed mismatch
 
-## Current Example
+## Current Examples
 
 - `random-seed-prefix-mismatch`
   Artifact: `sim/reports/invalid/random-seed-prefix-mismatch.example.json`
+  Expected result: `mycel validate` fails with a `seed_source` / `deterministic_seed` prefix error
+- `auto-seed-prefix-mismatch`
+  Artifact: `sim/reports/invalid/auto-seed-prefix-mismatch.example.json`
   Expected result: `mycel validate` fails with a `seed_source` / `deterministic_seed` prefix error
 
 ## Command
 
 ```bash
 cargo run -p mycel-cli -- validate sim/reports/invalid/random-seed-prefix-mismatch.example.json --json
+cargo run -p mycel-cli -- validate sim/reports/invalid/auto-seed-prefix-mismatch.example.json --json
 ```
 
 ## Smoke Script
@@ -35,8 +39,8 @@ Run both the positive and negative validation path in one command:
 The script expects:
 
 - repo-wide `mycel validate --json` returns `status: "ok"`
-- the intentional invalid report returns `status: "failed"`
-- the failure message mentions the `seed_source` mismatch
+- the intentional invalid `random` and `auto` reports return `status: "failed"`
+- each failure message mentions the matching `seed_source` mismatch
 
 ## Why This Directory Exists
 
