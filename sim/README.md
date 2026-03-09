@@ -56,6 +56,29 @@ Validation output notes:
 
 - `--json` includes a stable top-level `status`
 - `--strict` treats warnings as failures for CI-oriented validation
+- tools and tests should rely on JSON fields such as `status`, `root`, `target`, `fixture_count`, `peer_count`, `topology_count`, `test_case_count`, `report_count`, `warnings`, and `errors`
+- warning-only validation still emits `status: warning`; `--strict` changes the exit behavior, not the warning payload itself
+
+Minimal JSON shape example:
+
+```json
+{
+  "status": "warning",
+  "root": "/workspaces/Mycel",
+  "target": "/workspaces/Mycel/sim/reports/invalid/missing-seed-source.example.json",
+  "fixture_count": 1,
+  "peer_count": 0,
+  "topology_count": 1,
+  "test_case_count": 1,
+  "report_count": 1,
+  "warnings": [
+    {
+      "message": "report metadata does not include seed_source"
+    }
+  ],
+  "errors": []
+}
+```
 
 Object-verification output notes:
 

@@ -26,6 +26,7 @@ Mycel can be used in many content domains. The protocol itself remains neutral a
 - Current Rust CLI status: suitable for internal validation and deterministic simulator-harness workflows, but not yet a production Mycel client or node
 - Current head-inspection output boundary: `decision_trace` is a high-level human-readable summary, while typed arrays such as `effective_weights[]`, `maintainer_support[]`, and `critical_violations[]` carry stable machine-consumable detail
 - Current object-verification output boundary: text output is for human inspection, while `--json` exposes stable fields such as `status`, `object_type`, `signature_rule`, `signature_verification`, `declared_id`, `recomputed_id`, `notes`, and `errors`
+- Current validation output boundary: `--json` exposes stable status, scope counts, warnings, and errors, while `--strict` turns warning-only validation results into failing exits for CI-oriented workflows
 
 ## Documentation
 
