@@ -20,16 +20,20 @@ Minimal VS Code extension for this workflow:
 
 Direct hover translation only works in normal editors because VS Code hover providers run on text documents, not inside another extension's isolated chat/webview surface.
 
-For Codex chat, use this command instead:
+For Codex chat, the closest supported flow is a context-menu command:
 
 - `Hover Translate: Translate Selection or Clipboard`
 
 Workflow:
 
 1. select text in the Codex chat window
-2. copy it
-3. run `Hover Translate: Translate Selection or Clipboard`
+2. right-click and choose `Hover Translate: Translate Selection or Clipboard`
+3. if the chat surface does not expose the selected text to extensions, copy the text first and run the same command
 4. the extension opens a markdown preview with the translation result
+
+Limit:
+
+- VS Code menu items are static command entries, so the translated text itself cannot be rendered directly inside the popup menu row
 
 The same command also works in editors. If there is an active text selection, it translates that first. Otherwise it falls back to clipboard text.
 

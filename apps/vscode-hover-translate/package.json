@@ -31,6 +31,21 @@
         "title": "Hover Translate: Translate Selection or Clipboard"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "hoverTranslate.translateSelectionOrClipboard",
+          "when": "editorHasSelection",
+          "group": "navigation@99"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "hoverTranslate.translateSelectionOrClipboard",
+          "group": "navigation@99"
+        }
+      ]
+    },
     "configuration": {
       "title": "Hover Translate",
       "properties": {
