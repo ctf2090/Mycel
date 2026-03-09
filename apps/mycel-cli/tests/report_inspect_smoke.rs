@@ -1178,7 +1178,7 @@ fn report_inspect_requires_phase_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --phase");
+    assert_stderr_contains(&output, "a value is required for '--phase <NAME>'");
 }
 
 #[test]
@@ -1191,7 +1191,7 @@ fn report_inspect_requires_action_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --action");
+    assert_stderr_contains(&output, "a value is required for '--action <NAME>'");
 }
 
 #[test]
@@ -1204,7 +1204,7 @@ fn report_inspect_requires_outcome_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --outcome");
+    assert_stderr_contains(&output, "a value is required for '--outcome <NAME>'");
 }
 
 #[test]
@@ -1217,7 +1217,7 @@ fn report_inspect_requires_step_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --step");
+    assert_stderr_contains(&output, "a value is required for '--step <N>'");
 }
 
 #[test]
@@ -1244,7 +1244,10 @@ fn report_inspect_requires_step_range_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --step-range");
+    assert_stderr_contains(
+        &output,
+        "a value is required for '--step-range <START:END>'",
+    );
 }
 
 #[test]
@@ -1288,7 +1291,7 @@ fn report_inspect_requires_last_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --last");
+    assert_stderr_contains(&output, "a value is required for '--last <N>'");
 }
 
 #[test]
@@ -1315,7 +1318,7 @@ fn report_inspect_requires_first_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --first");
+    assert_stderr_contains(&output, "a value is required for '--first <N>'");
 }
 
 #[test]
@@ -1342,7 +1345,7 @@ fn report_inspect_requires_node_value() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "missing value for --node");
+    assert_stderr_contains(&output, "a value is required for '--node <NODE_ID>'");
 }
 
 #[test]

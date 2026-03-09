@@ -168,22 +168,27 @@ struct ReportInspectCliArgs {
         ]
     )]
     full: bool,
-    #[arg(long, value_name = "NAME", help = "Filter event inspection to one phase", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
-    phase: Option<Option<String>>,
-    #[arg(long, value_name = "NAME", help = "Filter event inspection to one action", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
-    action: Option<Option<String>>,
-    #[arg(long, value_name = "NAME", help = "Filter event inspection to one outcome", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
-    outcome: Option<Option<String>>,
-    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", num_args = 0..=1, conflicts_with_all = ["failures", "full", "step_range"])]
-    step: Option<Option<String>>,
-    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", num_args = 0..=1, conflicts_with_all = ["failures", "full", "step"])]
-    step_range: Option<Option<String>>,
-    #[arg(long, value_name = "N", help = "Keep the first N matching events", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
-    first: Option<Option<String>>,
-    #[arg(long, value_name = "N", help = "Keep the last N matching events", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
-    last: Option<Option<String>>,
-    #[arg(long, value_name = "NODE_ID", help = "Filter event or failure inspection to one node", num_args = 0..=1, conflicts_with = "full")]
-    node: Option<Option<String>>,
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one phase", conflicts_with_all = ["failures", "full"])]
+    phase: Option<String>,
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one action", conflicts_with_all = ["failures", "full"])]
+    action: Option<String>,
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one outcome", conflicts_with_all = ["failures", "full"])]
+    outcome: Option<String>,
+    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", conflicts_with_all = ["failures", "full", "step_range"])]
+    step: Option<String>,
+    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", conflicts_with_all = ["failures", "full", "step"])]
+    step_range: Option<String>,
+    #[arg(long, value_name = "N", help = "Keep the first N matching events", conflicts_with_all = ["failures", "full"])]
+    first: Option<String>,
+    #[arg(long, value_name = "N", help = "Keep the last N matching events", conflicts_with_all = ["failures", "full"])]
+    last: Option<String>,
+    #[arg(
+        long,
+        value_name = "NODE_ID",
+        help = "Filter event or failure inspection to one node",
+        conflicts_with = "full"
+    )]
+    node: Option<String>,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -949,17 +954,6 @@ fn exit_usage_error(message: impl AsRef<str>) -> ! {
     std::process::exit(2);
 }
 
-fn require_optional_flag_value(
-    value: Option<Option<String>>,
-    flag: &str,
-) -> Result<Option<String>, String> {
-    match value {
-        Some(Some(value)) => Ok(Some(value)),
-        Some(None) => Err(format!("missing value for {flag}")),
-        None => Ok(None),
-    }
-}
-
 fn unexpected_extra(extra: &[String], context: &str) -> Option<String> {
     extra
         .first()
@@ -1022,37 +1016,24 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
                 mode = ReportInspectMode::Full;
             }
 
-            let phase = require_optional_flag_value(args.phase, "--phase")
-                .unwrap_or_else(|message| exit_usage_error(message));
-            let action = require_optional_flag_value(args.action, "--action")
-                .unwrap_or_else(|message| exit_usage_error(message));
-            let outcome = require_optional_flag_value(args.outcome, "--outcome")
-                .unwrap_or_else(|message| exit_usage_error(message));
-            let step = require_optional_flag_value(args.step, "--step")
-                .unwrap_or_else(|message| exit_usage_error(message))
-                .map(|value| {
-                    parse_u64_flag(&value, "--step")
-                        .unwrap_or_else(|message| exit_usage_error(message))
-                });
-            let step_range = require_optional_flag_value(args.step_range, "--step-range")
-                .unwrap_or_else(|message| exit_usage_error(message))
-                .map(|value| {
-                    parse_step_range(&value).unwrap_or_else(|message| exit_usage_error(message))
-                });
-            let first = require_optional_flag_value(args.first, "--first")
-                .unwrap_or_else(|message| exit_usage_error(message))
-                .map(|value| {
-                    parse_usize_flag(&value, "--first")
-                        .unwrap_or_else(|message| exit_usage_error(message))
-                });
-            let last = require_optional_flag_value(args.last, "--last")
-                .unwrap_or_else(|message| exit_usage_error(message))
-                .map(|value| {
-                    parse_usize_flag(&value, "--last")
-                        .unwrap_or_else(|message| exit_usage_error(message))
-                });
-            let node = require_optional_flag_value(args.node, "--node")
-                .unwrap_or_else(|message| exit_usage_error(message));
+            let phase = args.phase;
+            let action = args.action;
+            let outcome = args.outcome;
+            let step = args.step.map(|value| {
+                parse_u64_flag(&value, "--step").unwrap_or_else(|message| exit_usage_error(message))
+            });
+            let step_range = args.step_range.map(|value| {
+                parse_step_range(&value).unwrap_or_else(|message| exit_usage_error(message))
+            });
+            let first = args.first.map(|value| {
+                parse_usize_flag(&value, "--first")
+                    .unwrap_or_else(|message| exit_usage_error(message))
+            });
+            let last = args.last.map(|value| {
+                parse_usize_flag(&value, "--last")
+                    .unwrap_or_else(|message| exit_usage_error(message))
+            });
+            let node = args.node;
 
             let Some(target) = args.target else {
                 exit_usage_error("missing report inspect target");
