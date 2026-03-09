@@ -1,3 +1,4 @@
+use std::process::Output;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 mod common;
@@ -12,6 +13,13 @@ fn sim_run_lock() -> MutexGuard<'static, ()> {
     LOCK.get_or_init(|| Mutex::new(()))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn assert_clap_conflict(output: &Output, left: &str, right: &str) {
+    assert_exit_code(output, 2);
+    assert_stderr_contains(output, "cannot be used with");
+    assert_stderr_contains(output, left);
+    assert_stderr_contains(output, right);
 }
 
 #[test]
@@ -896,11 +904,7 @@ fn report_inspect_rejects_conflicting_filter_flags() {
         "--failures",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect accepts only one of --events, --failures, or --full",
-    );
+    assert_clap_conflict(&output, "--events", "--failures");
 }
 
 #[test]
@@ -913,7 +917,8 @@ fn report_inspect_rejects_full_without_json() {
     ]);
 
     assert_exit_code(&output, 2);
-    assert_stderr_contains(&output, "report inspect --full requires --json");
+    assert_stderr_contains(&output, "required arguments were not provided");
+    assert_stderr_contains(&output, "--json");
 }
 
 #[test]
@@ -927,11 +932,7 @@ fn report_inspect_rejects_full_with_other_filter_flags() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect accepts only one of --events, --failures, or --full",
-    );
+    assert_clap_conflict(&output, "--events", "--full");
 }
 
 #[test]
@@ -945,11 +946,7 @@ fn report_inspect_rejects_phase_with_failures() {
         "sync",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --phase cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--phase", "--failures");
 }
 
 #[test]
@@ -964,11 +961,7 @@ fn report_inspect_rejects_phase_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --phase cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--phase", "--full");
 }
 
 #[test]
@@ -982,11 +975,7 @@ fn report_inspect_rejects_action_with_failures() {
         "seed-advertise",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --action cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--action", "--failures");
 }
 
 #[test]
@@ -1001,11 +990,7 @@ fn report_inspect_rejects_action_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --action cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--action", "--full");
 }
 
 #[test]
@@ -1019,11 +1004,7 @@ fn report_inspect_rejects_outcome_with_failures() {
         "ok",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --outcome cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--outcome", "--failures");
 }
 
 #[test]
@@ -1038,11 +1019,7 @@ fn report_inspect_rejects_outcome_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --outcome cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--outcome", "--full");
 }
 
 #[test]
@@ -1056,11 +1033,7 @@ fn report_inspect_rejects_step_with_failures() {
         "2",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --step cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--step", "--failures");
 }
 
 #[test]
@@ -1075,11 +1048,7 @@ fn report_inspect_rejects_step_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --step cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--step", "--full");
 }
 
 #[test]
@@ -1093,11 +1062,7 @@ fn report_inspect_rejects_step_range_with_failures() {
         "1:2",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --step-range cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--step-range", "--failures");
 }
 
 #[test]
@@ -1112,11 +1077,7 @@ fn report_inspect_rejects_step_range_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --step-range cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--step-range", "--full");
 }
 
 #[test]
@@ -1130,11 +1091,7 @@ fn report_inspect_rejects_last_with_failures() {
         "1",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --last cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--last", "--failures");
 }
 
 #[test]
@@ -1149,11 +1106,7 @@ fn report_inspect_rejects_last_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --last cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--last", "--full");
 }
 
 #[test]
@@ -1167,11 +1120,7 @@ fn report_inspect_rejects_first_with_failures() {
         "1",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --first cannot be combined with --failures",
-    );
+    assert_clap_conflict(&output, "--first", "--failures");
 }
 
 #[test]
@@ -1186,11 +1135,7 @@ fn report_inspect_rejects_first_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --first cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--first", "--full");
 }
 
 #[test]
@@ -1205,11 +1150,7 @@ fn report_inspect_rejects_step_and_step_range_together() {
         "1:3",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect accepts only one of --step or --step-range",
-    );
+    assert_clap_conflict(&output, "--step", "--step-range");
 }
 
 #[test]
@@ -1224,11 +1165,7 @@ fn report_inspect_rejects_node_with_full() {
         "--json",
     ]);
 
-    assert_exit_code(&output, 2);
-    assert_stderr_contains(
-        &output,
-        "report inspect --node cannot be combined with --full",
-    );
+    assert_clap_conflict(&output, "--node", "--full");
 }
 
 #[test]

@@ -125,27 +125,57 @@ struct ReportInspectCliArgs {
     target: Option<String>,
     #[arg(long, help = "Emit machine-readable report inspection output")]
     json: bool,
-    #[arg(long, help = "Show only report events")]
+    #[arg(long, help = "Show only report events", conflicts_with_all = ["failures", "full"])]
     events: bool,
-    #[arg(long, help = "Show only report failures")]
+    #[arg(
+        long,
+        help = "Show only report failures",
+        conflicts_with_all = [
+            "events",
+            "full",
+            "phase",
+            "action",
+            "outcome",
+            "step",
+            "step_range",
+            "first",
+            "last"
+        ]
+    )]
     failures: bool,
-    #[arg(long, help = "Emit the full raw report (requires --json)")]
+    #[arg(
+        long,
+        help = "Emit the full raw report (requires --json)",
+        requires = "json",
+        conflicts_with_all = [
+            "events",
+            "failures",
+            "phase",
+            "action",
+            "outcome",
+            "step",
+            "step_range",
+            "first",
+            "last",
+            "node"
+        ]
+    )]
     full: bool,
-    #[arg(long, value_name = "NAME", help = "Filter event inspection to one phase", num_args = 0..=1)]
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one phase", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
     phase: Option<Option<String>>,
-    #[arg(long, value_name = "NAME", help = "Filter event inspection to one action", num_args = 0..=1)]
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one action", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
     action: Option<Option<String>>,
-    #[arg(long, value_name = "NAME", help = "Filter event inspection to one outcome", num_args = 0..=1)]
+    #[arg(long, value_name = "NAME", help = "Filter event inspection to one outcome", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
     outcome: Option<Option<String>>,
-    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", num_args = 0..=1)]
+    #[arg(long, value_name = "N", help = "Filter event inspection to one step number", num_args = 0..=1, conflicts_with_all = ["failures", "full", "step_range"])]
     step: Option<Option<String>>,
-    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", num_args = 0..=1)]
+    #[arg(long = "step-range", value_name = "START:END", help = "Filter event inspection to one inclusive step range", num_args = 0..=1, conflicts_with_all = ["failures", "full", "step"])]
     step_range: Option<Option<String>>,
-    #[arg(long, value_name = "N", help = "Keep the first N matching events", num_args = 0..=1)]
+    #[arg(long, value_name = "N", help = "Keep the first N matching events", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
     first: Option<Option<String>>,
-    #[arg(long, value_name = "N", help = "Keep the last N matching events", num_args = 0..=1)]
+    #[arg(long, value_name = "N", help = "Keep the last N matching events", num_args = 0..=1, conflicts_with_all = ["failures", "full"])]
     last: Option<Option<String>>,
-    #[arg(long, value_name = "NODE_ID", help = "Filter event or failure inspection to one node", num_args = 0..=1)]
+    #[arg(long, value_name = "NODE_ID", help = "Filter event or failure inspection to one node", num_args = 0..=1, conflicts_with = "full")]
     node: Option<Option<String>>,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
@@ -981,19 +1011,9 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
                 mode = ReportInspectMode::Events;
             }
             if args.failures {
-                if mode != ReportInspectMode::Summary {
-                    exit_usage_error(
-                        "report inspect accepts only one of --events, --failures, or --full",
-                    );
-                }
                 mode = ReportInspectMode::Failures;
             }
             if args.full {
-                if mode != ReportInspectMode::Summary {
-                    exit_usage_error(
-                        "report inspect accepts only one of --events, --failures, or --full",
-                    );
-                }
                 mode = ReportInspectMode::Full;
             }
 
@@ -1029,55 +1049,6 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
             let node = require_optional_flag_value(args.node, "--node")
                 .unwrap_or_else(|message| exit_usage_error(message));
 
-            if phase.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --phase cannot be combined with --failures");
-            }
-            if phase.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --phase cannot be combined with --full");
-            }
-            if action.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --action cannot be combined with --failures");
-            }
-            if action.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --action cannot be combined with --full");
-            }
-            if outcome.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --outcome cannot be combined with --failures");
-            }
-            if outcome.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --outcome cannot be combined with --full");
-            }
-            if step.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --step cannot be combined with --failures");
-            }
-            if step.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --step cannot be combined with --full");
-            }
-            if step_range.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --step-range cannot be combined with --failures");
-            }
-            if step_range.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --step-range cannot be combined with --full");
-            }
-            if first.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --first cannot be combined with --failures");
-            }
-            if first.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --first cannot be combined with --full");
-            }
-            if last.is_some() && matches!(mode, ReportInspectMode::Failures) {
-                exit_usage_error("report inspect --last cannot be combined with --failures");
-            }
-            if last.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --last cannot be combined with --full");
-            }
-            if node.is_some() && matches!(mode, ReportInspectMode::Full) {
-                exit_usage_error("report inspect --node cannot be combined with --full");
-            }
-            if step.is_some() && step_range.is_some() {
-                exit_usage_error("report inspect accepts only one of --step or --step-range");
-            }
-
             let Some(target) = args.target else {
                 exit_usage_error("missing report inspect target");
             };
@@ -1106,10 +1077,6 @@ fn handle_report_command(command: ReportCliArgs) -> ! {
             } else {
                 mode
             };
-
-            if matches!(mode, ReportInspectMode::Full) && !args.json {
-                exit_usage_error("report inspect --full requires --json");
-            }
 
             std::process::exit(report_inspect(
                 PathBuf::from(target),
