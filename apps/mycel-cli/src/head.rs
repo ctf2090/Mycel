@@ -1,0 +1,136 @@
+use std::path::PathBuf;
+
+use clap::{Args, Subcommand};
+use mycel_core::head::{inspect_heads_from_path, HeadInspectSummary};
+
+use crate::{emit_error_line, CliError};
+
+#[derive(Args)]
+pub(crate) struct HeadCliArgs {
+    #[command(subcommand)]
+    command: Option<HeadSubcommand>,
+}
+
+#[derive(Subcommand)]
+enum HeadSubcommand {
+    #[command(about = "Inspect one document's accepted head")]
+    Inspect(HeadInspectCliArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Args)]
+struct HeadInspectCliArgs {
+    #[arg(
+        value_name = "DOC_ID",
+        help = "Document identifier to inspect",
+        required = true,
+        allow_hyphen_values = true
+    )]
+    doc_id: String,
+    #[arg(
+        long,
+        value_name = "PATH_OR_FIXTURE",
+        help = "Input bundle path or repo fixture name",
+        required = true
+    )]
+    input: String,
+    #[arg(long, help = "Emit machine-readable head inspection output")]
+    json: bool,
+    #[arg(hide = true, allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+fn print_head_inspect_text(summary: &HeadInspectSummary) -> i32 {
+    println!("input path: {}", summary.input_path.display());
+    println!("doc id: {}", summary.doc_id);
+    if let Some(profile_id) = &summary.profile_id {
+        println!("profile id: {profile_id}");
+    }
+    if let Some(effective_selection_time) = summary.effective_selection_time {
+        println!("effective selection time: {effective_selection_time}");
+    }
+    if let Some(selector_epoch) = summary.selector_epoch {
+        println!("selector epoch: {selector_epoch}");
+    }
+    println!("verified revisions: {}", summary.verified_revision_count);
+    println!("verified views: {}", summary.verified_view_count);
+    println!("status: {}", summary.status);
+
+    for head in &summary.eligible_heads {
+        println!(
+            "eligible head: {} timestamp={} score={} supporters={}",
+            head.revision_id, head.revision_timestamp, head.selector_score, head.supporter_count
+        );
+    }
+
+    if let Some(selected_head) = &summary.selected_head {
+        println!("selected head: {selected_head}");
+    }
+    if let Some(tie_break_reason) = &summary.tie_break_reason {
+        println!("tie break reason: {tie_break_reason}");
+    }
+    for trace in &summary.decision_trace {
+        println!("trace: {}: {}", trace.step, trace.detail);
+    }
+    for note in &summary.notes {
+        println!("note: {note}");
+    }
+
+    if summary.is_ok() {
+        println!("head inspection: ok");
+        0
+    } else {
+        println!("head inspection: failed");
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    }
+}
+
+fn print_head_inspect_json(summary: &HeadInspectSummary) -> Result<i32, CliError> {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                Ok(0)
+            } else {
+                Ok(1)
+            }
+        }
+        Err(source) => Err(CliError::serialization("head inspection summary", source)),
+    }
+}
+
+fn head_inspect(doc_id: String, input_path: PathBuf, json: bool) -> Result<i32, CliError> {
+    let summary = inspect_heads_from_path(&input_path, &doc_id);
+    if json {
+        print_head_inspect_json(&summary)
+    } else {
+        Ok(print_head_inspect_text(&summary))
+    }
+}
+
+fn unexpected_extra(extra: &[String], context: &str) -> Option<String> {
+    extra
+        .first()
+        .map(|arg| format!("unexpected {context} argument: {arg}"))
+}
+
+pub(crate) fn handle_head_command(command: HeadCliArgs) -> Result<i32, CliError> {
+    match command.command {
+        Some(HeadSubcommand::Inspect(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "head inspect") {
+                return Err(CliError::usage(message));
+            }
+
+            head_inspect(args.doc_id, PathBuf::from(args.input), args.json)
+        }
+        Some(HeadSubcommand::External(args)) => {
+            let other = args.first().map(String::as_str).unwrap_or("<unknown>");
+            Err(CliError::usage(format!("unknown head subcommand: {other}")))
+        }
+        None => Err(CliError::usage("missing head subcommand")),
+    }
+}
