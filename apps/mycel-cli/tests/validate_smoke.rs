@@ -35,7 +35,9 @@ fn assert_failed_with_message(output: &std::process::Output, expected_text: &str
 
     let json = parse_json_stdout(output);
     assert_eq!(json["status"], "failed");
-    let errors = json["errors"].as_array().expect("errors should be an array");
+    let errors = json["errors"]
+        .as_array()
+        .expect("errors should be an array");
     assert!(
         errors.iter().any(|entry| {
             entry["message"]
