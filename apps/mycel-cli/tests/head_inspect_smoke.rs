@@ -9,8 +9,9 @@ use sha2::{Digest, Sha256};
 mod common;
 
 use common::{
-    assert_exit_code, assert_stderr_contains, assert_stdout_contains, assert_success,
-    assert_top_level_help, create_temp_dir, parse_json_stdout, repo_root, run_mycel, stdout_text,
+    assert_exit_code, assert_stderr_contains, assert_stderr_starts_with, assert_stdout_contains,
+    assert_success, assert_top_level_help, create_temp_dir, parse_json_stdout, repo_root,
+    run_mycel, stdout_text,
 };
 
 struct TempInputFile {
@@ -320,6 +321,7 @@ fn head_inspect_text_fails_when_no_eligible_head_exists() {
 
     assert_exit_code(&output, 1);
     assert_stdout_contains(&output, "head inspection: failed");
+    assert_stderr_starts_with(&output, "error: ");
     assert_stderr_contains(&output, "NO_ELIGIBLE_HEAD");
 }
 

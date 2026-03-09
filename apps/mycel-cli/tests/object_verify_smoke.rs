@@ -10,8 +10,8 @@ mod common;
 
 use common::{
     assert_empty_stderr, assert_exit_code, assert_json_status, assert_stderr_contains,
-    assert_stdout_contains, assert_success, assert_top_level_help, create_temp_dir,
-    parse_json_stdout, run_mycel, stdout_text,
+    assert_stderr_starts_with, assert_stdout_contains, assert_success, assert_top_level_help,
+    create_temp_dir, parse_json_stdout, run_mycel, stdout_text,
 };
 
 struct TempObjectFile {
@@ -228,6 +228,7 @@ fn object_verify_text_fails_when_signed_object_is_missing_signature() {
 
     assert_exit_code(&output, 1);
     assert_stdout_contains(&output, "verification: failed");
+    assert_stderr_starts_with(&output, "error: ");
     assert_stderr_contains(
         &output,
         "view object is missing required top-level 'signature'",

@@ -47,13 +47,21 @@ impl CliError {
     fn emit(&self) {
         match self {
             Self::Usage(message) => {
-                eprintln!("error: {message}");
+                emit_error_line(message);
                 eprintln!();
                 print_usage();
             }
-            _ => eprintln!("error: {self}"),
+            _ => emit_error_line(self),
         }
     }
+}
+
+fn emit_error_line(message: impl std::fmt::Display) {
+    eprintln!("error: {message}");
+}
+
+fn emit_warning_line(message: impl std::fmt::Display) {
+    eprintln!("warning: {message}");
 }
 
 #[derive(Parser)]
@@ -349,7 +357,7 @@ fn print_head_inspect_text(summary: &HeadInspectSummary) -> i32 {
     } else {
         println!("head inspection: failed");
         for error in &summary.errors {
-            eprintln!("error: {error}");
+            emit_error_line(error);
         }
         1
     }
@@ -413,7 +421,7 @@ fn print_object_verification_text(summary: &ObjectVerificationSummary) -> i32 {
     } else {
         println!("verification: failed");
         for error in &summary.errors {
-            eprintln!("error: {error}");
+            emit_error_line(error);
         }
         1
     }
@@ -461,14 +469,14 @@ fn print_validation_text(summary: &mycel_sim::validate::ValidationSummary) -> i3
 
     if !summary.warnings.is_empty() {
         for warning in &summary.warnings {
-            eprintln!("warning: {}: {}", warning.path, warning.message);
+            emit_warning_line(format_args!("{}: {}", warning.path, warning.message));
         }
     }
 
     if !summary.is_ok() {
         println!("validation: failed");
         for error in &summary.errors {
-            eprintln!("error: {}: {}", error.path, error.message);
+            emit_error_line(format_args!("{}: {}", error.path, error.message));
         }
         1
     } else if summary.has_warnings() {
@@ -796,7 +804,7 @@ fn print_report_text(summary: &ReportInspectSummary) -> i32 {
     } else {
         println!("report inspection: failed");
         for error in &summary.errors {
-            eprintln!("error: {error}");
+            emit_error_line(error);
         }
         1
     }
@@ -870,7 +878,7 @@ fn print_report_events_text(summary: &ReportInspectSummary, events: &[ReportEven
     } else {
         println!("report inspection: failed");
         for error in &summary.errors {
-            eprintln!("error: {error}");
+            emit_error_line(error);
         }
         1
     }
@@ -1177,7 +1185,7 @@ fn print_report_failures_text(summary: &ReportInspectSummary, failures: &[Report
     } else {
         println!("report inspection: failed");
         for error in &summary.errors {
-            eprintln!("error: {error}");
+            emit_error_line(error);
         }
         1
     }
@@ -1332,7 +1340,7 @@ fn print_run_text(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     }
 
     for warning in &summary.validation_warnings {
-        eprintln!("warning: {warning}");
+        emit_warning_line(warning);
     }
 
     0
