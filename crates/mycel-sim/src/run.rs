@@ -3,6 +3,7 @@
 use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use chrono::{FixedOffset, Utc};
 use serde::Serialize;
@@ -18,6 +19,8 @@ pub struct SimulationRunSummary {
     pub report_path: PathBuf,
     pub started_at: String,
     pub finished_at: String,
+    pub run_duration_ms: u128,
+    pub deterministic_seed: String,
     pub validation_status: ValidationStatus,
     pub validation_warnings: Vec<String>,
     pub result: String,
@@ -53,6 +56,7 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
     }
 
     let started_at = now_taipei_timestamp()?;
+    let started_clock = Instant::now();
     let test_case = load_json::<TestCase>(&target)?;
     let report_path = root
         .join("sim/reports/out")
@@ -86,9 +90,11 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
 
     let fixture_path = root.join(&test_case.fixture_set).join("fixture.json");
     let fixture = load_json::<Fixture>(&fixture_path)?;
+    let deterministic_seed = deterministic_seed(&test_case, &topology, &fixture);
 
     let mut report = simulate_report(&test_case, &topology, &fixture)?;
     let finished_at = now_taipei_timestamp()?;
+    let run_duration_ms = started_clock.elapsed().as_millis();
     report.started_at = Some(started_at.clone());
     report.finished_at = Some(finished_at.clone());
     report.metadata = Some(build_run_metadata(
@@ -97,6 +103,8 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         &topology_path,
         &fixture_path,
         filtered_validation_status,
+        run_duration_ms,
+        &deterministic_seed,
     ));
     if let Some(parent) = report_path.parent() {
         fs::create_dir_all(parent).map_err(|err| {
@@ -118,6 +126,8 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         report_path,
         started_at,
         finished_at,
+        run_duration_ms,
+        deterministic_seed,
         validation_status: filtered_validation_status,
         validation_warnings: filtered_validation_warnings,
         result: report.result.clone(),
@@ -457,6 +467,8 @@ fn build_run_metadata(
     topology_path: &Path,
     fixture_path: &Path,
     validation_status: ValidationStatus,
+    run_duration_ms: u128,
+    deterministic_seed: &str,
 ) -> serde_json::Value {
     json!({
         "generator": "mycel-cli/sim-run-v0",
@@ -465,6 +477,8 @@ fn build_run_metadata(
         "trace_version": "v0",
         "timezone": "Asia/Taipei (UTC+8)",
         "validation_status": validation_status.to_string(),
+        "run_duration_ms": run_duration_ms,
+        "deterministic_seed": deterministic_seed,
         "source_test_case": relative_path_string(root, test_case_path),
         "source_topology": relative_path_string(root, topology_path),
         "source_fixture": relative_path_string(root, fixture_path),
@@ -493,6 +507,13 @@ fn relative_path_string(root: &Path, path: &Path) -> String {
         .and_then(|relative| relative.to_str())
         .map(|value| value.replace('\\', "/"))
         .unwrap_or_else(|| path.display().to_string())
+}
+
+fn deterministic_seed(test_case: &TestCase, topology: &Topology, fixture: &Fixture) -> String {
+    format!(
+        "{}|{}|{}|{}",
+        test_case.test_id, topology.topology_id, fixture.fixture_id, test_case.execution_mode
+    )
 }
 
 fn push_event(

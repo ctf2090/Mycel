@@ -230,6 +230,8 @@
         "trace_version",
         "timezone",
         "validation_status",
+        "run_duration_ms",
+        "deterministic_seed",
         "source_test_case",
         "source_topology",
         "source_fixture"
@@ -261,6 +263,14 @@
             "warning",
             "failed"
           ]
+        },
+        "run_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deterministic_seed": {
+          "type": "string",
+          "minLength": 1
         },
         "source_test_case": {
           "type": "string",

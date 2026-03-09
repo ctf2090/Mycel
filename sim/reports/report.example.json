@@ -62,6 +62,8 @@
     "trace_version": "v0",
     "timezone": "Asia/Taipei (UTC+8)",
     "validation_status": "ok",
+    "run_duration_ms": 1000,
+    "deterministic_seed": "three-peer-consistency|three-peer-consistency|minimal-valid|single-process",
     "source_test_case": "sim/tests/three-peer-consistency.example.json",
     "source_topology": "sim/topologies/three-peer-consistency.example.json",
     "source_fixture": "fixtures/object-sets/minimal-valid/fixture.json"

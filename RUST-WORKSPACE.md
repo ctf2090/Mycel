@@ -63,6 +63,7 @@ Current `sim run` behavior:
 - emits a deterministic per-step event trace inside the generated report
 - stamps generated reports with `started_at` / `finished_at` in `Asia/Taipei (UTC+8)`
 - records deterministic run metadata, including source paths and validation status
+- records `run_duration_ms` and a derived `deterministic_seed` for reproducible scheduling
 - uses deterministic placeholder object IDs instead of real wire sync
 
 Recommended next:

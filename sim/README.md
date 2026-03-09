@@ -48,3 +48,4 @@ Simulator run notes:
 - generated reports are written under `sim/reports/out/`
 - generated reports now include a step-by-step `events` trace
 - generated reports now include `started_at`, `finished_at`, and deterministic run metadata
+- deterministic run metadata now includes `run_duration_ms` and `deterministic_seed`

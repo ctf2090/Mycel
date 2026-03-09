@@ -1419,6 +1419,33 @@ fn validate_quality_hints(
                     report.value.run_id
                 ),
             );
+        } else if let Some(metadata) = report
+            .value
+            .metadata
+            .as_ref()
+            .and_then(|value| value.as_object())
+        {
+            if !metadata.contains_key("run_duration_ms") {
+                push_warning(
+                    summary,
+                    &report.path,
+                    format!(
+                        "report '{}' metadata does not include run_duration_ms",
+                        report.value.run_id
+                    ),
+                );
+            }
+
+            if !metadata.contains_key("deterministic_seed") {
+                push_warning(
+                    summary,
+                    &report.path,
+                    format!(
+                        "report '{}' metadata does not include deterministic_seed",
+                        report.value.run_id
+                    ),
+                );
+            }
         }
     }
 }
