@@ -3,6 +3,7 @@
 //! This crate is intentionally small at first. It defines shared identities and
 //! workspace-level constants that both the simulator and CLI can depend on.
 
+pub mod head;
 pub mod protocol;
 pub mod verify;
 

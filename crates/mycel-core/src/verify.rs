@@ -68,6 +68,24 @@ pub fn verify_object_path(path: &Path) -> ObjectVerificationSummary {
         }
     };
 
+    verify_object_value_with_summary(path, value, summary)
+}
+
+pub fn verify_object_value(value: &Value) -> ObjectVerificationSummary {
+    verify_object_value_with_summary(
+        Path::new("<inline-object>"),
+        value.clone(),
+        ObjectVerificationSummary::new(Path::new("<inline-object>")),
+    )
+}
+
+fn verify_object_value_with_summary(
+    path: &Path,
+    value: Value,
+    mut summary: ObjectVerificationSummary,
+) -> ObjectVerificationSummary {
+    summary.path = path.to_path_buf();
+
     collect_value_errors(&value, "$", &mut summary.errors);
     if !summary.errors.is_empty() {
         summary.status = "failed".to_string();
@@ -326,7 +344,7 @@ fn signed_payload_bytes(value: &Value) -> Result<Vec<u8>, String> {
     Ok(canonical.into_bytes())
 }
 
-fn canonical_json(value: &Value) -> Result<String, String> {
+pub(crate) fn canonical_json(value: &Value) -> Result<String, String> {
     let mut output = String::new();
     write_canonical_json(value, &mut output)?;
     Ok(output)
@@ -387,7 +405,7 @@ fn write_canonical_json(value: &Value, output: &mut String) -> Result<(), String
     }
 }
 
-fn hex_encode(bytes: &[u8]) -> String {
+pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     let mut output = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
         output.push_str(&format!("{byte:02x}"));

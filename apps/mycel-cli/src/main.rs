@@ -1,6 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 
+use mycel_core::head::inspect_heads_from_path;
+use mycel_core::head::HeadInspectSummary;
 use mycel_core::verify::{verify_object_path, ObjectVerificationSummary};
 use mycel_core::workspace_banner;
 use mycel_sim::manifest::SimulatorPaths;
@@ -12,11 +14,16 @@ fn print_usage() {
     println!("mycel <command> [path]");
     println!();
     println!("Commands:");
+    println!("  head       Inspect accepted-head selection from a local input bundle");
     println!("  info       Show workspace and simulator scaffold information");
     println!("  object     Verify one Mycel object file");
     println!("  sim        Run a simulator test case");
     println!("  validate   Validate the repo root, one file, or one supported directory");
     println!("  help       Show this message");
+    println!();
+    println!("Head options:");
+    println!("  inspect <doc_id> --input <path>  Inspect one document's accepted head");
+    println!("  --json                           Emit machine-readable head inspection output");
     println!();
     println!("Object options:");
     println!("  verify <path>  Verify one object file");
@@ -42,6 +49,77 @@ fn print_info() {
     println!("topologies: {}", paths.topologies_root);
     println!("tests: {}", paths.tests_root);
     println!("reports: {}", paths.reports_root);
+}
+
+fn print_head_inspect_text(summary: &HeadInspectSummary) -> i32 {
+    println!("input path: {}", summary.input_path.display());
+    println!("doc id: {}", summary.doc_id);
+    if let Some(profile_id) = &summary.profile_id {
+        println!("profile id: {profile_id}");
+    }
+    if let Some(effective_selection_time) = summary.effective_selection_time {
+        println!("effective selection time: {effective_selection_time}");
+    }
+    if let Some(selector_epoch) = summary.selector_epoch {
+        println!("selector epoch: {selector_epoch}");
+    }
+    println!("verified revisions: {}", summary.verified_revision_count);
+    println!("verified views: {}", summary.verified_view_count);
+    println!("status: {}", summary.status);
+
+    for head in &summary.eligible_heads {
+        println!(
+            "eligible head: {} timestamp={} score={} supporters={}",
+            head.revision_id, head.revision_timestamp, head.selector_score, head.supporter_count
+        );
+    }
+
+    if let Some(selected_head) = &summary.selected_head {
+        println!("selected head: {selected_head}");
+    }
+    if let Some(tie_break_reason) = &summary.tie_break_reason {
+        println!("tie break reason: {tie_break_reason}");
+    }
+    for note in &summary.notes {
+        println!("note: {note}");
+    }
+
+    if summary.is_ok() {
+        println!("head inspection: ok");
+        0
+    } else {
+        println!("head inspection: failed");
+        for error in &summary.errors {
+            eprintln!("error: {error}");
+        }
+        1
+    }
+}
+
+fn print_head_inspect_json(summary: &HeadInspectSummary) -> i32 {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                0
+            } else {
+                1
+            }
+        }
+        Err(err) => {
+            eprintln!("failed to serialize head inspection summary: {err}");
+            2
+        }
+    }
+}
+
+fn head_inspect(doc_id: String, input_path: PathBuf, json: bool) -> i32 {
+    let summary = inspect_heads_from_path(&input_path, &doc_id);
+    if json {
+        print_head_inspect_json(&summary)
+    } else {
+        print_head_inspect_text(&summary)
+    }
 }
 
 fn print_object_verification_text(summary: &ObjectVerificationSummary) -> i32 {
@@ -278,6 +356,66 @@ fn main() {
     let mut args = env::args().skip(1);
 
     match args.next().as_deref() {
+        Some("head") => match args.next().as_deref() {
+            Some("inspect") => {
+                let mut doc_id = None;
+                let mut input_path = None;
+                let mut json = false;
+                let mut expect_input_path = false;
+
+                for arg in args {
+                    if expect_input_path {
+                        input_path = Some(PathBuf::from(arg));
+                        expect_input_path = false;
+                    } else if arg == "--json" {
+                        json = true;
+                    } else if arg == "--input" {
+                        expect_input_path = true;
+                    } else if doc_id.is_none() {
+                        doc_id = Some(arg);
+                    } else {
+                        eprintln!("unexpected head inspect argument: {arg}");
+                        eprintln!();
+                        print_usage();
+                        std::process::exit(2);
+                    }
+                }
+
+                if expect_input_path {
+                    eprintln!("missing value for --input");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                }
+
+                let Some(doc_id) = doc_id else {
+                    eprintln!("missing head inspect doc_id");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                };
+                let Some(input_path) = input_path else {
+                    eprintln!("missing --input for head inspect");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                };
+
+                std::process::exit(head_inspect(doc_id, input_path, json));
+            }
+            Some(other) => {
+                eprintln!("unknown head subcommand: {other}");
+                eprintln!();
+                print_usage();
+                std::process::exit(2);
+            }
+            None => {
+                eprintln!("missing head subcommand");
+                eprintln!();
+                print_usage();
+                std::process::exit(2);
+            }
+        },
         Some("info") => print_info(),
         Some("object") => match args.next().as_deref() {
             Some("verify") => {
