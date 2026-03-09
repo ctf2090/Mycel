@@ -55,14 +55,12 @@ struct HeadInspectInput {
 struct HeadInspectProfile {
     policy_hash: String,
     effective_selection_time: u64,
-    #[serde(default = "default_epoch_seconds")]
     epoch_seconds: u64,
-    #[serde(default)]
     epoch_zero_timestamp: i64,
-}
-
-fn default_epoch_seconds() -> u64 {
-    3600
+    admission_window_epochs: u64,
+    min_valid_views_for_admission: u64,
+    min_valid_views_per_epoch: u64,
+    weight_cap_per_key: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +77,12 @@ struct VerifiedView {
     maintainer: String,
     timestamp: u64,
     documents: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone)]
+struct MaintainerSupport {
+    revision_id: String,
+    effective_weight: u64,
 }
 
 impl HeadInspectSummary {
@@ -164,7 +168,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         ),
     );
     summary.notes.push(
-        "minimal selector mode: view-maintainer admission and weighted governance are not implemented yet; each matching maintainer contributes weight 1".to_string(),
+        "minimal selector mode: critical violation accounting and profile-defined penalty rules are not implemented yet; critical_violation_count is assumed to be 0".to_string(),
     );
 
     let verified_revisions = collect_verified_revisions(
@@ -212,6 +216,17 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         return summary;
     }
 
+    let (effective_weights, weight_trace) = compute_effective_weights(
+        &verified_views,
+        summary
+            .selector_epoch
+            .expect("selector epoch should be set"),
+        &input.profile,
+    );
+    for entry in weight_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
+
     let (support_map, support_trace) = latest_support_by_maintainer(
         &verified_views,
         doc_id,
@@ -220,6 +235,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
             .selector_epoch
             .expect("selector epoch should be set"),
         &input.profile,
+        &effective_weights,
     );
     for entry in support_trace {
         summary.push_trace(entry.step, entry.detail);
@@ -228,17 +244,25 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     let mut eligible_summaries = eligible_heads
         .iter()
         .map(|revision| {
-            let supporter_count = support_map
+            let supporting_entries = support_map
                 .values()
-                .filter(|candidate| candidate.as_str() == revision.revision_id.as_str())
+                .filter(|candidate| candidate.revision_id.as_str() == revision.revision_id.as_str())
+                .collect::<Vec<_>>();
+            let supporter_count = supporting_entries
+                .iter()
+                .filter(|candidate| candidate.effective_weight > 0)
                 .count() as u64;
+            let weighted_support = supporting_entries
+                .iter()
+                .map(|candidate| candidate.effective_weight)
+                .sum::<u64>();
 
             EligibleHeadSummary {
                 revision_id: revision.revision_id.clone(),
                 revision_timestamp: revision.timestamp,
-                weighted_support: supporter_count,
+                weighted_support,
                 supporter_count,
-                selector_score: supporter_count,
+                selector_score: weighted_support,
             }
         })
         .collect::<Vec<_>>();
@@ -597,7 +621,8 @@ fn latest_support_by_maintainer(
     eligible_heads: &[VerifiedRevision],
     selector_epoch: i64,
     profile: &HeadInspectProfile,
-) -> (HashMap<String, String>, Vec<DecisionTraceEntry>) {
+    effective_weights: &HashMap<String, u64>,
+) -> (HashMap<String, MaintainerSupport>, Vec<DecisionTraceEntry>) {
     let eligible_ids = eligible_heads
         .iter()
         .map(|revision| revision.revision_id.clone())
@@ -627,10 +652,19 @@ fn latest_support_by_maintainer(
     let support_map = latest_by_maintainer
         .into_iter()
         .filter_map(|(maintainer, view)| {
+            let effective_weight = effective_weights.get(&maintainer).copied().unwrap_or(0);
             view.documents
                 .get(doc_id)
                 .filter(|revision_id| eligible_ids.contains(*revision_id))
-                .map(|revision_id| (maintainer, revision_id.clone()))
+                .map(|revision_id| {
+                    (
+                        maintainer,
+                        MaintainerSupport {
+                            revision_id: revision_id.clone(),
+                            effective_weight,
+                        },
+                    )
+                })
         })
         .collect::<HashMap<_, _>>();
 
@@ -643,13 +677,127 @@ fn latest_support_by_maintainer(
         } else {
             sorted_support
                 .into_iter()
-                .map(|(maintainer, revision_id)| format!("{maintainer}->{revision_id}"))
+                .map(|(maintainer, support)| {
+                    format!(
+                        "{maintainer}->{revision_id} weight={weight}",
+                        revision_id = support.revision_id,
+                        weight = support.effective_weight
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join(", ")
         },
     }];
 
     (support_map, trace)
+}
+
+fn compute_effective_weights(
+    views: &[VerifiedView],
+    selector_epoch: i64,
+    profile: &HeadInspectProfile,
+) -> (HashMap<String, u64>, Vec<DecisionTraceEntry>) {
+    let mut per_epoch_counts: HashMap<String, BTreeMap<i64, u64>> = HashMap::new();
+
+    for view in views {
+        let epoch = selector_epoch_for_view(
+            view.timestamp,
+            profile.epoch_seconds,
+            profile.epoch_zero_timestamp,
+        );
+        per_epoch_counts
+            .entry(view.maintainer.clone())
+            .or_default()
+            .entry(epoch)
+            .and_modify(|count| *count += 1)
+            .or_insert(1);
+    }
+
+    let mut maintainers = per_epoch_counts.keys().cloned().collect::<Vec<_>>();
+    maintainers.sort();
+
+    let mut weights = HashMap::new();
+    let mut trace = Vec::new();
+
+    for maintainer in maintainers {
+        let counts = per_epoch_counts
+            .get(&maintainer)
+            .expect("maintainer counts should exist");
+        let effective_weight = effective_weight_for_epoch(counts, selector_epoch, profile);
+        weights.insert(maintainer.clone(), effective_weight);
+
+        let mut count_parts = counts
+            .iter()
+            .map(|(epoch, count)| format!("epoch{epoch}={count}"))
+            .collect::<Vec<_>>();
+        if count_parts.is_empty() {
+            count_parts.push("no_views".to_string());
+        }
+
+        trace.push(DecisionTraceEntry {
+            step: "effective_weight".to_string(),
+            detail: format!(
+                "{maintainer} admitted={admitted} weight={weight} counts=[{counts}]",
+                admitted = is_admitted_in_epoch(counts, selector_epoch, profile),
+                weight = effective_weight,
+                counts = count_parts.join(", ")
+            ),
+        });
+    }
+
+    (weights, trace)
+}
+
+fn effective_weight_for_epoch(
+    counts: &BTreeMap<i64, u64>,
+    epoch: i64,
+    profile: &HeadInspectProfile,
+) -> u64 {
+    if !is_admitted_in_epoch(counts, epoch, profile) {
+        return 0;
+    }
+
+    if epoch <= 0 || !is_admitted_in_epoch(counts, epoch - 1, profile) {
+        return 1;
+    }
+
+    let previous_weight = effective_weight_for_epoch(counts, epoch - 1, profile);
+    let previous_valid_views = counts.get(&(epoch - 1)).copied().unwrap_or(0);
+    let delta = if previous_valid_views >= profile.min_valid_views_per_epoch {
+        1_i64
+    } else {
+        0_i64
+    };
+
+    clamp_weight(
+        previous_weight as i64 + delta,
+        0,
+        profile.weight_cap_per_key as i64,
+    )
+}
+
+fn is_admitted_in_epoch(
+    counts: &BTreeMap<i64, u64>,
+    epoch: i64,
+    profile: &HeadInspectProfile,
+) -> bool {
+    if profile.admission_window_epochs == 0 {
+        return profile.min_valid_views_for_admission == 0;
+    }
+
+    let window = profile.admission_window_epochs as i64;
+    let start_epoch = epoch - window;
+    let end_epoch = epoch - 1;
+
+    let valid_view_sum = (start_epoch..=end_epoch)
+        .map(|candidate_epoch| counts.get(&candidate_epoch).copied().unwrap_or(0))
+        .sum::<u64>();
+
+    valid_view_sum >= profile.min_valid_views_for_admission
+}
+
+fn clamp_weight(value: i64, lo: i64, hi: i64) -> u64 {
+    value.clamp(lo, hi) as u64
 }
 
 fn selector_epoch(

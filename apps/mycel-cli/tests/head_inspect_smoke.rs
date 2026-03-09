@@ -130,6 +130,45 @@ fn hash_json(value: &Value) -> String {
     format!("hash:{:x}", hasher.finalize())
 }
 
+fn head_profile(policy_hash: String, effective_selection_time: u64) -> Value {
+    json!({
+        "policy_hash": policy_hash,
+        "effective_selection_time": effective_selection_time,
+        "epoch_seconds": 3600,
+        "epoch_zero_timestamp": 0,
+        "admission_window_epochs": 0,
+        "min_valid_views_for_admission": 0,
+        "min_valid_views_per_epoch": 1,
+        "weight_cap_per_key": 3
+    })
+}
+
+fn signed_view(
+    signing_key: &SigningKey,
+    policy: &Value,
+    documents: Value,
+    timestamp: u64,
+) -> Value {
+    let mut value = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": signer_id(signing_key),
+        "policy": policy,
+        "documents": documents,
+        "timestamp": timestamp
+    });
+    let id = recompute_id(&value, "view_id", "view");
+    value["view_id"] = Value::String(id);
+    value["signature"] = Value::String(sign_value(signing_key, &value));
+    value
+}
+
+fn documents_value(doc_id: &str, revision_id: &Value) -> Value {
+    let mut documents = serde_json::Map::new();
+    documents.insert(doc_id.to_string(), revision_id.clone());
+    Value::Object(documents)
+}
+
 #[test]
 fn head_inspect_json_selects_highest_supported_head() {
     let doc_id = "doc:sample";
@@ -230,10 +269,7 @@ fn head_inspect_text_fails_when_no_eligible_head_exists() {
         "preferred_branches": ["main"]
     });
     let bundle = json!({
-        "profile": {
-            "policy_hash": hash_json(&policy),
-            "effective_selection_time": 1200
-        },
+        "profile": head_profile(hash_json(&policy), 1200),
         "revisions": [revision],
         "views": []
     });
@@ -256,10 +292,7 @@ fn head_inspect_directory_resolves_input_json() {
         "preferred_branches": ["main"]
     });
     let bundle = json!({
-        "profile": {
-            "policy_hash": hash_json(&policy),
-            "effective_selection_time": 1200
-        },
+        "profile": head_profile(hash_json(&policy), 1200),
         "revisions": [revision],
         "views": []
     });
@@ -298,6 +331,122 @@ fn head_inspect_text_reports_decision_trace() {
     assert_stdout_contains(&output, "trace: selector_epoch:");
     assert_stdout_contains(&output, "trace: maintainer_support:");
     assert_stdout_contains(&output, "trace: selected_head:");
+}
+
+#[test]
+fn head_inspect_uses_effective_weight_in_selector_score() {
+    let doc_id = "doc:weighted";
+    let revision_author = signing_key(21);
+    let maintainer_a = signing_key(31);
+    let maintainer_b = signing_key(32);
+    let maintainer_c = signing_key(33);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b),
+            signer_id(&maintainer_c)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 10, "hash:weighted-a");
+    let revision_b = signed_revision(&revision_author, doc_id, vec![], 20, "hash:weighted-b");
+    let bundle = json!({
+        "profile": {
+            "policy_hash": hash_json(&policy),
+            "effective_selection_time": 250,
+            "epoch_seconds": 100,
+            "epoch_zero_timestamp": 0,
+            "admission_window_epochs": 2,
+            "min_valid_views_for_admission": 1,
+            "min_valid_views_per_epoch": 2,
+            "weight_cap_per_key": 3
+        },
+        "revisions": [revision_a.clone(), revision_b.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                10
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                12
+            ),
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                110
+            ),
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                120
+            ),
+            signed_view(
+                &maintainer_c,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                220
+            ),
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                230
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                240
+            )
+        ]
+    });
+    let input = write_input_file("head-inspect-weighted", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], revision_a["revision_id"]);
+    let eligible_heads = json["eligible_heads"]
+        .as_array()
+        .expect("eligible_heads should be array");
+    let selected = eligible_heads
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_a["revision_id"])
+        .expect("selected head summary should exist");
+    let alternative = eligible_heads
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_b["revision_id"])
+        .expect("alternative head summary should exist");
+    assert_eq!(selected["weighted_support"], 2);
+    assert_eq!(selected["supporter_count"], 1);
+    assert_eq!(alternative["weighted_support"], 1);
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("effective_weight")
+                    && entry["detail"]
+                        .as_str()
+                        .is_some_and(|detail| detail.contains("weight=2"))
+            })),
+        "expected effective_weight trace entry, stdout: {}",
+        stdout_text(&output)
+    );
 }
 
 #[test]

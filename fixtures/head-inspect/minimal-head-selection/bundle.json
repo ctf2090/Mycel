@@ -13,7 +13,11 @@
     "effective_selection_time": 1200,
     "epoch_seconds": 3600,
     "epoch_zero_timestamp": 0,
-    "policy_hash": "hash:06e66caf7a308877829de59d1848af2bd7f9c96ae9eae61031f91f27b4719f82"
+    "admission_window_epochs": 0,
+    "min_valid_views_for_admission": 0,
+    "min_valid_views_per_epoch": 1,
+    "policy_hash": "hash:06e66caf7a308877829de59d1848af2bd7f9c96ae9eae61031f91f27b4719f82",
+    "weight_cap_per_key": 3
   },
   "revisions": [
     {

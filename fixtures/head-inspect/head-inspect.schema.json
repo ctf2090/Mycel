@@ -49,7 +49,13 @@
       "additionalProperties": false,
       "required": [
         "policy_hash",
-        "effective_selection_time"
+        "effective_selection_time",
+        "epoch_seconds",
+        "epoch_zero_timestamp",
+        "admission_window_epochs",
+        "min_valid_views_for_admission",
+        "min_valid_views_per_epoch",
+        "weight_cap_per_key"
       ],
       "properties": {
         "policy_hash": {
@@ -66,6 +72,22 @@
         },
         "epoch_zero_timestamp": {
           "type": "integer"
+        },
+        "admission_window_epochs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_valid_views_for_admission": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_valid_views_per_epoch": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "weight_cap_per_key": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
