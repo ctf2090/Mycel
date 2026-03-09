@@ -69,8 +69,12 @@ The CI job currently runs:
 
 - `cargo fmt --all --check`
 - `cargo check`
-- `cargo test -p mycel-sim`
+- `cargo test --workspace`
 - `./sim/negative-validation/smoke.sh --summary-only`
+
+Some of the smoke coverage now also exists as Rust integration tests under:
+
+- `apps/mycel-cli/tests/validate_smoke.rs`
 
 Available case names:
 

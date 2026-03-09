@@ -28,8 +28,8 @@ jobs:
       - name: Compile workspace
         run: cargo check
 
-      - name: Run simulator tests
-        run: cargo test -p mycel-sim
+      - name: Run workspace tests
+        run: cargo test --workspace
 
       - name: Run negative validation smoke
         run: ./sim/negative-validation/smoke.sh --summary-only
