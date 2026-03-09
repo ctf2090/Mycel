@@ -4,12 +4,39 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 summary_lines=()
+summary_only=false
+
+if [[ $# -gt 1 ]]; then
+  echo "usage: $0 [--summary-only]" >&2
+  exit 2
+fi
+
+if [[ $# -eq 1 ]]; then
+  case "$1" in
+    --summary-only)
+      summary_only=true
+      ;;
+    *)
+      echo "usage: $0 [--summary-only]" >&2
+      exit 2
+      ;;
+  esac
+fi
 
 cd "$repo_root"
 
-echo "[smoke] validating repo root should pass"
-repo_output="$(cargo run -p mycel-cli -- validate --json)"
-echo "$repo_output"
+print_block() {
+  local output="$1"
+  if [[ "$summary_only" == false ]]; then
+    echo "$output"
+  fi
+}
+
+if [[ "$summary_only" == false ]]; then
+  echo "[smoke] validating repo root should pass"
+fi
+repo_output="$(cargo run -p mycel-cli -- validate --json 2>&1)"
+print_block "$repo_output"
 
 if [[ "$repo_output" != *'"status": "ok"'* ]]; then
   echo "[smoke] expected repo validation status ok" >&2
@@ -17,13 +44,17 @@ if [[ "$repo_output" != *'"status": "ok"'* ]]; then
 fi
 summary_lines+=("PASS  repo-validate-ok")
 
-echo
+if [[ "$summary_only" == false ]]; then
+  echo
+fi
 validate_expected_failure() {
   local artifact_path="$1"
   local expected_source="$2"
   local case_name="$3"
 
-  echo "[smoke] validating intentional invalid report should fail: $artifact_path"
+  if [[ "$summary_only" == false ]]; then
+    echo "[smoke] validating intentional invalid report should fail: $artifact_path"
+  fi
 
   set +e
   local invalid_output
@@ -31,7 +62,7 @@ validate_expected_failure() {
   local invalid_exit=$?
   set -e
 
-  echo "$invalid_output"
+  print_block "$invalid_output"
 
   if [[ $invalid_exit -eq 0 ]]; then
     echo "[smoke] expected invalid report validation to fail" >&2
@@ -50,7 +81,9 @@ validate_expected_failure() {
 
   summary_lines+=("PASS  ${case_name} -> failed as expected")
 
-  echo
+  if [[ "$summary_only" == false ]]; then
+    echo
+  fi
 }
 
 validate_expected_error_text() {
@@ -58,7 +91,9 @@ validate_expected_error_text() {
   local expected_text="$2"
   local case_name="$3"
 
-  echo "[smoke] validating intentional invalid report should fail: $artifact_path"
+  if [[ "$summary_only" == false ]]; then
+    echo "[smoke] validating intentional invalid report should fail: $artifact_path"
+  fi
 
   set +e
   local invalid_output
@@ -66,7 +101,7 @@ validate_expected_error_text() {
   local invalid_exit=$?
   set -e
 
-  echo "$invalid_output"
+  print_block "$invalid_output"
 
   if [[ $invalid_exit -eq 0 ]]; then
     echo "[smoke] expected invalid report validation to fail" >&2
@@ -85,7 +120,9 @@ validate_expected_error_text() {
 
   summary_lines+=("PASS  ${case_name} -> failed as expected")
 
-  echo
+  if [[ "$summary_only" == false ]]; then
+    echo
+  fi
 }
 
 validate_expected_failure \
@@ -105,9 +142,11 @@ validate_expected_error_text \
   "does not match any loaded fixture" \
   "unknown-fixture-reference"
 
-echo "[smoke] validating intentional warning report should warn by default"
-warning_output="$(cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json)"
-echo "$warning_output"
+if [[ "$summary_only" == false ]]; then
+  echo "[smoke] validating intentional warning report should warn by default"
+fi
+warning_output="$(cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json 2>&1)"
+print_block "$warning_output"
 
 if [[ "$warning_output" != *'"status": "warning"'* ]]; then
   echo "[smoke] expected missing-seed-source validation status warning" >&2
@@ -120,15 +159,17 @@ if [[ "$warning_output" != *"does not include seed_source"* ]]; then
 fi
 summary_lines+=("PASS  missing-seed-source -> warning in normal mode")
 
-echo
-echo "[smoke] validating intentional warning report should fail under --strict"
+if [[ "$summary_only" == false ]]; then
+  echo
+  echo "[smoke] validating intentional warning report should fail under --strict"
+fi
 
 set +e
 strict_warning_output="$(cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json --strict 2>&1)"
 strict_warning_exit=$?
 set -e
 
-echo "$strict_warning_output"
+print_block "$strict_warning_output"
 
 if [[ $strict_warning_exit -eq 0 ]]; then
   echo "[smoke] expected missing-seed-source strict validation to fail" >&2
