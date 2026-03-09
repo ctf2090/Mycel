@@ -20,12 +20,18 @@ This directory is the index and matrix for those cases.
 - `auto-seed-prefix-mismatch`
   Artifact: `sim/reports/invalid/auto-seed-prefix-mismatch.example.json`
   Expected result: `mycel validate` fails with a `seed_source` / `deterministic_seed` prefix error
+- `missing-seed-source`
+  Artifact: `sim/reports/invalid/missing-seed-source.example.json`
+  Expected result: `mycel validate` returns `status: "warning"` because metadata omits `seed_source`
+  Strict mode: `mycel validate --strict` returns a non-zero exit code for the same file
 
 ## Command
 
 ```bash
 cargo run -p mycel-cli -- validate sim/reports/invalid/random-seed-prefix-mismatch.example.json --json
 cargo run -p mycel-cli -- validate sim/reports/invalid/auto-seed-prefix-mismatch.example.json --json
+cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json
+cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json --strict
 ```
 
 ## Smoke Script

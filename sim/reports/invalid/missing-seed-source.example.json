@@ -1,0 +1,90 @@
+{
+  "$schema": "../report.schema.json",
+  "run_id": "run:missing-seed-source-001",
+  "topology_id": "three-peer-consistency",
+  "fixture_id": "minimal-valid",
+  "test_id": "three-peer-consistency",
+  "execution_mode": "single-process",
+  "started_at": "2026-03-09T16:12:00+08:00",
+  "finished_at": "2026-03-09T16:12:01+08:00",
+  "peers": [
+    {
+      "node_id": "node:peer-reader-a",
+      "status": "ok",
+      "verified_object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ]
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "status": "ok",
+      "verified_object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ]
+    },
+    {
+      "node_id": "node:peer-seed",
+      "status": "ok",
+      "verified_object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ]
+    }
+  ],
+  "result": "pass",
+  "events": [
+    {
+      "step": 1,
+      "phase": "load",
+      "action": "load-fixture",
+      "outcome": "ok",
+      "detail": "Loaded minimal-valid fixture for missing-seed-source warning demonstration."
+    },
+    {
+      "step": 2,
+      "phase": "sync",
+      "action": "seed-advertise",
+      "outcome": "ok",
+      "node_id": "node:peer-seed",
+      "object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ]
+    },
+    {
+      "step": 3,
+      "phase": "replay",
+      "action": "reader-compare",
+      "outcome": "ok",
+      "detail": "Reader peers converged on the same verified object set and replay result."
+    }
+  ],
+  "summary": {
+    "verified_object_count": 1,
+    "rejected_object_count": 0,
+    "matched_expected_outcomes": [
+      "sync-success",
+      "matching-object-sets",
+      "matching-replay-results"
+    ]
+  },
+  "metadata": {
+    "generator": "mycel-cli/sim-run-v0",
+    "deterministic": true,
+    "run_mode": "deterministic-placeholder",
+    "trace_version": "v0",
+    "timezone": "Asia/Taipei (UTC+8)",
+    "validation_status": "ok",
+    "run_duration_ms": 1000,
+    "deterministic_seed": "three-peer-consistency|three-peer-consistency|minimal-valid|single-process",
+    "events_per_second": 3.0,
+    "ms_per_event": 333.333,
+    "scheduled_peer_order": [
+      "node:peer-reader-a",
+      "node:peer-reader-b",
+      "node:peer-seed"
+    ],
+    "fault_plan": [],
+    "source_test_case": "sim/tests/three-peer-consistency.example.json",
+    "source_topology": "sim/topologies/three-peer-consistency.example.json",
+    "source_fixture": "fixtures/object-sets/minimal-valid/fixture.json"
+  }
+}

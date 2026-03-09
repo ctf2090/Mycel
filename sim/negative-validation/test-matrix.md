@@ -14,12 +14,14 @@
   Expected status: `failed`
   Expected failure: `seed_source = auto` with a non-`auto:` deterministic seed
 
-## Planned Cases
-
 - `missing-seed-source`
+  Artifact: `sim/reports/invalid/missing-seed-source.example.json`
   Target type: report
-  Expected status: `warning` or `failed` depending on validator strictness
-  Planned failure: metadata omits `seed_source`
+  Expected status: `warning`
+  Strict mode exit code: non-zero with `--strict`
+  Expected failure: metadata omits `seed_source`
+
+## Planned Cases
 
 - `unknown-topology-reference`
   Target type: test-case or report
@@ -33,6 +35,8 @@ Run one case directly:
 ```bash
 cargo run -p mycel-cli -- validate sim/reports/invalid/random-seed-prefix-mismatch.example.json --json
 cargo run -p mycel-cli -- validate sim/reports/invalid/auto-seed-prefix-mismatch.example.json --json
+cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json
+cargo run -p mycel-cli -- validate sim/reports/invalid/missing-seed-source.example.json --json --strict
 ```
 
 Run the whole repo and confirm the invalid artifacts are not part of normal validation:
