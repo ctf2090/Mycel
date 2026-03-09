@@ -1447,6 +1447,17 @@ fn validate_quality_hints(
                 );
             }
 
+            if !metadata.contains_key("seed_source") {
+                push_warning(
+                    summary,
+                    &report.path,
+                    format!(
+                        "report '{}' metadata does not include seed_source",
+                        report.value.run_id
+                    ),
+                );
+            }
+
             if !metadata.contains_key("events_per_second") {
                 push_warning(
                     summary,

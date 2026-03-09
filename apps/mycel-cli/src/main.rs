@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use mycel_core::workspace_banner;
 use mycel_sim::manifest::SimulatorPaths;
-use mycel_sim::run::run_test_case;
+use mycel_sim::run::{run_test_case_with_options, RunOptions};
 use mycel_sim::simulator_banner;
 use mycel_sim::validate::validate_path;
 
@@ -19,6 +19,7 @@ fn print_usage() {
     println!("Sim options:");
     println!("  run <path> Run one test-case and write a report to sim/reports/out/");
     println!("  --json     Emit machine-readable run output");
+    println!("  --seed     Override the derived deterministic seed for sim run");
     println!();
     println!("Validate options:");
     println!("  --json     Emit machine-readable validation output");
@@ -119,6 +120,7 @@ fn print_run_text(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     println!("finished at: {}", summary.finished_at);
     println!("run duration ms: {}", summary.run_duration_ms);
     println!("deterministic seed: {}", summary.deterministic_seed);
+    println!("seed source: {}", summary.seed_source);
     println!("events per second: {:.3}", summary.events_per_second);
     println!("ms per event: {:.3}", summary.ms_per_event);
     println!(
@@ -182,8 +184,9 @@ fn print_run_json(summary: &mycel_sim::run::SimulationRunSummary) -> i32 {
     }
 }
 
-fn sim_run(target: PathBuf, json: bool) -> i32 {
-    match run_test_case(&target) {
+fn sim_run(target: PathBuf, json: bool, seed_override: Option<String>) -> i32 {
+    let options = RunOptions { seed_override };
+    match run_test_case_with_options(&target, &options) {
         Ok(summary) => {
             if json {
                 print_run_json(&summary)
@@ -229,10 +232,17 @@ fn main() {
             Some("run") => {
                 let mut target = None;
                 let mut json = false;
+                let mut seed_override = None;
+                let mut expect_seed_value = false;
 
                 for arg in args {
-                    if arg == "--json" {
+                    if expect_seed_value {
+                        seed_override = Some(arg);
+                        expect_seed_value = false;
+                    } else if arg == "--json" {
                         json = true;
+                    } else if arg == "--seed" {
+                        expect_seed_value = true;
                     } else if target.is_none() {
                         target = Some(PathBuf::from(arg));
                     } else {
@@ -243,6 +253,13 @@ fn main() {
                     }
                 }
 
+                if expect_seed_value {
+                    eprintln!("missing value for --seed");
+                    eprintln!();
+                    print_usage();
+                    std::process::exit(2);
+                }
+
                 let Some(target) = target else {
                     eprintln!("missing sim run target");
                     eprintln!();
@@ -250,7 +267,7 @@ fn main() {
                     std::process::exit(2);
                 };
 
-                std::process::exit(sim_run(target, json));
+                std::process::exit(sim_run(target, json, seed_override));
             }
             Some(other) => {
                 eprintln!("unknown sim subcommand: {other}");

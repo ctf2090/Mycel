@@ -64,6 +64,7 @@ Current `sim run` behavior:
 - stamps generated reports with `started_at` / `finished_at` in `Asia/Taipei (UTC+8)`
 - records deterministic run metadata, including source paths and validation status
 - records `run_duration_ms` and a derived `deterministic_seed` for reproducible scheduling
+- allows `sim run --seed <value>` to override the derived seed and records `seed_source`
 - records `events_per_second` and `ms_per_event` as runtime observation metrics
 - derives `scheduled_peer_order` from the deterministic seed and uses it for peer/event processing
 - derives `fault_plan` from the deterministic seed for negative fixture ordering

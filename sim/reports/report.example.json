@@ -64,6 +64,7 @@
     "validation_status": "ok",
     "run_duration_ms": 1000,
     "deterministic_seed": "three-peer-consistency|three-peer-consistency|minimal-valid|single-process",
+    "seed_source": "derived",
     "events_per_second": 3.0,
     "ms_per_event": 333.333,
     "scheduled_peer_order": [

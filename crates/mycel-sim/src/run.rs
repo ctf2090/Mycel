@@ -12,6 +12,11 @@ use serde_json::json;
 use crate::model::{Fixture, Report, ReportEvent, ReportPeer, ReportSummary, TestCase, Topology};
 use crate::validate::{validate_path, ValidationStatus};
 
+#[derive(Debug, Clone, Default)]
+pub struct RunOptions {
+    pub seed_override: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct SimulationRunSummary {
     pub root: PathBuf,
@@ -21,6 +26,7 @@ pub struct SimulationRunSummary {
     pub finished_at: String,
     pub run_duration_ms: u128,
     pub deterministic_seed: String,
+    pub seed_source: String,
     pub events_per_second: f64,
     pub ms_per_event: f64,
     pub scheduled_peer_order: Vec<String>,
@@ -45,6 +51,13 @@ pub struct FaultPlanEntry {
 }
 
 pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String> {
+    run_test_case_with_options(target_path, &RunOptions::default())
+}
+
+pub fn run_test_case_with_options(
+    target_path: &Path,
+    options: &RunOptions,
+) -> Result<SimulationRunSummary, String> {
     let validation = validate_path(target_path);
     if !validation.errors.is_empty() {
         let first_error = validation
@@ -103,7 +116,12 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
 
     let fixture_path = root.join(&test_case.fixture_set).join("fixture.json");
     let fixture = load_json::<Fixture>(&fixture_path)?;
-    let deterministic_seed = deterministic_seed(&test_case, &topology, &fixture);
+    let (deterministic_seed, seed_source) = resolve_deterministic_seed(
+        &test_case,
+        &topology,
+        &fixture,
+        options.seed_override.as_deref(),
+    );
     let fault_plan = build_fault_plan(&topology, &fixture, &deterministic_seed);
 
     let mut report = simulate_report(
@@ -138,6 +156,7 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         filtered_validation_status,
         run_duration_ms,
         &deterministic_seed,
+        &seed_source,
         events_per_second,
         ms_per_event,
         &scheduled_peer_order,
@@ -165,6 +184,7 @@ pub fn run_test_case(target_path: &Path) -> Result<SimulationRunSummary, String>
         finished_at,
         run_duration_ms,
         deterministic_seed,
+        seed_source,
         events_per_second,
         ms_per_event,
         scheduled_peer_order,
@@ -560,6 +580,7 @@ fn build_run_metadata(
     validation_status: ValidationStatus,
     run_duration_ms: u128,
     deterministic_seed: &str,
+    seed_source: &str,
     events_per_second: f64,
     ms_per_event: f64,
     scheduled_peer_order: &[String],
@@ -574,6 +595,7 @@ fn build_run_metadata(
         "validation_status": validation_status.to_string(),
         "run_duration_ms": run_duration_ms,
         "deterministic_seed": deterministic_seed,
+        "seed_source": seed_source,
         "events_per_second": events_per_second,
         "ms_per_event": ms_per_event,
         "scheduled_peer_order": scheduled_peer_order,
@@ -608,11 +630,30 @@ fn relative_path_string(root: &Path, path: &Path) -> String {
         .unwrap_or_else(|| path.display().to_string())
 }
 
-fn deterministic_seed(test_case: &TestCase, topology: &Topology, fixture: &Fixture) -> String {
+fn derive_deterministic_seed(
+    test_case: &TestCase,
+    topology: &Topology,
+    fixture: &Fixture,
+) -> String {
     format!(
         "{}|{}|{}|{}",
         test_case.test_id, topology.topology_id, fixture.fixture_id, test_case.execution_mode
     )
+}
+
+fn resolve_deterministic_seed(
+    test_case: &TestCase,
+    topology: &Topology,
+    fixture: &Fixture,
+    seed_override: Option<&str>,
+) -> (String, String) {
+    match seed_override {
+        Some(seed) => (seed.to_owned(), "override".to_owned()),
+        None => (
+            derive_deterministic_seed(test_case, topology, fixture),
+            "derived".to_owned(),
+        ),
+    }
 }
 
 fn build_fault_plan(
@@ -767,7 +808,7 @@ fn push_event(
 #[cfg(test)]
 mod tests {
     use super::{build_fault_plan, scheduled_peer_order, scheduler_rank, stable_hash64};
-    use crate::model::{Peer, Topology};
+    use crate::model::{Fixture, Peer, Topology};
 
     fn sample_topology() -> Topology {
         Topology {
@@ -820,6 +861,21 @@ mod tests {
         }
     }
 
+    fn sample_fixture() -> Fixture {
+        Fixture {
+            schema: None,
+            fixture_id: "minimal-valid".to_owned(),
+            description: "sample".to_owned(),
+            seed_peer: "peer-seed".to_owned(),
+            reader_peers: vec!["peer-reader-a".to_owned()],
+            documents: Vec::new(),
+            expected_outcomes: Vec::new(),
+            fault_peer: None,
+            notes: Vec::new(),
+            metadata: None,
+        }
+    }
+
     #[test]
     fn stable_hash_is_deterministic() {
         let first = stable_hash64([
@@ -849,7 +905,7 @@ mod tests {
     #[test]
     fn fault_plan_is_reproducible_for_same_seed() {
         let topology = sample_topology();
-        let fixture = crate::model::Fixture {
+        let fixture = Fixture {
             schema: None,
             fixture_id: "signature-mismatch".to_owned(),
             description: "negative".to_owned(),
@@ -883,5 +939,35 @@ mod tests {
                 .map(|entry| entry.target_node_id.clone())
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn override_seed_wins_over_derived_seed() {
+        let topology = sample_topology();
+        let fixture = sample_fixture();
+        let test_case = crate::model::TestCase {
+            schema: None,
+            test_id: "three-peer-consistency".to_owned(),
+            description: "sample".to_owned(),
+            category: "deterministic-comparison".to_owned(),
+            topology: "sim/topologies/three-peer-consistency.example.json".to_owned(),
+            fixture_set: "fixtures/object-sets/minimal-valid".to_owned(),
+            execution_mode: "single-process".to_owned(),
+            expected_result: "pass".to_owned(),
+            expected_outcomes: Vec::new(),
+            assertions: Vec::new(),
+            notes: Vec::new(),
+            metadata: None,
+        };
+
+        let (derived, derived_source) =
+            super::resolve_deterministic_seed(&test_case, &topology, &fixture, None);
+        let (override_seed, override_source) =
+            super::resolve_deterministic_seed(&test_case, &topology, &fixture, Some("custom-seed"));
+
+        assert_eq!(derived_source, "derived");
+        assert_eq!(override_source, "override");
+        assert_ne!(derived, override_seed);
+        assert_eq!(override_seed, "custom-seed");
     }
 }
