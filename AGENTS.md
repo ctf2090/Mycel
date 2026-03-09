@@ -2,7 +2,7 @@
 
 ## Git workflow
 - Commit after every code change.
-- Push to `origin main` after every 20 local commits, or when explicitly asked.
+- Push to `origin main` after every code change.
 
 ## Git identity (User vs Agent)
 - User commits (VS Code): `ctf2090 <ctf2090@gmail.com>`
