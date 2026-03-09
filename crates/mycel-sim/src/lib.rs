@@ -4,6 +4,8 @@
 //! scaffold under `fixtures/` and `sim/`.
 
 pub mod manifest;
+pub mod model;
+pub mod validate;
 
 use mycel_core::protocol::ProtocolVersion;
 

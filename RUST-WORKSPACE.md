@@ -16,23 +16,29 @@ This note describes the first Rust workspace cut for Mycel.
 
 ## Current Scope
 
-The current Rust workspace is only a scaffold.
+The current Rust workspace now includes:
+
+- a protocol-facing core crate
+- a simulator-facing crate with scaffold data models
+- a CLI crate with `info` and `validate`
+- repository validation for fixture, peer, topology, test-case, and report inputs
 
 It does not yet implement:
 
-- schema loading
-- schema validation
-- fixture/topology/test/report cross-check execution
 - wire sync
 - object parsing or replay
+- simulator execution
+- report generation from a real run
 
 ## Recommended Next Step
 
-Implement one narrow CLI command first:
+Implemented now:
 
-- `mycel info`: verify the workspace boots and can read scaffold defaults
-
-Then move to:
-
+- `mycel info`
 - `mycel validate`
+
+Recommended next:
+
 - `mycel sim run`
+- richer schema-level validation
+- fixture/topology/test/report loading into executable simulator state

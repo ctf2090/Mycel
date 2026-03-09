@@ -24,3 +24,10 @@ Recommended sequence:
 4. later reuse the same peer logic in a localhost multi-process harness
 
 This scaffold does not commit us to a language yet.
+
+## Current Rust CLI
+
+The Rust workspace currently exposes:
+
+- `cargo run -p mycel-cli -- info`
+- `cargo run -p mycel-cli -- validate`
