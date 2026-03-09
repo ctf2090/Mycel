@@ -4,14 +4,14 @@ use std::path::PathBuf;
 use mycel_core::workspace_banner;
 use mycel_sim::manifest::SimulatorPaths;
 use mycel_sim::simulator_banner;
-use mycel_sim::validate::validate_repo;
+use mycel_sim::validate::validate_path;
 
 fn print_usage() {
-    println!("mycel <command>");
+    println!("mycel <command> [path]");
     println!();
     println!("Commands:");
     println!("  info       Show workspace and simulator scaffold information");
-    println!("  validate   Validate simulator inputs and cross-check references");
+    println!("  validate   Validate the repo root, one file, or one supported directory");
     println!("  help       Show this message");
     println!();
     println!("Planned next commands:");
@@ -30,10 +30,15 @@ fn print_info() {
     println!("reports: {}", paths.reports_root);
 }
 
-fn validate(root: PathBuf) -> i32 {
-    let summary = validate_repo(&root);
+fn validate(target: PathBuf) -> i32 {
+    let summary = validate_path(&target);
 
-    println!("validated root: {}", root.display());
+    if let Some(root) = &summary.root {
+        println!("repo root: {}", root.display());
+    }
+    if let Some(target) = &summary.target {
+        println!("validated target: {}", target.display());
+    }
     println!("fixtures: {}", summary.fixture_count);
     println!("peers: {}", summary.peer_count);
     println!("topologies: {}", summary.topology_count);
@@ -58,11 +63,11 @@ fn main() {
     match args.next().as_deref() {
         Some("info") => print_info(),
         Some("validate") => {
-            let root = args
+            let target = args
                 .next()
                 .map(PathBuf::from)
                 .unwrap_or_else(|| PathBuf::from("."));
-            std::process::exit(validate(root));
+            std::process::exit(validate(target));
         }
         Some("help") | None => print_usage(),
         Some(other) => {

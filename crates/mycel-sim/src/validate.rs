@@ -14,6 +14,8 @@ pub struct ValidationError {
 
 #[derive(Debug, Clone, Default)]
 pub struct ValidationSummary {
+    pub root: Option<PathBuf>,
+    pub target: Option<PathBuf>,
     pub fixture_count: usize,
     pub peer_count: usize,
     pub topology_count: usize,
@@ -58,27 +60,743 @@ struct NamedReport {
     value: Report,
 }
 
+#[derive(Debug, Clone)]
+enum ValidationTarget {
+    Repo,
+    Fixture(PathBuf),
+    Peer(PathBuf),
+    Topology(PathBuf),
+    TestCase(PathBuf),
+    Report(PathBuf),
+    FixturesDir(PathBuf),
+    PeersDir(PathBuf),
+    TopologiesDir(PathBuf),
+    TestsDir(PathBuf),
+    ReportsDir(PathBuf),
+}
+
+#[derive(Debug, Clone)]
+struct ValidationInput {
+    fixtures: Vec<NamedFixture>,
+    peers: Vec<NamedPeer>,
+    topologies: Vec<NamedTopology>,
+    test_cases: Vec<NamedTestCase>,
+    reports: Vec<NamedReport>,
+}
+
 pub fn validate_repo(root: &Path) -> ValidationSummary {
+    let normalized_root = normalize_input_path(root);
+    let target = ValidationTarget::Repo;
+    validate_from_target(&normalized_root, &normalized_root, &target)
+}
+
+pub fn validate_path(target_path: &Path) -> ValidationSummary {
+    let normalized_target = normalize_input_path(target_path);
     let mut summary = ValidationSummary::default();
+    let Some(root) = find_repo_root(&normalized_target) else {
+        push_error(
+            &mut summary,
+            &normalized_target,
+            "could not find repository root containing Cargo.toml, fixtures/, and sim/".to_owned(),
+        );
+        summary.target = Some(normalized_target);
+        return summary;
+    };
 
-    let fixtures = load_fixtures(root, &mut summary);
-    let peers = load_peers(root, &mut summary);
-    let topologies = load_topologies(root, &mut summary);
-    let test_cases = load_test_cases(root, &mut summary);
-    let reports = load_reports(root, &mut summary);
+    let target = match detect_target(&root, &normalized_target) {
+        Ok(target) => target,
+        Err(message) => {
+            push_error(&mut summary, &normalized_target, message);
+            summary.root = Some(root);
+            summary.target = Some(normalized_target);
+            return summary;
+        }
+    };
 
-    summary.fixture_count = fixtures.len();
-    summary.peer_count = peers.len();
-    summary.topology_count = topologies.len();
-    summary.test_case_count = test_cases.len();
-    summary.report_count = reports.len();
+    validate_from_target(&root, &normalized_target, &target)
+}
 
-    validate_peers(&peers, &mut summary);
-    validate_topologies(&topologies, &mut summary);
-    validate_test_cases(root, &fixtures, &topologies, &test_cases, &mut summary);
-    validate_reports(&fixtures, &topologies, &test_cases, &reports, &mut summary);
+fn validate_from_target(
+    root: &Path,
+    target_path: &Path,
+    target: &ValidationTarget,
+) -> ValidationSummary {
+    let mut summary = ValidationSummary {
+        root: Some(root.to_path_buf()),
+        target: Some(target_path.to_path_buf()),
+        ..ValidationSummary::default()
+    };
+
+    let input = load_all(root, &mut summary);
+    let scoped = scope_input(root, &input, target);
+
+    summary.fixture_count = scoped.fixtures.len();
+    summary.peer_count = scoped.peers.len();
+    summary.topology_count = scoped.topologies.len();
+    summary.test_case_count = scoped.test_cases.len();
+    summary.report_count = scoped.reports.len();
+
+    validate_peers(&scoped.peers, &mut summary);
+    validate_topologies(&scoped.topologies, &mut summary);
+    validate_test_cases(
+        root,
+        &scoped.fixtures,
+        &scoped.topologies,
+        &scoped.test_cases,
+        &mut summary,
+    );
+    validate_reports(
+        &scoped.fixtures,
+        &scoped.topologies,
+        &scoped.test_cases,
+        &scoped.reports,
+        &mut summary,
+    );
 
     summary
+}
+
+fn load_all(root: &Path, summary: &mut ValidationSummary) -> ValidationInput {
+    ValidationInput {
+        fixtures: load_fixtures(root, summary),
+        peers: load_peers(root, summary),
+        topologies: load_topologies(root, summary),
+        test_cases: load_test_cases(root, summary),
+        reports: load_reports(root, summary),
+    }
+}
+
+fn scope_input(root: &Path, input: &ValidationInput, target: &ValidationTarget) -> ValidationInput {
+    match target {
+        ValidationTarget::Repo => input.clone(),
+        ValidationTarget::Fixture(path) => scope_for_fixture(root, input, path),
+        ValidationTarget::Peer(path) => ValidationInput {
+            fixtures: Vec::new(),
+            peers: filter_by_path(&input.peers, path),
+            topologies: Vec::new(),
+            test_cases: Vec::new(),
+            reports: Vec::new(),
+        },
+        ValidationTarget::Topology(path) => scope_for_topology(root, input, path),
+        ValidationTarget::TestCase(path) => scope_for_test_case(root, input, path),
+        ValidationTarget::Report(path) => scope_for_report(input, path),
+        ValidationTarget::FixturesDir(path) => scope_for_fixtures_dir(root, input, path),
+        ValidationTarget::PeersDir(path) => ValidationInput {
+            fixtures: Vec::new(),
+            peers: filter_by_dir(&input.peers, path),
+            topologies: Vec::new(),
+            test_cases: Vec::new(),
+            reports: Vec::new(),
+        },
+        ValidationTarget::TopologiesDir(path) => scope_for_topologies_dir(root, input, path),
+        ValidationTarget::TestsDir(path) => scope_for_tests_dir(root, input, path),
+        ValidationTarget::ReportsDir(path) => scope_for_reports_dir(input, path),
+    }
+}
+
+fn scope_for_fixture(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    let fixtures = filter_by_path(&input.fixtures, path);
+    let fixture_ids: HashSet<_> = fixtures
+        .iter()
+        .map(|fixture| fixture.value.fixture_id.as_str())
+        .collect();
+
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| {
+            fixture_ids.contains(fixture_dir_name(&topology.value.fixture_set).as_str())
+        })
+        .cloned()
+        .collect();
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let topology_paths: HashSet<_> = topologies
+        .iter()
+        .filter_map(|topology| relative_display(root, &topology.path))
+        .collect();
+
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| {
+            fixture_ids.contains(fixture_dir_name(&test_case.value.fixture_set).as_str())
+                || topology_ids.contains(test_case.value.topology.as_str())
+                || topology_paths.contains(test_case.value.topology.as_str())
+        })
+        .cloned()
+        .collect();
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            fixture_ids.contains(report.value.fixture_id.as_str())
+                || topology_ids.contains(report.value.topology_id.as_str())
+                || report
+                    .value
+                    .test_id
+                    .as_deref()
+                    .is_some_and(|test_id| test_ids.contains(test_id))
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_topology(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    let topologies = filter_by_path(&input.topologies, path);
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let topology_paths: HashSet<_> = topologies
+        .iter()
+        .filter_map(|topology| relative_display(root, &topology.path))
+        .collect();
+    let fixture_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| fixture_dir_name(&topology.value.fixture_set))
+        .collect();
+
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(&fixture.value.fixture_id))
+        .cloned()
+        .collect();
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| {
+            topology_ids.contains(test_case.value.topology.as_str())
+                || topology_paths.contains(test_case.value.topology.as_str())
+        })
+        .cloned()
+        .collect();
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            topology_ids.contains(report.value.topology_id.as_str())
+                || report
+                    .value
+                    .test_id
+                    .as_deref()
+                    .is_some_and(|test_id| test_ids.contains(test_id))
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_test_case(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    let test_cases = filter_by_path(&input.test_cases, path);
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+    let topology_refs: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.topology.as_str())
+        .collect();
+    let fixture_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| fixture_dir_name(&test_case.value.fixture_set))
+        .collect();
+
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| {
+            topology_refs.contains(topology.value.topology_id.as_str())
+                || relative_display(root, &topology.path)
+                    .is_some_and(|path| topology_refs.contains(path.as_str()))
+        })
+        .cloned()
+        .collect();
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(&fixture.value.fixture_id))
+        .cloned()
+        .collect();
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            report
+                .value
+                .test_id
+                .as_deref()
+                .is_some_and(|test_id| test_ids.contains(test_id))
+                || topology_ids.contains(report.value.topology_id.as_str())
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_report(input: &ValidationInput, path: &Path) -> ValidationInput {
+    let reports = filter_by_path(&input.reports, path);
+    let fixture_ids: HashSet<_> = reports
+        .iter()
+        .map(|report| report.value.fixture_id.as_str())
+        .collect();
+    let topology_ids: HashSet<_> = reports
+        .iter()
+        .map(|report| report.value.topology_id.as_str())
+        .collect();
+    let test_ids: HashSet<_> = reports
+        .iter()
+        .filter_map(|report| report.value.test_id.as_deref())
+        .collect();
+
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(fixture.value.fixture_id.as_str()))
+        .cloned()
+        .collect();
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| topology_ids.contains(topology.value.topology_id.as_str()))
+        .cloned()
+        .collect();
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| test_ids.contains(test_case.value.test_id.as_str()))
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_fixtures_dir(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    if is_fixture_scenario_dir(path) {
+        return scope_for_fixture(root, input, &path.join("fixture.json"));
+    }
+
+    let fixtures = filter_by_dir(&input.fixtures, path);
+    if fixtures.is_empty() {
+        return ValidationInput {
+            fixtures,
+            peers: Vec::new(),
+            topologies: Vec::new(),
+            test_cases: Vec::new(),
+            reports: Vec::new(),
+        };
+    }
+
+    let fixture_ids: HashSet<_> = fixtures
+        .iter()
+        .map(|fixture| fixture.value.fixture_id.as_str())
+        .collect();
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| {
+            fixture_ids.contains(fixture_dir_name(&topology.value.fixture_set).as_str())
+        })
+        .cloned()
+        .collect();
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let topology_paths: HashSet<_> = topologies
+        .iter()
+        .filter_map(|topology| relative_display(root, &topology.path))
+        .collect();
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| {
+            fixture_ids.contains(fixture_dir_name(&test_case.value.fixture_set).as_str())
+                || topology_ids.contains(test_case.value.topology.as_str())
+                || topology_paths.contains(test_case.value.topology.as_str())
+        })
+        .cloned()
+        .collect();
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            fixture_ids.contains(report.value.fixture_id.as_str())
+                || topology_ids.contains(report.value.topology_id.as_str())
+                || report
+                    .value
+                    .test_id
+                    .as_deref()
+                    .is_some_and(|test_id| test_ids.contains(test_id))
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_topologies_dir(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    let topologies = filter_by_dir(&input.topologies, path);
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let topology_paths: HashSet<_> = topologies
+        .iter()
+        .filter_map(|topology| relative_display(root, &topology.path))
+        .collect();
+    let fixture_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| fixture_dir_name(&topology.value.fixture_set))
+        .collect();
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(&fixture.value.fixture_id))
+        .cloned()
+        .collect();
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| {
+            topology_ids.contains(test_case.value.topology.as_str())
+                || topology_paths.contains(test_case.value.topology.as_str())
+        })
+        .cloned()
+        .collect();
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            topology_ids.contains(report.value.topology_id.as_str())
+                || report
+                    .value
+                    .test_id
+                    .as_deref()
+                    .is_some_and(|test_id| test_ids.contains(test_id))
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_tests_dir(root: &Path, input: &ValidationInput, path: &Path) -> ValidationInput {
+    let test_cases = filter_by_dir(&input.test_cases, path);
+    let test_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.test_id.as_str())
+        .collect();
+    let topology_refs: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| test_case.value.topology.as_str())
+        .collect();
+    let fixture_ids: HashSet<_> = test_cases
+        .iter()
+        .map(|test_case| fixture_dir_name(&test_case.value.fixture_set))
+        .collect();
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| {
+            topology_refs.contains(topology.value.topology_id.as_str())
+                || relative_display(root, &topology.path)
+                    .is_some_and(|path| topology_refs.contains(path.as_str()))
+        })
+        .cloned()
+        .collect();
+    let topology_ids: HashSet<_> = topologies
+        .iter()
+        .map(|topology| topology.value.topology_id.as_str())
+        .collect();
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(&fixture.value.fixture_id))
+        .cloned()
+        .collect();
+    let reports: Vec<_> = input
+        .reports
+        .iter()
+        .filter(|report| {
+            report
+                .value
+                .test_id
+                .as_deref()
+                .is_some_and(|test_id| test_ids.contains(test_id))
+                || topology_ids.contains(report.value.topology_id.as_str())
+        })
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn scope_for_reports_dir(input: &ValidationInput, path: &Path) -> ValidationInput {
+    let reports = filter_by_dir(&input.reports, path);
+    let fixture_ids: HashSet<_> = reports
+        .iter()
+        .map(|report| report.value.fixture_id.as_str())
+        .collect();
+    let topology_ids: HashSet<_> = reports
+        .iter()
+        .map(|report| report.value.topology_id.as_str())
+        .collect();
+    let test_ids: HashSet<_> = reports
+        .iter()
+        .filter_map(|report| report.value.test_id.as_deref())
+        .collect();
+    let fixtures: Vec<_> = input
+        .fixtures
+        .iter()
+        .filter(|fixture| fixture_ids.contains(fixture.value.fixture_id.as_str()))
+        .cloned()
+        .collect();
+    let topologies: Vec<_> = input
+        .topologies
+        .iter()
+        .filter(|topology| topology_ids.contains(topology.value.topology_id.as_str()))
+        .cloned()
+        .collect();
+    let test_cases: Vec<_> = input
+        .test_cases
+        .iter()
+        .filter(|test_case| test_ids.contains(test_case.value.test_id.as_str()))
+        .cloned()
+        .collect();
+
+    ValidationInput {
+        fixtures,
+        peers: Vec::new(),
+        topologies,
+        test_cases,
+        reports,
+    }
+}
+
+fn filter_by_path<T: Clone + HasPath>(items: &[T], path: &Path) -> Vec<T> {
+    items
+        .iter()
+        .filter(|item| item.path() == path)
+        .cloned()
+        .collect()
+}
+
+fn filter_by_dir<T: Clone + HasPath>(items: &[T], path: &Path) -> Vec<T> {
+    items
+        .iter()
+        .filter(|item| item.path().parent().is_some_and(|parent| parent == path))
+        .cloned()
+        .collect()
+}
+
+trait HasPath {
+    fn path(&self) -> &Path;
+}
+
+impl HasPath for NamedFixture {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl HasPath for NamedPeer {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl HasPath for NamedTopology {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl HasPath for NamedTestCase {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl HasPath for NamedReport {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+fn find_repo_root(start: &Path) -> Option<PathBuf> {
+    let absolute = normalize_input_path(start);
+    let mut current = if absolute.is_file() {
+        absolute.parent()?.to_path_buf()
+    } else {
+        absolute
+    };
+
+    loop {
+        if current.join("Cargo.toml").exists()
+            && current.join("fixtures").is_dir()
+            && current.join("sim").is_dir()
+        {
+            return Some(current);
+        }
+
+        if !current.pop() {
+            return None;
+        }
+    }
+}
+
+fn normalize_input_path(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(path)
+    }
+}
+
+fn detect_target(root: &Path, input: &Path) -> Result<ValidationTarget, String> {
+    let path = if input.is_absolute() {
+        input.to_path_buf()
+    } else {
+        root.join(input)
+    };
+
+    if !path.exists() {
+        return Err(format!("path does not exist: {}", path.display()));
+    }
+
+    let relative = path
+        .strip_prefix(root)
+        .map_err(|_| format!("path is outside repository root: {}", path.display()))?;
+
+    if relative.as_os_str().is_empty() || relative == Path::new(".") {
+        return Ok(ValidationTarget::Repo);
+    }
+
+    if path.is_dir() {
+        if relative.starts_with("fixtures/object-sets") {
+            return Ok(ValidationTarget::FixturesDir(path));
+        }
+        if relative == Path::new("sim/peers") {
+            return Ok(ValidationTarget::PeersDir(path));
+        }
+        if relative == Path::new("sim/topologies") {
+            return Ok(ValidationTarget::TopologiesDir(path));
+        }
+        if relative == Path::new("sim/tests") {
+            return Ok(ValidationTarget::TestsDir(path));
+        }
+        if relative == Path::new("sim/reports") || relative == Path::new("sim/reports/out") {
+            return Ok(ValidationTarget::ReportsDir(path));
+        }
+
+        return Ok(ValidationTarget::Repo);
+    }
+
+    let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+        return Err(format!("unsupported target path: {}", path.display()));
+    };
+
+    if name.ends_with(".schema.json") {
+        return Err(format!(
+            "schema files are not validate targets: {}",
+            path.display()
+        ));
+    }
+
+    if relative.starts_with("fixtures/object-sets") && name == "fixture.json" {
+        return Ok(ValidationTarget::Fixture(path));
+    }
+    if relative.starts_with("sim/peers") && name.ends_with(".json") {
+        return Ok(ValidationTarget::Peer(path));
+    }
+    if relative.starts_with("sim/topologies") && name.ends_with(".json") {
+        return Ok(ValidationTarget::Topology(path));
+    }
+    if relative.starts_with("sim/tests") && name.ends_with(".json") {
+        return Ok(ValidationTarget::TestCase(path));
+    }
+    if relative.starts_with("sim/reports") && name.ends_with(".json") {
+        return Ok(ValidationTarget::Report(path));
+    }
+
+    Err(format!("unsupported validate target: {}", path.display()))
+}
+
+fn is_fixture_scenario_dir(path: &Path) -> bool {
+    path.join("fixture.json").exists()
 }
 
 fn load_json<T: serde::de::DeserializeOwned>(

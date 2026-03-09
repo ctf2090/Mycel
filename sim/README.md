@@ -31,3 +31,4 @@ The Rust workspace currently exposes:
 
 - `cargo run -p mycel-cli -- info`
 - `cargo run -p mycel-cli -- validate`
+- `cargo run -p mycel-cli -- validate <path>`
