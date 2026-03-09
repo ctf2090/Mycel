@@ -301,6 +301,10 @@ pub fn assert_report_list_help(stdout: &str) {
         stdout.contains("--result <RESULT>"),
         "expected result flag in report list help, stdout: {stdout}"
     );
+    assert!(
+        stdout.contains("--path-only"),
+        "expected path-only flag in report list help, stdout: {stdout}"
+    );
 }
 
 pub fn assert_report_latest_help(stdout: &str) {

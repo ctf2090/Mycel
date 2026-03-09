@@ -3,7 +3,8 @@ use std::fs;
 mod common;
 
 use common::{
-    assert_exit_code, assert_success, create_temp_dir, parse_json_stdout, run_report, stdout_text,
+    assert_exit_code, assert_stderr_contains, assert_success, create_temp_dir, parse_json_stdout,
+    run_report, stdout_text,
 };
 use serde_json::json;
 
@@ -223,6 +224,62 @@ fn report_list_text_filters_to_fail_result_and_keeps_invalid_entries() {
 }
 
 #[test]
+fn report_list_path_only_prints_only_valid_report_paths() {
+    let temp_dir = create_temp_dir("report-list-path-only");
+    let pass_report = temp_dir.path().join("pass.report.json");
+    let fail_report = temp_dir.path().join("fail.report.json");
+    let invalid_report = temp_dir.path().join("broken.report.json");
+    write_report_with_result(
+        &pass_report,
+        "run:pass",
+        "2026-03-09T11:00:05+08:00",
+        "pass",
+    );
+    write_report_with_result(
+        &fail_report,
+        "run:fail",
+        "2026-03-09T12:00:05+08:00",
+        "fail",
+    );
+    fs::write(&invalid_report, "{ broken json").expect("invalid report should be written");
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&["report", "list", &target, "--path-only"]);
+
+    assert_success(&output);
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains(&pass_report.display().to_string()));
+    assert!(stdout.contains(&fail_report.display().to_string()));
+    assert!(!stdout.contains(&invalid_report.display().to_string()));
+}
+
+#[test]
+fn report_list_path_only_filters_to_fail_result() {
+    let temp_dir = create_temp_dir("report-list-path-only-filter");
+    let pass_report = temp_dir.path().join("pass.report.json");
+    let fail_report = temp_dir.path().join("fail.report.json");
+    write_report_with_result(
+        &pass_report,
+        "run:pass",
+        "2026-03-09T11:00:05+08:00",
+        "pass",
+    );
+    write_report_with_result(
+        &fail_report,
+        "run:fail",
+        "2026-03-09T12:00:05+08:00",
+        "fail",
+    );
+
+    let target = temp_dir.path().display().to_string();
+    let output = run_report(&["report", "list", &target, "--result", "fail", "--path-only"]);
+
+    assert_success(&output);
+    let stdout = stdout_text(&output);
+    assert_eq!(stdout.trim(), fail_report.display().to_string());
+}
+
+#[test]
 fn report_list_json_returns_empty_valid_results_when_no_report_matches_filter() {
     let temp_dir = create_temp_dir("report-list-result-miss");
     let pass_report = temp_dir.path().join("pass.report.json");
@@ -257,4 +314,14 @@ fn report_list_json_reports_missing_target_as_failed() {
         json["errors"][0],
         "report list target does not exist: sim/reports/missing-directory"
     );
+}
+
+#[test]
+fn report_list_rejects_path_only_with_json() {
+    let output = run_report(&["report", "list", "sim/reports", "--path-only", "--json"]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(&output, "cannot be used with");
+    assert_stderr_contains(&output, "--path-only");
+    assert_stderr_contains(&output, "--json");
 }

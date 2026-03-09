@@ -260,6 +260,12 @@ struct ReportListCliArgs {
     json: bool,
     #[arg(
         long,
+        help = "Print only matching valid report paths",
+        conflicts_with = "json"
+    )]
+    path_only: bool,
+    #[arg(
+        long,
         value_name = "RESULT",
         help = "List only reports with one result",
         value_enum
@@ -1395,6 +1401,23 @@ fn print_report_list_json(summary: &ReportListSummary) -> Result<i32, CliError> 
     }
 }
 
+fn print_report_list_paths(summary: &ReportListSummary) -> i32 {
+    for report in &summary.reports {
+        if report.status == "ok" {
+            println!("{}", report.path.display());
+        }
+    }
+
+    if summary.is_ok() {
+        0
+    } else {
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    }
+}
+
 fn print_report_summary_json(summary: &ReportInspectSummary) -> Result<i32, CliError> {
     let json = serde_json::json!({
         "path": summary.path,
@@ -1699,7 +1722,12 @@ fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
             }
 
             let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_list(PathBuf::from(target), args.json, args.result)
+            report_list(
+                PathBuf::from(target),
+                args.json,
+                args.path_only,
+                args.result,
+            )
         }
         Some(ReportSubcommand::Latest(args)) => {
             if let Some(message) = unexpected_extra(&args.extra, "report latest") {
@@ -1898,10 +1926,13 @@ fn report_inspect(
 fn report_list(
     target: PathBuf,
     json: bool,
+    path_only: bool,
     result_filter: Option<ReportResultFilter>,
 ) -> Result<i32, CliError> {
     let summary = filter_report_list(list_reports(target), result_filter);
-    if json {
+    if path_only {
+        Ok(print_report_list_paths(&summary))
+    } else if json {
         print_report_list_json(&summary)
     } else {
         Ok(print_report_list_text(&summary))
