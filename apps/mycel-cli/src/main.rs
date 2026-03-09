@@ -19,7 +19,7 @@ fn print_usage() {
     println!("Sim options:");
     println!("  run <path> Run one test-case and write a report to sim/reports/out/");
     println!("  --json     Emit machine-readable run output");
-    println!("  --seed     Override the derived deterministic seed for sim run");
+    println!("  --seed     Use a fixed seed, or 'random' / 'auto' to generate one");
     println!();
     println!("Validate options:");
     println!("  --json     Emit machine-readable validation output");

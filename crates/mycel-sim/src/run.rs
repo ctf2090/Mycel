@@ -3,6 +3,7 @@
 use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process;
 use std::time::Instant;
 
 use chrono::{FixedOffset, Utc};
@@ -641,6 +642,20 @@ fn derive_deterministic_seed(
     )
 }
 
+fn generate_runtime_seed(mode: &str) -> String {
+    let timestamp_ns = Utc::now().timestamp_nanos_opt().unwrap_or_default();
+    let pid = process::id();
+    let entropy = stable_hash64([
+        mode.as_bytes(),
+        b"|",
+        timestamp_ns.to_string().as_bytes(),
+        b"|",
+        pid.to_string().as_bytes(),
+    ]);
+
+    format!("{mode}:{timestamp_ns}:{pid}:{entropy:016x}")
+}
+
 fn resolve_deterministic_seed(
     test_case: &TestCase,
     topology: &Topology,
@@ -648,6 +663,8 @@ fn resolve_deterministic_seed(
     seed_override: Option<&str>,
 ) -> (String, String) {
     match seed_override {
+        Some("random") => (generate_runtime_seed("random"), "random".to_owned()),
+        Some("auto") => (generate_runtime_seed("auto"), "auto".to_owned()),
         Some(seed) => (seed.to_owned(), "override".to_owned()),
         None => (
             derive_deterministic_seed(test_case, topology, fixture),
@@ -969,5 +986,59 @@ mod tests {
         assert_eq!(override_source, "override");
         assert_ne!(derived, override_seed);
         assert_eq!(override_seed, "custom-seed");
+    }
+
+    #[test]
+    fn random_seed_mode_generates_runtime_seed() {
+        let topology = sample_topology();
+        let fixture = sample_fixture();
+        let test_case = crate::model::TestCase {
+            schema: None,
+            test_id: "three-peer-consistency".to_owned(),
+            description: "sample".to_owned(),
+            category: "deterministic-comparison".to_owned(),
+            topology: "sim/topologies/three-peer-consistency.example.json".to_owned(),
+            fixture_set: "fixtures/object-sets/minimal-valid".to_owned(),
+            execution_mode: "single-process".to_owned(),
+            expected_result: "pass".to_owned(),
+            expected_outcomes: Vec::new(),
+            assertions: Vec::new(),
+            notes: Vec::new(),
+            metadata: None,
+        };
+
+        let (seed, source) =
+            super::resolve_deterministic_seed(&test_case, &topology, &fixture, Some("random"));
+
+        assert_ne!(seed, "random");
+        assert!(seed.starts_with("random:"));
+        assert_eq!(source, "random");
+    }
+
+    #[test]
+    fn auto_seed_mode_generates_runtime_seed() {
+        let topology = sample_topology();
+        let fixture = sample_fixture();
+        let test_case = crate::model::TestCase {
+            schema: None,
+            test_id: "three-peer-consistency".to_owned(),
+            description: "sample".to_owned(),
+            category: "deterministic-comparison".to_owned(),
+            topology: "sim/topologies/three-peer-consistency.example.json".to_owned(),
+            fixture_set: "fixtures/object-sets/minimal-valid".to_owned(),
+            execution_mode: "single-process".to_owned(),
+            expected_result: "pass".to_owned(),
+            expected_outcomes: Vec::new(),
+            assertions: Vec::new(),
+            notes: Vec::new(),
+            metadata: None,
+        };
+
+        let (seed, source) =
+            super::resolve_deterministic_seed(&test_case, &topology, &fixture, Some("auto"));
+
+        assert_ne!(seed, "auto");
+        assert!(seed.starts_with("auto:"));
+        assert_eq!(source, "auto");
     }
 }

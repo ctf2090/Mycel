@@ -281,7 +281,9 @@
           "type": "string",
           "enum": [
             "derived",
-            "override"
+            "override",
+            "random",
+            "auto"
           ]
         },
         "events_per_second": {
