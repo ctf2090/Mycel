@@ -3,3 +3,4 @@ target/
 sim/runtime/*
 !sim/runtime/README.md
 sim/reports/out/
+apps/vscode-hover-translate/
