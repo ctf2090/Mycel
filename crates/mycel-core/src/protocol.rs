@@ -1426,7 +1426,8 @@ mod tests {
         canonical_json, ensure_supported_json_values, object_schema, parse_block_object,
         parse_document_object, parse_json_strict, parse_json_value_strict, parse_object_envelope,
         parse_patch_object, parse_revision_object, parse_snapshot_object, parse_view_object,
-        recompute_object_id, ObjectKind, ParseObjectEnvelopeError, SignatureRule, StringFieldError,
+        recompute_object_id, signed_payload_bytes, ObjectKind, ParseObjectEnvelopeError,
+        SignatureRule, StringFieldError,
     };
 
     #[test]
@@ -2557,6 +2558,28 @@ mod tests {
     }
 
     #[test]
+    fn canonical_json_round_trips_through_strict_parse() {
+        let value = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:base", "rev:side"],
+            "patches": ["patch:test"],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 7u64
+        });
+        let canonical = canonical_json(&value).expect("canonical JSON should render");
+        let reparsed = parse_json_strict::<Value>(&canonical).expect("canonical JSON should parse");
+        let canonical_after_reparse =
+            canonical_json(&reparsed).expect("reparsed canonical JSON should render");
+
+        assert_eq!(reparsed, value);
+        assert_eq!(canonical_after_reparse, canonical);
+    }
+
+    #[test]
     fn recompute_object_id_omits_signature_and_derived_id_field() {
         let value = json!({
             "type": "patch",
@@ -2574,5 +2597,66 @@ mod tests {
             recompute_object_id(&value, "patch_id", "patch").expect("patch ID should recompute");
         assert!(recomputed.starts_with("patch:"));
         assert_ne!(recomputed, "patch:declared");
+    }
+
+    #[test]
+    fn recompute_object_id_is_reproducible_across_object_key_order() {
+        let left = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": []
+        });
+        let right = json!({
+            "timestamp": 1u64,
+            "ops": [],
+            "author": "pk:ed25519:test",
+            "base_revision": "rev:genesis-null",
+            "doc_id": "doc:test",
+            "version": "mycel/0.1",
+            "type": "patch"
+        });
+
+        let left_id =
+            recompute_object_id(&left, "patch_id", "patch").expect("left patch ID should compute");
+        let right_id = recompute_object_id(&right, "patch_id", "patch")
+            .expect("right patch ID should compute");
+
+        assert_eq!(left_id, right_id);
+    }
+
+    #[test]
+    fn signed_payload_bytes_are_reproducible_across_object_key_order() {
+        let left = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [],
+            "signature": "sig:placeholder-left"
+        });
+        let right = json!({
+            "signature": "sig:placeholder-right",
+            "ops": [],
+            "timestamp": 1u64,
+            "author": "pk:ed25519:test",
+            "base_revision": "rev:genesis-null",
+            "doc_id": "doc:test",
+            "patch_id": "patch:test",
+            "version": "mycel/0.1",
+            "type": "patch"
+        });
+
+        let left_payload = signed_payload_bytes(&left).expect("left payload should canonicalize");
+        let right_payload =
+            signed_payload_bytes(&right).expect("right payload should canonicalize");
+
+        assert_eq!(left_payload, right_payload);
     }
 }

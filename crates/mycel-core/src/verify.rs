@@ -697,6 +697,36 @@ mod tests {
     }
 
     #[test]
+    fn patch_signature_is_reproducible_across_object_key_order() {
+        let (signing_key, public_key) = signer_material();
+        let left = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 1777778888u64,
+            "ops": []
+        });
+        let right = json!({
+            "ops": [],
+            "timestamp": 1777778888u64,
+            "author": public_key,
+            "base_revision": "rev:genesis-null",
+            "doc_id": "doc:test",
+            "patch_id": "patch:test",
+            "version": "mycel/0.1",
+            "type": "patch"
+        });
+
+        let left_signature = sign_value(&signing_key, &left);
+        let right_signature = sign_value(&signing_key, &right);
+
+        assert_eq!(left_signature, right_signature);
+    }
+
+    #[test]
     fn null_values_are_rejected() {
         let path = write_test_file(
             "document-null",
