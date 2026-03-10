@@ -534,6 +534,43 @@ fn object_verify_json_fails_for_document_missing_created_at() {
 }
 
 #[test]
+fn object_verify_json_fails_for_document_with_negative_created_at() {
+    let document = json!({
+        "type": "document",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "title": "Test Document",
+        "language": "en",
+        "content_model": "block-tree",
+        "created_at": -1,
+        "created_by": signer_id(&signing_key()),
+        "genesis_revision": "rev:genesis-test"
+    });
+    let object = write_object_file(
+        "object-verify-document-negative-created-at",
+        "document.json",
+        document,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "document");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'created_at' must be a non-negative integer")
+                })
+            })),
+        "expected created_at integer error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_block_missing_block_id() {
     let object = write_object_file(
         "object-verify-block-missing-block-id",
@@ -1842,6 +1879,49 @@ fn object_verify_json_fails_for_snapshot_missing_timestamp() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_negative_timestamp() {
+    let mut snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "timestamp": 9u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    snapshot["timestamp"] = json!(-1);
+    snapshot["signature"] = Value::String(sign_value(&signing_key(), &snapshot));
+    let object = write_object_file(
+        "object-verify-snapshot-negative-timestamp",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'timestamp' must be a non-negative integer")
+                })
+            })),
+        "expected timestamp integer error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_invalid_snapshot_signature() {
     let mut snapshot = signed_object(
         json!({
@@ -2219,6 +2299,46 @@ fn object_verify_json_fails_for_view_missing_timestamp() {
                     .is_some_and(|message| message.contains("missing integer field 'timestamp'"))
             })),
         "expected missing timestamp error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_negative_timestamp() {
+    let mut view = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 1777778891u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+    view["timestamp"] = json!(-1);
+    view["signature"] = Value::String(sign_value(&signing_key(), &view));
+    let object = write_object_file("object-verify-view-negative-timestamp", "view.json", view);
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'timestamp' must be a non-negative integer")
+                })
+            })),
+        "expected timestamp integer error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -3551,6 +3671,47 @@ fn object_verify_json_fails_for_patch_missing_timestamp() {
 }
 
 #[test]
+fn object_verify_json_fails_for_patch_with_negative_timestamp() {
+    let mut patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    patch["timestamp"] = json!(-1);
+    patch["signature"] = Value::String(sign_value(&signing_key(), &patch));
+    let object = write_object_file(
+        "object-verify-patch-negative-timestamp",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'timestamp' must be a non-negative integer")
+                })
+            })),
+        "expected timestamp integer error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_patch_with_non_string_signature() {
     let object = write_object_file(
         "object-verify-patch-non-string-signature",
@@ -4522,6 +4683,48 @@ fn object_verify_json_fails_for_revision_missing_timestamp() {
                     .is_some_and(|message| message.contains("missing integer field 'timestamp'"))
             })),
         "expected missing timestamp error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_negative_timestamp() {
+    let mut revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": "hash:test-state",
+            "timestamp": 1777778890u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    revision["timestamp"] = json!(-1);
+    revision["signature"] = Value::String(sign_value(&signing_key(), &revision));
+    let object = write_object_file(
+        "object-verify-revision-negative-timestamp",
+        "revision.json",
+        revision,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'timestamp' must be a non-negative integer")
+                })
+            })),
+        "expected timestamp integer error, stdout: {}",
         stdout_text(&output)
     );
 }
