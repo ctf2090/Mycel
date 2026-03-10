@@ -1284,6 +1284,41 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_empty_documents_is_rejected_by_typed_validation() {
+        let (signing_key, public_key) = signer_material();
+        let mut snapshot = json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {},
+            "included_objects": ["rev:test"],
+            "root_hash": "hash:test",
+            "created_by": public_key,
+            "timestamp": 9u64
+        });
+        let snapshot_id = super::recompute_object_id(&snapshot, "snapshot_id", "snap")
+            .expect("snapshot ID should recompute");
+        snapshot["snapshot_id"] = Value::String(snapshot_id);
+        snapshot["signature"] = Value::String(sign_value(&signing_key, &snapshot));
+        let path = write_test_file(
+            "snapshot-empty-documents",
+            &serde_json::to_string_pretty(&snapshot).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'documents' must not be empty")),
+            "expected empty documents error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn snapshot_non_string_snapshot_id_is_rejected() {
         let (signing_key, public_key) = signer_material();
         let mut snapshot = json!({

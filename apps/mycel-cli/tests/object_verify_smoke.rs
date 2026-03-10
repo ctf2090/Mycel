@@ -707,6 +707,45 @@ fn object_verify_json_fails_for_snapshot_missing_documents() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_empty_documents() {
+    let snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {},
+            "included_objects": ["rev:test"],
+            "root_hash": "hash:test",
+            "timestamp": 9u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    let object = write_object_file(
+        "object-verify-snapshot-empty-documents",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents' must not be empty")
+                })
+            })),
+        "expected empty documents error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_snapshot_missing_declared_revision_in_included_objects() {
     let snapshot = signed_object(
         json!({
@@ -868,6 +907,87 @@ fn object_verify_json_fails_for_snapshot_with_wrong_document_key_prefix() {
                 })
             })),
         "expected snapshot document key-prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_snapshot_with_wrong_created_by_prefix() {
+    let mut snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "timestamp": 1777778890u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    snapshot["created_by"] = Value::String("sig:bad".to_string());
+    let object = write_object_file(
+        "object-verify-snapshot-wrong-created-by-prefix",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("signer field must use format 'pk:ed25519:<base64>'")
+                })
+            })),
+        "expected created_by signer-format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_snapshot_with_non_string_snapshot_id() {
+    let mut snapshot = json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "included_objects": ["rev:test", "patch:test"],
+        "root_hash": "hash:test",
+        "created_by": signer_id(&signing_key()),
+        "timestamp": 9u64,
+        "snapshot_id": 7
+    });
+    snapshot["signature"] = Value::String(sign_value(&signing_key(), &snapshot));
+    let object = write_object_file(
+        "object-verify-snapshot-non-string-id",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'snapshot_id' must be a string")
+                })
+            })),
+        "expected snapshot_id type error, stdout: {}",
         stdout_text(&output)
     );
 }
