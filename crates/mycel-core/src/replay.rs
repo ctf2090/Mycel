@@ -761,6 +761,108 @@ mod tests {
     }
 
     #[test]
+    fn replay_merge_revision_uses_only_primary_parent_state() {
+        let base_patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:base",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Base",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        });
+        let side_patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:side",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 2u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:002",
+                        "block_type": "paragraph",
+                        "content": "Side",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        });
+        let base_state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![block("blk:001", "Base")],
+            metadata: Map::new(),
+        };
+        let side_state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![block("blk:002", "Side")],
+            metadata: Map::new(),
+        };
+        let base_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:base",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": ["patch:base"],
+            "state_hash": compute_state_hash(&base_state).expect("base hash should compute"),
+            "author": "pk:ed25519:test",
+            "timestamp": 3u64
+        });
+        let side_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:side",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": ["patch:side"],
+            "state_hash": compute_state_hash(&side_state).expect("side hash should compute"),
+            "author": "pk:ed25519:test",
+            "timestamp": 4u64
+        });
+        let merge_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:merge",
+            "doc_id": "doc:test",
+            "parents": ["rev:base", "rev:side"],
+            "patches": [],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": compute_state_hash(&base_state).expect("merge hash should compute"),
+            "author": "pk:ed25519:test",
+            "timestamp": 5u64
+        });
+
+        let mut index = HashMap::new();
+        index.insert("patch:base".to_string(), base_patch);
+        index.insert("patch:side".to_string(), side_patch);
+        index.insert("rev:base".to_string(), base_revision);
+        index.insert("rev:side".to_string(), side_revision);
+        index.insert("rev:merge".to_string(), merge_revision.clone());
+
+        let summary =
+            replay_revision_from_index(&merge_revision, &index).expect("merge replay should work");
+
+        assert_eq!(summary.state, base_state);
+    }
+
+    #[test]
     fn move_block_rejects_cycle_into_descendant() {
         let patch = parse_patch_object(&json!({
             "type": "patch",

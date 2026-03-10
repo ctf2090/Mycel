@@ -1187,6 +1187,213 @@ fn object_verify_json_fails_for_multi_parent_revision_without_merge_strategy() {
 }
 
 #[test]
+fn object_verify_json_reports_ok_for_valid_merge_revision() {
+    let dir = create_temp_dir("object-verify-valid-merge-revision");
+    let base_patch_path = dir.path().join("patch-base.json");
+    let base_revision_path = dir.path().join("revision-base.json");
+    let side_patch_path = dir.path().join("patch-side.json");
+    let side_revision_path = dir.path().join("revision-side.json");
+    let merge_patch_path = dir.path().join("patch-merge.json");
+    let merge_revision_path = dir.path().join("revision-merge.json");
+
+    let base_patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778887u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Base",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &base_patch_path,
+        serde_json::to_string_pretty(&base_patch).expect("base patch JSON should serialize"),
+    )
+    .expect("base patch JSON should be written");
+
+    let base_revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [base_patch["patch_id"].as_str().expect("base patch id should exist")],
+            "state_hash": state_hash(&json!({
+                "doc_id": "doc:test",
+                "blocks": [
+                    {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Base",
+                        "attrs": {},
+                        "children": []
+                    }
+                ]
+            })),
+            "timestamp": 1777778888u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &base_revision_path,
+        serde_json::to_string_pretty(&base_revision).expect("base revision JSON should serialize"),
+    )
+    .expect("base revision JSON should be written");
+
+    let side_patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778889u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:002",
+                        "block_type": "paragraph",
+                        "content": "Side",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &side_patch_path,
+        serde_json::to_string_pretty(&side_patch).expect("side patch JSON should serialize"),
+    )
+    .expect("side patch JSON should be written");
+
+    let side_revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [side_patch["patch_id"].as_str().expect("side patch id should exist")],
+            "state_hash": state_hash(&json!({
+                "doc_id": "doc:test",
+                "blocks": [
+                    {
+                        "block_id": "blk:002",
+                        "block_type": "paragraph",
+                        "content": "Side",
+                        "attrs": {},
+                        "children": []
+                    }
+                ]
+            })),
+            "timestamp": 1777778890u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &side_revision_path,
+        serde_json::to_string_pretty(&side_revision).expect("side revision JSON should serialize"),
+    )
+    .expect("side revision JSON should be written");
+
+    let merge_patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": base_revision["revision_id"].as_str().expect("base revision id should exist"),
+            "timestamp": 1777778891u64,
+            "ops": [
+                {
+                    "op": "replace_block",
+                    "block_id": "blk:001",
+                    "new_content": "Merged"
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &merge_patch_path,
+        serde_json::to_string_pretty(&merge_patch).expect("merge patch JSON should serialize"),
+    )
+    .expect("merge patch JSON should be written");
+
+    let merge_revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [
+                base_revision["revision_id"].as_str().expect("base revision id should exist"),
+                side_revision["revision_id"].as_str().expect("side revision id should exist")
+            ],
+            "patches": [merge_patch["patch_id"].as_str().expect("merge patch id should exist")],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": state_hash(&json!({
+                "doc_id": "doc:test",
+                "blocks": [
+                    {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Merged",
+                        "attrs": {},
+                        "children": []
+                    }
+                ]
+            })),
+            "timestamp": 1777778892u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &merge_revision_path,
+        serde_json::to_string_pretty(&merge_revision)
+            .expect("merge revision JSON should serialize"),
+    )
+    .expect("merge revision JSON should be written");
+
+    let output = run_mycel(&[
+        "object",
+        "verify",
+        &path_arg(&merge_revision_path),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "verified");
+    assert_eq!(json["declared_state_hash"], json["recomputed_state_hash"]);
+}
+
+#[test]
 fn object_verify_json_fails_for_revision_with_invalid_move_cycle() {
     let dir = create_temp_dir("object-verify-revision-move-cycle");
     let parent_patch_path = dir.path().join("patch-parent.json");
