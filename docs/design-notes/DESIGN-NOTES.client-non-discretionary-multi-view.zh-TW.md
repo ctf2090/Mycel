@@ -2,7 +2,7 @@
 
 狀態：design draft
 
-這份筆記描述一種做法：保留 Mycel 的 multi-view，同時盡量降低一般 client 對 active accepted head 的影響力。
+這份筆記描述一種做法：保留 Mycel 的 multi-view，同時盡量降低一般客戶端對 active accepted head 的影響力。
 
 ## 0. 目標
 
@@ -21,16 +21,16 @@
 
 ## 1. 核心想法
 
-Mycel 在 protocol layer 仍然是 multi-view，但合規的 reader client 不應對 active accepted head 擁有太多自由裁量權。
+Mycel 在 protocol layer 仍然是 multi-view，但合規的 reader 客戶端不應對 active accepted head 擁有太多自由裁量權。
 
-client 主要只做：
+客戶端主要只做：
 
 - 同步已驗證物件
 - 驗證 hash 與 signature
 - 計算 selector 輸出
 - 顯示 accepted result 與其 trace
 
-client 不應自由做：
+客戶端不應自由做：
 
 - 修改 selector parameters
 - 更改 maintainer weights
@@ -42,8 +42,8 @@ client 不應自由做：
 - `View object`：已簽章的 governance signal object，不是使用者偏好
 - `View profile`：用來評估 View objects 的固定 selector profile
 - `accepted head`：對 `(profile_id, doc_id, effective_selection_time)` 算出的唯一 selected revision
-- `reader client`：消費 accepted result，但不產生治理訊號的 client
-- `curator client`：可發布 View objects，但仍不能改 selector math 的 client
+- `reader client`：消費 accepted result，但不產生治理訊號的客戶端
+- `curator client`：可發布 View objects，但仍不能改 selector math 的客戶端
 
 ## 3. 把 View object 視為治理訊號
 
@@ -72,7 +72,7 @@ client 不應自由做：
 - `weight_cap_per_key`
 - tie-break 順序
 
-一般 client 不得在 active accepted-head 路徑上本地修改這些值。
+一般客戶端不得在 active accepted-head 路徑上本地修改這些值。
 
 ## 5. Accepted-Head 計算
 
@@ -89,11 +89,11 @@ client 不應自由做：
 accepted head 是 protocol 導出的，不是使用者自己選的。
 它也不是在宣稱整個網路只有一個普遍接受的真版本；它是在某個固定 profile 與某個 effective selection time 下算出的 accepted result。
 
-## 6. Client 角色
+## 6. 客戶端角色
 
 ### 6.1 Reader Client
 
-合規的 reader client：
+合規的 reader 客戶端：
 
 - 可以同步並驗證所有物件
 - 可以顯示 raw heads 與 branch graphs
@@ -103,7 +103,7 @@ accepted head 是 protocol 導出的，不是使用者自己選的。
 
 ### 6.2 Curator Client
 
-curator client：
+curator 客戶端：
 
 - 可以建立並簽署 View objects
 - 可以向 network 發布 governance signals
@@ -112,7 +112,7 @@ curator client：
 
 ### 6.3 Governance Update Tooling
 
-若 profile 本身要改，應透過明確的 profile versioning 或 governance-update workflow，而不是透過安靜的本地 client 設定。
+若 profile 本身要改，應透過明確的 profile versioning 或 governance-update 工作流程，而不是透過安靜的本地客戶端設定。
 
 ## 7. UI 規則
 
@@ -132,7 +132,7 @@ curator client：
 
 ## 8. Client 仍然可能影響什麼
 
-即使在這個模型裡，client 仍可能透過以下方式間接影響結果：
+即使在這個模型裡，客戶端仍可能透過以下方式間接影響結果：
 
 - 沒有同步到足夠物件
 - 驗證實作錯誤
@@ -168,6 +168,6 @@ curator client：
 ## 11. 開放問題
 
 - 一個 network 應允許多個固定 profiles，還是每個 document family 只能有一個 active profile？
-- reader client 可以檢視其他合法 profiles，還是只能看 network default？
+- reader 客戶端可以檢視其他合法 profiles，還是只能看 network default？
 - 在 governed multi-view network 中，`VIEW_ANNOUNCE` 應繼續是 optional，還是實質上變成必要？
 - implementation checklist 是否應明確拆成 reader-client 與 curator-client 兩份需求？
