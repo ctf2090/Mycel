@@ -1354,6 +1354,45 @@ fn object_verify_json_fails_for_snapshot_missing_documents() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_non_object_documents() {
+    let snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": [],
+            "included_objects": ["rev:test"],
+            "root_hash": "hash:test",
+            "timestamp": 9u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    let object = write_object_file(
+        "object-verify-snapshot-non-object-documents",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents' must be an object")
+                })
+            })),
+        "expected documents object-shape error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_snapshot_missing_included_objects() {
     let snapshot = signed_object(
         json!({
@@ -2777,6 +2816,42 @@ fn object_verify_json_fails_for_view_with_non_object_policy() {
 }
 
 #[test]
+fn object_verify_json_fails_for_view_with_non_object_documents() {
+    let view = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": [],
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 1777778891u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+    let object = write_object_file("object-verify-view-non-object-documents", "view.json", view);
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents' must be an object")
+                })
+            })),
+        "expected documents object-shape error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_view_missing_policy() {
     let view = signed_object(
         json!({
@@ -3908,6 +3983,41 @@ fn object_verify_json_fails_for_patch_missing_ops() {
 }
 
 #[test]
+fn object_verify_json_fails_for_patch_with_non_array_ops() {
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": {}
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let object = write_object_file("object-verify-patch-non-array-ops", "patch.json", patch);
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("top-level 'ops' must be an array"))
+            })),
+        "expected ops array-shape error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_patch_move_without_destination() {
     let patch = signed_object(
         json!({
@@ -4414,6 +4524,46 @@ fn object_verify_json_fails_for_revision_missing_parents() {
 }
 
 #[test]
+fn object_verify_json_fails_for_revision_with_non_array_parents() {
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": {},
+            "patches": [],
+            "state_hash": "hash:test-state",
+            "timestamp": 1777778890u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    let object = write_object_file(
+        "object-verify-revision-non-array-parents",
+        "revision.json",
+        revision,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("top-level 'parents' must be an array"))
+            })),
+        "expected parents array-shape error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_revision_missing_patches() {
     let revision = signed_object(
         json!({
@@ -4448,6 +4598,46 @@ fn object_verify_json_fails_for_revision_missing_patches() {
                     .is_some_and(|message| message.contains("missing array field 'patches'"))
             })),
         "expected missing patches error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_non_array_patches() {
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": {},
+            "state_hash": "hash:test-state",
+            "timestamp": 1777778890u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    let object = write_object_file(
+        "object-verify-revision-non-array-patches",
+        "revision.json",
+        revision,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("top-level 'patches' must be an array"))
+            })),
+        "expected patches array-shape error, stdout: {}",
         stdout_text(&output)
     );
 }
