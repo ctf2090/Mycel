@@ -1,10 +1,10 @@
-# Mycel Protocol v0.1
+# Mycel 協定 v0.1
 
 語言：繁體中文 | [English](./PROTOCOL.en.md)
 
 ## 0. 定位
 
-Mycel 是一種具備以下特性的文本協議：
+Mycel 是一種具備以下特性的文本協定：
 
 - Git 式版本模型
 - P2P 複製
@@ -12,7 +12,7 @@ Mycel 是一種具備以下特性的文本協議：
 - 多分支共存
 - 不要求全域單一共識
 
-它不是區塊鏈，也不是 Git 複製品；它是為文字與知識內容而設計的，去中心、可分叉、可驗證歷史的協議。
+它不是區塊鏈，也不是 Git 複製品；它是為文字與知識內容而設計的去中心、可分叉、可驗證歷史協定。
 
 適用場景包含：
 
@@ -31,8 +31,8 @@ Mycel 的設計目標：
 1. **可驗證歷史**：所有被接受的修改都必須可追溯、可重放驗證。
 2. **去中心存活**：在沒有單一伺服器時，內容仍可保存與同步。
 3. **分支合法**：分叉是第一級合法狀態，不是錯誤。
-4. **合併可選**：社群可發布已簽章的治理 View，而 reader client 依固定 profile 規則導出 accepted head。
-5. **匿名可用**：作者可使用假名金鑰，並應最小化 metadata 暴露。
+4. **合併可選**：社群可發布已簽章的治理 View，而閱讀客戶端依固定 profile 規則導出 accepted head。
+5. **匿名可用**：作者可使用假名金鑰，並應最小化中繼資料暴露。
 6. **文本優先（v0.1）**：在 v0.1 以 block / paragraph 為主要操作單位。
 
 ## 2. 協議概念
@@ -69,11 +69,11 @@ object_id = <type-prefix>:<object_hash>
 - `patch_id`、`revision_id`、`view_id`、`snapshot_id` 是 canonical object ID
 - 導出 ID 欄位本身與 `signature` 欄位 MUST NOT 納入 hash 輸入
 
-這個拆分可避免自我遞迴雜湊，也讓 transport 參照保持明確。
+這個拆分可避免自我遞迴雜湊，也讓傳輸參照保持明確。
 
 ### 3.2 簽章必須存在
 
-所有作者產生的 Patch、Revision、View 都必須有數位簽章。
+所有作者產生的 Patch、Revision、View 都必須具備數位簽章。
 所有 v0.1 物件型別的簽章要求，以第 6.4 節為規範性定義。
 
 ### 3.3 多個 head 合法
@@ -83,12 +83,12 @@ object_id = <type-prefix>:<object_hash>
 ### 3.4 Accepted Head 由 Profile 治理，而非全域真理
 
 所謂「採信版本」只是某個治理 View profile 的輸出，不是全網唯一版本。
-不同合法 profile 可以並存，但合規的 reader client MUST 以固定的 protocol-defined profile 輸入導出 active accepted head，而不是依本地偏好自由裁量。
+不同合法 profile 可以並存，但合規的閱讀客戶端 MUST 以固定的 protocol-defined profile 輸入導出 active accepted head，而不是依本地偏好自由裁量。
 這表示「採信」是某個固定 profile 下可重現的 selector 結果，不是在宣稱整個網路已收斂到唯一強制版本。
 
 ### 3.5 傳輸與接受分離
 
-節點可以接收某 object，但不讓它進入 profile-governed accepted-head 路徑。
+節點可以接收某個 object，但不讓它進入 profile-governed accepted-head 路徑。
 物件只有在完整驗證且符合固定 selector profile 的條件後，才會影響 accepted-head selection。
 
 ## 4. 物件模型

@@ -1,4 +1,4 @@
-# Mycel Wire Protocol v0.1（草案）
+# Mycel 傳輸協定 v0.1（草案）
 
 語言：繁體中文 | [English](./WIRE-PROTOCOL.en.md)
 
@@ -8,7 +8,7 @@
 
 v0.1 目標：
 
-- 定義穩定的 wire envelope
+- 定義穩定的 wire 信封
 - 定義 v0.1 同步訊息集的規範性欄位
 - 保持實作中立、技術化、可互通
 
@@ -49,7 +49,7 @@ v0.1 目標：
 - `sig`：對不含 `sig` 的 canonical envelope 做簽章
 
 每一種訊息型別的 wire-message 簽章規則，以第 3.1 節為規範性定義。
-Envelope 的 canonicalization MUST 依 `PROTOCOL.zh-TW.md` Appendix A 執行。
+信封的 canonicalization MUST 依 `PROTOCOL.zh-TW.md` Appendix A 執行。
 
 ## 3. 訊息類型
 
@@ -85,7 +85,7 @@ v0.1 定義以下訊息種類：
 
 1. 接收端 MUST 拒絕任何缺少 `sig` 的 v0.1 wire 訊息。
 2. `from` 所對應的節點金鑰 MUST 能驗證對不含 `sig` 的 canonical envelope 所做的簽章。
-3. Envelope `sig` 只驗證 transport metadata；它不能取代 `OBJECT.body` 內部的 object-level signature。
+3. Envelope `sig` 只驗證傳輸中繼資料；它不能取代 `OBJECT.body` 內部的 object-level signature。
 4. `sig` 欄位本身 MUST NOT 納入簽章 envelope payload。
 
 ## 4. HELLO
@@ -119,7 +119,7 @@ v0.1 定義以下訊息種類：
 ## 5. MANIFEST
 
 `MANIFEST` 用於宣告節點目前提供的同步表面。
-它是 wire message summary，不是內容定址的協議物件。
+它是 wire 訊息摘要，不是內容定址的協定物件。
 
 ```json
 {
@@ -252,7 +252,7 @@ v0.1 定義以下訊息種類：
 
 - `object_id`：canonical 型別化 object ID，以 `<object_type-prefix>:<hash>` 重建
 - `hash`：canonicalized `body` 的原始摘要值
-- `body`：未經 transport 包裝前的 canonical 物件內容
+- `body`：未經傳輸包裝前的 canonical 物件內容
 
 對 v0.1 的內容定址物件型別：
 
