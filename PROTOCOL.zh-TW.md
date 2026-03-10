@@ -881,7 +881,7 @@ effective_weight(e, k) =
 
 11. `clamp(x, lo, hi)` 的意義是：若 `x < lo` 回傳 `lo`，若 `x > hi` 回傳 `hi`，否則回傳 `x`。
 12. 若某 key 在 epoch `e-1` 有一個或多個重大違規，則它在 epoch `e` MUST 至少失去一個 weight unit。
-13. 合規的 reader client MUST NOT 套用會改變 active accepted-head 路徑的自由裁量 per-installation quarantine 或 removal 規則。
+13. 合規的閱讀客戶端 MUST NOT 套用會改變 active accepted-head 路徑的自由裁量 per-installation 隔離或移除規則。
 14. head 選擇 MUST 使用 `effective_weight(e, k)`，且 MUST NOT 單獨依賴原始 hit count。
 
 ### 10.3 Editor-Maintainer 發布政策（規範）
@@ -928,10 +928,10 @@ Mycel 建議預設跑在匿名傳輸上，例如：
 - 接受哪些作者 key
 - 接受哪些 curator key
 - 是否接受匿名 key
-- 新 key 是否先 quarantine
+- 新 key 是否先隔離
 
 這些本地策略 MAY 影響 storage、relay、moderation、或 private inspection。
-但對合規的 reader client 而言，它們 MUST NOT 改變第 10 節所定義的 fixed-profile active accepted head。
+但對合規的閱讀客戶端而言，它們 MUST NOT 改變第 10 節所定義的 fixed-profile active accepted head。
 
 ## 12. 本地儲存模型
 
@@ -939,7 +939,7 @@ Mycel 建議預設跑在匿名傳輸上，例如：
 
 ### 12.1 Object Store
 
-用 `object_id` 存所有物件。
+用 `object_id` 儲存所有物件。
 
 ### 12.2 Index Store
 
@@ -985,7 +985,7 @@ mycel verify
 
 ## 15. 最小實作架構
 
-一個 Mycel client 最少要有：
+一個 Mycel 客戶端最少要有：
 
 ### 15.1 Core
 
@@ -1004,7 +1004,7 @@ mycel verify
 
 ### 15.3 Network
 
-- peer transport
+- peer 傳輸
 - manifest exchange
 - want/object exchange
 - snapshot sync
@@ -1012,7 +1012,7 @@ mycel verify
 ### 15.4 UI
 
 - CLI
-- wiki-like reader/editor
+- wiki-like 閱讀／編輯介面
 - diff viewer
 - branch/view browser
 
