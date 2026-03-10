@@ -2,13 +2,13 @@
 
 狀態：late partial progress，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 接近完成
 
-這份清單把 v0.1 規格轉成偏實作導向的 build plan，目標是一個最小但可互通的 client。
+這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
 ## 0. 建置目標
 
-先鎖定受限版 v0.1 client：
+先鎖定受限版 v0.1 客戶端：
 
-- 一個本地 object store
+- 一個本地物件儲存
 - 一個固定的 network hash algorithm
 - 只支援 canonical JSON
 - 支援 `patch` / `revision` / `view` / `snapshot`
@@ -31,7 +31,7 @@
 - [x] 選定一個實作語言與 package layout。
 - [x] 為 network profile 固定一個 canonical hash algorithm。
 - [x] 為 client profile 固定一組 signature algorithms。
-- [ ] 加入一個可被 hash、signature、wire 共用的 canonical JSON utility。
+- [ ] 加入一個可被 hash、signature、wire 共用的 canonical JSON 工具。
 - [x] 加入 protocol examples 與 regression tests 的 fixture 載入機制。
 
 ## 2. 物件型別與 ID
@@ -92,7 +92,7 @@
 - [x] 維護 `author -> patches` 索引。
 - [x] 維護 `view_id -> governance signal contents` 索引。
 - [x] 維護 `profile_id -> selected document heads` 索引。
-- [ ] 把本地 transport 與 safety policy 與可複製的協議物件分開保存。
+- [ ] 把本地 transport 與 safety policy 與可複製的協定物件分開保存。
 - [x] 不讓自由裁量的本地 policy 進入 active accepted-head 路徑。
 - [x] 支援只靠 object store 就能重建 indexes。
 
@@ -175,7 +175,7 @@
 
 ## 13. 可開始建 client 的門檻
 
-當以下條件都成立時，可把 client 視為 ready for first interoperable build：
+當以下條件都成立時，可把客戶端視為 ready for first interoperable build：
 
 - [ ] 所有必要 object types 都能解析並驗證
 - [x] canonical IDs 與 signatures 可重現
