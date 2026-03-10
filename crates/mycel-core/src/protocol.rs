@@ -584,6 +584,16 @@ pub fn parse_snapshot_object(value: &Value) -> Result<SnapshotObject, TypedObjec
         ));
     }
     let included_objects = required_canonical_object_id_array(object, "included_objects")?;
+    for (doc_id, revision_id) in &documents {
+        if !included_objects
+            .iter()
+            .any(|object_id| object_id == revision_id)
+        {
+            return Err(TypedObjectError::new(format!(
+                "top-level 'included_objects' must include revision '{revision_id}' declared by 'documents.{doc_id}'"
+            )));
+        }
+    }
 
     Ok(SnapshotObject {
         snapshot_id: required_prefixed_string(object, "snapshot_id", "snap:")?,
@@ -1690,6 +1700,28 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'included_objects[0]' must use a canonical object ID prefix"
+        );
+    }
+
+    #[test]
+    fn parse_snapshot_object_requires_declared_document_revision_in_included_objects() {
+        let error = parse_snapshot_object(&json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["patch:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'included_objects' must include revision 'rev:test' declared by 'documents.doc:test'"
         );
     }
 
