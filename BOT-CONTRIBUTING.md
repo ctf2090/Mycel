@@ -2,12 +2,15 @@
 
 This guide is for AI coding bots and other automation-oriented contributors working in this repository.
 
+For the repo-wide model of how humans, issues, agents, verification, and planning sync fit together, start with [docs/AI-CO-WORKING-MODEL.md](./docs/AI-CO-WORKING-MODEL.md). This guide stays narrower and more execution-oriented.
+
 Use it together with:
 
 - [README.md](./README.md)
 - [docs/DEV-SETUP.md](./docs/DEV-SETUP.md)
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 - [AGENTS.md](./AGENTS.md)
+- [docs/AI-CO-WORKING-MODEL.md](./docs/AI-CO-WORKING-MODEL.md) for the higher-level human-plus-agent operating model
 - [`.github/labels.yml`](./.github/labels.yml) for the repo-tracked bot/task label set
 - [docs/LABELS.md](./docs/LABELS.md) for label meanings and recommended combinations
 - [docs/MULTI-AGENT-COORDINATION.md](./docs/MULTI-AGENT-COORDINATION.md) for parallel issue ownership, file boundaries, and push discipline

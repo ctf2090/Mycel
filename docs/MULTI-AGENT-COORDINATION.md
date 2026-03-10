@@ -4,10 +4,13 @@ Status: draft
 
 This note describes how multiple AI coding agents should work in parallel in the Mycel repository without colliding on scope, files, or push order.
 
+For the higher-level operating model that connects planning, issue intake, execution, verification, and human control, see [AI-CO-WORKING-MODEL.md](./AI-CO-WORKING-MODEL.md).
+
 For the short maintainer version, see [MULTI-AGENT-CHEATSHEET.md](./MULTI-AGENT-CHEATSHEET.md).
 
 Use it together with:
 
+- [AI-CO-WORKING-MODEL.md](./AI-CO-WORKING-MODEL.md)
 - [BOT-CONTRIBUTING.md](../BOT-CONTRIBUTING.md)
 - [ROADMAP.md](../ROADMAP.md)
 - [IMPLEMENTATION-CHECKLIST.en.md](../IMPLEMENTATION-CHECKLIST.en.md)
