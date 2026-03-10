@@ -6,14 +6,14 @@ Status: design draft
 
 主要設計原則是：
 
-- 在建立完整 client 之前，先證明核心同步與驗證行為
-- 讓 simulator 保持可決定、容易重置
+- 在建立完整客戶端之前，先證明核心同步與驗證行為
+- 讓 simulator 保持決定性且容易重置
 - 優先採用有界的本地拓樸，而不是廣域 discovery
 - 把 wire 行為測試與豐富產品功能分開
 
 ## 0. 目標
 
-提供一個實際可用的第一版 test harness，能夠：
+提供一個實際可用的第一版測試框架，能夠：
 
 - 在本地執行多個 Mycel peer 身分
 - 交換最小 v0.1 wire messages
@@ -30,19 +30,19 @@ Status: design draft
 
 ### 1.1 Phase A: 單程序多 peer simulator
 
-在同一個 process 內執行多個 peer state。
+在同一個程序內執行多個 peer state。
 
 優點：
 
 - 最快可以做出來
-- 排程可決定
+- 排程具決定性
 - 容易注入 fixture
 - 容易收集 trace
 
 限制：
 
 - 無法測真實 socket 行為
-- 無法測 process 層級隔離
+- 無法測程序層級隔離
 - 無法真實測試 restart 行為
 
 ### 1.2 Phase B: Localhost 多程序 peer harness
@@ -58,7 +58,7 @@ Status: design draft
 限制：
 
 - 比 Phase A 慢
-- 需要更多 harness code 與 process control
+- 需要更多 harness code 與程序控制
 
 建議路徑是：
 
@@ -74,7 +74,7 @@ Status: design draft
 
 - 多個 peer identities
 - 每個 peer 一個本地 object store
-- 可決定的 fixture loading
+- 具決定性的 fixture 載入
 - `HELLO`
 - `MANIFEST`
 - `HEADS`
@@ -95,7 +95,7 @@ Simulator v0 可選：
 延後：
 
 - rich reader UI
-- editor workflows
+- editor 工作流程
 - public discovery
 - Tor transport
 - signer 或 runtime roles
@@ -120,7 +120,7 @@ reader peer 一開始是空的，或只有部分資料。
 
 職責：
 
-- 從有界 peer list bootstrap
+- 從有界 peer list 啟動
 - 同步缺失 objects
 - 在 indexing 之前先驗證所有收到的 objects
 - 若啟用該層，則計算本地 accepted state
@@ -204,7 +204,7 @@ transport layer 應可替換。
 
 - 保留 sender 與 receiver identity
 - 保留單一 session 內的 message order
-- 支援可決定的 delay 或 drop injection
+- 支援具決定性的 delay 或 drop injection
 - 能完整捕捉 wire envelopes 供檢查
 
 ### 6.2 Phase B Transport
@@ -234,7 +234,7 @@ simulator 一開始應使用明確 fixtures，而不是臨時生成的內容。
 
 fixtures 應該：
 
-- 可決定
+- 具決定性
 - 受版本控制
 - 能載入到任何 peer role
 
@@ -336,7 +336,7 @@ Simulator v0 應明確避免：
 若我們能做到以下六點，Peer Simulator v0 就算成功：
 
 1. 在本地啟動至少三個隔離的 peer identities
-2. 將可決定 fixtures 載入一個 peer
+2. 將具決定性的 fixtures 載入一個 peer
 3. 將這些 fixtures 同步到一個或多個其他 peers
 4. 正確拒絕 malformed 或不一致的 objects
 5. 只靠 canonical objects 重建本地狀態
