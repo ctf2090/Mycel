@@ -1532,6 +1532,44 @@ fn object_verify_json_fails_for_snapshot_with_wrong_created_by_prefix() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_malformed_created_by_key() {
+    let mut snapshot = json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "included_objects": ["rev:test", "patch:test"],
+        "root_hash": "hash:test",
+        "created_by": "pk:ed25519:not-base64",
+        "timestamp": 1777778890u64
+    });
+    snapshot["signature"] = Value::String(sign_value(&signing_key(), &snapshot));
+    let object = write_object_file(
+        "object-verify-snapshot-malformed-created-by-key",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 public key"))
+            })),
+        "expected malformed public-key error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_snapshot_missing_created_by() {
     let mut snapshot = signed_object(
         json!({
@@ -1994,6 +2032,47 @@ fn object_verify_json_fails_for_view_with_wrong_maintainer_prefix() {
                 })
             })),
         "expected maintainer signer-format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_malformed_maintainer_key() {
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": "pk:ed25519:not-base64",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "policy": {
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 1777778891u64
+    });
+    let view_id = recompute_id(&view, "view_id", "view");
+    view["view_id"] = Value::String(view_id);
+    view["signature"] = Value::String(sign_value(&signing_key(), &view));
+    let object = write_object_file(
+        "object-verify-view-malformed-maintainer-key",
+        "view.json",
+        view,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 public key"))
+            })),
+        "expected malformed public-key error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -2694,6 +2773,43 @@ fn object_verify_json_fails_for_patch_with_wrong_author_prefix() {
                 })
             })),
         "expected signer-format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_patch_with_malformed_author_key() {
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:placeholder",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:not-base64",
+        "timestamp": 1777778888u64,
+        "ops": []
+    });
+    patch["signature"] = Value::String(sign_value(&signing_key(), &patch));
+    let object = write_object_file(
+        "object-verify-patch-malformed-author-key",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 public key"))
+            })),
+        "expected malformed public-key error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -3438,6 +3554,44 @@ fn object_verify_json_fails_for_revision_with_wrong_author_prefix() {
                 })
             })),
         "expected signer-format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_malformed_author_key() {
+    let mut revision = json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "revision_id": "rev:placeholder",
+        "doc_id": "doc:test",
+        "parents": [],
+        "patches": [],
+        "state_hash": "hash:test-state",
+        "author": "pk:ed25519:not-base64",
+        "timestamp": 1777778890u64
+    });
+    revision["signature"] = Value::String(sign_value(&signing_key(), &revision));
+    let object = write_object_file(
+        "object-verify-revision-malformed-author-key",
+        "revision.json",
+        revision,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 public key"))
+            })),
+        "expected malformed public-key error, stdout: {}",
         stdout_text(&output)
     );
 }
