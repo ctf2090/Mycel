@@ -103,7 +103,16 @@ fn profile_id(policy: &Value) -> String {
     format!("hash:{:x}", hasher.finalize())
 }
 
-fn build_store_with_view() -> (common::TempDir, common::TempDir, String, String) {
+struct StoreFixtureInfo {
+    source_dir: common::TempDir,
+    store_dir: common::TempDir,
+    signer: String,
+    revision_id: String,
+    view_id: String,
+    profile_id: String,
+}
+
+fn build_store_with_view() -> StoreFixtureInfo {
     let source_dir = create_temp_dir("store-index-source");
     let store_dir = create_temp_dir("store-index-root");
     let patch_path = source_dir.path().join("patch.json");
@@ -148,6 +157,10 @@ fn build_store_with_view() -> (common::TempDir, common::TempDir, String, String)
         "revision_id",
         "rev",
     );
+    let revision_id = revision["revision_id"]
+        .as_str()
+        .expect("revision id should exist")
+        .to_string();
     fs::write(
         &revision_path,
         serde_json::to_string_pretty(&revision).expect("revision should serialize"),
@@ -174,6 +187,10 @@ fn build_store_with_view() -> (common::TempDir, common::TempDir, String, String)
         "view_id",
         "view",
     );
+    let view_id = view["view_id"]
+        .as_str()
+        .expect("view id should exist")
+        .to_string();
     fs::write(
         &view_path,
         serde_json::to_string_pretty(&view).expect("view should serialize"),
@@ -189,17 +206,24 @@ fn build_store_with_view() -> (common::TempDir, common::TempDir, String, String)
     ]);
     assert_success(&ingest);
 
-    (source_dir, store_dir, signer_id(&signing_key()), profile_id)
+    StoreFixtureInfo {
+        source_dir,
+        store_dir,
+        signer: signer_id(&signing_key()),
+        revision_id,
+        view_id,
+        profile_id,
+    }
 }
 
 #[test]
 fn store_index_json_reads_persisted_manifest() {
-    let (_source_dir, store_dir, signer, profile_id) = build_store_with_view();
+    let fixture = build_store_with_view();
 
     let output = run_mycel(&[
         "store",
         "index",
-        &path_arg(&store_dir.path().to_path_buf()),
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
         "--json",
     ]);
 
@@ -221,14 +245,14 @@ fn store_index_json_reads_persisted_manifest() {
         stdout_text(&output)
     );
     assert!(
-        json["author_patches"][signer]
+        json["author_patches"][fixture.signer]
             .as_array()
             .is_some_and(|values| values.len() == 1),
         "expected author patch index, stdout: {}",
         stdout_text(&output)
     );
     assert!(
-        json["profile_heads"][profile_id]["doc:index"]
+        json["profile_heads"][fixture.profile_id]["doc:index"]
             .as_array()
             .is_some_and(|values| values.len() == 1),
         "expected profile head index, stdout: {}",
@@ -238,18 +262,18 @@ fn store_index_json_reads_persisted_manifest() {
 
 #[test]
 fn store_index_json_filters_common_indexes() {
-    let (_source_dir, store_dir, signer, profile_id) = build_store_with_view();
+    let fixture = build_store_with_view();
 
     let output = run_mycel(&[
         "store",
         "index",
-        &path_arg(&store_dir.path().to_path_buf()),
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
         "--doc-id",
         "doc:index",
         "--author",
-        &signer,
+        &fixture.signer,
         "--profile-id",
-        &profile_id,
+        &fixture.profile_id,
         "--object-type",
         "patch",
         "--json",
@@ -258,8 +282,8 @@ fn store_index_json_filters_common_indexes() {
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
     assert_eq!(json["filters"]["doc_id"], "doc:index");
-    assert_eq!(json["filters"]["author"], signer);
-    assert_eq!(json["filters"]["profile_id"], profile_id);
+    assert_eq!(json["filters"]["author"], fixture.signer);
+    assert_eq!(json["filters"]["profile_id"], fixture.profile_id);
     assert_eq!(json["filters"]["object_type"], "patch");
     assert_eq!(
         json["object_ids_by_type"]
@@ -297,13 +321,55 @@ fn store_index_json_filters_common_indexes() {
 }
 
 #[test]
-fn store_index_text_reports_summary() {
-    let (_source_dir, store_dir, _signer, _profile_id) = build_store_with_view();
+fn store_index_json_filters_by_revision_and_view() {
+    let fixture = build_store_with_view();
 
     let output = run_mycel(&[
         "store",
         "index",
-        &path_arg(&store_dir.path().to_path_buf()),
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--revision-id",
+        &fixture.revision_id,
+        "--view-id",
+        &fixture.view_id,
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(json["filters"]["revision_id"], fixture.revision_id);
+    assert_eq!(json["filters"]["view_id"], fixture.view_id);
+    assert!(
+        json["revision_parents"][fixture.revision_id]
+            .as_array()
+            .is_some_and(|values| values.is_empty()),
+        "expected revision parent entry, stdout: {}",
+        stdout_text(&output)
+    );
+    assert_eq!(
+        json["view_governance"]
+            .as_array()
+            .map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(json["view_governance"][0]["view_id"], fixture.view_id);
+    assert!(
+        json["profile_heads"][fixture.profile_id]["doc:index"]
+            .as_array()
+            .is_some_and(|values| values.len() == 1),
+        "expected filtered profile head index, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn store_index_text_reports_summary() {
+    let fixture = build_store_with_view();
+
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
         "--doc-id",
         "doc:index",
     ]);
@@ -320,6 +386,49 @@ fn store_index_text_reports_summary() {
         "stdout: {stdout}"
     );
     assert!(stdout.contains("store index: ok"), "stdout: {stdout}");
+}
+
+#[test]
+fn store_index_path_only_prints_manifest_path() {
+    let fixture = build_store_with_view();
+
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--path-only",
+    ]);
+
+    assert_success(&output);
+    assert_empty_stderr(&output);
+    assert_eq!(
+        stdout_text(&output).trim(),
+        fixture
+            .store_dir
+            .path()
+            .join("indexes")
+            .join("manifest.json")
+            .to_string_lossy()
+    );
+    let _ = fixture.source_dir.path();
+}
+
+#[test]
+fn store_index_path_only_rejects_json() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--path-only",
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "store index --path-only cannot be used with --json",
+    );
 }
 
 #[test]
