@@ -43,6 +43,8 @@ Mycel 不是：
 
 目前的 Rust CLI 是內部驗證與 simulator 工具鏈，還不是 production 等級的 Mycel client 或 node。
 
+如果你是從全新環境開始，請先看 [`docs/DEV-SETUP.zh-TW.md`](./docs/DEV-SETUP.zh-TW.md)。
+
 在 repo 根目錄執行：
 
 ```bash

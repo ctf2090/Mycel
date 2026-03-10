@@ -43,6 +43,8 @@ Mycel is not:
 
 The current Rust CLI is an internal validation and simulator toolchain, not yet a production Mycel client or node.
 
+If you are starting from a fresh environment, read [`docs/DEV-SETUP.md`](./docs/DEV-SETUP.md) first.
+
 From the repo root:
 
 ```bash
