@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: late partial progress, refreshed after the recent M1 strictness and fixture-isolation batch
+Status: late partial progress, refreshed after the recent M1 strictness, test-foundation, and docs-sync batch
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -17,7 +17,8 @@ The repository already has:
 - a growing v0.1 protocol and wire-spec document set
 - a Rust CLI suitable for internal validation and deterministic simulator workflows
 - `mycel-core` support for object schema metadata, object-envelope parsing, replay-based revision verification, local object-store ingest/rebuild, persisted store indexes, and accepted-head inspection
-- broader strictness-surface coverage for `document`, `block`, `patch`, `revision`, `view`, and `snapshot` validation paths, plus isolated validate-peer fixtures
+- broader parser / verify / CLI strictness-surface coverage for `document`, `block`, `patch`, `revision`, `view`, and `snapshot`, plus isolated validate-peer fixtures
+- a more maintainable CLI test base with `assert_cmd`, `predicates`, `tempfile`, and small `rstest` use on high-duplication strictness matrices
 - simulator fixtures, topologies, tests, and reports for regression coverage
 
 The repository does not yet have:
@@ -110,7 +111,7 @@ Already in progress or partially implemented:
 
 Still missing or incomplete:
 
-1. Final closure work around strict unknown-field policy and malformed field-shape depth
+1. Final closure work around malformed field-shape depth, inspect-surface parity, and remaining semantic-edge strictness
 2. Narrow object-authoring and write path beyond verified ingest into the store
 3. A cleaner reader-facing profile surface on top of the accepted-head selector
 4. Shared canonicalization reuse extended into future wire-envelope work
@@ -136,7 +137,7 @@ Completion gate:
 
 Current read:
 
-Nearly complete. The shared parsing, canonical helper, broad strictness-surface coverage, isolated validate-peer fixtures, and canonical reproducibility coverage now exist; the remaining work is mostly malformed-field depth and semantic-edge closure plus a few milestone-close proof points.
+Nearly complete. The shared parsing, canonical helper, broad parser / verify / CLI strictness-surface coverage, isolated validate-peer fixtures, and canonical reproducibility coverage now exist; the remaining work is mostly malformed-field depth, inspect-surface parity, and semantic-edge closure plus a few milestone-close proof points.
 
 Already visible in the repo:
 
@@ -151,8 +152,8 @@ Already visible in the repo:
 
 Main remaining gaps:
 
-1. final malformed-field depth and semantic-edge strictness closure after broad unknown-field and invalid-type rejection
-2. deeper `mycel-core`-level coverage for the remaining semantic edge cases outside the current revision/canonical batch
+1. final malformed-field depth, inspect-surface parity, and semantic-edge strictness closure after broad unknown-field and invalid-type rejection
+2. deeper `mycel-core`-level coverage for the remaining semantic edge cases outside the current revision / patch and view / snapshot batches
 3. shared helper reuse extended into future wire-validation work
 4. clearer milestone-close criteria before widening more surfaces
 
