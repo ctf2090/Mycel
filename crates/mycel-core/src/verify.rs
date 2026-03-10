@@ -8,6 +8,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::protocol::{parse_object_envelope, ParseObjectEnvelopeError, StringFieldError};
+use crate::replay::replay_revision_from_index;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ObjectVerificationSummary {
@@ -20,6 +21,9 @@ pub struct ObjectVerificationSummary {
     pub signature_verification: Option<String>,
     pub declared_id: Option<String>,
     pub recomputed_id: Option<String>,
+    pub declared_state_hash: Option<String>,
+    pub recomputed_state_hash: Option<String>,
+    pub state_hash_verification: Option<String>,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
 }
@@ -53,6 +57,9 @@ impl ObjectVerificationSummary {
             signature_verification: None,
             declared_id: None,
             recomputed_id: None,
+            declared_state_hash: None,
+            recomputed_state_hash: None,
+            state_hash_verification: None,
             notes: Vec::new(),
             errors: Vec::new(),
         }
@@ -222,6 +229,18 @@ fn verify_object_value_with_summary(
         }
     }
 
+    if object_type == "revision" {
+        match envelope.required_string_field("state_hash") {
+            Ok(state_hash) => summary.declared_state_hash = Some(state_hash.to_string()),
+            Err(StringFieldError::Missing) => {
+                summary.push_error("revision object is missing string field 'state_hash'")
+            }
+            Err(StringFieldError::WrongType) => {
+                summary.push_error("top-level 'state_hash' must be a string")
+            }
+        }
+    }
+
     if schema.signature_rule.is_required() {
         let Some(signature) = object.get("signature") else {
             summary.push_error(format!(
@@ -292,6 +311,22 @@ fn verify_object_value_with_summary(
                 }
             }
             Err(err) => summary.push_error(err),
+        }
+    }
+
+    if object_type == "revision"
+        && summary.errors.is_empty()
+        && path != Path::new("<inline-object>")
+    {
+        match verify_revision_replay(path, &value) {
+            Ok(recomputed_state_hash) => {
+                summary.recomputed_state_hash = Some(recomputed_state_hash.clone());
+                summary.state_hash_verification = Some("verified".to_string());
+            }
+            Err(err) => {
+                summary.state_hash_verification = Some("failed".to_string());
+                summary.push_error(err);
+            }
         }
     }
 
@@ -398,6 +433,83 @@ fn inspect_object_value_with_summary(
     }
 
     summary
+}
+
+fn verify_revision_replay(path: &Path, value: &Value) -> Result<String, String> {
+    let object_index = load_neighbor_object_index(path)?;
+    let replay = replay_revision_from_index(value, &object_index)
+        .map_err(|error| format!("revision replay failed: {error}"))?;
+    let declared_state_hash = value
+        .as_object()
+        .and_then(|object| object.get("state_hash"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| "revision replay requires string field 'state_hash'".to_string())?;
+
+    if replay.recomputed_state_hash != declared_state_hash {
+        return Err(format!(
+            "declared state_hash does not match replayed state hash: expected '{}' but recomputed '{}'",
+            declared_state_hash, replay.recomputed_state_hash
+        ));
+    }
+
+    Ok(replay.recomputed_state_hash)
+}
+
+fn load_neighbor_object_index(
+    path: &Path,
+) -> Result<std::collections::HashMap<String, Value>, String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("cannot inspect sibling objects for {}", path.display()))?;
+    let entries = fs::read_dir(parent).map_err(|err| {
+        format!(
+            "failed to read object directory {}: {err}",
+            parent.display()
+        )
+    })?;
+
+    let mut object_index = std::collections::HashMap::new();
+    for entry in entries {
+        let entry = entry.map_err(|err| {
+            format!(
+                "failed to read object directory entry {}: {err}",
+                parent.display()
+            )
+        })?;
+        let entry_path = entry.path();
+        if entry_path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+
+        let content = fs::read_to_string(&entry_path).map_err(|err| {
+            format!(
+                "failed to read sibling object {}: {err}",
+                entry_path.display()
+            )
+        })?;
+        let value: Value = serde_json::from_str(&content).map_err(|err| {
+            format!(
+                "failed to parse sibling object {}: {err}",
+                entry_path.display()
+            )
+        })?;
+        let envelope = match parse_object_envelope(&value) {
+            Ok(envelope) => envelope,
+            Err(_) => continue,
+        };
+        let Some(declared_id) = envelope.declared_id().map_err(|_| {
+            format!(
+                "sibling object {} has invalid declared ID",
+                entry_path.display()
+            )
+        })?
+        else {
+            continue;
+        };
+        object_index.insert(declared_id.to_string(), value);
+    }
+
+    Ok(object_index)
 }
 
 fn finalize_signed_summary(mut summary: ObjectVerificationSummary) -> ObjectVerificationSummary {
@@ -572,9 +684,11 @@ pub(crate) fn hex_encode(bytes: &[u8]) -> String {
 mod tests {
     use base64::Engine;
     use ed25519_dalek::{Signer, SigningKey};
-    use serde_json::{json, Value};
+    use serde_json::{json, Map, Value};
 
     use super::{inspect_object_path, verify_object_path};
+    use crate::protocol::BlockObject;
+    use crate::replay::{compute_state_hash, DocumentState};
 
     fn write_test_file(name: &str, content: &str) -> std::path::PathBuf {
         let unique = std::time::SystemTime::now()
@@ -583,6 +697,16 @@ mod tests {
             .as_nanos();
         let path = std::env::temp_dir().join(format!("mycel-core-{name}-{unique}.json"));
         std::fs::write(&path, content).expect("test JSON should be written");
+        path
+    }
+
+    fn write_test_dir(name: &str) -> std::path::PathBuf {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("mycel-core-{name}-{unique}"));
+        std::fs::create_dir_all(&path).expect("test directory should be created");
         path
     }
 
@@ -603,6 +727,15 @@ mod tests {
             "sig:ed25519:{}",
             base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
         )
+    }
+
+    fn state_hash_for_blocks(doc_id: &str, blocks: Vec<BlockObject>) -> String {
+        compute_state_hash(&DocumentState {
+            doc_id: doc_id.to_string(),
+            blocks,
+            metadata: Map::new(),
+        })
+        .expect("state hash should compute")
     }
 
     #[test]
@@ -751,5 +884,157 @@ mod tests {
         );
 
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn revision_replay_verifies_state_hash_from_neighbor_patch() {
+        let (signing_key, public_key) = signer_material();
+        let dir = write_test_dir("revision-replay-valid");
+        let patch_path = dir.join("patch.json");
+        let revision_path = dir.join("revision.json");
+
+        let mut patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 10u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        });
+        let patch_id = super::recompute_object_id(&patch, "patch_id", "patch")
+            .expect("patch ID should recompute");
+        patch["patch_id"] = Value::String(patch_id.clone());
+        patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+        std::fs::write(
+            &patch_path,
+            serde_json::to_string_pretty(&patch).expect("patch should serialize"),
+        )
+        .expect("patch should write");
+
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [patch_id],
+            "state_hash": state_hash_for_blocks(
+                "doc:test",
+                vec![BlockObject {
+                    block_id: "blk:001".to_string(),
+                    block_type: "paragraph".to_string(),
+                    content: "Hello".to_string(),
+                    attrs: Map::new(),
+                    children: Vec::new()
+                }]
+            ),
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id);
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        std::fs::write(
+            &revision_path,
+            serde_json::to_string_pretty(&revision).expect("revision should serialize"),
+        )
+        .expect("revision should write");
+
+        let summary = verify_object_path(&revision_path);
+
+        assert!(summary.is_ok(), "expected success, got {summary:?}");
+        assert_eq!(summary.state_hash_verification.as_deref(), Some("verified"));
+        assert_eq!(
+            summary.declared_state_hash.as_deref(),
+            summary.recomputed_state_hash.as_deref()
+        );
+
+        let _ = std::fs::remove_file(patch_path);
+        let _ = std::fs::remove_file(revision_path);
+        let _ = std::fs::remove_dir(dir);
+    }
+
+    #[test]
+    fn revision_replay_rejects_state_hash_mismatch() {
+        let (signing_key, public_key) = signer_material();
+        let dir = write_test_dir("revision-replay-mismatch");
+        let patch_path = dir.join("patch.json");
+        let revision_path = dir.join("revision.json");
+
+        let mut patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 10u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        });
+        let patch_id = super::recompute_object_id(&patch, "patch_id", "patch")
+            .expect("patch ID should recompute");
+        patch["patch_id"] = Value::String(patch_id.clone());
+        patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+        std::fs::write(
+            &patch_path,
+            serde_json::to_string_pretty(&patch).expect("patch should serialize"),
+        )
+        .expect("patch should write");
+
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [patch_id],
+            "state_hash": "hash:wrong",
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id);
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        std::fs::write(
+            &revision_path,
+            serde_json::to_string_pretty(&revision).expect("revision should serialize"),
+        )
+        .expect("revision should write");
+
+        let summary = verify_object_path(&revision_path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert_eq!(summary.state_hash_verification.as_deref(), Some("failed"));
+        assert!(
+            summary.errors.iter().any(|message| message
+                .contains("declared state_hash does not match replayed state hash")),
+            "expected state-hash mismatch error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(patch_path);
+        let _ = std::fs::remove_file(revision_path);
+        let _ = std::fs::remove_dir(dir);
     }
 }

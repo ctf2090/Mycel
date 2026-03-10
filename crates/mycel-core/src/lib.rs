@@ -5,6 +5,7 @@
 
 pub mod head;
 pub mod protocol;
+pub mod replay;
 pub mod verify;
 
 pub const WORKSPACE_NAME: &str = "mycel";

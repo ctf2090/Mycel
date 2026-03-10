@@ -147,6 +147,15 @@ fn print_object_verification_text(summary: &ObjectVerificationSummary) -> i32 {
     if let Some(recomputed_id) = &summary.recomputed_id {
         println!("recomputed id: {recomputed_id}");
     }
+    if let Some(declared_state_hash) = &summary.declared_state_hash {
+        println!("declared state hash: {declared_state_hash}");
+    }
+    if let Some(recomputed_state_hash) = &summary.recomputed_state_hash {
+        println!("recomputed state hash: {recomputed_state_hash}");
+    }
+    if let Some(state_hash_verification) = &summary.state_hash_verification {
+        println!("state hash verification: {state_hash_verification}");
+    }
     println!("status: {}", summary.status);
 
     for note in &summary.notes {

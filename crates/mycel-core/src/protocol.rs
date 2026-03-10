@@ -337,12 +337,338 @@ pub fn required_string_field<'a>(
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BlockObject {
+    pub block_id: String,
+    pub block_type: String,
+    pub content: String,
+    pub attrs: Map<String, Value>,
+    pub children: Vec<BlockObject>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PatchOperation {
+    InsertBlock {
+        parent_block_id: Option<String>,
+        index: Option<usize>,
+        new_block: BlockObject,
+    },
+    InsertBlockAfter {
+        after_block_id: String,
+        new_block: BlockObject,
+    },
+    DeleteBlock {
+        block_id: String,
+    },
+    ReplaceBlock {
+        block_id: String,
+        new_content: String,
+    },
+    MoveBlock {
+        block_id: String,
+        parent_block_id: Option<String>,
+        after_block_id: Option<String>,
+    },
+    AnnotateBlock {
+        block_id: String,
+        annotation: BlockObject,
+    },
+    SetMetadata {
+        entries: Map<String, Value>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PatchObject {
+    pub patch_id: String,
+    pub doc_id: String,
+    pub base_revision: String,
+    pub author: String,
+    pub timestamp: u64,
+    pub ops: Vec<PatchOperation>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RevisionObject {
+    pub revision_id: String,
+    pub doc_id: String,
+    pub parents: Vec<String>,
+    pub patches: Vec<String>,
+    pub state_hash: String,
+    pub author: String,
+    pub timestamp: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedObjectError {
+    message: String,
+}
+
+impl TypedObjectError {
+    fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for TypedObjectError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for TypedObjectError {}
+
+pub fn parse_block_object(value: &Value) -> Result<BlockObject, TypedObjectError> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| TypedObjectError::new("block must be a JSON object"))?;
+
+    Ok(BlockObject {
+        block_id: required_string(object, "block_id")?,
+        block_type: required_string(object, "block_type")?,
+        content: required_string(object, "content")?,
+        attrs: required_object(object, "attrs")?,
+        children: required_array(object, "children")?
+            .iter()
+            .map(parse_block_object)
+            .collect::<Result<Vec<_>, _>>()?,
+    })
+}
+
+pub fn parse_patch_object(value: &Value) -> Result<PatchObject, TypedObjectError> {
+    let envelope = parse_object_envelope(value)
+        .map_err(|error| TypedObjectError::new(format!("patch parse error: {error}")))?;
+    if envelope.kind() != ObjectKind::Patch {
+        return Err(TypedObjectError::new(format!(
+            "expected patch object, found '{}'",
+            envelope.object_type()
+        )));
+    }
+
+    let object = envelope.object();
+    Ok(PatchObject {
+        patch_id: required_string(object, "patch_id")?,
+        doc_id: required_string(object, "doc_id")?,
+        base_revision: required_string(object, "base_revision")?,
+        author: required_string(object, "author")?,
+        timestamp: required_u64(object, "timestamp")?,
+        ops: required_array(object, "ops")?
+            .iter()
+            .map(parse_patch_operation)
+            .collect::<Result<Vec<_>, _>>()?,
+    })
+}
+
+pub fn parse_revision_object(value: &Value) -> Result<RevisionObject, TypedObjectError> {
+    let envelope = parse_object_envelope(value)
+        .map_err(|error| TypedObjectError::new(format!("revision parse error: {error}")))?;
+    if envelope.kind() != ObjectKind::Revision {
+        return Err(TypedObjectError::new(format!(
+            "expected revision object, found '{}'",
+            envelope.object_type()
+        )));
+    }
+
+    let object = envelope.object();
+    Ok(RevisionObject {
+        revision_id: required_string(object, "revision_id")?,
+        doc_id: required_string(object, "doc_id")?,
+        parents: required_string_array(object, "parents")?,
+        patches: required_string_array(object, "patches")?,
+        state_hash: required_string(object, "state_hash")?,
+        author: required_string(object, "author")?,
+        timestamp: required_u64(object, "timestamp")?,
+    })
+}
+
+fn parse_patch_operation(value: &Value) -> Result<PatchOperation, TypedObjectError> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| TypedObjectError::new("patch op must be a JSON object"))?;
+    let op = required_string(object, "op")?;
+
+    match op.as_str() {
+        "insert_block" => Ok(PatchOperation::InsertBlock {
+            parent_block_id: optional_string(object, "parent_block_id")?,
+            index: optional_usize(object, "index")?,
+            new_block: parse_block_field(object, "new_block")?,
+        }),
+        "insert_block_after" => Ok(PatchOperation::InsertBlockAfter {
+            after_block_id: required_string(object, "after_block_id")?,
+            new_block: parse_block_field(object, "new_block")?,
+        }),
+        "delete_block" => Ok(PatchOperation::DeleteBlock {
+            block_id: required_string(object, "block_id")?,
+        }),
+        "replace_block" => Ok(PatchOperation::ReplaceBlock {
+            block_id: required_string(object, "block_id")?,
+            new_content: required_string(object, "new_content")?,
+        }),
+        "move_block" => Ok(PatchOperation::MoveBlock {
+            block_id: required_string(object, "block_id")?,
+            parent_block_id: optional_string(object, "parent_block_id")?,
+            after_block_id: optional_string(object, "after_block_id")?,
+        }),
+        "annotate_block" => Ok(PatchOperation::AnnotateBlock {
+            block_id: required_string(object, "block_id")?,
+            annotation: parse_block_field(object, "annotation")?,
+        }),
+        "set_metadata" => Ok(PatchOperation::SetMetadata {
+            entries: parse_metadata_entries(object)?,
+        }),
+        _ => Err(TypedObjectError::new(format!(
+            "unsupported patch op '{op}'"
+        ))),
+    }
+}
+
+fn parse_block_field(
+    object: &Map<String, Value>,
+    field: &str,
+) -> Result<BlockObject, TypedObjectError> {
+    let value = object
+        .get(field)
+        .ok_or_else(|| TypedObjectError::new(format!("missing object field '{field}'")))?;
+    parse_block_object(value)
+}
+
+fn parse_metadata_entries(
+    object: &Map<String, Value>,
+) -> Result<Map<String, Value>, TypedObjectError> {
+    if let Some(metadata) = object.get("metadata") {
+        let entries = metadata
+            .as_object()
+            .ok_or_else(|| TypedObjectError::new("top-level 'metadata' must be an object"))?;
+        return Ok(entries.clone());
+    }
+
+    let key = required_string(object, "key")?;
+    let value = object
+        .get("value")
+        .ok_or_else(|| TypedObjectError::new("missing object field 'value'"))?;
+    let mut entries = Map::new();
+    entries.insert(key, value.clone());
+    Ok(entries)
+}
+
+fn required_string(object: &Map<String, Value>, field: &str) -> Result<String, TypedObjectError> {
+    match object.get(field) {
+        Some(Value::String(value)) => Ok(value.clone()),
+        Some(_) => Err(TypedObjectError::new(format!(
+            "top-level '{field}' must be a string"
+        ))),
+        None => Err(TypedObjectError::new(format!(
+            "missing string field '{field}'"
+        ))),
+    }
+}
+
+fn optional_string(
+    object: &Map<String, Value>,
+    field: &str,
+) -> Result<Option<String>, TypedObjectError> {
+    match object.get(field) {
+        Some(Value::String(value)) => Ok(Some(value.clone())),
+        Some(_) => Err(TypedObjectError::new(format!(
+            "top-level '{field}' must be a string"
+        ))),
+        None => Ok(None),
+    }
+}
+
+fn required_u64(object: &Map<String, Value>, field: &str) -> Result<u64, TypedObjectError> {
+    match object.get(field) {
+        Some(Value::Number(value)) => value.as_u64().ok_or_else(|| {
+            TypedObjectError::new(format!(
+                "top-level '{field}' must be a non-negative integer"
+            ))
+        }),
+        Some(_) => Err(TypedObjectError::new(format!(
+            "top-level '{field}' must be a non-negative integer"
+        ))),
+        None => Err(TypedObjectError::new(format!(
+            "missing integer field '{field}'"
+        ))),
+    }
+}
+
+fn optional_usize(
+    object: &Map<String, Value>,
+    field: &str,
+) -> Result<Option<usize>, TypedObjectError> {
+    match object.get(field) {
+        Some(Value::Number(value)) => {
+            let index = value.as_u64().ok_or_else(|| {
+                TypedObjectError::new(format!(
+                    "top-level '{field}' must be a non-negative integer"
+                ))
+            })?;
+            usize::try_from(index)
+                .map(Some)
+                .map_err(|_| TypedObjectError::new(format!("top-level '{field}' is too large")))
+        }
+        Some(_) => Err(TypedObjectError::new(format!(
+            "top-level '{field}' must be a non-negative integer"
+        ))),
+        None => Ok(None),
+    }
+}
+
+fn required_array<'a>(
+    object: &'a Map<String, Value>,
+    field: &str,
+) -> Result<&'a Vec<Value>, TypedObjectError> {
+    match object.get(field) {
+        Some(Value::Array(values)) => Ok(values),
+        Some(_) => Err(TypedObjectError::new(format!(
+            "top-level '{field}' must be an array"
+        ))),
+        None => Err(TypedObjectError::new(format!(
+            "missing array field '{field}'"
+        ))),
+    }
+}
+
+fn required_object(
+    object: &Map<String, Value>,
+    field: &str,
+) -> Result<Map<String, Value>, TypedObjectError> {
+    match object.get(field) {
+        Some(Value::Object(value)) => Ok(value.clone()),
+        Some(_) => Err(TypedObjectError::new(format!(
+            "top-level '{field}' must be an object"
+        ))),
+        None => Err(TypedObjectError::new(format!(
+            "missing object field '{field}'"
+        ))),
+    }
+}
+
+fn required_string_array(
+    object: &Map<String, Value>,
+    field: &str,
+) -> Result<Vec<String>, TypedObjectError> {
+    required_array(object, field)?
+        .iter()
+        .enumerate()
+        .map(|(index, value)| match value {
+            Value::String(value) => Ok(value.clone()),
+            _ => Err(TypedObjectError::new(format!(
+                "top-level '{field}[{index}]' must be a string"
+            ))),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
 
     use super::{
-        object_schema, parse_object_envelope, ObjectKind, ParseObjectEnvelopeError, SignatureRule,
+        object_schema, parse_block_object, parse_object_envelope, parse_patch_object,
+        parse_revision_object, ObjectKind, ParseObjectEnvelopeError, SignatureRule,
         StringFieldError,
     };
 
@@ -546,5 +872,65 @@ mod tests {
             envelope.required_string_field("missing"),
             Err(StringFieldError::Missing)
         );
+    }
+
+    #[test]
+    fn parse_patch_object_reads_ops_and_new_block() {
+        let patch = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }))
+        .expect("patch should parse");
+
+        assert_eq!(patch.patch_id, "patch:test");
+        assert_eq!(patch.ops.len(), 1);
+    }
+
+    #[test]
+    fn parse_revision_object_reads_parent_and_patch_ids() {
+        let revision = parse_revision_object(&json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": ["patch:test"],
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 2u64
+        }))
+        .expect("revision should parse");
+
+        assert_eq!(revision.parents, vec!["rev:base"]);
+        assert_eq!(revision.patches, vec!["patch:test"]);
+    }
+
+    #[test]
+    fn parse_block_object_requires_attrs_and_children() {
+        let error = parse_block_object(&json!({
+            "block_id": "blk:001",
+            "block_type": "paragraph",
+            "content": "Hello"
+        }))
+        .unwrap_err();
+
+        assert_eq!(error.to_string(), "missing object field 'attrs'");
     }
 }
