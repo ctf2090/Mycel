@@ -130,6 +130,19 @@ fn store_rebuild_help_prints_structured_clap_help() {
 }
 
 #[test]
+fn store_ingest_help_prints_structured_clap_help() {
+    let output = run_mycel(&["store", "ingest", "--help"]);
+
+    assert_exit_code(&output, 0);
+    assert_empty_stderr(&output);
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("Verify and ingest objects into a local object store"));
+    assert!(stdout.contains("Usage: mycel store ingest [OPTIONS] --into <STORE_ROOT> <SOURCE>"));
+    assert!(stdout.contains("--into <STORE_ROOT>"));
+    assert!(stdout.contains("--json"));
+}
+
+#[test]
 fn validate_help_prints_structured_clap_help() {
     let output = run_mycel(&["validate", "--help"]);
 

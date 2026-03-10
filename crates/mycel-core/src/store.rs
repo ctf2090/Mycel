@@ -8,7 +8,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::protocol::{parse_patch_object, parse_revision_object, parse_view_object};
-use crate::verify::{canonical_json, hex_encode, verify_object_value_with_object_index};
+use crate::verify::{
+    canonical_json, hex_encode, verify_object_path, verify_object_value_with_object_index,
+};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct StoredObjectRecord {
@@ -23,6 +25,22 @@ pub struct ViewGovernanceRecord {
     pub maintainer: String,
     pub profile_id: String,
     pub documents: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StoreIngestSummary {
+    pub source: PathBuf,
+    pub store_root: PathBuf,
+    pub status: String,
+    pub discovered_file_count: usize,
+    pub identified_object_count: usize,
+    pub verified_object_count: usize,
+    pub written_object_count: usize,
+    pub existing_object_count: usize,
+    pub skipped_object_count: usize,
+    pub stored_objects: Vec<StoredObjectRecord>,
+    pub notes: Vec<String>,
+    pub errors: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -101,14 +119,49 @@ impl StoreRebuildSummary {
     }
 }
 
+impl StoreIngestSummary {
+    fn new(source: &Path, store_root: &Path) -> Self {
+        Self {
+            source: source.to_path_buf(),
+            store_root: store_root.to_path_buf(),
+            status: "ok".to_string(),
+            discovered_file_count: 0,
+            identified_object_count: 0,
+            verified_object_count: 0,
+            written_object_count: 0,
+            existing_object_count: 0,
+            skipped_object_count: 0,
+            stored_objects: Vec::new(),
+            notes: Vec::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn is_ok(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    fn push_error(&mut self, message: impl Into<String>) {
+        self.status = "failed".to_string();
+        self.errors.push(message.into());
+    }
+
+    fn push_note(&mut self, message: impl Into<String>) {
+        self.notes.push(message.into());
+        if self.status != "failed" {
+            self.status = "warning".to_string();
+        }
+    }
+}
+
 pub fn rebuild_store_from_path(target: &Path) -> Result<StoreRebuildSummary, StoreRebuildError> {
     let target = normalize_path(target);
     let mut summary = StoreRebuildSummary::new(&target);
-    let json_paths = collect_json_paths(&target)?;
+    let json_paths = collect_json_paths(&target, "store target")?;
     summary.discovered_file_count = json_paths.len();
 
-    let loaded = load_objects(&json_paths, &mut summary)?;
-    let object_index = build_object_index(&loaded, &mut summary);
+    let loaded = load_objects(&json_paths, SummaryAdapter::Rebuild(&mut summary))?;
+    let object_index = build_object_index(&loaded, SummaryAdapter::Rebuild(&mut summary));
     summary.identified_object_count = object_index.len();
 
     for loaded_object in &loaded {
@@ -156,12 +209,101 @@ pub fn rebuild_store_from_path(target: &Path) -> Result<StoreRebuildSummary, Sto
     Ok(summary)
 }
 
+pub fn ingest_store_from_path(
+    source: &Path,
+    store_root: &Path,
+) -> Result<StoreIngestSummary, StoreRebuildError> {
+    let source = normalize_path(source);
+    let store_root = normalize_path(store_root);
+    ensure_store_root(&store_root)?;
+
+    let mut summary = StoreIngestSummary::new(&source, &store_root);
+    let json_paths = collect_json_paths(&source, "ingest source")?;
+    summary.discovered_file_count = json_paths.len();
+
+    let loaded = load_objects(&json_paths, SummaryAdapter::Ingest(&mut summary))?;
+    let object_index = build_object_index(&loaded, SummaryAdapter::Ingest(&mut summary));
+    summary.identified_object_count = object_index.len();
+
+    for loaded_object in &loaded {
+        let verification = if source.is_file() {
+            verify_object_path(&loaded_object.path)
+        } else {
+            verify_object_value_with_object_index(&loaded_object.value, Some(&object_index))
+        };
+        if !verification.is_ok() {
+            summary.push_error(format!(
+                "{}: {}",
+                loaded_object.path.display(),
+                verification.errors.join("; ")
+            ));
+            continue;
+        }
+
+        let Some(record) = stored_record_from_loaded(loaded_object)? else {
+            summary.skipped_object_count += 1;
+            summary.push_note(format!(
+                "skipping non-content-addressed object {} ({})",
+                loaded_object.path.display(),
+                loaded_object.object_type
+            ));
+            continue;
+        };
+
+        summary.verified_object_count += 1;
+        let write_outcome = write_stored_object(&store_root, loaded_object, &record)?;
+        match write_outcome {
+            WriteOutcome::Written(path) => {
+                summary.written_object_count += 1;
+                summary
+                    .stored_objects
+                    .push(StoredObjectRecord { path, ..record });
+            }
+            WriteOutcome::AlreadyPresent(path) => {
+                summary.existing_object_count += 1;
+                summary
+                    .stored_objects
+                    .push(StoredObjectRecord { path, ..record });
+            }
+        }
+    }
+
+    summary.stored_objects.sort_by(|left, right| {
+        left.object_id
+            .cmp(&right.object_id)
+            .then_with(|| left.path.cmp(&right.path))
+    });
+
+    Ok(summary)
+}
+
 #[derive(Debug, Clone)]
 struct LoadedObject {
     path: PathBuf,
     value: Value,
     object_type: String,
     declared_id: Option<String>,
+}
+
+enum SummaryAdapter<'a> {
+    Rebuild(&'a mut StoreRebuildSummary),
+    Ingest(&'a mut StoreIngestSummary),
+}
+
+impl SummaryAdapter<'_> {
+    fn push_error(&mut self, message: impl Into<String>) {
+        match self {
+            Self::Rebuild(summary) => summary.push_error(message),
+            Self::Ingest(summary) => summary.push_error(message),
+        }
+    }
+
+    fn push_note(&mut self, message: impl Into<String>) {
+        match self {
+            Self::Rebuild(summary) => summary.push_note(message),
+            Self::Ingest(summary) => summary.push_note(message),
+        }
+    }
 }
 
 fn normalize_path(path: &Path) -> PathBuf {
@@ -174,10 +316,108 @@ fn normalize_path(path: &Path) -> PathBuf {
     }
 }
 
-fn collect_json_paths(target: &Path) -> Result<Vec<PathBuf>, StoreRebuildError> {
+fn ensure_store_root(store_root: &Path) -> Result<(), StoreRebuildError> {
+    if store_root.exists() && !store_root.is_dir() {
+        return Err(StoreRebuildError::new(format!(
+            "store root must be a directory: {}",
+            store_root.display()
+        )));
+    }
+
+    fs::create_dir_all(store_root).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to create store root {}: {error}",
+            store_root.display()
+        ))
+    })
+}
+
+fn objects_root(store_root: &Path) -> PathBuf {
+    store_root.join("objects")
+}
+
+fn store_path_for_record(
+    store_root: &Path,
+    record: &StoredObjectRecord,
+) -> Result<PathBuf, StoreRebuildError> {
+    let (_, object_hash) = record.object_id.split_once(':').ok_or_else(|| {
+        StoreRebuildError::new(format!(
+            "stored object ID '{}' is missing type prefix separator",
+            record.object_id
+        ))
+    })?;
+    Ok(objects_root(store_root)
+        .join(&record.object_type)
+        .join(format!("{object_hash}.json")))
+}
+
+enum WriteOutcome {
+    Written(PathBuf),
+    AlreadyPresent(PathBuf),
+}
+
+fn write_stored_object(
+    store_root: &Path,
+    loaded_object: &LoadedObject,
+    record: &StoredObjectRecord,
+) -> Result<WriteOutcome, StoreRebuildError> {
+    let store_path = store_path_for_record(store_root, record)?;
+    if let Some(parent) = store_path.parent() {
+        fs::create_dir_all(parent).map_err(|error| {
+            StoreRebuildError::new(format!(
+                "failed to create store object directory {}: {error}",
+                parent.display()
+            ))
+        })?;
+    }
+
+    let rendered = serde_json::to_string_pretty(&loaded_object.value).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to serialize object '{}' for storage: {error}",
+            record.object_id
+        ))
+    })?;
+
+    if store_path.exists() {
+        let existing = fs::read_to_string(&store_path).map_err(|error| {
+            StoreRebuildError::new(format!(
+                "failed to read existing stored object {}: {error}",
+                store_path.display()
+            ))
+        })?;
+        let existing_value: Value = serde_json::from_str(&existing).map_err(|error| {
+            StoreRebuildError::new(format!(
+                "failed to parse existing stored object {}: {error}",
+                store_path.display()
+            ))
+        })?;
+        if existing_value == loaded_object.value {
+            return Ok(WriteOutcome::AlreadyPresent(store_path));
+        }
+        return Err(StoreRebuildError::new(format!(
+            "store path conflict for object '{}' at {}",
+            record.object_id,
+            store_path.display()
+        )));
+    }
+
+    fs::write(&store_path, rendered).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to write stored object {}: {error}",
+            store_path.display()
+        ))
+    })?;
+
+    Ok(WriteOutcome::Written(store_path))
+}
+
+fn collect_json_paths(
+    target: &Path,
+    target_label: &str,
+) -> Result<Vec<PathBuf>, StoreRebuildError> {
     if !target.exists() {
         return Err(StoreRebuildError::new(format!(
-            "store target does not exist: {}",
+            "{target_label} does not exist: {}",
             target.display()
         )));
     }
@@ -230,7 +470,7 @@ fn collect_json_paths_recursive(
 
 fn load_objects(
     paths: &[PathBuf],
-    summary: &mut StoreRebuildSummary,
+    mut summary: SummaryAdapter<'_>,
 ) -> Result<Vec<LoadedObject>, StoreRebuildError> {
     let mut loaded = Vec::new();
 
@@ -282,7 +522,7 @@ fn load_objects(
 
 fn build_object_index(
     loaded: &[LoadedObject],
-    summary: &mut StoreRebuildSummary,
+    mut summary: SummaryAdapter<'_>,
 ) -> HashMap<String, Value> {
     let mut object_index = HashMap::new();
 
@@ -422,7 +662,7 @@ mod tests {
     use serde_json::{json, Value};
     use sha2::{Digest, Sha256};
 
-    use super::rebuild_store_from_path;
+    use super::{ingest_store_from_path, rebuild_store_from_path};
 
     fn signing_key() -> SigningKey {
         SigningKey::from_bytes(&[7u8; 32])
@@ -648,5 +888,165 @@ mod tests {
         assert_eq!(summary.profile_heads.len(), 1);
 
         let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn ingest_store_writes_verified_objects_to_content_addressed_layout() {
+        let source_dir = write_temp_dir("ingest-source");
+        let store_dir = write_temp_dir("ingest-store");
+        let patch = signed_object(
+            json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "doc_id": "doc:ingest",
+                "base_revision": "rev:genesis-null",
+                "timestamp": 1u64,
+                "ops": [
+                    {
+                        "op": "insert_block",
+                        "new_block": {
+                            "block_id": "blk:ingest-001",
+                            "block_type": "paragraph",
+                            "content": "Hello ingest",
+                            "attrs": {},
+                            "children": []
+                        }
+                    }
+                ]
+            }),
+            "author",
+            "patch_id",
+            "patch",
+        );
+        let patch_id = patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string();
+        fs::write(
+            source_dir.join("patch.json"),
+            serde_json::to_string_pretty(&patch).expect("patch should serialize"),
+        )
+        .expect("patch should write");
+
+        let state = json!({
+            "doc_id": "doc:ingest",
+            "blocks": [
+                {
+                    "block_id": "blk:ingest-001",
+                    "block_type": "paragraph",
+                    "content": "Hello ingest",
+                    "attrs": {},
+                    "children": []
+                }
+            ]
+        });
+        let mut hasher = Sha256::new();
+        hasher.update(canonical_json(&state).as_bytes());
+        let state_hash = format!("hash:{:x}", hasher.finalize());
+
+        let revision = signed_object(
+            json!({
+                "type": "revision",
+                "version": "mycel/0.1",
+                "doc_id": "doc:ingest",
+                "parents": [],
+                "patches": [patch_id],
+                "state_hash": state_hash,
+                "timestamp": 2u64
+            }),
+            "author",
+            "revision_id",
+            "rev",
+        );
+        let revision_id = revision["revision_id"]
+            .as_str()
+            .expect("revision id should exist")
+            .to_string();
+        fs::write(
+            source_dir.join("revision.json"),
+            serde_json::to_string_pretty(&revision).expect("revision should serialize"),
+        )
+        .expect("revision should write");
+
+        let summary =
+            ingest_store_from_path(&source_dir, &store_dir).expect("store ingest should succeed");
+
+        assert!(summary.is_ok(), "expected ok summary, got {summary:?}");
+        assert_eq!(summary.verified_object_count, 2);
+        assert_eq!(summary.written_object_count, 2);
+        assert_eq!(summary.existing_object_count, 0);
+        assert_eq!(summary.skipped_object_count, 0);
+
+        let patch_hash = patch["patch_id"]
+            .as_str()
+            .and_then(|value| value.split_once(':'))
+            .map(|(_, hash)| hash)
+            .expect("patch id should include hash");
+        let revision_hash = revision_id
+            .split_once(':')
+            .map(|(_, hash)| hash)
+            .expect("revision id should include hash");
+
+        assert!(store_dir
+            .join("objects")
+            .join("patch")
+            .join(format!("{patch_hash}.json"))
+            .exists());
+        assert!(store_dir
+            .join("objects")
+            .join("revision")
+            .join(format!("{revision_hash}.json"))
+            .exists());
+
+        let rebuild =
+            rebuild_store_from_path(&store_dir).expect("rebuild from ingested store should work");
+        assert!(
+            rebuild.is_ok(),
+            "expected ok rebuild summary, got {rebuild:?}"
+        );
+        assert_eq!(rebuild.stored_object_count, 2);
+
+        let _ = fs::remove_dir_all(source_dir);
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn ingest_store_marks_existing_objects_on_repeat_ingest() {
+        let source_dir = write_temp_dir("repeat-source");
+        let store_dir = write_temp_dir("repeat-store");
+        let patch = signed_object(
+            json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "doc_id": "doc:repeat",
+                "base_revision": "rev:genesis-null",
+                "timestamp": 1u64,
+                "ops": []
+            }),
+            "author",
+            "patch_id",
+            "patch",
+        );
+        fs::write(
+            source_dir.join("patch.json"),
+            serde_json::to_string_pretty(&patch).expect("patch should serialize"),
+        )
+        .expect("patch should write");
+
+        let first =
+            ingest_store_from_path(&source_dir, &store_dir).expect("first ingest should succeed");
+        assert!(first.is_ok(), "expected ok first ingest, got {first:?}");
+        assert_eq!(first.written_object_count, 1);
+        assert_eq!(first.existing_object_count, 0);
+
+        let second =
+            ingest_store_from_path(&source_dir, &store_dir).expect("second ingest should succeed");
+        assert!(second.is_ok(), "expected ok second ingest, got {second:?}");
+        assert_eq!(second.written_object_count, 0);
+        assert_eq!(second.existing_object_count, 1);
+        assert_eq!(second.verified_object_count, 1);
+
+        let _ = fs::remove_dir_all(source_dir);
+        let _ = fs::remove_dir_all(store_dir);
     }
 }
