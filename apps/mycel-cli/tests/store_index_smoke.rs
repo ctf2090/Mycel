@@ -432,6 +432,127 @@ fn store_index_path_only_rejects_json() {
 }
 
 #[test]
+fn store_index_doc_only_json_prunes_other_sections() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--doc-only",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(json["projection"], "doc-only");
+    assert_eq!(
+        json["doc_revisions"].as_object().map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(
+        json["revision_parents"]
+            .as_object()
+            .map(|values| values.len()),
+        Some(0)
+    );
+    assert_eq!(
+        json["view_governance"]
+            .as_array()
+            .map(|values| values.len()),
+        Some(0)
+    );
+    assert_eq!(
+        json["profile_heads"].as_object().map(|values| values.len()),
+        Some(0)
+    );
+}
+
+#[test]
+fn store_index_governance_only_json_prunes_non_governance_sections() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--governance-only",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(json["projection"], "governance-only");
+    assert_eq!(
+        json["view_governance"]
+            .as_array()
+            .map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(
+        json["profile_heads"].as_object().map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(
+        json["doc_revisions"].as_object().map(|values| values.len()),
+        Some(0)
+    );
+    assert_eq!(
+        json["revision_parents"]
+            .as_object()
+            .map(|values| values.len()),
+        Some(0)
+    );
+}
+
+#[test]
+fn store_index_parents_only_text_reports_projection() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--parents-only",
+    ]);
+
+    assert_success(&output);
+    assert_empty_stderr(&output);
+    let stdout = stdout_text(&output);
+    assert!(
+        stdout.contains("projection: parents-only"),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("revision parent indexes: 1"),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("document revision indexes: 0"),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("view governance records: 0"),
+        "stdout: {stdout}"
+    );
+}
+
+#[test]
+fn store_index_rejects_multiple_projection_flags() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--doc-only",
+        "--governance-only",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "store index projection flags are mutually exclusive",
+    );
+}
+
+#[test]
 fn store_index_missing_manifest_fails_cleanly() {
     let store_dir = create_temp_dir("store-index-missing");
     let output = run_mycel(&["store", "index", &path_arg(&store_dir.path().to_path_buf())]);

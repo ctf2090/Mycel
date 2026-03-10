@@ -158,6 +158,9 @@ fn store_index_help_prints_structured_clap_help() {
     assert!(stdout.contains("--profile-id <PROFILE_ID>"));
     assert!(stdout.contains("--object-type <OBJECT_TYPE>"));
     assert!(stdout.contains("--path-only"));
+    assert!(stdout.contains("--doc-only"));
+    assert!(stdout.contains("--governance-only"));
+    assert!(stdout.contains("--parents-only"));
     assert!(stdout.contains("--json"));
 }
 

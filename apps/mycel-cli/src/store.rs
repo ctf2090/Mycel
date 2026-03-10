@@ -89,6 +89,12 @@ struct StoreIndexCliArgs {
     json: bool,
     #[arg(long, help = "Print only the persisted manifest path")]
     path_only: bool,
+    #[arg(long, help = "Only emit document revision indexes")]
+    doc_only: bool,
+    #[arg(long, help = "Only emit governance-related indexes")]
+    governance_only: bool,
+    #[arg(long, help = "Only emit revision parent indexes")]
+    parents_only: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
 }
@@ -107,6 +113,7 @@ struct StoreIndexQuerySummary {
     profile_heads:
         std::collections::BTreeMap<String, std::collections::BTreeMap<String, Vec<String>>>,
     filters: StoreIndexQueryFilters,
+    projection: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -117,6 +124,13 @@ struct StoreIndexQueryFilters {
     view_id: Option<String>,
     profile_id: Option<String>,
     object_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StoreIndexProjection {
+    DocOnly,
+    GovernanceOnly,
+    ParentsOnly,
 }
 
 fn print_store_rebuild_text(summary: &StoreRebuildSummary) -> i32 {
@@ -365,10 +379,43 @@ fn filtered_doc_revisions(
     filtered
 }
 
+fn apply_projection(
+    summary: &mut StoreIndexQuerySummary,
+    projection: Option<StoreIndexProjection>,
+) {
+    match projection {
+        Some(StoreIndexProjection::DocOnly) => {
+            summary.object_ids_by_type.clear();
+            summary.revision_parents.clear();
+            summary.author_patches.clear();
+            summary.view_governance.clear();
+            summary.profile_heads.clear();
+            summary.projection = Some("doc-only".to_string());
+        }
+        Some(StoreIndexProjection::GovernanceOnly) => {
+            summary.object_ids_by_type.clear();
+            summary.doc_revisions.clear();
+            summary.revision_parents.clear();
+            summary.author_patches.clear();
+            summary.projection = Some("governance-only".to_string());
+        }
+        Some(StoreIndexProjection::ParentsOnly) => {
+            summary.object_ids_by_type.clear();
+            summary.doc_revisions.clear();
+            summary.author_patches.clear();
+            summary.view_governance.clear();
+            summary.profile_heads.clear();
+            summary.projection = Some("parents-only".to_string());
+        }
+        None => {}
+    }
+}
+
 fn build_store_index_query_summary(
     store_root: PathBuf,
     manifest: StoreIndexManifest,
     filters: StoreIndexQueryFilters,
+    projection: Option<StoreIndexProjection>,
 ) -> StoreIndexQuerySummary {
     let doc_revisions = filtered_doc_revisions(&manifest, &filters.doc_id, &filters.revision_id);
     let author_patches = filter_single_map(&manifest.author_patches, &filters.author);
@@ -389,7 +436,7 @@ fn build_store_index_query_summary(
     let revision_ids = selected_revision_ids(&doc_revisions, &filters.revision_id);
     let revision_parents = filtered_revision_parents(&manifest, &revision_ids);
 
-    StoreIndexQuerySummary {
+    let mut summary = StoreIndexQuerySummary {
         manifest_path: store_root.join("indexes").join("manifest.json"),
         store_root,
         status: "ok".to_string(),
@@ -401,7 +448,10 @@ fn build_store_index_query_summary(
         view_governance,
         profile_heads,
         filters,
-    }
+        projection: None,
+    };
+    apply_projection(&mut summary, projection);
+    summary
 }
 
 fn print_store_index_text(summary: &StoreIndexQuerySummary) -> i32 {
@@ -436,6 +486,9 @@ fn print_store_index_text(summary: &StoreIndexQuerySummary) -> i32 {
     if let Some(object_type) = &summary.filters.object_type {
         println!("filter object_type: {object_type}");
     }
+    if let Some(projection) = &summary.projection {
+        println!("projection: {projection}");
+    }
     println!("store index: ok");
     0
 }
@@ -456,6 +509,27 @@ fn print_store_index_path_only(store_root: &std::path::Path) -> i32 {
         store_root.join("indexes").join("manifest.json").display()
     );
     0
+}
+
+fn selected_projection(args: &StoreIndexCliArgs) -> Result<Option<StoreIndexProjection>, CliError> {
+    let mut selected = Vec::new();
+    if args.doc_only {
+        selected.push(StoreIndexProjection::DocOnly);
+    }
+    if args.governance_only {
+        selected.push(StoreIndexProjection::GovernanceOnly);
+    }
+    if args.parents_only {
+        selected.push(StoreIndexProjection::ParentsOnly);
+    }
+
+    if selected.len() > 1 {
+        return Err(CliError::usage(
+            "store index projection flags are mutually exclusive",
+        ));
+    }
+
+    Ok(selected.into_iter().next())
 }
 
 fn store_rebuild(target: PathBuf, json: bool) -> Result<i32, CliError> {
@@ -485,6 +559,7 @@ fn store_ingest(source: PathBuf, store_root: PathBuf, json: bool) -> Result<i32,
 }
 
 fn store_index(args: StoreIndexCliArgs) -> Result<i32, CliError> {
+    let projection = selected_projection(&args)?;
     let store_root = PathBuf::from(args.store_root);
     let manifest = load_store_index_manifest(&store_root)
         .map_err(|error| CliError::usage(error.to_string()))?;
@@ -507,6 +582,7 @@ fn store_index(args: StoreIndexCliArgs) -> Result<i32, CliError> {
             profile_id: args.profile_id,
             object_type: args.object_type,
         },
+        projection,
     );
 
     if args.json {
