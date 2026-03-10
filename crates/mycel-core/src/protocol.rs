@@ -467,7 +467,7 @@ pub fn parse_document_object(value: &Value) -> Result<DocumentObject, TypedObjec
         doc_id: required_prefixed_string(object, "doc_id", "doc:")?,
         title: required_string(object, "title")?,
         language: required_string(object, "language")?,
-        content_model: required_string(object, "content_model")?,
+        content_model: required_exact_string(object, "content_model", "block-tree")?,
         created_at: required_u64(object, "created_at")?,
         created_by: required_prefixed_string(object, "created_by", "pk:")?,
         genesis_revision: required_prefixed_string(object, "genesis_revision", "rev:")?,
@@ -478,10 +478,12 @@ pub fn parse_block_object(value: &Value) -> Result<BlockObject, TypedObjectError
     let object = value
         .as_object()
         .ok_or_else(|| TypedObjectError::new("block must be a JSON object"))?;
+    let block_type = required_string(object, "block_type")?;
+    validate_block_type(&block_type)?;
 
     Ok(BlockObject {
-        block_id: required_string(object, "block_id")?,
-        block_type: required_string(object, "block_type")?,
+        block_id: required_prefixed_string(object, "block_id", "blk:")?,
+        block_type,
         content: required_string(object, "content")?,
         attrs: required_object(object, "attrs")?,
         children: required_array(object, "children")?
@@ -691,25 +693,25 @@ fn parse_patch_operation(value: &Value) -> Result<PatchOperation, TypedObjectErr
 
     match op.as_str() {
         "insert_block" => Ok(PatchOperation::InsertBlock {
-            parent_block_id: optional_string(object, "parent_block_id")?,
+            parent_block_id: optional_prefixed_string(object, "parent_block_id", "blk:")?,
             index: optional_usize(object, "index")?,
             new_block: parse_block_field(object, "new_block")?,
         }),
         "insert_block_after" => Ok(PatchOperation::InsertBlockAfter {
-            after_block_id: required_string(object, "after_block_id")?,
+            after_block_id: required_prefixed_string(object, "after_block_id", "blk:")?,
             new_block: parse_block_field(object, "new_block")?,
         }),
         "delete_block" => Ok(PatchOperation::DeleteBlock {
-            block_id: required_string(object, "block_id")?,
+            block_id: required_prefixed_string(object, "block_id", "blk:")?,
         }),
         "replace_block" => Ok(PatchOperation::ReplaceBlock {
-            block_id: required_string(object, "block_id")?,
+            block_id: required_prefixed_string(object, "block_id", "blk:")?,
             new_content: required_string(object, "new_content")?,
         }),
         "move_block" => Ok(PatchOperation::MoveBlock {
-            block_id: required_string(object, "block_id")?,
-            parent_block_id: optional_string(object, "parent_block_id")?,
-            after_block_id: optional_string(object, "after_block_id")?,
+            block_id: required_prefixed_string(object, "block_id", "blk:")?,
+            parent_block_id: optional_prefixed_string(object, "parent_block_id", "blk:")?,
+            after_block_id: optional_prefixed_string(object, "after_block_id", "blk:")?,
         })
         .and_then(|operation| match operation {
             PatchOperation::MoveBlock {
@@ -722,7 +724,7 @@ fn parse_patch_operation(value: &Value) -> Result<PatchOperation, TypedObjectErr
             _ => Ok(operation),
         }),
         "annotate_block" => Ok(PatchOperation::AnnotateBlock {
-            block_id: required_string(object, "block_id")?,
+            block_id: required_prefixed_string(object, "block_id", "blk:")?,
             annotation: parse_block_field(object, "annotation")?,
         }),
         "set_metadata" => Ok(PatchOperation::SetMetadata {
@@ -800,6 +802,20 @@ fn required_prefixed_string(
     Ok(value)
 }
 
+fn required_exact_string(
+    object: &Map<String, Value>,
+    field: &str,
+    expected: &str,
+) -> Result<String, TypedObjectError> {
+    let value = required_string(object, field)?;
+    if value != expected {
+        return Err(TypedObjectError::new(format!(
+            "top-level '{field}' must equal '{expected}'"
+        )));
+    }
+    Ok(value)
+}
+
 fn optional_string(
     object: &Map<String, Value>,
     field: &str,
@@ -811,6 +827,18 @@ fn optional_string(
         ))),
         None => Ok(None),
     }
+}
+
+fn optional_prefixed_string(
+    object: &Map<String, Value>,
+    field: &str,
+    prefix: &str,
+) -> Result<Option<String>, TypedObjectError> {
+    let value = optional_string(object, field)?;
+    if let Some(value) = &value {
+        validate_prefixed_string(value, field, prefix)?;
+    }
+    Ok(value)
 }
 
 fn required_u64(object: &Map<String, Value>, field: &str) -> Result<u64, TypedObjectError> {
@@ -989,6 +1017,16 @@ fn validate_prefixed_string_with_path(
         )));
     }
     Ok(())
+}
+
+fn validate_block_type(value: &str) -> Result<(), TypedObjectError> {
+    match value {
+        "title" | "heading" | "paragraph" | "quote" | "verse" | "list" | "annotation"
+        | "metadata" => Ok(()),
+        _ => Err(TypedObjectError::new(format!(
+            "top-level 'block_type' must be one of: title, heading, paragraph, quote, verse, list, annotation, metadata"
+        ))),
+    }
 }
 
 #[cfg(test)]
@@ -1281,6 +1319,32 @@ mod tests {
     }
 
     #[test]
+    fn parse_patch_object_rejects_wrong_block_reference_prefix() {
+        let error = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "replace_block",
+                    "block_id": "paragraph-1",
+                    "new_content": "Hello"
+                }
+            ]
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'block_id' must use 'blk:' prefix"
+        );
+    }
+
+    #[test]
     fn parse_document_object_reads_identity_and_baseline_fields() {
         let document = parse_document_object(&json!({
             "type": "document",
@@ -1318,6 +1382,27 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'doc_id' must use 'doc:' prefix"
+        );
+    }
+
+    #[test]
+    fn parse_document_object_rejects_wrong_content_model() {
+        let error = parse_document_object(&json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "title": "Origin Text",
+            "language": "zh-Hant",
+            "content_model": "markdown",
+            "created_at": 1u64,
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test"
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'content_model' must equal 'block-tree'"
         );
     }
 
@@ -1371,6 +1456,40 @@ mod tests {
         .unwrap_err();
 
         assert_eq!(error.to_string(), "missing object field 'attrs'");
+    }
+
+    #[test]
+    fn parse_block_object_rejects_wrong_block_prefix() {
+        let error = parse_block_object(&json!({
+            "block_id": "paragraph-1",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": []
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'block_id' must use 'blk:' prefix"
+        );
+    }
+
+    #[test]
+    fn parse_block_object_rejects_unknown_block_type() {
+        let error = parse_block_object(&json!({
+            "block_id": "blk:001",
+            "block_type": "table",
+            "content": "Hello",
+            "attrs": {},
+            "children": []
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'block_type' must be one of: title, heading, paragraph, quote, verse, list, annotation, metadata"
+        );
     }
 
     #[test]
