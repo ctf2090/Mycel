@@ -20,6 +20,7 @@
 - [`IMPLEMENTATION-CHECKLIST.zh-TW.md`](../IMPLEMENTATION-CHECKLIST.zh-TW.md)
 - [`docs/PROGRESS.md`](./PROGRESS.md)
 - [`docs/progress.html`](./progress.html)
+- [`README.md`](../README.md) 與 [`README.zh-TW.md`](../README.zh-TW.md) 中精選的 contributor-entry issue 連結
 - GitHub Issues，尤其是 `ai-ready` 類任務
 
 這份計畫不適用於：
@@ -38,6 +39,7 @@
 4. `docs/PROGRESS.md`
 5. `docs/progress.html`
 6. landing page 或 support page 上的摘要說法
+7. README 中精選的 contributor-entry issue 連結
 
 解讀方式：
 
@@ -45,6 +47,7 @@
 - `IMPLEMENTATION-CHECKLIST.*` 擁有 section-level closure 狀態與 readiness gate 的權威性。
 - GitHub Issues 代表剩餘缺口的可執行切片。
 - `docs/PROGRESS.md` 與 `docs/progress.html` 是衍生摘要，不得自行發明專案狀態。
+- `README.*` 中精選的 issue 連結也是給 contributor 看的衍生摘要，必須指向目前仍有效的 `ai-ready` 任務。
 
 ## 3. 各表面的角色
 
@@ -277,6 +280,7 @@ scripts/check-doc-refresh.sh
 4. 再更新 `docs/PROGRESS.md`
 5. 再更新 `docs/progress.html`
 6. 確認 GitHub Pages 上的 planning 摘要與刷新後的 roadmap/checklist/issues 狀態一致
+7. 若目前建議起手的 issue 已改變，同步刷新 `README.*` 中精選的 contributor-entry 連結
 
 ## 9. Anti-Drift 規則
 
@@ -287,6 +291,7 @@ scripts/check-doc-refresh.sh
 3. progress page 說某區塊 mostly done，但 checklist 仍大多未勾
 4. issue 標題漂移成 roadmap 尚未支持的推測性工作
 5. Pages 自行發明 roadmap 或 checklist 沒有的專案狀態說法
+6. README 的 contributor-entry 連結指向過期、已關閉、或已不具代表性的 issue
 
 ## 10. 最低完成條件
 
@@ -297,6 +302,7 @@ scripts/check-doc-refresh.sh
 - open issues 對應到真實剩餘缺口
 - `docs/PROGRESS.md` 的摘要與 roadmap/checklist 一致
 - `docs/progress.html` 與 `docs/PROGRESS.md` 一致
+- `README.*` 中精選的 contributor-entry 連結仍指向具代表性的 open starter issues
 
 ## 11. 對 Mycel 目前的實務指引
 
@@ -306,5 +312,6 @@ scripts/check-doc-refresh.sh
 2. 把 `IMPLEMENTATION-CHECKLIST.*` 當成 closure 狀態的權威來源
 3. 把 open 的 `ai-ready` issues 視為 checklist gaps 的窄執行切片
 4. 把 `docs/PROGRESS.md` 與 `docs/progress.html` 視為公開摘要層
+5. 把 `README.*` 中精選的 contributor issue 連結視為窄的公開入口，並在 planning sync 時一起刷新
 
 這樣可以讓 roadmap、implementation closure、task queue、以及公開進度頁保持一致，而不會讓任何一個表面被迫承擔過多角色。

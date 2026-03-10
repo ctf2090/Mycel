@@ -89,6 +89,8 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 - [#3 補上 document 與 block objects 的 malformed logical-ID coverage](https://github.com/ctf2090/Mycel/issues/3)
 - [#4 補上 snapshot derived-ID verification smoke coverage](https://github.com/ctf2090/Mycel/issues/4)
 
+這些連結應和 [`docs/PLANNING-SYNC-PLAN.zh-TW.md`](./docs/PLANNING-SYNC-PLAN.zh-TW.md) 的 planning sync 流程一起刷新。
+
 如果你想看更結構化的任務入口，請直接瀏覽帶有 `ai-ready` 與 `well-scoped` labels 的 issues。
 
 如果你想理解目前的 Rust 實作：
