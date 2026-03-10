@@ -9,6 +9,7 @@ Use it together with:
 - [AGENTS.md](./AGENTS.md)
 - [`.github/labels.yml`](./.github/labels.yml) for the repo-tracked bot/task label set
 - [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) to apply tracked labels back to GitHub
+- [`scripts/check-labels.sh`](./scripts/check-labels.sh) to verify GitHub labels still match the tracked set
 
 ## Bot Setup
 
