@@ -109,6 +109,7 @@ If you want the design layer behind current decisions:
 - [PROJECT-INTENT.md](./PROJECT-INTENT.md): project-intent boundary notes
 - [CONTRIBUTING.md](./CONTRIBUTING.md): contribution expectations
 - [BOT-CONTRIBUTING.md](./BOT-CONTRIBUTING.md): bot-oriented contribution guide for narrow, verifiable work
+- [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) and [`scripts/check-labels.sh`](./scripts/check-labels.sh): sync and verify the tracked GitHub label set
 - [AGENTS.md](./AGENTS.md): repository collaboration rules
 - [docs/OUTWARD-RELEASE-CHECKLIST.md](./docs/OUTWARD-RELEASE-CHECKLIST.md): outward-facing publish checklist for repo, homepage, and share previews
 
