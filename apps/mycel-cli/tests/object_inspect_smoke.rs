@@ -481,6 +481,43 @@ fn object_inspect_json_warns_for_view_with_wrong_maintainer_prefix() {
 }
 
 #[test]
+fn object_inspect_json_warns_for_view_with_empty_documents() {
+    let object = write_object_file(
+        "object-inspect-view-empty-documents",
+        "view.json",
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "view_id": "view:test",
+            "maintainer": "pk:ed25519:test",
+            "documents": {},
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 12u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|entry| entry.as_str().is_some_and(
+                    |message| message.contains("top-level 'documents' must not be empty")
+                ))),
+        "expected empty documents warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_inspect_json_warns_for_snapshot_missing_declared_revision() {
     let object = write_object_file(
         "object-inspect-snapshot-missing-declared-revision",
@@ -514,6 +551,86 @@ fn object_inspect_json_warns_for_snapshot_missing_declared_revision() {
             })
         })),
         "expected missing declared revision warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_snapshot_with_duplicate_included_objects() {
+    let object = write_object_file(
+        "object-inspect-snapshot-duplicate-included-objects",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "rev:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains(
+                        "top-level 'included_objects[1]' duplicates 'included_objects[0]'",
+                    )
+                })
+            })),
+        "expected duplicate included_objects warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_snapshot_with_non_canonical_included_object_id() {
+    let object = write_object_file(
+        "object-inspect-snapshot-non-canonical-included-object-id",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["doc:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains(
+                        "top-level 'included_objects[0]' must use a canonical object ID prefix",
+                    )
+                })
+            })),
+        "expected canonical included_objects warning, stdout: {}",
         stdout_text(&output)
     );
 }
