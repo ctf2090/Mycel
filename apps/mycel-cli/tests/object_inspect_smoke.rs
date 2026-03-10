@@ -332,6 +332,44 @@ fn object_inspect_json_warns_for_patch_with_wrong_block_reference_prefix() {
 }
 
 #[test]
+fn object_inspect_json_warns_for_patch_with_unknown_top_level_field() {
+    let object = write_object_file(
+        "object-inspect-patch-unknown-top-level-field",
+        "patch.json",
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "unexpected": true,
+            "timestamp": 1u64,
+            "ops": [],
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|entry| entry
+                    .as_str()
+                    .is_some_and(|message| message
+                        .contains("top-level contains unexpected field 'unexpected'")))),
+        "expected unknown top-level field warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_inspect_json_warns_for_revision_with_wrong_state_hash_prefix() {
     let object = write_object_file(
         "object-inspect-revision-wrong-state-hash-prefix",
@@ -370,6 +408,43 @@ fn object_inspect_json_warns_for_revision_with_wrong_state_hash_prefix() {
 }
 
 #[test]
+fn object_inspect_json_warns_for_revision_with_wrong_parent_prefix() {
+    let object = write_object_file(
+        "object-inspect-revision-wrong-parent-prefix",
+        "revision.json",
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "doc_id": "doc:test",
+            "parents": ["hash:base"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|entry| entry.as_str().is_some_and(
+                    |message| message.contains("top-level 'parents[0]' must use 'rev:' prefix")
+                ))),
+        "expected parent prefix warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_inspect_json_warns_for_revision_with_wrong_author_prefix() {
     let object = write_object_file(
         "object-inspect-revision-wrong-author-prefix",
@@ -402,6 +477,76 @@ fn object_inspect_json_warns_for_revision_with_wrong_author_prefix() {
                     |message| message.contains("top-level 'author' must use 'pk:' prefix")
                 ))),
         "expected revision author prefix warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_revision_with_merge_strategy_on_single_parent() {
+    let object = write_object_file(
+        "object-inspect-revision-merge-strategy-single-parent",
+        "revision.json",
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": [],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|entry| entry.as_str().is_some_and(|message| message
+                    .contains("top-level 'merge_strategy' requires multiple parents")))),
+        "expected merge_strategy warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_multi_parent_revision_without_merge_strategy() {
+    let object = write_object_file(
+        "object-inspect-revision-missing-merge-strategy",
+        "revision.json",
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "doc_id": "doc:test",
+            "parents": ["rev:base", "rev:side"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["notes"].as_array().is_some_and(|notes| notes.iter().any(|entry| entry.as_str().is_some_and(
+            |message| message.contains("top-level 'merge_strategy' is required when 'parents' has multiple entries")
+        ))),
+        "expected missing merge_strategy warning, stdout: {}",
         stdout_text(&output)
     );
 }
