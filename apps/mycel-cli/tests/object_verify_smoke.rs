@@ -2118,6 +2118,52 @@ fn object_verify_json_fails_for_patch_with_wrong_base_revision_prefix() {
 }
 
 #[test]
+fn object_verify_json_fails_for_patch_with_wrong_block_reference_prefix() {
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": [
+                {
+                    "op": "replace_block",
+                    "block_id": "paragraph-1",
+                    "new_content": "Hello"
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let object = write_object_file(
+        "object-verify-patch-wrong-block-reference-prefix",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message
+                        .contains("top-level 'ops[0]': top-level 'block_id' must use 'blk:' prefix")
+                })
+            })),
+        "expected block reference prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_patch_with_wrong_author_prefix() {
     let mut patch = signed_object(
         json!({

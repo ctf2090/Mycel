@@ -1273,6 +1273,46 @@ mod tests {
     }
 
     #[test]
+    fn patch_wrong_block_reference_prefix_is_rejected() {
+        let (signing_key, public_key) = signer_material();
+        let mut patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 11u64,
+            "ops": [
+                {
+                    "op": "replace_block",
+                    "block_id": "paragraph-1",
+                    "new_content": "Hello"
+                }
+            ]
+        });
+        let patch_id = super::recompute_object_id(&patch, "patch_id", "patch")
+            .expect("patch ID should recompute");
+        patch["patch_id"] = Value::String(patch_id);
+        patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+        let path = write_test_file(
+            "patch-wrong-block-reference-prefix",
+            &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary.errors.iter().any(|message| {
+                message.contains("top-level 'ops[0]': top-level 'block_id' must use 'blk:' prefix")
+            }),
+            "expected block reference prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn patch_wrong_author_prefix_is_rejected() {
         let (signing_key, public_key) = signer_material();
         let mut patch = json!({
