@@ -2069,6 +2069,37 @@ mod tests {
     }
 
     #[test]
+    fn inspect_warns_when_snapshot_missing_documents() {
+        let path = write_test_file(
+            "snapshot-missing-documents-inspect",
+            &serde_json::to_string_pretty(&json!({
+                "type": "snapshot",
+                "version": "mycel/0.1",
+                "snapshot_id": "snap:test",
+                "included_objects": ["rev:test"],
+                "root_hash": "hash:test",
+                "created_by": "pk:ed25519:test",
+                "timestamp": 9u64,
+                "signature": "sig:ed25519:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = inspect_object_path(&path);
+
+        assert_eq!(summary.status, "warning");
+        assert!(
+            summary
+                .notes
+                .iter()
+                .any(|message| message.contains("missing object field 'documents'")),
+            "expected missing documents warning, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn inspect_warns_when_snapshot_included_objects_duplicates_entry() {
         let path = write_test_file(
             "snapshot-duplicate-included-objects-inspect",
@@ -2096,6 +2127,39 @@ mod tests {
                 message.contains("top-level 'included_objects[1]' duplicates 'included_objects[0]'")
             }),
             "expected duplicate included_objects warning, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn inspect_warns_when_snapshot_included_objects_has_empty_entry() {
+        let path = write_test_file(
+            "snapshot-empty-included-object-entry-inspect",
+            &serde_json::to_string_pretty(&json!({
+                "type": "snapshot",
+                "version": "mycel/0.1",
+                "snapshot_id": "snap:test",
+                "documents": {
+                    "doc:test": "rev:test"
+                },
+                "included_objects": ["rev:test", ""],
+                "root_hash": "hash:test",
+                "created_by": "pk:ed25519:test",
+                "timestamp": 9u64,
+                "signature": "sig:ed25519:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = inspect_object_path(&path);
+
+        assert_eq!(summary.status, "warning");
+        assert!(
+            summary.notes.iter().any(|message| {
+                message.contains("top-level 'included_objects[1]' must not be an empty string")
+            }),
+            "expected empty included_objects entry warning, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);

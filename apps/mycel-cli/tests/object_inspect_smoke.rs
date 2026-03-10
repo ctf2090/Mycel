@@ -556,6 +556,41 @@ fn object_inspect_json_warns_for_snapshot_missing_declared_revision() {
 }
 
 #[test]
+fn object_inspect_json_warns_for_snapshot_missing_documents() {
+    let object = write_object_file(
+        "object-inspect-snapshot-missing-documents",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "included_objects": ["rev:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("missing object field 'documents'"))
+            })),
+        "expected missing documents warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_inspect_json_warns_for_snapshot_with_duplicate_included_objects() {
     let object = write_object_file(
         "object-inspect-snapshot-duplicate-included-objects",
@@ -591,6 +626,44 @@ fn object_inspect_json_warns_for_snapshot_with_duplicate_included_objects() {
                 })
             })),
         "expected duplicate included_objects warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_snapshot_with_empty_included_object_entry() {
+    let object = write_object_file(
+        "object-inspect-snapshot-empty-included-object-entry",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", ""],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64,
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'included_objects[1]' must not be an empty string")
+                })
+            })),
+        "expected empty included_objects entry warning, stdout: {}",
         stdout_text(&output)
     );
 }
