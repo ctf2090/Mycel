@@ -1010,6 +1010,42 @@ mod tests {
     }
 
     #[test]
+    fn revision_wrong_parent_prefix_is_rejected() {
+        let (signing_key, public_key) = signer_material();
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["hash:base"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id);
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        let path = write_test_file(
+            "revision-wrong-parent-prefix",
+            &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'parents[0]' must use 'rev:' prefix")),
+            "expected parent prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn patch_wrong_base_revision_prefix_is_rejected() {
         let (signing_key, public_key) = signer_material();
         let mut patch = json!({
@@ -1264,6 +1300,43 @@ mod tests {
                 message.contains("top-level 'merge_strategy' requires multiple parents")
             }),
             "expected merge_strategy parent-count error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn genesis_revision_rejects_merge_strategy() {
+        let (signing_key, public_key) = signer_material();
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id);
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        let path = write_test_file(
+            "revision-merge-strategy-genesis",
+            &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary.errors.iter().any(|message| {
+                message
+                    .contains("top-level 'merge_strategy' is not allowed when 'parents' is empty")
+            }),
+            "expected genesis merge_strategy error, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);
