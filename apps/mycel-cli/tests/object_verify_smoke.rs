@@ -1615,6 +1615,46 @@ fn object_verify_json_fails_for_snapshot_missing_created_by() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_invalid_created_by_key_bytes() {
+    let object = write_object_file(
+        "object-verify-snapshot-invalid-created-by-bytes",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:placeholder",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:AA==",
+            "timestamp": 1777778890u64,
+            "signature": "sig:ed25519:AA=="
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| {
+                        message.contains("Ed25519 public key must decode to 32 bytes")
+                    })
+            })),
+        "expected invalid public-key length error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_snapshot_missing_signature() {
     let object = write_object_file(
         "object-verify-snapshot-missing-signature",
@@ -2227,6 +2267,47 @@ fn object_verify_json_fails_for_view_with_malformed_maintainer_key() {
                     .is_some_and(|message| message.contains("failed to decode Ed25519 public key"))
             })),
         "expected malformed public-key error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_invalid_maintainer_key_bytes() {
+    let object = write_object_file(
+        "object-verify-view-invalid-maintainer-bytes",
+        "view.json",
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "maintainer": "pk:ed25519:AA==",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 1777778891u64,
+            "view_id": "view:placeholder",
+            "signature": "sig:ed25519:AA=="
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| {
+                        message.contains("Ed25519 public key must decode to 32 bytes")
+                    })
+            })),
+        "expected invalid public-key length error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -3041,6 +3122,44 @@ fn object_verify_json_fails_for_patch_with_malformed_author_key() {
 }
 
 #[test]
+fn object_verify_json_fails_for_patch_with_invalid_author_key_bytes() {
+    let object = write_object_file(
+        "object-verify-patch-invalid-author-bytes",
+        "patch.json",
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:placeholder",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:AA==",
+            "timestamp": 1777778888u64,
+            "ops": [],
+            "signature": "sig:ed25519:AA=="
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| {
+                        message.contains("Ed25519 public key must decode to 32 bytes")
+                    })
+            })),
+        "expected invalid public-key length error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_patch_missing_author() {
     let mut patch = signed_object(
         json!({
@@ -3818,6 +3937,45 @@ fn object_verify_json_fails_for_revision_with_malformed_author_key() {
                     .is_some_and(|message| message.contains("failed to decode Ed25519 public key"))
             })),
         "expected malformed public-key error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_invalid_author_key_bytes() {
+    let object = write_object_file(
+        "object-verify-revision-invalid-author-bytes",
+        "revision.json",
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:placeholder",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": "hash:test-state",
+            "author": "pk:ed25519:AA==",
+            "timestamp": 1777778890u64,
+            "signature": "sig:ed25519:AA=="
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| {
+                        message.contains("Ed25519 public key must decode to 32 bytes")
+                    })
+            })),
+        "expected invalid public-key length error, stdout: {}",
         stdout_text(&output)
     );
 }
