@@ -3633,6 +3633,114 @@ fn object_verify_json_fails_for_revision_with_patch_from_other_document() {
 }
 
 #[test]
+fn object_verify_json_fails_for_revision_with_missing_parent_revision() {
+    let dir = create_temp_dir("object-verify-revision-missing-parent");
+    let patch_path = dir.path().join("patch.json");
+    let revision_path = dir.path().join("revision.json");
+
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:missing-parent",
+            "timestamp": 1777778888u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &patch_path,
+        serde_json::to_string_pretty(&patch).expect("patch JSON should serialize"),
+    )
+    .expect("patch JSON should be written");
+
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:missing-parent"],
+            "patches": [patch["patch_id"].as_str().expect("patch id should exist")],
+            "state_hash": "hash:placeholder",
+            "timestamp": 1777778889u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &revision_path,
+        serde_json::to_string_pretty(&revision).expect("revision JSON should serialize"),
+    )
+    .expect("revision JSON should be written");
+
+    let output = run_mycel(&["object", "verify", &path_arg(&revision_path), "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "failed");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("missing parent revision 'rev:missing-parent' for replay")
+                })
+            })),
+        "expected missing parent replay error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_missing_patch_object() {
+    let dir = create_temp_dir("object-verify-revision-missing-patch");
+    let revision_path = dir.path().join("revision.json");
+
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": ["patch:missing"],
+            "state_hash": "hash:placeholder",
+            "timestamp": 1777778889u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &revision_path,
+        serde_json::to_string_pretty(&revision).expect("revision JSON should serialize"),
+    )
+    .expect("revision JSON should be written");
+
+    let output = run_mycel(&["object", "verify", &path_arg(&revision_path), "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "failed");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("missing patch 'patch:missing' for replay")
+                })
+            })),
+        "expected missing patch replay error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_revision_with_invalid_move_cycle() {
     let dir = create_temp_dir("object-verify-revision-move-cycle");
     let parent_patch_path = dir.path().join("patch-parent.json");
