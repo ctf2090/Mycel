@@ -2,18 +2,18 @@
 
 狀態：design draft
 
-這份文件定義 Mycel 第一版 client 最窄、最實際的範圍。
+這份文件定義 Mycel 第一個客戶端最窄、最實際的範圍。
 
 核心設計原則是：
 
-- 第一版 client 應先證明 protocol 可行，而不是一次把整個平台做滿
+- 第一個客戶端應先證明 protocol 可行，而不是一次把整個平台做滿
 - reader behavior 應優先於豐富 authoring 或 app execution
 - 一開始就要明確選定支援哪些 profiles
 - 凡是不在目前範圍內的能力，都應刻意延後
 
 ## 0. Goal
 
-設定一個現實可做的 first-client 目標，使其能：
+設定一個現實可做的第一個客戶端目標，使其能：
 
 - 驗證 core protocol
 - 驗證 wire sync 路徑
@@ -24,11 +24,11 @@
 
 ## 1. Build Shape
 
-建議的第一版 client 應是：
+建議的第一個客戶端應是：
 
-- 一個 reader-first client
-- 一個本地 node process
-- 一個本地 object store
+- 一個 reader-first 客戶端
+- 一個本地節點程序
+- 一個本地物件儲存
 - 一組受限的 wire implementation
 - 一組狹窄的 profile set
 
@@ -42,13 +42,13 @@
 
 ## 2. In-Scope Layers
 
-第一版 client 應只包含以下層次：
+第一個客戶端應只包含以下層次：
 
 1. protocol core
 2. object verification 與 local state
 3. 最小同步與 transport
 4. governance 與 accepted-state selection
-5. reader-facing client surface
+5. reader-facing 客戶端介面
 
 可選地包含：
 
@@ -57,7 +57,7 @@
 
 ## 3. Required Protocol Features
 
-第一版 client 應實作：
+第一個客戶端應實作：
 
 - `document`
 - `block`
@@ -87,7 +87,7 @@
 
 ## 4. Required Local Capabilities
 
-第一版 client 應支援：
+第一個客戶端應支援：
 
 - 一個持久化的本地 object store
 - 可重建的本地 indexes
@@ -103,7 +103,7 @@
 
 ## 5. Required Reader Behavior
 
-第一版 client 應能：
+第一個客戶端應能：
 
 - 透過 logical ID 開啟文件
 - 計算並顯示 accepted head
@@ -119,7 +119,7 @@
 
 ## 6. Chosen Profiles
 
-第一版 client 應明確選定它支援哪些 profiles。
+第一個客戶端應明確選定它支援哪些 profiles。
 
 建議第一組：
 
@@ -132,27 +132,27 @@
 - signer-oriented custody profiles
 - runtime-heavy app profiles
 
-第一版 client 不應宣稱支援那些它無法端到端實作的 profile。
+第一個客戶端不應宣稱支援那些它無法端到端實作的 profile。
 
 ## 7. Explicit Non-goals
 
-第一版 client 應延後以下所有能力：
+第一個客戶端應延後以下所有能力：
 
 - 豐富的 editing UX
-- editor-maintainer 的 authoring workflows
-- view-maintainer 的 publication workflows
+- editor-maintainer 的 authoring 工作流程
+- view-maintainer 的 publication 工作流程
 - donation execution
 - threshold custody
 - automatic effect execution
 - sensor-triggered flows
-- 廣泛的 Q&A authoring workflows
+- 廣泛的 Q&A authoring 工作流程
 - 超出 bounded configuration 的 public anonymous mesh discovery
 
 延後不是失敗，而是刻意收窄。
 
 ## 8. Networking Posture
 
-第一版 client 應採 bounded network posture。
+第一個客戶端應採 bounded network posture。
 
 建議模式：
 
@@ -160,11 +160,11 @@
 - explicit bootstrap peers
 - 可選的 Tor-routed transport
 
-第一版應避免：
+第一個客戶端應避免：
 
 - uncontrolled public discovery
 - transport fallback ambiguity
-- reader 與 signer/runtime 行為混在同一個 client 內
+- reader 與 signer/runtime 行為混在同一個客戶端內
 
 ## 9. UI Surface
 
@@ -186,7 +186,7 @@
 
 ## 10. Testing Gate
 
-若未通過以下測試，第一版 client 不應視為完成：
+若未通過以下測試，第一個客戶端不應視為完成：
 
 - canonical object parsing tests
 - derived-ID verification tests
@@ -197,7 +197,7 @@
 
 ## 11. Minimal Success Criteria
 
-若一位新使用者可以做到以下六件事，第一版 client 就算成功：
+若一位新使用者可以做到以下六件事，第一個客戶端就算成功：
 
 1. 啟動本地 node
 2. 連到 bounded peer set
@@ -210,10 +210,10 @@
 
 ## 12. Recommended Next Step After This Scope
 
-當第一版 client 可用後，下一步的擴張方向應只先選一個：
+當第一個客戶端可用後，下一步的擴張方向應只先選一個：
 
 - 更完整的 canonical-text reading
-- 基本 authoring workflows
+- 基本 authoring 工作流程
 - 某個 profile-specific app support
 
 即使往前擴，也應一次只增加一個 major layer。
