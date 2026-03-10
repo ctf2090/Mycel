@@ -4,7 +4,25 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '.github/workflows/ci.yml'
+      - 'apps/**'
+      - 'crates/**'
+      - 'fixtures/**'
+      - 'sim/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   pull_request:
+    paths:
+      - '.github/workflows/ci.yml'
+      - 'apps/**'
+      - 'crates/**'
+      - 'fixtures/**'
+      - 'sim/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
 
 jobs:
   rust-and-validation:
