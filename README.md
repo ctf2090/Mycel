@@ -107,6 +107,7 @@ If you want the design layer behind current decisions:
 - [PROJECT-INTENT.md](./PROJECT-INTENT.md): project-intent boundary notes
 - [CONTRIBUTING.md](./CONTRIBUTING.md): contribution expectations
 - [AGENTS.md](./AGENTS.md): repository collaboration rules
+- [docs/OUTWARD-RELEASE-CHECKLIST.md](./docs/OUTWARD-RELEASE-CHECKLIST.md): outward-facing publish checklist for repo, homepage, and share previews
 
 ## Near-Term Priorities
 
