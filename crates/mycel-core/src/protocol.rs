@@ -1420,6 +1420,7 @@ fn validate_block_type(value: &str) -> Result<(), TypedObjectError> {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
     use serde_json::{json, Value};
 
     use super::{
@@ -1429,6 +1430,90 @@ mod tests {
         recompute_object_id, signed_payload_bytes, ObjectKind, ParseObjectEnvelopeError,
         SignatureRule, StringFieldError,
     };
+
+    fn strict_id_case_value(kind: &str) -> Value {
+        match kind {
+            "document" => json!({
+                "type": "document",
+                "version": "mycel/0.1",
+                "doc_id": "doc:test",
+                "title": "Origin Text",
+                "language": "zh-Hant",
+                "content_model": "block-tree",
+                "created_at": 1u64,
+                "created_by": "pk:ed25519:test",
+                "genesis_revision": "rev:test"
+            }),
+            "block" => json!({
+                "block_id": "blk:001",
+                "block_type": "paragraph",
+                "content": "Hello",
+                "attrs": {},
+                "children": []
+            }),
+            "patch" => json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "patch_id": "patch:test",
+                "doc_id": "doc:test",
+                "base_revision": "rev:base",
+                "author": "pk:ed25519:test",
+                "timestamp": 1u64,
+                "ops": []
+            }),
+            "revision" => json!({
+                "type": "revision",
+                "version": "mycel/0.1",
+                "revision_id": "rev:test",
+                "doc_id": "doc:test",
+                "parents": ["rev:base"],
+                "patches": ["patch:test"],
+                "state_hash": "hash:test",
+                "author": "pk:ed25519:test",
+                "timestamp": 2u64
+            }),
+            "view" => json!({
+                "type": "view",
+                "version": "mycel/0.1",
+                "view_id": "view:test",
+                "maintainer": "pk:ed25519:test",
+                "documents": {
+                    "doc:test": "rev:test"
+                },
+                "policy": {
+                    "merge_rule": "manual-reviewed"
+                },
+                "timestamp": 7u64
+            }),
+            "snapshot" => json!({
+                "type": "snapshot",
+                "version": "mycel/0.1",
+                "snapshot_id": "snap:test",
+                "documents": {
+                    "doc:test": "rev:test"
+                },
+                "included_objects": ["rev:test", "patch:test"],
+                "root_hash": "hash:test",
+                "created_by": "pk:ed25519:test",
+                "timestamp": 9u64
+            }),
+            _ => panic!("unknown strict ID case: {kind}"),
+        }
+    }
+
+    fn parse_strict_id_case(kind: &str, value: &Value) -> String {
+        let error = match kind {
+            "document" => parse_document_object(value).unwrap_err(),
+            "block" => parse_block_object(value).unwrap_err(),
+            "patch" => parse_patch_object(value).unwrap_err(),
+            "revision" => parse_revision_object(value).unwrap_err(),
+            "view" => parse_view_object(value).unwrap_err(),
+            "snapshot" => parse_snapshot_object(value).unwrap_err(),
+            _ => panic!("unknown strict ID case: {kind}"),
+        };
+
+        error.to_string()
+    }
 
     #[test]
     fn object_kind_round_trips_from_strings() {
@@ -1922,43 +2007,72 @@ mod tests {
         assert_eq!(document.genesis_revision, "rev:test");
     }
 
-    #[test]
-    fn parse_document_object_rejects_wrong_doc_id_prefix() {
-        let error = parse_document_object(&json!({
-            "type": "document",
-            "version": "mycel/0.1",
-            "doc_id": "revision:test",
-            "title": "Origin Text",
-            "language": "zh-Hant",
-            "content_model": "block-tree",
-            "created_at": 1u64,
-            "created_by": "pk:ed25519:test",
-            "genesis_revision": "rev:test"
-        }))
-        .unwrap_err();
+    #[rstest]
+    #[case("document", "doc_id", json!(7), "top-level 'doc_id' must be a string")]
+    #[case("block", "block_id", json!(7), "top-level 'block_id' must be a string")]
+    #[case("patch", "patch_id", json!(7), "top-level 'patch_id' must be a string")]
+    #[case("revision", "revision_id", json!(7), "top-level 'revision_id' must be a string")]
+    #[case("view", "view_id", json!(7), "top-level 'view_id' must be a string")]
+    #[case("snapshot", "snapshot_id", json!(7), "top-level 'snapshot_id' must be a string")]
+    fn parse_object_rejects_non_string_id_field(
+        #[case] kind: &str,
+        #[case] id_field: &str,
+        #[case] invalid_value: Value,
+        #[case] expected_error: &str,
+    ) {
+        let mut value = strict_id_case_value(kind);
+        value[id_field] = invalid_value;
 
-        assert_eq!(
-            error.to_string(),
-            "top-level 'doc_id' must use 'doc:' prefix"
-        );
+        assert_eq!(parse_strict_id_case(kind, &value), expected_error);
     }
 
-    #[test]
-    fn parse_document_object_rejects_non_string_doc_id() {
-        let error = parse_document_object(&json!({
-            "type": "document",
-            "version": "mycel/0.1",
-            "doc_id": 7,
-            "title": "Origin Text",
-            "language": "zh-Hant",
-            "content_model": "block-tree",
-            "created_at": 1u64,
-            "created_by": "pk:ed25519:test",
-            "genesis_revision": "rev:test"
-        }))
-        .unwrap_err();
+    #[rstest]
+    #[case(
+        "document",
+        "doc_id",
+        "revision:test",
+        "top-level 'doc_id' must use 'doc:' prefix"
+    )]
+    #[case(
+        "block",
+        "block_id",
+        "paragraph-1",
+        "top-level 'block_id' must use 'blk:' prefix"
+    )]
+    #[case(
+        "patch",
+        "patch_id",
+        "rev:test",
+        "top-level 'patch_id' must use 'patch:' prefix"
+    )]
+    #[case(
+        "revision",
+        "revision_id",
+        "patch:test",
+        "top-level 'revision_id' must use 'rev:' prefix"
+    )]
+    #[case(
+        "view",
+        "view_id",
+        "snap:test",
+        "top-level 'view_id' must use 'view:' prefix"
+    )]
+    #[case(
+        "snapshot",
+        "snapshot_id",
+        "view:test",
+        "top-level 'snapshot_id' must use 'snap:' prefix"
+    )]
+    fn parse_object_rejects_wrong_id_prefix(
+        #[case] kind: &str,
+        #[case] id_field: &str,
+        #[case] invalid_value: &str,
+        #[case] expected_error: &str,
+    ) {
+        let mut value = strict_id_case_value(kind);
+        value[id_field] = json!(invalid_value);
 
-        assert_eq!(error.to_string(), "top-level 'doc_id' must be a string");
+        assert_eq!(parse_strict_id_case(kind, &value), expected_error);
     }
 
     #[test]
@@ -2065,48 +2179,6 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'parents[0]' must use 'rev:' prefix"
-        );
-    }
-
-    #[test]
-    fn parse_revision_object_rejects_non_string_revision_id() {
-        let error = parse_revision_object(&json!({
-            "type": "revision",
-            "version": "mycel/0.1",
-            "revision_id": 7,
-            "doc_id": "doc:test",
-            "parents": ["rev:base"],
-            "patches": ["patch:test"],
-            "state_hash": "hash:test",
-            "author": "pk:ed25519:test",
-            "timestamp": 2u64
-        }))
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "top-level 'revision_id' must be a string"
-        );
-    }
-
-    #[test]
-    fn parse_revision_object_rejects_wrong_revision_id_prefix() {
-        let error = parse_revision_object(&json!({
-            "type": "revision",
-            "version": "mycel/0.1",
-            "revision_id": "patch:test",
-            "doc_id": "doc:test",
-            "parents": ["rev:base"],
-            "patches": ["patch:test"],
-            "state_hash": "hash:test",
-            "author": "pk:ed25519:test",
-            "timestamp": 2u64
-        }))
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "top-level 'revision_id' must use 'rev:' prefix"
         );
     }
 
@@ -2272,37 +2344,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_block_object_rejects_wrong_block_prefix() {
-        let error = parse_block_object(&json!({
-            "block_id": "paragraph-1",
-            "block_type": "paragraph",
-            "content": "Hello",
-            "attrs": {},
-            "children": []
-        }))
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "top-level 'block_id' must use 'blk:' prefix"
-        );
-    }
-
-    #[test]
-    fn parse_block_object_rejects_non_string_block_id() {
-        let error = parse_block_object(&json!({
-            "block_id": 7,
-            "block_type": "paragraph",
-            "content": "Hello",
-            "attrs": {},
-            "children": []
-        }))
-        .unwrap_err();
-
-        assert_eq!(error.to_string(), "top-level 'block_id' must be a string");
-    }
-
-    #[test]
     fn parse_block_object_rejects_unknown_block_type() {
         let error = parse_block_object(&json!({
             "block_id": "blk:001",
@@ -2404,49 +2445,6 @@ mod tests {
         .unwrap_err();
 
         assert_eq!(error.to_string(), "top-level 'documents' must not be empty");
-    }
-
-    #[test]
-    fn parse_view_object_rejects_non_string_view_id() {
-        let error = parse_view_object(&json!({
-            "type": "view",
-            "version": "mycel/0.1",
-            "view_id": 7,
-            "maintainer": "pk:ed25519:test",
-            "documents": {
-                "doc:test": "rev:test"
-            },
-            "policy": {
-                "merge_rule": "manual-reviewed"
-            },
-            "timestamp": 7u64
-        }))
-        .unwrap_err();
-
-        assert_eq!(error.to_string(), "top-level 'view_id' must be a string");
-    }
-
-    #[test]
-    fn parse_view_object_rejects_wrong_view_id_prefix() {
-        let error = parse_view_object(&json!({
-            "type": "view",
-            "version": "mycel/0.1",
-            "view_id": "snap:test",
-            "maintainer": "pk:ed25519:test",
-            "documents": {
-                "doc:test": "rev:test"
-            },
-            "policy": {
-                "merge_rule": "manual-reviewed"
-            },
-            "timestamp": 7u64
-        }))
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "top-level 'view_id' must use 'view:' prefix"
-        );
     }
 
     #[test]
@@ -2581,50 +2579,6 @@ mod tests {
         assert_eq!(
             snapshot.documents.get("doc:test").map(String::as_str),
             Some("rev:test")
-        );
-    }
-
-    #[test]
-    fn parse_snapshot_object_rejects_non_string_snapshot_id() {
-        let error = parse_snapshot_object(&json!({
-            "type": "snapshot",
-            "version": "mycel/0.1",
-            "snapshot_id": 7,
-            "documents": {
-                "doc:test": "rev:test"
-            },
-            "included_objects": ["rev:test", "patch:test"],
-            "root_hash": "hash:test",
-            "created_by": "pk:ed25519:test",
-            "timestamp": 9u64
-        }))
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "top-level 'snapshot_id' must be a string"
-        );
-    }
-
-    #[test]
-    fn parse_snapshot_object_rejects_wrong_snapshot_id_prefix() {
-        let error = parse_snapshot_object(&json!({
-            "type": "snapshot",
-            "version": "mycel/0.1",
-            "snapshot_id": "view:test",
-            "documents": {
-                "doc:test": "rev:test"
-            },
-            "included_objects": ["rev:test", "patch:test"],
-            "root_hash": "hash:test",
-            "created_by": "pk:ed25519:test",
-            "timestamp": 9u64
-        }))
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "top-level 'snapshot_id' must use 'snap:' prefix"
         );
     }
 
