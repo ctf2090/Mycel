@@ -628,6 +628,47 @@ fn object_verify_json_fails_for_snapshot_missing_declared_revision_in_included_o
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_wrong_root_hash_prefix() {
+    let snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "rev:test",
+            "timestamp": 1777778890u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    let object = write_object_file(
+        "object-verify-snapshot-wrong-root-hash-prefix",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'root_hash' must use 'hash:' prefix")
+                })
+            })),
+        "expected root_hash prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_text_fails_when_signed_object_is_missing_signature() {
     let object = write_object_file(
         "object-verify-view-missing-signature",
@@ -657,6 +698,47 @@ fn object_verify_text_fails_when_signed_object_is_missing_signature() {
     assert_stderr_contains(
         &output,
         "view object is missing required top-level 'signature'",
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_wrong_maintainer_prefix() {
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": "sig:bad",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "policy": {
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 1777778891u64
+    });
+    let view_id = recompute_id(&view, "view_id", "view");
+    view["view_id"] = Value::String(view_id);
+    view["signature"] = Value::String(sign_value(&signing_key(), &view));
+    let object = write_object_file(
+        "object-verify-view-wrong-maintainer-prefix",
+        "view.json",
+        view,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("signer field must use format 'pk:ed25519:<base64>'")
+                })
+            })),
+        "expected maintainer signer-format error, stdout: {}",
+        stdout_text(&output)
     );
 }
 
