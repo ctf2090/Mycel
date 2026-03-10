@@ -1731,6 +1731,44 @@ fn object_verify_json_fails_for_snapshot_with_wrong_signature_format() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_malformed_signature_bytes() {
+    let object = write_object_file(
+        "object-verify-snapshot-malformed-signature",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:placeholder",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": signer_id(&signing_key()),
+            "timestamp": 1777778890u64,
+            "signature": "sig:ed25519:not-base64"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 signature"))
+            })),
+        "expected malformed signature decode error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_snapshot_with_non_string_signature() {
     let object = write_object_file(
         "object-verify-snapshot-non-string-signature",
@@ -1991,6 +2029,45 @@ fn object_verify_json_fails_for_view_with_wrong_signature_format() {
             .any(|entry| entry.as_str().is_some_and(|message| message
                 .contains("signature field must use format 'sig:ed25519:<base64>'")))),
         "expected signature format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_malformed_signature_bytes() {
+    let object = write_object_file(
+        "object-verify-view-malformed-signature",
+        "view.json",
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "maintainer": signer_id(&signing_key()),
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 1777778891u64,
+            "view_id": "view:placeholder",
+            "signature": "sig:ed25519:not-base64"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 signature"))
+            })),
+        "expected malformed signature decode error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -2558,6 +2635,42 @@ fn object_verify_json_fails_for_patch_with_wrong_signature_format() {
             .any(|entry| entry.as_str().is_some_and(|message| message
                 .contains("signature field must use format 'sig:ed25519:<base64>'")))),
         "expected signature format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_patch_with_malformed_signature_bytes() {
+    let object = write_object_file(
+        "object-verify-patch-malformed-signature",
+        "patch.json",
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:placeholder",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": signer_id(&signing_key()),
+            "timestamp": 1777778888u64,
+            "ops": [],
+            "signature": "sig:ed25519:not-base64"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 signature"))
+            })),
+        "expected malformed signature decode error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -3749,6 +3862,43 @@ fn object_verify_json_fails_for_revision_with_wrong_signature_format() {
             .any(|entry| entry.as_str().is_some_and(|message| message
                 .contains("signature field must use format 'sig:ed25519:<base64>'")))),
         "expected signature format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_malformed_signature_bytes() {
+    let object = write_object_file(
+        "object-verify-revision-malformed-signature",
+        "revision.json",
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:placeholder",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": "hash:test-state",
+            "author": signer_id(&signing_key()),
+            "timestamp": 1777778890u64,
+            "signature": "sig:ed25519:not-base64"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to decode Ed25519 signature"))
+            })),
+        "expected malformed signature decode error, stdout: {}",
         stdout_text(&output)
     );
 }
