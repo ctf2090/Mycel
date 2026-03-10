@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress
+Status: late partial progress, M1 parsing and validation core nearly complete
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -36,12 +36,12 @@ Defer if needed:
 
 ## 2. Object Types and IDs
 
-- [ ] Implement `document` parsing with `doc_id` treated as a logical ID.
-- [ ] Implement `block` parsing with `block_id` treated as a logical ID.
+- [x] Implement `document` parsing with `doc_id` treated as a logical ID.
+- [x] Implement `block` parsing with `block_id` treated as a logical ID.
 - [x] Implement `patch` parsing with derived `patch_id`.
 - [x] Implement `revision` parsing with derived `revision_id`.
 - [x] Implement `view` parsing with derived `view_id`.
-- [ ] Implement `snapshot` parsing with derived `snapshot_id`.
+- [x] Implement `snapshot` parsing with derived `snapshot_id`.
 - [x] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
 - [ ] Reject unknown required fields or invalid field types according to the chosen strictness policy.
 - [ ] Model editor-maintainer and view-maintainer role assignment independently.
@@ -51,8 +51,8 @@ Defer if needed:
 - [x] Canonicalize all protocol objects as UTF-8 JSON with no extra whitespace.
 - [x] Enforce object-key lexicographic ordering.
 - [x] Preserve array order exactly.
-- [ ] Reject duplicate keys.
-- [ ] Reject unsupported value types such as `null` or floating-point numbers.
+- [x] Reject duplicate keys.
+- [x] Reject unsupported value types such as `null` or floating-point numbers.
 - [x] Omit derived ID fields and `signature` when recomputing object IDs.
 - [ ] Reuse the same canonicalization rules for `state_hash` and wire envelope signatures.
 

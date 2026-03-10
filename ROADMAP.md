@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: draft
+Status: late partial progress, refreshed after the recent M1 validation batch
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -109,10 +109,10 @@ Already in progress or partially implemented:
 
 Still missing or incomplete:
 
-1. Full typed object model across all object families
-2. Canonical serialization as a fully shared protocol layer
-3. Narrow object-authoring and write path beyond verified ingest into the store
-4. A cleaner reader-facing profile surface on top of the accepted-head selector
+1. Final closure work around strict unknown-field policy and malformed field-shape depth
+2. Narrow object-authoring and write path beyond verified ingest into the store
+3. A cleaner reader-facing profile surface on top of the accepted-head selector
+4. Shared canonicalization reuse extended into future wire-envelope work
 5. Final closure work that would justify marking Phase 1 exit criteria as complete
 
 ### Milestones in This Phase
@@ -135,22 +135,24 @@ Completion gate:
 
 Current read:
 
-Mostly complete, but still missing the cleanup work needed to close the milestone confidently.
+Nearly complete. The shared parsing, canonical helper, and negative-validation base now exist; the remaining work is mostly closure and stricter edge-case policy.
 
 Already visible in the repo:
 
 1. shared schema metadata
 2. shared object-envelope parsing
-3. object inspection and verification
-4. protocol-level typed parsing for the currently supported object families
-5. internal validation and simulator harness coverage
+3. shared canonical JSON, derived-ID recomputation, and signed-payload helpers
+4. object inspection and verification
+5. protocol-level typed parsing for the supported object families, including `document`, `block`, `patch`, `revision`, `view`, and `snapshot`
+6. duplicate-key rejection and unsupported-value rejection in shared JSON loading
+7. internal validation and simulator harness coverage
 
 Main remaining gaps:
 
-1. full typed object-family coverage
-2. canonical serialization promoted into a clearly shared protocol utility
-3. stronger `mycel-core`-level test depth around protocol parsing and verification
-4. clearer closure of the remaining parsing and canonical-helper debt before widening more surfaces
+1. stricter unknown-field and malformed-field policy closure
+2. deeper `mycel-core`-level coverage for remaining semantic edge cases
+3. shared helper reuse extended into future wire-validation work
+4. clearer milestone-close criteria before widening more surfaces
 
 Implementation anchors:
 
@@ -184,18 +186,22 @@ Recommended build order:
 
 First implementation batch:
 
-1. Add typed parsing coverage for `document` and `block` logical-ID handling in `crates/mycel-core/src/protocol.rs`.
-2. Add typed parsing coverage for `patch`, `revision`, `view`, and `snapshot` derived-ID fields in `crates/mycel-core/src/protocol.rs`.
-3. Extract canonical object helpers from `crates/mycel-core/src/verify.rs` into shared protocol-level utilities for canonical JSON, derived-ID recomputation, and signed payload generation.
-4. Convert `crates/mycel-core/src/verify.rs` to consume the shared typed parsing and canonical helpers for every supported object family.
-5. Add `mycel-core` tests for malformed object type, missing signer fields, wrong derived-ID fields, and unsupported field-shape cases before widening more CLI behavior.
+Completed in the current repo state:
+
+1. typed parsing coverage for `document` and `block` logical-ID handling in `crates/mycel-core/src/protocol.rs`
+2. typed parsing coverage for `patch`, `revision`, `view`, and `snapshot` derived-ID fields in `crates/mycel-core/src/protocol.rs`
+3. shared protocol-level canonical JSON, derived-ID recomputation, and signed-payload helpers extracted from verification-only ownership
+4. `crates/mycel-core/src/verify.rs` consuming the shared typed parsing and canonical helpers for every supported object family
+5. `mycel-core` tests for malformed object type, missing signer fields, wrong derived-ID fields, duplicate keys, unsupported values, and malformed field-shape cases before widening more CLI behavior
 
 Concrete completion check for this batch:
 
+Completed:
+
 1. `protocol.rs` understands every currently supported object family through one shared parsing layer.
 2. `verify.rs` no longer owns the only copy of canonical object mechanics.
-3. `cargo test -p mycel-core` provides direct coverage for the newly shared protocol helpers and object-family edge cases.
-4. Existing `object inspect` and `object verify` CLI contracts still pass without needing new CLI-only fallback logic.
+3. `cargo test -p mycel-core` provides direct coverage for shared protocol helpers and object-family edge cases.
+4. Existing `object inspect` and `object verify` CLI contracts still pass without needing CLI-only fallback logic.
 
 #### M2: Replay, Storage, and Rebuild
 

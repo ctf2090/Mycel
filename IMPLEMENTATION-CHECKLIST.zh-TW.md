@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress
+狀態：late partial progress，M1 parsing 與 validation core 接近完成
 
 這份清單把 v0.1 規格轉成偏實作導向的 build plan，目標是一個最小但可互通的 client。
 
@@ -36,12 +36,12 @@
 
 ## 2. 物件型別與 ID
 
-- [ ] 實作 `document` 解析，並把 `doc_id` 視為 logical ID。
-- [ ] 實作 `block` 解析，並把 `block_id` 視為 logical ID。
+- [x] 實作 `document` 解析，並把 `doc_id` 視為 logical ID。
+- [x] 實作 `block` 解析，並把 `block_id` 視為 logical ID。
 - [x] 實作帶導出 `patch_id` 的 `patch` 解析。
 - [x] 實作帶導出 `revision_id` 的 `revision` 解析。
 - [x] 實作帶導出 `view_id` 的 `view` 解析。
-- [ ] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
+- [x] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
 - [x] 拒絕任何內嵌導出 ID 與重算 canonical ID 不一致的內容定址物件。
 - [ ] 依我們選定的 strictness policy，拒絕未知必要欄位或非法欄位型別。
 - [ ] 將 editor-maintainer 與 view-maintainer 的角色指派分開建模。
@@ -51,8 +51,8 @@
 - [x] 把所有協議物件 canonicalize 成 UTF-8 JSON，且不含多餘空白。
 - [x] 強制 object key 以字典序排序。
 - [x] 完整保留 array 順序。
-- [ ] 拒絕 duplicate keys。
-- [ ] 拒絕 `null`、浮點數等不支援的值型別。
+- [x] 拒絕 duplicate keys。
+- [x] 拒絕 `null`、浮點數等不支援的值型別。
 - [x] 重算 object ID 時省略導出 ID 欄位與 `signature`。
 - [ ] 對 `state_hash` 與 wire envelope signature 重用同一套 canonicalization 規則。
 
