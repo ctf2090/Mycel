@@ -881,6 +881,99 @@ mod tests {
     }
 
     #[test]
+    fn document_wrong_content_model_is_rejected() {
+        let path = write_test_file(
+            "document-wrong-content-model",
+            &serde_json::to_string_pretty(&json!({
+                "type": "document",
+                "version": "mycel/0.1",
+                "doc_id": "doc:test",
+                "title": "Plain document",
+                "language": "zh-Hant",
+                "content_model": "markdown",
+                "created_at": 1u64,
+                "created_by": "pk:ed25519:test",
+                "genesis_revision": "rev:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary.errors.iter().any(|message| {
+                message.contains("top-level 'content_model' must equal 'block-tree'")
+            }),
+            "expected content_model validation error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn document_wrong_created_by_prefix_is_rejected() {
+        let path = write_test_file(
+            "document-wrong-created-by-prefix",
+            &serde_json::to_string_pretty(&json!({
+                "type": "document",
+                "version": "mycel/0.1",
+                "doc_id": "doc:test",
+                "title": "Plain document",
+                "language": "zh-Hant",
+                "content_model": "block-tree",
+                "created_at": 1u64,
+                "created_by": "sig:bad",
+                "genesis_revision": "rev:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary.errors.iter().any(|message| {
+                message.contains("top-level 'created_by' must use 'pk:' prefix")
+            }),
+            "expected created_by prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn document_wrong_genesis_revision_prefix_is_rejected() {
+        let path = write_test_file(
+            "document-wrong-genesis-revision-prefix",
+            &serde_json::to_string_pretty(&json!({
+                "type": "document",
+                "version": "mycel/0.1",
+                "doc_id": "doc:test",
+                "title": "Plain document",
+                "language": "zh-Hant",
+                "content_model": "block-tree",
+                "created_at": 1u64,
+                "created_by": "pk:ed25519:test",
+                "genesis_revision": "hash:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary.errors.iter().any(|message| {
+                message.contains("top-level 'genesis_revision' must use 'rev:' prefix")
+            }),
+            "expected genesis_revision prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn revision_duplicate_parent_ids_are_rejected_by_typed_validation() {
         let (signing_key, public_key) = signer_material();
         let mut revision = json!({
