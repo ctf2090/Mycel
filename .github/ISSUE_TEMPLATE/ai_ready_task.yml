@@ -1,0 +1,111 @@
+name: AI-ready task
+description: Define a narrow, verifiable task that an AI coding bot can execute safely.
+title: "[Task] "
+labels:
+  - ai-ready
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for implementation work that should be easy to scope, verify, and review. Keep it narrow. For task-shaping guidance, see `BOT-CONTRIBUTING.md`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete gap or defect should this task close?
+      placeholder: Describe the current limitation in protocol, code, fixtures, tests, or docs.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What should change, and just as importantly, what should stay out of scope?
+      placeholder: |
+        In scope:
+        - Update shared typed parsing for snapshot objects.
+
+        Out of scope:
+        - CLI UX changes
+        - wire protocol work
+        - store schema changes
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Rust core
+        - CLI
+        - Simulator
+        - Fixtures
+        - Protocol spec
+        - Wire protocol
+        - Documentation
+        - Governance/profile design
+    validations:
+      required: true
+  - type: textarea
+    id: start_files
+    attributes:
+      label: Suggested start files
+      description: Point to the main files or modules that should anchor the work.
+      placeholder: |
+        crates/mycel-core/src/protocol.rs
+        crates/mycel-core/src/verify.rs
+        apps/mycel-cli/tests/object_verify_smoke.rs
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Spec and planning references
+      description: Link the exact docs or checklist items this task should follow.
+      placeholder: |
+        - PROTOCOL.en.md section ...
+        - IMPLEMENTATION-CHECKLIST.en.md item ...
+        - ROADMAP.md milestone ...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What specific outcomes must be true before this task is considered complete?
+      placeholder: |
+        - snapshot objects parse through the shared typed parser
+        - derived ID checks fail on mismatch
+        - direct tests cover malformed field shapes
+    validations:
+      required: true
+  - type: textarea
+    id: verify
+    attributes:
+      label: Verification commands
+      description: List the exact commands a bot or reviewer should run to verify the result.
+      placeholder: |
+        cargo test -p mycel-core
+        cargo test -p mycel-cli
+        cargo run -p mycel-cli -- object verify <path> --json
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals and guardrails
+      description: State what the task must not quietly expand into.
+      placeholder: |
+        - do not widen into full wire sync
+        - do not introduce backward-compatibility glue
+        - do not mix unrelated cleanup
+    validations:
+      required: true
+  - type: textarea
+    id: handoff
+    attributes:
+      label: Useful follow-up notes
+      description: Optional notes for reviewers or the next task after this one lands.
+      placeholder: Note the next likely closure item or any related issue.
+    validations:
+      required: false
