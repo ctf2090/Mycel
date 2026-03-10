@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Mycel Progress</title>
     <meta
       name="description"
-      content="A visual summary of the Mycel roadmap and implementation checklist."
+      content="Mycel roadmap 與 implementation checklist 的公開摘要頁。"
     >
     <meta name="theme-color" content="#0d6b57">
-    <link rel="alternate" hreflang="zh-TW" href="https://ctf2090.github.io/Mycel/zh-TW/progress.html">
+    <link rel="alternate" hreflang="en" href="https://ctf2090.github.io/Mycel/progress.html">
     <style>
       :root {
         --bg: #f3efe6;
@@ -29,7 +29,7 @@
 
       body {
         margin: 0;
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
         color: var(--text);
         background:
           radial-gradient(circle at top left, rgba(13, 107, 87, 0.14), transparent 34%),
@@ -100,13 +100,13 @@
       h2,
       h3 {
         margin: 0;
-        font-family: "IBM Plex Serif", Georgia, serif;
-        line-height: 1.04;
+        font-family: "Noto Serif TC", "PMingLiU", serif;
+        line-height: 1.08;
       }
 
       h1 {
         margin-top: 18px;
-        font-size: clamp(1.8rem, 4.2vw, 3.4rem);
+        font-size: clamp(1.8rem, 4.1vw, 3.2rem);
         max-width: 14ch;
       }
 
@@ -114,7 +114,7 @@
         margin: 18px 0 0;
         max-width: 70ch;
         font-size: 1.02rem;
-        line-height: 1.72;
+        line-height: 1.82;
         color: var(--muted);
       }
 
@@ -122,7 +122,7 @@
         margin: 20px 0 0;
         padding-left: 20px;
         color: var(--muted);
-        line-height: 1.7;
+        line-height: 1.8;
       }
 
       section {
@@ -142,7 +142,7 @@
         margin: 0 0 18px;
         max-width: 72ch;
         color: var(--muted);
-        line-height: 1.72;
+        line-height: 1.82;
       }
 
       .milestones {
@@ -195,7 +195,7 @@
       .card li,
       table {
         color: var(--muted);
-        line-height: 1.65;
+        line-height: 1.72;
       }
 
       .card ul {
@@ -233,7 +233,7 @@
 
       .sources {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
       }
 
@@ -310,43 +310,42 @@
       <nav class="nav">
         <div class="brand">Mycel / Progress</div>
         <div class="nav-links">
-          <a href="/Mycel/">Home</a>
-          <a href="https://ctf2090.github.io/Mycel/zh-TW/progress.html">繁體中文</a>
-          <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Roadmap</a>
-          <a href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.en.md">Checklist</a>
-          <a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.md">Dev Setup</a>
+          <a href="/Mycel/zh-TW/">首頁</a>
+          <a href="https://ctf2090.github.io/Mycel/progress.html">English</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.zh-TW.md">Roadmap</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.zh-TW.md">Checklist</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.zh-TW.md">Dev Setup</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/docs/PROGRESS.md">Source</a>
         </div>
       </nav>
 
       <header class="panel hero">
-        <div class="eyebrow">Visual progress summary</div>
-        <h1>Roadmap order and implementation status in one view.</h1>
+        <div class="eyebrow">公開進度摘要</div>
+        <h1>用一頁看懂 Roadmap 順序與 implementation 狀態。</h1>
         <p class="lead">
-          Mycel is still in the narrow first-client lane. The immediate goal is to close shared-core
-          parsing, canonicalization, replay, and rebuild work before widening the reader, sync, and
-          app-layer surface.
+          Mycel 目前仍在窄版 first-client lane。眼前目標是先收掉 shared-core 的 parsing、canonicalization、
+          replay 與 rebuild，再往 reader、sync 與 app-layer 擴張。
         </p>
         <ol class="lane-list">
-          <li>Close <code>M1</code> parsing and canonicalization debt.</li>
-          <li>Finish <code>M2</code> replay, rebuild, and narrow write-path closure.</li>
-          <li>Delay <code>M3+</code> expansion until the shared core is stable.</li>
+          <li>收掉 <code>M1</code> 的 parsing 與 canonicalization debt。</li>
+          <li>完成 <code>M2</code> 的 replay、rebuild 與 narrow write-path closure。</li>
+          <li>在 shared core 穩定前，延後 <code>M3+</code> 的擴張。</li>
         </ol>
       </header>
 
       <section class="panel section-panel">
         <h2>Milestone Timeline</h2>
         <p>
-          The roadmap is sequential: each later phase assumes the earlier one is already stable.
-          Right now, the center of gravity is still the end of <code>M1</code> and the closure of <code>M2</code>.
+          這份 roadmap 是序列式的：後面的 phase 都假設前面的 phase 已經穩定。現在的重心仍然是
+          <code>M1</code> 的收尾與 <code>M2</code> 的 closure。
         </p>
         <div class="milestones">
           <article class="card">
             <div class="stage">Minimal</div>
             <h3>M1</h3>
-            <div class="status mostly-done">Mostly complete</div>
+            <div class="status mostly-done">大致完成</div>
             <ul>
-              <li>Shared parsing and schema layer</li>
+              <li>Shared parsing 與 schema layer</li>
               <li>Canonical validation utilities</li>
               <li>Verification test depth</li>
             </ul>
@@ -354,17 +353,17 @@
           <article class="card">
             <div class="stage">Minimal</div>
             <h3>M2</h3>
-            <div class="status partial">Substantially underway</div>
+            <div class="status partial">已大幅展開</div>
             <ul>
-              <li>Replay and <code>state_hash</code></li>
-              <li>Store rebuild and indexes</li>
+              <li>Replay 與 <code>state_hash</code></li>
+              <li>Store rebuild 與 indexes</li>
               <li>Narrow write-path closure</li>
             </ul>
           </article>
           <article class="card">
             <div class="stage">Reader-plus-governance</div>
             <h3>M3</h3>
-            <div class="status partial">Planned next</div>
+            <div class="status partial">下一步</div>
             <ul>
               <li>Accepted-head reader workflows</li>
               <li>Fixed-profile reading</li>
@@ -374,9 +373,9 @@
           <article class="card">
             <div class="stage">Full-stack</div>
             <h3>M4</h3>
-            <div class="status later">Later</div>
+            <div class="status later">後續</div>
             <ul>
-              <li>Wire envelope and sync</li>
+              <li>Wire envelope 與 sync</li>
               <li>Peer interop</li>
               <li>Canonical object exchange</li>
             </ul>
@@ -384,7 +383,7 @@
           <article class="card">
             <div class="stage">Full-stack</div>
             <h3>M5</h3>
-            <div class="status later">Later</div>
+            <div class="status later">後續</div>
             <ul>
               <li>Selective app-layer growth</li>
               <li>Profiles on stable core</li>
@@ -397,8 +396,7 @@
       <section class="panel section-panel">
         <h2>Implementation Matrix</h2>
         <p>
-          This matrix compresses the checklist into section-level status so we can see what is
-          substantively done, what is only partial, and what still belongs to later phases.
+          這張表把 checklist 壓成 section-level 狀態，讓我們快速看到哪些區塊已大致完成、哪些仍屬 partial、哪些仍在後續 phases。
         </p>
         <table>
           <thead>
@@ -414,79 +412,79 @@
               <td data-label="Area">1. Repo and Build Setup</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">Only the shared canonical JSON utility remains open.</td>
+              <td data-label="Current read">只剩 shared canonical JSON utility 尚未收尾。</td>
             </tr>
             <tr>
               <td data-label="Area">2. Object Types and IDs</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">Several families are typed; logical-ID and stricter field-shape closure remain.</td>
+              <td data-label="Current read">多個 families 已 typed，但 logical-ID 與更嚴格 field-shape closure 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">3. Canonical Serialization and Hashing</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">Core rules exist, but duplicate-key rejection and shared reuse are still open.</td>
+              <td data-label="Current read">核心規則已存在，但 duplicate-key rejection 的 reuse 與 shared reuse 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">4. Signature Verification</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">Object signature rules are mostly present; wire-envelope verification is not.</td>
+              <td data-label="Current read">Object signature rules 大多已到位；wire-envelope verification 尚未開始。</td>
             </tr>
             <tr>
               <td data-label="Area">5. Patch and Revision Engine</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay and <code>state_hash</code> are in place; the patch-op base is strong.</td>
+              <td data-label="Current read">Replay 與 <code>state_hash</code> 已存在；patch-op base 已很穩。</td>
             </tr>
             <tr>
               <td data-label="Area">6. Local State and Storage</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Store ingest, rebuild, and indexes exist; policy separation still remains.</td>
+              <td data-label="Current read">Store ingest、rebuild 與 indexes 已存在；local transport/safety separation 尚未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">7. Wire Protocol</td>
               <td data-label="Status">Not started</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Canonical wire envelope and message validation remain future work.</td>
+              <td data-label="Current read">Canonical wire envelope 與 message validation 仍屬未來工作。</td>
             </tr>
             <tr>
               <td data-label="Area">8. Sync Workflow</td>
               <td data-label="Status">Not started</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">First-time and incremental sync are still future work.</td>
+              <td data-label="Current read">First-time 與 incremental sync 都仍屬未來工作。</td>
             </tr>
             <tr>
               <td data-label="Area">9. Views and Head Selection</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M3</td>
-              <td data-label="Current read">The deterministic selector core exists; multi-profile and dual-role closure remain.</td>
+              <td data-label="Current read">Deterministic selector core 已存在；multi-profile 與 dual-role closure 尚未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">10. Merge Generation</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay verification is present, but local merge authoring is not built.</td>
+              <td data-label="Current read">Verification 採 replay-based，但 local merge authoring 尚未建立。</td>
             </tr>
             <tr>
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3</td>
-              <td data-label="Current read">Verification and inspection exist; authoring, sync, and workflow split remain.</td>
+              <td data-label="Current read">Verification 與 inspection 已存在；authoring、sync 與 workflow split 尚未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M2</td>
-              <td data-label="Current read">Fixtures and smoke coverage exist, but several normative and round-trip checks remain.</td>
+              <td data-label="Current read">Fixtures 與 smoke coverage 已存在，但多條 normative 與 round-trip checks 尚未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">Whole plan</td>
-              <td data-label="Current read">Replay, head selection, and rebuild are green; parse, wire sync, and merge generation are not.</td>
+              <td data-label="Current read">Replay、head selection 與 rebuild 已綠；parse、wire sync 與 merge generation 尚未完成。</td>
             </tr>
           </tbody>
         </table>
@@ -495,36 +493,34 @@
       <section class="panel section-panel">
         <h2>Source Files</h2>
         <p>
-          This page is intentionally a summary. The authoritative wording still lives in the repo-level
-          planning documents below.
+          這頁刻意只做摘要。真正的權威 wording 仍然在 repo 層級的 planning files 中。
         </p>
         <div class="sources">
           <article class="card">
             <h3>Roadmap</h3>
-            <p>The repo-level build order, milestones, and phase transitions.</p>
-            <p><a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Open ROADMAP.md</a></p>
+            <p>Repo 層級的 build order、milestones 與 phase transitions。</p>
+            <p><a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.zh-TW.md">Open ROADMAP.zh-TW.md</a></p>
           </article>
           <article class="card">
             <h3>Implementation Checklist</h3>
-            <p>The detailed v0.1 capability checklist for the minimal interoperable client.</p>
-            <p><a href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.en.md">Open IMPLEMENTATION-CHECKLIST.en.md</a></p>
+            <p>窄版可互通 client 的詳細 v0.1 capability checklist。</p>
+            <p><a href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.zh-TW.md">Open IMPLEMENTATION-CHECKLIST.zh-TW.md</a></p>
           </article>
           <article class="card">
             <h3>Progress Source</h3>
-            <p>The Markdown summary that this visual page is based on.</p>
+            <p>這個公開頁面所依據的 Markdown 摘要來源。</p>
             <p><a href="https://github.com/ctf2090/Mycel/blob/main/docs/PROGRESS.md">Open PROGRESS.md</a></p>
           </article>
           <article class="card">
             <h3>Dev Setup</h3>
-            <p>The shortest path from a fresh checkout to a usable Mycel development environment.</p>
-            <p><a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.md">Open DEV-SETUP.md</a></p>
+            <p>從全新 checkout 到可用 Mycel 開發環境的最短路徑。</p>
+            <p><a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.zh-TW.md">Open DEV-SETUP.zh-TW.md</a></p>
           </article>
         </div>
       </section>
 
       <footer>
-        Public summary for roadmap order and checklist status. Authoritative planning still lives in the
-        source Markdown files.
+        這是 roadmap 與 checklist 狀態的公開摘要。權威 planning 狀態仍在 source Markdown files 中。
       </footer>
     </div>
   </body>
