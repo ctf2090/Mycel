@@ -185,6 +185,77 @@ fn object_inspect_json_warns_for_block_with_non_string_block_id() {
 }
 
 #[test]
+fn object_inspect_json_warns_for_view_with_wrong_document_key_prefix() {
+    let object = write_object_file(
+        "object-inspect-view-wrong-document-key-prefix",
+        "view.json",
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "view_id": "view:test",
+            "maintainer": "pk:ed25519:test",
+            "documents": {
+                "patch:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 12u64
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["notes"].as_array().is_some_and(|notes| notes
+            .iter()
+            .any(|entry| entry.as_str().is_some_and(|message| message
+                .contains("top-level 'documents.patch:test key' must use 'doc:' prefix")))),
+        "expected view documents key-prefix warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_snapshot_with_wrong_document_value_prefix() {
+    let object = write_object_file(
+        "object-inspect-snapshot-wrong-document-value-prefix",
+        "snapshot.json",
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "patch:test"
+            },
+            "included_objects": ["patch:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|entry| entry.as_str().is_some_and(|message| message
+                    .contains("top-level 'documents.doc:test' must use 'rev:' prefix")))),
+        "expected snapshot documents value-prefix warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_inspect_json_fails_for_non_object_top_level_value() {
     let object = write_raw_object_file("object-inspect-non-object", "array.json", "[1,2,3]");
     let path = path_arg(&object.path);

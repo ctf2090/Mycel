@@ -375,6 +375,25 @@ fn validate_typed_object_shape(
     }
 }
 
+fn append_inspection_shape_notes(
+    object_type: &str,
+    value: &Value,
+    summary: &mut ObjectInspectionSummary,
+) {
+    let result = match object_type {
+        "view" => parse_view_object(value).map(|_| ()),
+        "snapshot" => parse_snapshot_object(value).map(|_| ()),
+        _ => return,
+    };
+
+    if let Err(error) = result {
+        let message = error.to_string();
+        if !summary.notes.iter().any(|note| note == &message) {
+            summary.push_note(message);
+        }
+    }
+}
+
 fn inspect_object_value_with_summary(
     path: &Path,
     value: Value,
@@ -473,6 +492,8 @@ fn inspect_object_value_with_summary(
             "{object_type} object includes top-level 'signature' even though signatures are forbidden"
         ));
     }
+
+    append_inspection_shape_notes(object_type, &value, &mut summary);
 
     summary
 }
