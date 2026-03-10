@@ -577,10 +577,18 @@ pub fn parse_snapshot_object(value: &Value) -> Result<SnapshotObject, TypedObjec
     }
 
     let object = envelope.object();
+    let documents = required_prefixed_string_map(object, "documents", "doc:", "rev:")?;
+    if documents.is_empty() {
+        return Err(TypedObjectError::new(
+            "top-level 'documents' must not be empty",
+        ));
+    }
+    let included_objects = required_canonical_object_id_array(object, "included_objects")?;
+
     Ok(SnapshotObject {
         snapshot_id: required_prefixed_string(object, "snapshot_id", "snap:")?,
-        documents: required_prefixed_string_map(object, "documents", "doc:", "rev:")?,
-        included_objects: required_non_empty_string_array(object, "included_objects")?,
+        documents,
+        included_objects,
         root_hash: required_prefixed_string(object, "root_hash", "hash:")?,
         created_by: required_prefixed_string(object, "created_by", "pk:")?,
         timestamp: required_u64(object, "timestamp")?,
@@ -952,6 +960,17 @@ fn required_prefixed_string_array(
     Ok(values)
 }
 
+fn required_canonical_object_id_array(
+    object: &Map<String, Value>,
+    field: &str,
+) -> Result<Vec<String>, TypedObjectError> {
+    let values = required_non_empty_string_array(object, field)?;
+    for (index, value) in values.iter().enumerate() {
+        validate_canonical_object_id(value, &format!("{field}[{index}]"))?;
+    }
+    Ok(values)
+}
+
 fn required_string_map(
     object: &Map<String, Value>,
     field: &str,
@@ -1017,6 +1036,19 @@ fn validate_prefixed_string_with_path(
         )));
     }
     Ok(())
+}
+
+fn validate_canonical_object_id(value: &str, path: &str) -> Result<(), TypedObjectError> {
+    if ["patch:", "rev:", "view:", "snap:"]
+        .iter()
+        .any(|prefix| value.starts_with(prefix) && value.len() > prefix.len())
+    {
+        return Ok(());
+    }
+
+    Err(TypedObjectError::new(format!(
+        "top-level '{path}' must use a canonical object ID prefix"
+    )))
 }
 
 fn validate_block_type(value: &str) -> Result<(), TypedObjectError> {
@@ -1601,6 +1633,23 @@ mod tests {
     }
 
     #[test]
+    fn parse_snapshot_object_rejects_empty_documents() {
+        let error = parse_snapshot_object(&json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {},
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(error.to_string(), "top-level 'documents' must not be empty");
+    }
+
+    #[test]
     fn parse_snapshot_object_rejects_empty_included_object_entry() {
         let error = parse_snapshot_object(&json!({
             "type": "snapshot",
@@ -1619,6 +1668,28 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'included_objects[1]' must not be an empty string"
+        );
+    }
+
+    #[test]
+    fn parse_snapshot_object_rejects_non_canonical_included_object_id() {
+        let error = parse_snapshot_object(&json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["doc:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'included_objects[0]' must use a canonical object ID prefix"
         );
     }
 
