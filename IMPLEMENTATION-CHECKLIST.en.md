@@ -43,7 +43,8 @@ Defer if needed:
 - [x] Implement `view` parsing with derived `view_id`.
 - [x] Implement `snapshot` parsing with derived `snapshot_id`.
 - [x] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
-- [ ] Reject unknown required fields or invalid field types according to the chosen strictness policy.
+- [x] Reject unknown top-level typed-object fields and invalid required field types in shared parsing and verification.
+- [ ] Finish the remaining malformed field-shape and semantic edge-case closure required by the chosen strictness policy.
 - [ ] Model editor-maintainer and view-maintainer role assignment independently.
 
 ## 3. Canonical Serialization and Hashing

@@ -150,7 +150,7 @@ Already visible in the repo:
 
 Main remaining gaps:
 
-1. stricter unknown-field and malformed-field policy closure
+1. final malformed-field depth and semantic-edge strictness closure after broad unknown-field and invalid-type rejection
 2. deeper `mycel-core`-level coverage for the remaining semantic edge cases outside the current revision/canonical batch
 3. shared helper reuse extended into future wire-validation work
 4. clearer milestone-close criteria before widening more surfaces

@@ -43,7 +43,8 @@
 - [x] 實作帶導出 `view_id` 的 `view` 解析。
 - [x] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
 - [x] 拒絕任何內嵌導出 ID 與重算 canonical ID 不一致的內容定址物件。
-- [ ] 依我們選定的 strictness policy，拒絕未知必要欄位或非法欄位型別。
+- [x] 在 shared parsing 與 verification 中，拒絕 typed object 的未知頂層欄位與非法必要欄位型別。
+- [ ] 完成依我們選定的 strictness policy 所需的剩餘 malformed field-shape 與 semantic edge case 收尾。
 - [ ] 將 editor-maintainer 與 view-maintainer 的角色指派分開建模。
 
 ## 3. Canonical Serialization 與 Hashing
