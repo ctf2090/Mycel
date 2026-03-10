@@ -248,6 +248,10 @@ pub fn assert_head_inspect_help(stdout: &str) {
         "expected input flag in help, stdout: {stdout}"
     );
     assert!(
+        stdout.contains("--store-root <STORE_ROOT>"),
+        "expected store-root flag in help, stdout: {stdout}"
+    );
+    assert!(
         stdout.contains("PATH_OR_FIXTURE"),
         "expected input value name in help, stdout: {stdout}"
     );

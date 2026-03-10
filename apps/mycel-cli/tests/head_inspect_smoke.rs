@@ -178,6 +178,40 @@ fn critical_violation(maintainer: &SigningKey, timestamp: u64, reason: &str) -> 
     })
 }
 
+fn empty_document_state_hash(doc_id: &str) -> String {
+    hash_json(&json!({
+        "doc_id": doc_id,
+        "blocks": []
+    }))
+}
+
+fn write_store_source_objects(prefix: &str, objects: &[Value]) -> common::TempDir {
+    let dir = create_temp_dir(prefix);
+    for (index, object) in objects.iter().enumerate() {
+        let path = dir.path().join(format!("object-{index}.json"));
+        fs::write(
+            path,
+            serde_json::to_string_pretty(object).expect("object JSON should serialize"),
+        )
+        .expect("object JSON should be written");
+    }
+    dir
+}
+
+fn build_store_from_objects(objects: &[Value]) -> common::TempDir {
+    let source_dir = write_store_source_objects("head-inspect-store-source", &objects);
+    let store_dir = create_temp_dir("head-inspect-store-root");
+    let ingest = run_mycel(&[
+        "store",
+        "ingest",
+        &path_arg(&source_dir.path().to_path_buf()),
+        "--into",
+        &path_arg(&store_dir.path().to_path_buf()),
+    ]);
+    assert_success(&ingest);
+    store_dir
+}
+
 #[test]
 fn head_inspect_json_selects_highest_supported_head() {
     let doc_id = "doc:sample";
@@ -297,6 +331,149 @@ fn head_inspect_json_resolves_repo_native_fixture_name() {
     assert_eq!(
         json["selected_head"],
         "rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad"
+    );
+}
+
+#[test]
+fn head_inspect_json_can_source_objects_from_store_index() {
+    let doc_id = "doc:sample";
+    let revision_author = signing_key(61);
+    let maintainer_a = signing_key(71);
+    let maintainer_b = signing_key(72);
+    let maintainer_c = signing_key(73);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b),
+            signer_id(&maintainer_c)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let state_hash = empty_document_state_hash(doc_id);
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 1000, &state_hash);
+    let revision_b = signed_revision(
+        &revision_author,
+        doc_id,
+        vec![revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist")
+            .to_string()],
+        1010,
+        &state_hash,
+    );
+    let revision_c = signed_revision(
+        &revision_author,
+        doc_id,
+        vec![revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist")
+            .to_string()],
+        1020,
+        &state_hash,
+    );
+    let view_a = signed_view(
+        &maintainer_a,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1100,
+    );
+    let view_b = signed_view(
+        &maintainer_b,
+        &policy,
+        documents_value(doc_id, &revision_c["revision_id"]),
+        1110,
+    );
+    let view_c = signed_view(
+        &maintainer_c,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1120,
+    );
+    let store_dir = build_store_from_objects(&[
+        revision_a.clone(),
+        revision_b.clone(),
+        revision_c.clone(),
+        view_a,
+        view_b,
+        view_c,
+    ]);
+    let input = write_input_file(
+        "head-inspect-store-backed",
+        "input.json",
+        json!({
+            "profile": head_profile(hash_json(&policy), 1200),
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    assert_eq!(json["verified_revision_count"], 3);
+    assert_eq!(json["verified_view_count"], 3);
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("store-backed selector inputs loaded from")
+                })
+            })),
+        "expected store-backed note, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn head_inspect_store_root_reports_missing_manifest() {
+    let input = write_input_file(
+        "head-inspect-store-missing-manifest",
+        "input.json",
+        json!({
+            "profile": head_profile("hash:missing".to_string(), 1200),
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+    let store_dir = create_temp_dir("head-inspect-missing-store-root");
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        "doc:sample",
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "failed");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("failed to read store index manifest"))
+            })),
+        "expected missing manifest error, stdout: {}",
+        stdout_text(&output)
     );
 }
 

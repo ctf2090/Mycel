@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
-use mycel_core::head::{inspect_heads_from_path, HeadInspectSummary};
+use mycel_core::head::{
+    inspect_heads_from_path, inspect_heads_from_store_path, HeadInspectSummary,
+};
 
 use crate::{emit_error_line, CliError};
 
@@ -35,6 +37,12 @@ struct HeadInspectCliArgs {
         required = true
     )]
     input: String,
+    #[arg(
+        long,
+        value_name = "STORE_ROOT",
+        help = "Load selector revisions and views from a persisted store index"
+    )]
+    store_root: Option<String>,
     #[arg(long, help = "Emit machine-readable head inspection output")]
     json: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
@@ -103,8 +111,16 @@ fn print_head_inspect_json(summary: &HeadInspectSummary) -> Result<i32, CliError
     }
 }
 
-fn head_inspect(doc_id: String, input_path: PathBuf, json: bool) -> Result<i32, CliError> {
-    let summary = inspect_heads_from_path(&input_path, &doc_id);
+fn head_inspect(
+    doc_id: String,
+    input_path: PathBuf,
+    store_root: Option<PathBuf>,
+    json: bool,
+) -> Result<i32, CliError> {
+    let summary = match store_root {
+        Some(store_root) => inspect_heads_from_store_path(&input_path, &store_root, &doc_id),
+        None => inspect_heads_from_path(&input_path, &doc_id),
+    };
     if json {
         print_head_inspect_json(&summary)
     } else {
@@ -125,7 +141,12 @@ pub(crate) fn handle_head_command(command: HeadCliArgs) -> Result<i32, CliError>
                 return Err(CliError::usage(message));
             }
 
-            head_inspect(args.doc_id, PathBuf::from(args.input), args.json)
+            head_inspect(
+                args.doc_id,
+                PathBuf::from(args.input),
+                args.store_root.map(PathBuf::from),
+                args.json,
+            )
         }
         Some(HeadSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");

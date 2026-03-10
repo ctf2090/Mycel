@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use crate::store::{load_store_index_manifest, load_stored_object_value};
 use crate::verify::verify_object_value;
 use crate::verify::{canonical_json, hex_encode};
 
@@ -169,47 +170,106 @@ impl HeadInspectSummary {
 }
 
 pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSummary {
+    let (resolved_input_path, input) = match load_head_inspect_input(input_path, doc_id) {
+        Ok(loaded) => loaded,
+        Err(summary) => return summary,
+    };
+
+    inspect_heads_from_loaded_input(resolved_input_path, input, doc_id, None)
+}
+
+pub fn inspect_heads_from_store_path(
+    input_path: &Path,
+    store_root: &Path,
+    doc_id: &str,
+) -> HeadInspectSummary {
+    let (resolved_input_path, input) = match load_head_inspect_input(input_path, doc_id) {
+        Ok(loaded) => loaded,
+        Err(summary) => return summary,
+    };
+
+    inspect_heads_from_loaded_input(resolved_input_path, input, doc_id, Some(store_root))
+}
+
+fn load_head_inspect_input(
+    input_path: &Path,
+    doc_id: &str,
+) -> Result<(PathBuf, HeadInspectInput), HeadInspectSummary> {
     let resolved_input_path = match resolve_head_inspect_input_path(input_path) {
         Ok(path) => path,
         Err(message) => {
             let mut summary = HeadInspectSummary::new(input_path, doc_id);
             summary.push_error(message);
-            return summary;
+            return Err(summary);
         }
     };
 
     let mut summary = HeadInspectSummary::new(&resolved_input_path, doc_id);
-
     let content = match fs::read_to_string(&resolved_input_path) {
         Ok(content) => content,
         Err(err) => {
             summary.push_error(format!("failed to read head-inspect input: {err}"));
-            return summary;
+            return Err(summary);
         }
     };
 
-    let input: HeadInspectInput = match serde_json::from_str(&content) {
+    let input = match serde_json::from_str(&content) {
         Ok(input) => input,
         Err(err) => {
             summary.push_error(format!("failed to parse head-inspect input JSON: {err}"));
-            return summary;
+            return Err(summary);
         }
     };
 
-    summary.profile_id = Some(input.profile.policy_hash.clone());
-    summary.effective_selection_time = Some(input.profile.effective_selection_time);
+    Ok((resolved_input_path, input))
+}
+
+fn inspect_heads_from_loaded_input(
+    resolved_input_path: PathBuf,
+    input: HeadInspectInput,
+    doc_id: &str,
+    store_root: Option<&Path>,
+) -> HeadInspectSummary {
+    let mut summary = HeadInspectSummary::new(&resolved_input_path, doc_id);
+    let HeadInspectInput {
+        profile,
+        revisions,
+        views,
+        critical_violations,
+    } = input;
+    let (revision_values, view_values) = match store_root {
+        Some(store_root) => {
+            match load_store_backed_selector_objects(store_root, doc_id, &profile.policy_hash) {
+                Ok(values) => {
+                    summary.notes.push(format!(
+                        "store-backed selector inputs loaded from {} using persisted store index",
+                        store_root.display()
+                    ));
+                    values
+                }
+                Err(message) => {
+                    summary.push_error(message);
+                    return summary;
+                }
+            }
+        }
+        None => (revisions, views),
+    };
+
+    summary.profile_id = Some(profile.policy_hash.clone());
+    summary.effective_selection_time = Some(profile.effective_selection_time);
     summary.selector_epoch = Some(selector_epoch(
-        input.profile.effective_selection_time,
-        input.profile.epoch_seconds,
-        input.profile.epoch_zero_timestamp,
+        profile.effective_selection_time,
+        profile.epoch_seconds,
+        profile.epoch_zero_timestamp,
     ));
     summary.push_trace(
         "selector_epoch",
         format!(
             "effective_selection_time={} epoch_seconds={} epoch_zero_timestamp={} selector_epoch={}",
-            input.profile.effective_selection_time,
-            input.profile.epoch_seconds,
-            input.profile.epoch_zero_timestamp,
+            profile.effective_selection_time,
+            profile.epoch_seconds,
+            profile.epoch_zero_timestamp,
             summary.selector_epoch.expect("selector epoch should be set")
         ),
     );
@@ -218,15 +278,15 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     );
 
     let verified_revisions = collect_verified_revisions(
-        &input.revisions,
+        &revision_values,
         doc_id,
-        input.profile.effective_selection_time,
+        profile.effective_selection_time,
         &mut summary,
     );
     let verified_views = collect_verified_views(
-        &input.views,
-        &input.profile,
-        input.profile.effective_selection_time,
+        &view_values,
+        &profile,
+        profile.effective_selection_time,
         &mut summary,
     );
 
@@ -241,31 +301,29 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     );
     summary.push_trace(
         "critical_violations",
-        if input.critical_violations.is_empty() {
+        if critical_violations.is_empty() {
             "count=0 affected_maintainers=0".to_string()
         } else {
-            let affected_maintainers = input
-                .critical_violations
+            let affected_maintainers = critical_violations
                 .iter()
                 .map(|violation| violation.maintainer.clone())
                 .collect::<BTreeSet<_>>()
                 .len();
             format!(
                 "count={} affected_maintainers={affected_maintainers}",
-                input.critical_violations.len()
+                critical_violations.len()
             )
         },
     );
-    summary.critical_violations = input
-        .critical_violations
+    summary.critical_violations = critical_violations
         .iter()
         .map(|violation| CriticalViolationSummary {
             maintainer: violation.maintainer.clone(),
             timestamp: violation.timestamp,
             selector_epoch: selector_epoch_for_view(
                 violation.timestamp,
-                input.profile.epoch_seconds,
-                input.profile.epoch_zero_timestamp,
+                profile.epoch_seconds,
+                profile.epoch_zero_timestamp,
             ),
             reason: violation.reason.clone(),
         })
@@ -284,11 +342,11 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
 
     let (effective_weights, effective_weight_summaries, weight_trace) = compute_effective_weights(
         &verified_views,
-        &input.critical_violations,
+        &critical_violations,
         summary
             .selector_epoch
             .expect("selector epoch should be set"),
-        &input.profile,
+        &profile,
     );
     summary.effective_weights = effective_weight_summaries;
     for entry in weight_trace {
@@ -302,7 +360,7 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
         summary
             .selector_epoch
             .expect("selector epoch should be set"),
-        &input.profile,
+        &profile,
         &effective_weights,
     );
     summary.maintainer_support = support_summaries;
@@ -387,6 +445,39 @@ pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSu
     );
 
     summary
+}
+
+fn load_store_backed_selector_objects(
+    store_root: &Path,
+    doc_id: &str,
+    profile_id: &str,
+) -> Result<(Vec<Value>, Vec<Value>), String> {
+    let manifest = load_store_index_manifest(store_root).map_err(|error| error.to_string())?;
+    let revision_ids = manifest
+        .doc_revisions
+        .get(doc_id)
+        .cloned()
+        .unwrap_or_default();
+    let revisions = revision_ids
+        .iter()
+        .map(|revision_id| {
+            load_stored_object_value(store_root, revision_id).map_err(|error| error.to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let view_ids = manifest
+        .view_governance
+        .iter()
+        .filter(|record| record.profile_id == profile_id)
+        .map(|record| record.view_id.clone())
+        .collect::<BTreeSet<_>>();
+    let views = view_ids
+        .iter()
+        .map(|view_id| {
+            load_stored_object_value(store_root, view_id).map_err(|error| error.to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok((revisions, views))
 }
 
 fn resolve_head_inspect_input_path(input_path: &Path) -> Result<PathBuf, String> {

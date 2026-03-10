@@ -808,6 +808,39 @@ pub fn load_store_index_manifest(
     })
 }
 
+pub fn load_stored_object_value(
+    store_root: &Path,
+    object_id: &str,
+) -> Result<Value, StoreRebuildError> {
+    let (object_prefix, object_hash) = object_id.split_once(':').ok_or_else(|| {
+        StoreRebuildError::new(format!(
+            "stored object ID '{}' is missing type prefix separator",
+            object_id
+        ))
+    })?;
+    let object_type = match object_prefix {
+        "rev" => "revision",
+        "doc" => "document",
+        "blk" => "block",
+        other => other,
+    };
+    let object_path = objects_root(store_root)
+        .join(object_type)
+        .join(format!("{object_hash}.json"));
+    let content = fs::read_to_string(&object_path).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to read stored object {}: {error}",
+            object_path.display()
+        ))
+    })?;
+    serde_json::from_str(&content).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to parse stored object {}: {error}",
+            object_path.display()
+        ))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
