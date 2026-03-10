@@ -12,7 +12,7 @@ Mycel is an open protocol stack for text-bearing systems that require:
 - governance-aware default reading
 - decentralized replication without mandatory global consensus
 
-It is designed for long-lived texts, commentary systems, governed reference corpora, and other environments where history, interpretation, and auditability must remain durable across time and across multiple valid branches.
+It is designed for long-lived texts, commentary traditions, governed reference corpora, archives, and other environments where history, interpretation, and auditability must remain durable across time and across multiple valid branches.
 
 Mycel addresses a gap not well served by existing tools. Centralized collaboration systems provide convenience but weak auditability and portability. Code-oriented distributed tools preserve history well but are not designed for governed default reading. Blockchain-style systems provide strong consensus at a cost and with assumptions that are often unnecessary or undesirable for text-governance workflows.
 
@@ -25,9 +25,9 @@ Many important text systems need more than document editing and less than blockc
 Examples include:
 
 - governed legal or policy commentary
-- institutional reference texts
+- institutional reference texts and archives
 - scholarly annotation systems
-- long-lived technical or normative corpora
+- long-lived technical, normative, or cultural corpora
 - policy-bound execution systems that depend on accepted textual state
 
 In these settings, stakeholders need to know:
@@ -89,11 +89,11 @@ This is the layer with the highest leverage. Strengthening the shared core makes
 
 With support, Mycel aims to deliver:
 
-- a stronger open protocol core for verifiable text systems
+- a stronger open protocol core for verifiable text systems and cultural reference corpora
 - a more complete first-client implementation path
 - reusable fixtures and negative tests for interoperability
 - clearer public documentation around governed reading and accepted-state derivation
-- a reference base for future text-governance and commentary applications
+- a reference base for future text-governance, commentary, and cultural-preservation applications
 
 ## Why This Project Matters
 
@@ -102,7 +102,7 @@ Mycel explores an underbuilt part of digital infrastructure: systems that must p
 This work has public value because it supports:
 
 - durable and auditable knowledge systems
-- text-governance infrastructure
+- text-governance and cultural-preservation infrastructure
 - reproducible interpretation and commentary workflows
 - open protocol alternatives to closed platforms
 
@@ -118,4 +118,4 @@ Mycel is a strong fit for grants that support:
 
 ## Closing
 
-Mycel is still early, but it has already moved beyond pure concept into a concrete spec, implementation, and validation trajectory. Support at this stage would help turn a promising protocol direction into a usable public infrastructure foundation for governed text systems.
+Mycel is still early, but it has already moved beyond pure concept into a concrete spec, implementation, and validation trajectory. Support at this stage would help turn a promising protocol direction into a usable public infrastructure foundation for governed text systems and cultural stewardship.
