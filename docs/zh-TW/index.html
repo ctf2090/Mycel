@@ -306,7 +306,7 @@
             它把可重播驗證的歷史、治理訊號與去中心化複製拆成不同層次，同時保留彼此互通。
           </p>
           <p class="hero-note">
-            預設閱讀版本不是全網共識，而是依固定 profile 規則，從已驗證物件推導出的結果。
+            預設閱讀版本不是全網共識，而是依固定規則組（profile）從已驗證物件推導出的結果。
           </p>
           <div class="actions">
             <a class="button primary" href="https://github.com/ctf2090/Mycel">開啟 Repository</a>
@@ -318,8 +318,8 @@
           <div class="status-card">
             <strong>目前狀態</strong>
             <p>
-              `v0.1` spec-first 專案。目前工作集中在 first-client 範圍收斂、deterministic verification、
-              replay 行為，以及 simulator 驗證流程。
+              `v0.1` 以規格為先的專案。目前工作集中在第一個可互通客戶端的範圍收斂、決定性驗證、
+              重播行為，以及模擬器驗證流程。
             </p>
           </div>
           <div class="status-card">
@@ -331,8 +331,8 @@
           <div class="status-card">
             <strong>今天能做什麼</strong>
             <p>
-              Rust CLI 已能支援 repo-local validation、object inspection、accepted-head inspection、
-              report inspection 與 deterministic simulator runs。
+              Rust CLI 已能支援 repo 內部驗證、物件檢視、accepted-head 檢視、
+              報告檢視與決定性的模擬器執行。
             </p>
           </div>
         </div>
@@ -342,17 +342,17 @@
         <h2>為什麼是 Mycel</h2>
         <p>
           多數分散式協作系統要嘛把狀態集中在平台，要嘛為程式碼協作或全域共識最佳化。
-          Mycel 走的是更窄但更明確的路徑：text-first 歷史、由 profile 決定的 accepted reading，
-          以及帶有明確 replay 與 verification 邊界的 replication。
+          Mycel 走的是更窄但更明確的路徑：以文本為先的歷史、依規則導出的預設閱讀版本，
+          以及帶有明確重播與驗證邊界的去中心化複製。
         </p>
         <div class="grid">
           <div class="card">
             <strong>可驗證歷史</strong>
-            <p>revision 預期可以從 canonical objects replay、驗證與重建。</p>
+            <p>修訂內容預期可以從 canonical objects 重播、驗證與重建。</p>
           </div>
           <div class="card">
-            <strong>受治理的閱讀狀態</strong>
-            <p>accepted head 來自固定 selector 規則與已驗證的 View objects。</p>
+            <strong>依規則導出的預設閱讀版本</strong>
+            <p>預設採用的版本來自固定選擇規則與已驗證的 View 物件。</p>
           </div>
           <div class="card">
             <strong>容許分叉</strong>
@@ -364,7 +364,7 @@
       <section class="panel section-panel">
         <h2>今天就能試什麼</h2>
         <p>
-          現在的 CLI 還不是 production client 或 node，但已經適合在本 repo 內做驗證與 simulator 流程。
+          現在的 CLI 還不是正式可上線的客戶端或節點，但已經適合在本 repo 內做驗證與模擬器流程。
         </p>
         <p>
           如果你是從全新環境開始，請先看
@@ -390,7 +390,7 @@
         <h2>從這裡開始貢獻</h2>
         <p>
           如果你想先接一張範圍窄的任務，可以先看這幾張仍開放的 issue。若要看更完整的目前任務入口，請直接瀏覽
-          <a href="https://github.com/ctf2090/Mycel/issues">open issues 清單</a>。
+          <a href="https://github.com/ctf2090/Mycel/issues">GitHub issues 清單</a>。
         </p>
         <div class="grid">
           <div class="card">
@@ -412,8 +412,7 @@
         <h2>支持或一起推進 Mycel</h2>
         <p>
           我們希望與正在處理受治理文字系統、評註層或長期參考文本集合的設計夥伴、資助計畫與早期協作者合作。
-          現在的支持會直接幫助我們完成第一個可互通 client 的核心：verification、replay、可重建儲存，以及由
-          profile 決定的 accepted reading。
+          現在的支持會直接幫助我們完成第一個可互通客戶端的核心：驗證、重播、可重建儲存，以及依規則導出的預設閱讀版本。
         </p>
         <div class="actions">
           <a class="button primary" href="/Mycel/zh-TW/support.html">支持 Mycel</a>
