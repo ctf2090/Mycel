@@ -271,7 +271,7 @@ v0.1 定義以下訊息種類：
 
 ## 9. SNAPSHOT_OFFER
 
-`SNAPSHOT_OFFER` 用於宣告某個 snapshot 可透過 `WANT` 抓取。
+`SNAPSHOT_OFFER` 用於宣告某個 snapshot 可透過 `WANT` 取得。
 
 ```json
 {
@@ -303,11 +303,11 @@ v0.1 定義以下訊息種類：
 - `documents` MUST 是非空的 `doc_id` 陣列
 - 若有 `object_count`，其值 MUST 是非負整數
 - 若有 `size_bytes`，其值 MUST 是非負整數
-- 當接收端之後抓取對應的 Snapshot 物件時，其 `snapshot_id` 與 `root_hash` MUST 與此 offer 一致
+- 當接收端之後取得對應的 Snapshot 物件時，其 `snapshot_id` 與 `root_hash` MUST 與此 offer 一致
 
 ## 10. VIEW_ANNOUNCE
 
-`VIEW_ANNOUNCE` 用於宣告某個已簽章的 View 物件可透過 `WANT` 抓取。
+`VIEW_ANNOUNCE` 用於宣告某個已簽章的 View 物件可透過 `WANT` 取得。
 
 ```json
 {
@@ -337,11 +337,11 @@ v0.1 定義以下訊息種類：
 
 - `view_id` MUST 是 canonical view ID
 - `documents` MUST 是非空的 `doc_id -> canonical revision ID` map
-- 抓取到的 View 物件之 `view_id`、`maintainer`、`documents` MUST 與此 announcement 一致
+- 取得到的 View 物件之 `view_id`、`maintainer`、`documents` MUST 與此 announcement 一致
 
 ## 11. BYE
 
-`BYE` 用於正常關閉 session。
+`BYE` 用於正常關閉連線 session。
 
 ```json
 {
@@ -406,7 +406,7 @@ v0.1 定義以下訊息種類：
 
 1. 交換 `HELLO`
 2. 交換 `MANIFEST` / `HEADS`
-3. 接收端以 `WANT` 請求缺失 ID
+3. 接收端以 `WANT` 請求缺少的 ID
 4. 發送端回傳一個或多個 `OBJECT`
 5. 接收端驗證並入庫
 6. 可選擇交換 `SNAPSHOT_OFFER` / `VIEW_ANNOUNCE`
@@ -417,13 +417,13 @@ v0.1 定義以下訊息種類：
 - envelope 簽章不能取代 object 層簽章檢查
 - 依本地 policy 拒絕未簽章或簽章錯誤的控制訊息
 - 對重複無效流量套用 rate limit
-- 保持 transport 與 acceptance 決策分離
+- 保持傳輸與 acceptance 決策分離
 
 ## 15. 後續延伸
 
 後續版本可擴充：
 
-1. 大物件串流/分塊傳輸
+1. 大物件串流 / 分塊傳輸
 2. 壓縮能力協商
 3. capability 範圍授權 token
 4. replay 防護視窗與 nonce 規則
