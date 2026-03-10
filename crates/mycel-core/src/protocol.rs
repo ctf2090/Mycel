@@ -2634,6 +2634,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_snapshot_object_rejects_wrong_document_key_prefix() {
+        let error = parse_snapshot_object(&json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "patch:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'documents.patch:test key' must use 'doc:' prefix"
+        );
+    }
+
+    #[test]
     fn parse_snapshot_object_rejects_wrong_root_hash_prefix() {
         let error = parse_snapshot_object(&json!({
             "type": "snapshot",

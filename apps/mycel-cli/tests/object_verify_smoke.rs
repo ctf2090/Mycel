@@ -669,6 +669,88 @@ fn object_verify_json_fails_for_snapshot_with_wrong_root_hash_prefix() {
 }
 
 #[test]
+fn object_verify_json_fails_for_snapshot_with_wrong_document_value_prefix() {
+    let snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "patch:test"
+            },
+            "included_objects": ["patch:test"],
+            "root_hash": "hash:test",
+            "timestamp": 1777778890u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    let object = write_object_file(
+        "object-verify-snapshot-wrong-document-value-prefix",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents.doc:test' must use 'rev:' prefix")
+                })
+            })),
+        "expected snapshot document revision-prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_snapshot_with_wrong_document_key_prefix() {
+    let snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "patch:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "timestamp": 1777778890u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    let object = write_object_file(
+        "object-verify-snapshot-wrong-document-key-prefix",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents.patch:test key' must use 'doc:' prefix")
+                })
+            })),
+        "expected snapshot document key-prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_text_fails_when_signed_object_is_missing_signature() {
     let object = write_object_file(
         "object-verify-view-missing-signature",
@@ -774,6 +856,90 @@ fn object_verify_json_fails_for_view_with_non_object_policy() {
                     .is_some_and(|message| message.contains("top-level 'policy' must be an object"))
             })),
         "expected non-object policy error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_wrong_document_value_prefix() {
+    let view = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "patch:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 1777778891u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+    let object = write_object_file(
+        "object-verify-view-wrong-document-value-prefix",
+        "view.json",
+        view,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents.doc:test' must use 'rev:' prefix")
+                })
+            })),
+        "expected view document revision-prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_view_with_wrong_document_key_prefix() {
+    let view = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": {
+                "patch:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 1777778891u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+    let object = write_object_file(
+        "object-verify-view-wrong-document-key-prefix",
+        "view.json",
+        view,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'documents.patch:test key' must use 'doc:' prefix")
+                })
+            })),
+        "expected view document key-prefix error, stdout: {}",
         stdout_text(&output)
     );
 }
