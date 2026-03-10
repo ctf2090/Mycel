@@ -381,6 +381,7 @@ fn append_inspection_shape_notes(
     summary: &mut ObjectInspectionSummary,
 ) {
     let result = match object_type {
+        "patch" => parse_patch_object(value).map(|_| ()),
         "view" => parse_view_object(value).map(|_| ()),
         "snapshot" => parse_snapshot_object(value).map(|_| ()),
         _ => return,
@@ -1793,6 +1794,75 @@ mod tests {
                 .iter()
                 .any(|message| message.contains("top-level 'block_id' should be a string")),
             "expected logical ID warning, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn inspect_warns_when_patch_base_revision_prefix_is_wrong() {
+        let path = write_test_file(
+            "patch-wrong-base-revision-prefix-inspect",
+            &serde_json::to_string_pretty(&json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "patch_id": "patch:test",
+                "doc_id": "doc:test",
+                "base_revision": "hash:base",
+                "author": "pk:ed25519:test",
+                "timestamp": 1u64,
+                "ops": [],
+                "signature": "sig:ed25519:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = inspect_object_path(&path);
+
+        assert_eq!(summary.status, "warning");
+        assert!(
+            summary
+                .notes
+                .iter()
+                .any(|message| message.contains("top-level 'base_revision' must use 'rev:' prefix")),
+            "expected base_revision prefix warning, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn inspect_warns_when_patch_block_reference_prefix_is_wrong() {
+        let path = write_test_file(
+            "patch-wrong-block-reference-prefix-inspect",
+            &serde_json::to_string_pretty(&json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "patch_id": "patch:test",
+                "doc_id": "doc:test",
+                "base_revision": "rev:genesis-null",
+                "author": "pk:ed25519:test",
+                "timestamp": 1u64,
+                "ops": [
+                    {
+                        "op": "replace_block",
+                        "block_id": "paragraph-1",
+                        "new_content": "Hello"
+                    }
+                ],
+                "signature": "sig:ed25519:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = inspect_object_path(&path);
+
+        assert_eq!(summary.status, "warning");
+        assert!(
+            summary.notes.iter().any(|message| {
+                message.contains("top-level 'ops[0]': top-level 'block_id' must use 'blk:' prefix")
+            }),
+            "expected block reference prefix warning, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);

@@ -256,6 +256,82 @@ fn object_inspect_json_warns_for_snapshot_with_wrong_document_value_prefix() {
 }
 
 #[test]
+fn object_inspect_json_warns_for_patch_with_wrong_base_revision_prefix() {
+    let object = write_object_file(
+        "object-inspect-patch-wrong-base-revision-prefix",
+        "patch.json",
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "hash:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [],
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|entry| entry
+                    .as_str()
+                    .is_some_and(|message| message
+                        .contains("top-level 'base_revision' must use 'rev:' prefix")))),
+        "expected patch base_revision prefix warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_inspect_json_warns_for_patch_with_wrong_block_reference_prefix() {
+    let object = write_object_file(
+        "object-inspect-patch-wrong-block-reference-prefix",
+        "patch.json",
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "replace_block",
+                    "block_id": "paragraph-1",
+                    "new_content": "Hello"
+                }
+            ],
+            "signature": "sig:ed25519:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "inspect", &path, "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "warning");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["notes"].as_array().is_some_and(|notes| notes
+            .iter()
+            .any(|entry| entry.as_str().is_some_and(|message| message
+                .contains("top-level 'ops[0]': top-level 'block_id' must use 'blk:' prefix")))),
+        "expected patch block reference prefix warning, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_inspect_json_fails_for_non_object_top_level_value() {
     let object = write_raw_object_file("object-inspect-non-object", "array.json", "[1,2,3]");
     let path = path_arg(&object.path);
