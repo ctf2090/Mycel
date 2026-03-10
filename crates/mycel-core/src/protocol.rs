@@ -464,6 +464,21 @@ pub fn parse_document_object(value: &Value) -> Result<DocumentObject, TypedObjec
     }
 
     let object = envelope.object();
+    reject_unknown_fields(
+        object,
+        "top-level",
+        &[
+            "type",
+            "version",
+            "doc_id",
+            "title",
+            "language",
+            "content_model",
+            "created_at",
+            "created_by",
+            "genesis_revision",
+        ],
+    )?;
     Ok(DocumentObject {
         doc_id: required_prefixed_string(object, "doc_id", "doc:")?,
         title: required_string(object, "title")?,
@@ -479,6 +494,19 @@ pub fn parse_block_object(value: &Value) -> Result<BlockObject, TypedObjectError
     let object = value
         .as_object()
         .ok_or_else(|| TypedObjectError::new("block must be a JSON object"))?;
+    reject_unknown_fields(
+        object,
+        "top-level",
+        &[
+            "type",
+            "version",
+            "block_id",
+            "block_type",
+            "content",
+            "attrs",
+            "children",
+        ],
+    )?;
     let block_type = required_string(object, "block_type")?;
     validate_block_type(&block_type)?;
 
@@ -505,6 +533,21 @@ pub fn parse_patch_object(value: &Value) -> Result<PatchObject, TypedObjectError
     }
 
     let object = envelope.object();
+    reject_unknown_fields(
+        object,
+        "top-level",
+        &[
+            "type",
+            "version",
+            "patch_id",
+            "doc_id",
+            "base_revision",
+            "author",
+            "timestamp",
+            "ops",
+            "signature",
+        ],
+    )?;
     Ok(PatchObject {
         patch_id: required_prefixed_string(object, "patch_id", "patch:")?,
         doc_id: required_prefixed_string(object, "doc_id", "doc:")?,
@@ -529,6 +572,22 @@ pub fn parse_revision_object(value: &Value) -> Result<RevisionObject, TypedObjec
     }
 
     let object = envelope.object();
+    reject_unknown_fields(
+        object,
+        "top-level",
+        &[
+            "type",
+            "version",
+            "revision_id",
+            "doc_id",
+            "parents",
+            "patches",
+            "state_hash",
+            "author",
+            "timestamp",
+            "signature",
+        ],
+    )?;
     Ok(RevisionObject {
         revision_id: required_prefixed_string(object, "revision_id", "rev:")?,
         doc_id: required_prefixed_string(object, "doc_id", "doc:")?,
@@ -551,6 +610,20 @@ pub fn parse_view_object(value: &Value) -> Result<ViewObject, TypedObjectError> 
     }
 
     let object = envelope.object();
+    reject_unknown_fields(
+        object,
+        "top-level",
+        &[
+            "type",
+            "version",
+            "view_id",
+            "maintainer",
+            "documents",
+            "policy",
+            "timestamp",
+            "signature",
+        ],
+    )?;
     let documents = required_string_map(object, "documents")?;
     if documents.is_empty() {
         return Err(TypedObjectError::new(
@@ -578,6 +651,21 @@ pub fn parse_snapshot_object(value: &Value) -> Result<SnapshotObject, TypedObjec
     }
 
     let object = envelope.object();
+    reject_unknown_fields(
+        object,
+        "top-level",
+        &[
+            "type",
+            "version",
+            "snapshot_id",
+            "documents",
+            "included_objects",
+            "root_hash",
+            "created_by",
+            "timestamp",
+            "signature",
+        ],
+    )?;
     let documents = required_prefixed_string_map(object, "documents", "doc:", "rev:")?;
     if documents.is_empty() {
         return Err(TypedObjectError::new(
@@ -852,27 +940,50 @@ fn parse_patch_operation(value: &Value) -> Result<PatchOperation, TypedObjectErr
     let op = required_string(object, "op")?;
 
     match op.as_str() {
-        "insert_block" => Ok(PatchOperation::InsertBlock {
-            parent_block_id: optional_prefixed_string(object, "parent_block_id", "blk:")?,
-            index: optional_usize(object, "index")?,
-            new_block: parse_block_field(object, "new_block")?,
-        }),
-        "insert_block_after" => Ok(PatchOperation::InsertBlockAfter {
-            after_block_id: required_prefixed_string(object, "after_block_id", "blk:")?,
-            new_block: parse_block_field(object, "new_block")?,
-        }),
-        "delete_block" => Ok(PatchOperation::DeleteBlock {
-            block_id: required_prefixed_string(object, "block_id", "blk:")?,
-        }),
-        "replace_block" => Ok(PatchOperation::ReplaceBlock {
-            block_id: required_prefixed_string(object, "block_id", "blk:")?,
-            new_content: required_string(object, "new_content")?,
-        }),
-        "move_block" => Ok(PatchOperation::MoveBlock {
-            block_id: required_prefixed_string(object, "block_id", "blk:")?,
-            parent_block_id: optional_prefixed_string(object, "parent_block_id", "blk:")?,
-            after_block_id: optional_prefixed_string(object, "after_block_id", "blk:")?,
-        })
+        "insert_block" => {
+            reject_unknown_fields(
+                object,
+                "patch op",
+                &["op", "parent_block_id", "index", "new_block"],
+            )?;
+            Ok(PatchOperation::InsertBlock {
+                parent_block_id: optional_prefixed_string(object, "parent_block_id", "blk:")?,
+                index: optional_usize(object, "index")?,
+                new_block: parse_block_field(object, "new_block")?,
+            })
+        }
+        "insert_block_after" => {
+            reject_unknown_fields(object, "patch op", &["op", "after_block_id", "new_block"])?;
+            Ok(PatchOperation::InsertBlockAfter {
+                after_block_id: required_prefixed_string(object, "after_block_id", "blk:")?,
+                new_block: parse_block_field(object, "new_block")?,
+            })
+        }
+        "delete_block" => {
+            reject_unknown_fields(object, "patch op", &["op", "block_id"])?;
+            Ok(PatchOperation::DeleteBlock {
+                block_id: required_prefixed_string(object, "block_id", "blk:")?,
+            })
+        }
+        "replace_block" => {
+            reject_unknown_fields(object, "patch op", &["op", "block_id", "new_content"])?;
+            Ok(PatchOperation::ReplaceBlock {
+                block_id: required_prefixed_string(object, "block_id", "blk:")?,
+                new_content: required_string(object, "new_content")?,
+            })
+        }
+        "move_block" => {
+            reject_unknown_fields(
+                object,
+                "patch op",
+                &["op", "block_id", "parent_block_id", "after_block_id"],
+            )?;
+            Ok(PatchOperation::MoveBlock {
+                block_id: required_prefixed_string(object, "block_id", "blk:")?,
+                parent_block_id: optional_prefixed_string(object, "parent_block_id", "blk:")?,
+                after_block_id: optional_prefixed_string(object, "after_block_id", "blk:")?,
+            })
+        }
         .and_then(|operation| match operation {
             PatchOperation::MoveBlock {
                 parent_block_id: None,
@@ -883,15 +994,53 @@ fn parse_patch_operation(value: &Value) -> Result<PatchOperation, TypedObjectErr
             )),
             _ => Ok(operation),
         }),
-        "annotate_block" => Ok(PatchOperation::AnnotateBlock {
-            block_id: required_prefixed_string(object, "block_id", "blk:")?,
-            annotation: parse_block_field(object, "annotation")?,
-        }),
-        "set_metadata" => Ok(PatchOperation::SetMetadata {
-            entries: parse_metadata_entries(object)?,
-        }),
+        "annotate_block" => {
+            reject_unknown_fields(object, "patch op", &["op", "block_id", "annotation"])?;
+            Ok(PatchOperation::AnnotateBlock {
+                block_id: required_prefixed_string(object, "block_id", "blk:")?,
+                annotation: parse_block_field(object, "annotation")?,
+            })
+        }
+        "set_metadata" => {
+            if object.contains_key("metadata") {
+                reject_unknown_fields(object, "patch op", &["op", "metadata"])?;
+            } else {
+                reject_unknown_fields(object, "patch op", &["op", "key", "value"])?;
+            }
+            Ok(PatchOperation::SetMetadata {
+                entries: parse_metadata_entries(object)?,
+            })
+        }
         _ => Err(TypedObjectError::new(format!(
             "unsupported patch op '{op}'"
+        ))),
+    }
+}
+
+fn reject_unknown_fields(
+    object: &Map<String, Value>,
+    scope: &str,
+    allowed_fields: &[&str],
+) -> Result<(), TypedObjectError> {
+    let mut unknown_fields = object
+        .keys()
+        .filter(|field| !allowed_fields.contains(&field.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    unknown_fields.sort_unstable();
+
+    match unknown_fields.as_slice() {
+        [] => Ok(()),
+        [field] => Err(TypedObjectError::new(format!(
+            "{scope} contains unexpected field '{field}'"
+        ))),
+        fields => Err(TypedObjectError::new(format!(
+            "{scope} contains unexpected fields: {}",
+            fields
+                .iter()
+                .map(|field| format!("'{field}'"))
+                .collect::<Vec<_>>()
+                .join(", ")
         ))),
     }
 }
@@ -1542,6 +1691,81 @@ mod tests {
     }
 
     #[test]
+    fn parse_patch_object_rejects_unknown_top_level_field() {
+        let error = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [],
+            "unexpected": true
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level contains unexpected field 'unexpected'"
+        );
+    }
+
+    #[test]
+    fn parse_patch_object_rejects_unknown_patch_op_field() {
+        let error = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "delete_block",
+                    "block_id": "blk:001",
+                    "new_content": "unexpected"
+                }
+            ]
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "patch op contains unexpected field 'new_content'"
+        );
+    }
+
+    #[test]
+    fn parse_patch_object_rejects_mixed_set_metadata_forms() {
+        let error = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "set_metadata",
+                    "metadata": {
+                        "title": "Hello"
+                    },
+                    "key": "extra"
+                }
+            ]
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "patch op contains unexpected field 'key'"
+        );
+    }
+
+    #[test]
     fn parse_document_object_reads_identity_and_baseline_fields() {
         let document = parse_document_object(&json!({
             "type": "document",
@@ -1618,6 +1842,28 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'content_model' must equal 'block-tree'"
+        );
+    }
+
+    #[test]
+    fn parse_document_object_rejects_unknown_top_level_field() {
+        let error = parse_document_object(&json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "title": "Origin Text",
+            "language": "zh-Hant",
+            "content_model": "block-tree",
+            "created_at": 1u64,
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test",
+            "unexpected": true
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level contains unexpected field 'unexpected'"
         );
     }
 
@@ -1722,6 +1968,24 @@ mod tests {
     }
 
     #[test]
+    fn parse_block_object_rejects_unknown_top_level_field() {
+        let error = parse_block_object(&json!({
+            "block_id": "blk:001",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": [],
+            "unexpected": true
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level contains unexpected field 'unexpected'"
+        );
+    }
+
+    #[test]
     fn parse_view_object_reads_documents_and_policy() {
         let view = parse_view_object(&json!({
             "type": "view",
@@ -1802,6 +2066,30 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'documents.doc:test' must use 'rev:' prefix"
+        );
+    }
+
+    #[test]
+    fn parse_view_object_rejects_unknown_top_level_field() {
+        let error = parse_view_object(&json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "view_id": "view:test",
+            "maintainer": "pk:ed25519:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 7u64,
+            "unexpected": true
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level contains unexpected field 'unexpected'"
         );
     }
 
@@ -1953,6 +2241,29 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'included_objects' must include revision 'rev:test' declared by 'documents.doc:test'"
+        );
+    }
+
+    #[test]
+    fn parse_snapshot_object_rejects_unknown_top_level_field() {
+        let error = parse_snapshot_object(&json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "snapshot_id": "snap:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": "pk:ed25519:test",
+            "timestamp": 9u64,
+            "unexpected": true
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level contains unexpected field 'unexpected'"
         );
     }
 

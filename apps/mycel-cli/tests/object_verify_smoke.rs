@@ -255,6 +255,43 @@ fn object_verify_json_fails_for_document_with_wrong_doc_id_prefix() {
 }
 
 #[test]
+fn object_verify_json_fails_for_document_with_unknown_top_level_field() {
+    let object = write_object_file(
+        "object-verify-document-unknown-field",
+        "document.json",
+        json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "title": "Plain document",
+            "language": "zh-Hant",
+            "content_model": "block-tree",
+            "created_at": 1u64,
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test",
+            "unexpected": true
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "document");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level contains unexpected field 'unexpected'")
+                })
+            })),
+        "expected unknown-field validation error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_duplicate_object_keys() {
     let object = write_raw_object_file(
         "object-verify-duplicate-keys",
@@ -542,6 +579,47 @@ fn object_verify_json_fails_for_invalid_patch_signature() {
                 .as_str()
                 .is_some_and(|message| message.contains("Ed25519 signature verification failed")))),
         "expected signature failure, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_patch_op_unknown_field() {
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": [
+                {
+                    "op": "delete_block",
+                    "block_id": "blk:001",
+                    "new_content": "unexpected"
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let object = write_object_file("object-verify-patch-op-unknown-field", "patch.json", patch);
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("patch op contains unexpected field 'new_content'")
+                })
+            })),
+        "expected patch-op unknown-field error, stdout: {}",
         stdout_text(&output)
     );
 }
