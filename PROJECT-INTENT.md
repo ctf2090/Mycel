@@ -19,7 +19,7 @@
 
 Illustrative conditions and corresponding possible Mycel uses:
 
-- If privacy-preserving human-machine interfaces become mature enough for reliable deployment, Mycel may carry qualified participation records and access or reading flows linked to preservation activities.
+- If privacy-preserving human-machine interfaces become mature enough for reliable deployment, Mycel may carry qualified meditation-session records and profile-governed fund-eligibility or donation-trigger flows under agreed conditions.
 - If trustworthy automated threshold custody becomes mature enough for reliable deployment, Mycel may carry policy-governed automatic fund execution with stronger decentralization and lower manual friction.
 - If canonical-text tooling becomes sufficiently mature, Mycel may carry deeply layered reference corpora with parallel witnesses, commentary strata, and accepted reading profiles.
 - If anonymous deployment environments become sufficiently mature, Mycel may support stronger separation between reading, governance, signing, runtime execution, and cultural-support flows.

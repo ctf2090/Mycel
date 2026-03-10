@@ -19,7 +19,7 @@
 
 以下列出幾個條件與可能用途的對應例子：
 
-- 若保護隱私的人機介面成熟到足以可靠部署，Mycel 可以承載具資格條件的參與事件記錄，以及與保存活動連動的存取或閱讀流程。
+- 若保護隱私的人機介面成熟到足以可靠部署，Mycel 可以承載具資格條件的靜坐 session 記錄，以及在事先約定條件下、由 profile 規則導出的 fund 資格或 donation-trigger 流程。
 - 若可信的自動化門檻式託管成熟到足以可靠部署，Mycel 可以承載受 policy 約束的自動 fund 執行流程，同時保留更強的去中心化與更低的人工作業摩擦。
 - 若典範文本工具成熟到足夠穩定，Mycel 可以承載具平行 witnesses、分層 commentary 與 accepted reading profiles 的深層 reference corpora。
 - 若匿名部署環境成熟到足夠穩定，Mycel 可以更強地分離閱讀、治理、簽署、runtime 執行與文化支持流程。
