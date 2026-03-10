@@ -2735,6 +2735,107 @@ fn object_verify_json_reports_ok_for_revision_with_replayed_state_hash() {
 }
 
 #[test]
+fn object_verify_json_reports_ok_for_non_genesis_revision_with_neighbor_patch() {
+    let dir = create_temp_dir("object-verify-non-genesis-revision-replay");
+    let base_revision_path = dir.path().join("revision-base.json");
+    let patch_path = dir.path().join("patch-child.json");
+    let revision_path = dir.path().join("revision-child.json");
+
+    let base_revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": state_hash(&json!({
+                "doc_id": "doc:test",
+                "blocks": [],
+                "metadata": {}
+            })),
+            "timestamp": 1777778887u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &base_revision_path,
+        serde_json::to_string_pretty(&base_revision).expect("base revision JSON should serialize"),
+    )
+    .expect("base revision JSON should be written");
+
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": base_revision["revision_id"].as_str().expect("base revision id should exist"),
+            "timestamp": 1777778888u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &patch_path,
+        serde_json::to_string_pretty(&patch).expect("patch JSON should serialize"),
+    )
+    .expect("patch JSON should be written");
+
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [base_revision["revision_id"].as_str().expect("base revision id should exist")],
+            "patches": [patch["patch_id"].as_str().expect("patch id should exist")],
+            "state_hash": state_hash(&json!({
+                "doc_id": "doc:test",
+                "blocks": [
+                    {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {},
+                        "children": []
+                    }
+                ]
+            })),
+            "timestamp": 1777778889u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &revision_path,
+        serde_json::to_string_pretty(&revision).expect("revision JSON should serialize"),
+    )
+    .expect("revision JSON should be written");
+
+    let output = run_mycel(&["object", "verify", &path_arg(&revision_path), "--json"]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "verified");
+    assert_eq!(json["declared_state_hash"], json["recomputed_state_hash"]);
+}
+
+#[test]
 fn object_verify_json_fails_for_revision_state_hash_mismatch() {
     let dir = create_temp_dir("object-verify-revision-state-hash-mismatch");
     let patch_path = dir.path().join("patch.json");
