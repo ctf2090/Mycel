@@ -39,7 +39,7 @@ Mycel is designed with the following goals:
 
 Mycel splits data into six core concepts:
 
-- **Document**: A document
+- **Document**: A long-lived, replayable object history; not necessarily a traditional prose file
 - **Block**: A paragraph/block
 - **Patch**: One modification
 - **Revision**: A verifiable state
