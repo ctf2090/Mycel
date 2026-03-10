@@ -4,6 +4,8 @@ Status: draft
 
 This note describes how multiple AI coding agents should work in parallel in the Mycel repository without colliding on scope, files, or push order.
 
+For the short maintainer version, see [MULTI-AGENT-CHEATSHEET.md](./MULTI-AGENT-CHEATSHEET.md).
+
 Use it together with:
 
 - [BOT-CONTRIBUTING.md](../BOT-CONTRIBUTING.md)
