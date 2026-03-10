@@ -217,6 +217,42 @@ fn object_verify_json_fails_for_document_missing_doc_id() {
 }
 
 #[test]
+fn object_verify_json_fails_for_document_with_non_string_doc_id() {
+    let object = write_object_file(
+        "object-verify-document-non-string-doc-id",
+        "document.json",
+        json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": 7,
+            "title": "Plain document",
+            "language": "zh-Hant",
+            "content_model": "block-tree",
+            "created_at": 1u64,
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test"
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "document");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("top-level 'doc_id' must be a string"))
+            })),
+        "expected doc_id type error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_document_with_wrong_doc_id_prefix() {
     let object = write_object_file(
         "object-verify-document-wrong-doc-id-prefix",
@@ -460,6 +496,40 @@ fn object_verify_json_fails_for_block_missing_block_id() {
                         .contains("block object is missing string field 'block_id'")))
             ),
         "expected missing block_id error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_block_with_non_string_block_id() {
+    let object = write_object_file(
+        "object-verify-block-non-string-block-id",
+        "block.json",
+        json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": 7,
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": []
+        }),
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "block");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'block_id' must be a string")
+                })
+            })),
+        "expected block_id type error, stdout: {}",
         stdout_text(&output)
     );
 }

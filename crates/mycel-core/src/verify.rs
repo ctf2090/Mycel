@@ -818,6 +818,38 @@ mod tests {
     }
 
     #[test]
+    fn document_non_string_logical_id_is_rejected() {
+        let path = write_test_file(
+            "document-wrong-doc-id-type",
+            &serde_json::to_string_pretty(&json!({
+                "type": "document",
+                "version": "mycel/0.1",
+                "doc_id": 7,
+                "title": "Plain document",
+                "language": "zh-Hant",
+                "content_model": "block-tree",
+                "created_at": 1u64,
+                "created_by": "pk:ed25519:test",
+                "genesis_revision": "rev:test"
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'doc_id' must be a string")),
+            "expected logical ID type error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn document_wrong_logical_id_prefix_is_rejected() {
         let path = write_test_file(
             "document-wrong-doc-id-prefix",
@@ -1529,6 +1561,36 @@ mod tests {
                 .iter()
                 .any(|message| message.contains("block object is missing string field 'block_id'")),
             "expected missing logical ID error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn block_non_string_logical_id_is_rejected() {
+        let path = write_test_file(
+            "block-wrong-block-id-type",
+            &serde_json::to_string_pretty(&json!({
+                "type": "block",
+                "version": "mycel/0.1",
+                "block_id": 7,
+                "block_type": "paragraph",
+                "content": "Hello",
+                "attrs": {},
+                "children": []
+            }))
+            .expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'block_id' must be a string")),
+            "expected logical ID type error, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);
