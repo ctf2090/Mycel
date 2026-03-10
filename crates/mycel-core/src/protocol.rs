@@ -1277,6 +1277,7 @@ fn required_prefixed_string_array(
     for (index, value) in values.iter().enumerate() {
         validate_prefixed_string_with_path(value, &format!("{field}[{index}]"), prefix)?;
     }
+    reject_duplicate_strings(&values, field)?;
     Ok(values)
 }
 
@@ -1939,6 +1940,48 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'parents[0]' must use 'rev:' prefix"
+        );
+    }
+
+    #[test]
+    fn parse_revision_object_rejects_duplicate_parent_ids() {
+        let error = parse_revision_object(&json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "doc_id": "doc:test",
+            "parents": ["rev:base", "rev:base"],
+            "patches": ["patch:test"],
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 2u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'parents[1]' duplicates 'parents[0]'"
+        );
+    }
+
+    #[test]
+    fn parse_revision_object_rejects_duplicate_patch_ids() {
+        let error = parse_revision_object(&json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:test",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": ["patch:test", "patch:test"],
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 2u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'patches[1]' duplicates 'patches[0]'"
         );
     }
 

@@ -851,6 +851,78 @@ mod tests {
     }
 
     #[test]
+    fn revision_duplicate_parent_ids_are_rejected_by_typed_validation() {
+        let (signing_key, public_key) = signer_material();
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:base", "rev:base"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id);
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        let path = write_test_file(
+            "revision-duplicate-parents",
+            &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'parents[1]' duplicates 'parents[0]'")),
+            "expected duplicate parent error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn revision_duplicate_patch_ids_are_rejected_by_typed_validation() {
+        let (signing_key, public_key) = signer_material();
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": ["patch:test", "patch:test"],
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id);
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        let path = write_test_file(
+            "revision-duplicate-patches",
+            &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'patches[1]' duplicates 'patches[0]'")),
+            "expected duplicate patch error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn inspect_warns_when_document_logical_id_has_wrong_type() {
         let path = write_test_file(
             "document-wrong-doc-id-type",
