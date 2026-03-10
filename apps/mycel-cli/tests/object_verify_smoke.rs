@@ -1787,6 +1787,139 @@ fn object_verify_json_fails_for_patch_with_wrong_author_prefix() {
 }
 
 #[test]
+fn object_verify_json_fails_for_patch_with_unknown_top_level_field() {
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": [],
+            "unexpected": true
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let object = write_object_file(
+        "object-verify-patch-unknown-top-level-field",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level contains unexpected field 'unexpected'")
+                })
+            })),
+        "expected unknown top-level field error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_patch_move_without_destination() {
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": [
+                {
+                    "op": "move_block",
+                    "block_id": "blk:001"
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let object = write_object_file(
+        "object-verify-patch-move-without-destination",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains(
+                        "top-level 'ops[0]': move_block requires at least one destination reference",
+                    )
+                })
+            })),
+        "expected move_block destination error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_patch_with_mixed_set_metadata_forms() {
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": [
+                {
+                    "op": "set_metadata",
+                    "metadata": {
+                        "title": "Hello"
+                    },
+                    "key": "extra"
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let object = write_object_file(
+        "object-verify-patch-mixed-set-metadata-forms",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'ops[0]': patch op contains unexpected field 'key'")
+                })
+            })),
+        "expected mixed set_metadata forms error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_reports_ok_for_revision_with_replayed_state_hash() {
     let dir = create_temp_dir("object-verify-revision-replay");
     let patch_path = dir.path().join("patch.json");
