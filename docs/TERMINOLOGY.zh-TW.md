@@ -6,7 +6,7 @@
 
 目標：
 
-- 統一 core protocol、profile、design note、README 的中文用語
+- 統一協定核心、profile、設計備忘錄與 README 的中文用語
 - 降低 `document`、`accepted head`、`profile` 等術語的誤讀
 - 提供對外說明時較穩定的中文表述
 
@@ -14,7 +14,7 @@
 
 ## 1. 使用原則
 
-- 涉及 protocol core 的正式術語，優先沿用規格文件既有寫法。
+- 涉及協定核心的正式術語，優先沿用規格文件既有寫法。
 - 翻譯或修訂 `zh-TW` 文件時，優先使用台灣慣用詞與表達方式，而不只是把文字轉成繁體。
 - 若中文直譯容易誤導，保留英文並補短中文解釋。
 - 欄位名、enum 值、物件型別名在資料結構中保留英文；正文可用中文解釋。
@@ -24,7 +24,7 @@
 
 | English term | 建議中文 | 補充說明 |
 | --- | --- | --- |
-| protocol core | 協定核心 | 指 Mycel 最底層可驗證物件與規則，不含 app-layer 語意。 |
+| protocol core | 協定核心 | 指 Mycel 最底層可驗證物件與規則，不含應用層語意。 |
 | document | Document / 文件 | 在 Mycel 裡是「一條可長期演化且可重播的物件歷史」，不必然是傳統文字文件。 |
 | block | 區塊 / 段落區塊 | v0.1 主要操作單位。 |
 | patch | 修改 | 一次對 document state 的修改。 |
@@ -42,7 +42,7 @@
 | selector | selector / 選擇規則 | 用來在合法 heads 間導出 accepted head 的規則。 |
 | selector epoch | `selector_epoch` / 選擇 epoch | selector 計算上下文的一部分。 |
 | view maintainer | View 維護者 | 對 View 發布治理訊號的維護角色。 |
-| reader client | reader client / 閱讀客戶端 | 顯示 document family 並導出 accepted reading 的客戶端。 |
+| reader client | 閱讀客戶端 | 顯示 document family 並導出 accepted reading 的客戶端。 |
 
 ## 3. Profile 與治理術語
 
@@ -51,7 +51,7 @@
 | profile | profile / 規則組 | 正式技術語境建議保留 `profile`。 |
 | fixed profile | 固定 profile | 指不可臨時依本地偏好改動的規則組。 |
 | profile-governed | 由 profile 決定 | 強調結果來自固定規則，而不是自由裁量。 |
-| policy | policy / 政策約束 | 可是 profile 內的一部分，也可是一組更具體的執行條件。 |
+| policy | policy / 政策約束 | 可以是 profile 內的一部分，也可以是一組更具體的執行條件。 |
 | policy bundle | policy bundle / 政策包 | 一組共同生效的政策條件。 |
 | accepted-state derivation | accepted-state 推導 | 從已驗證物件與固定規則導出可採用狀態。 |
 | governance signal | 治理訊號 | 例如 View 的簽章聲明。 |
@@ -65,7 +65,7 @@
 | peer | peer / 對等節點 | 建議保留 `peer`，必要時補中文。 |
 | ingest | 匯入 | 物件進入本地儲存。 |
 | rebuild | 重建 | 由已知物件重新構建狀態或索引。 |
-| fixture | fixture / 測試樣本 | repo 中用於 deterministic 驗證的固定資料。 |
+| fixture | fixture / 測試樣本 | repo 中用於決定性驗證的固定資料。 |
 | simulator | simulator / 模擬器 | 用於測試 peer / topology / reports 的模擬層。 |
 | negative validation | 負向驗證 | 確認錯誤案例會被正確拒絕。 |
 | deterministic | 決定性 | 輸入相同時結果可重現。 |
@@ -74,12 +74,12 @@
 
 | English term | 建議中文 | 補充說明 |
 | --- | --- | --- |
-| app layer | 應用層 | 位於 protocol core 之上，承載領域語意。 |
+| app layer | 應用層 | 位於協定核心之上，承載領域語意。 |
 | record family | 記錄家族 | 一組相關 document families 或 object streams。 |
-| runtime | runtime | 建議保留英文；指執行外部效果或本地判定的執行環境。 |
+| runtime | runtime / 執行環境 | 指執行外部效果或本地判定的執行環境。 |
 | effect layer | 外部效果層 | 顯式表示外部觀測、支付、通知等副作用。 |
 | consent profile | consent profile / 同意規則組 | 使用者事前授權條件。 |
-| session record | session 記錄 | 一次有邊界的執行或觀測摘要。 |
+| session record | 時段記錄 | 一次有邊界的執行或觀測摘要。 |
 | derived event | 導出事件 | 從 session 或其他 evidence 摘要出的高階事件。 |
 | intent | 意圖 | 系統準備採取某動作前的可驗證中間狀態。 |
 | pledge | 承諾 | 尚未實際結算的承諾或待確認狀態。 |
@@ -105,4 +105,4 @@
 - Mycel 是一個用於可驗證文本歷史、依規則導出的預設閱讀版本與去中心化複製的協定。
 - 所謂「預設採用版本」不是全網共識，而是依固定 profile 規則，從已驗證物件推導出的結果。
 - `Document` 在 Mycel 中是長期可重播的物件歷史，不必然是傳統文字文件。
-- app-layer 語意應放在 profiles 與 applications，不應寫死進協定核心。
+- 應用層語意應放在 profiles 與 applications，不應寫死進協定核心。
