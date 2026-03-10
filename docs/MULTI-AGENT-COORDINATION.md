@@ -30,18 +30,53 @@ Use one agent per issue, and one active issue per agent.
 
 If a task cannot stay mostly inside one issue boundary, split the task instead of expanding the agent scope.
 
+## Hybrid Issue Mode
+
+Do not force every coding action through a GitHub issue first.
+
+Use a hybrid mode:
+
+- issue-first for scoped feature work, bot-ready tasks, multi-commit work, or anything another agent may need to pick up
+- chat-first for tiny fixes such as formatting-only changes, one-line assertion updates, or other obviously local cleanup
+
+Recommended issue-first triggers:
+
+1. the task will likely take more than one commit
+2. the task touches more than one primary file
+3. the task is intended for handoff to another agent
+4. the task changes roadmap or checklist meaning
+5. the task is large enough to deserve acceptance criteria and verify commands
+
+Recommended chat-first exceptions:
+
+1. formatting-only follow-up after a failed CI run
+2. narrow test assertion alignment after a behavior-preserving refactor
+3. trivial doc wording or typo cleanup in one file
+
+If a chat-first fix grows beyond that boundary, convert it into issue-first mode before widening scope.
+
+Practical default:
+
+- if the work needs a claim, handoff, labels, or batching, use a GitHub issue
+- if the work is obviously one short local correction, it can stay issue-free
+
 ## Claiming Work
 
 Before an agent starts:
 
-1. choose one open issue
-2. check whether another agent or human is already working on it
-3. leave a short claim note in the issue or team channel
-4. confirm the likely file set before editing
+1. decide whether the task is issue-first or chat-first
+2. if it is issue-first, choose one open issue
+3. check whether another agent or human is already working on it
+4. leave a short claim note in the issue or team channel
+5. confirm the likely file set before editing
 
 Recommended claim format:
 
 - `Claiming #5 for protocol/parser work in protocol.rs plus direct tests.`
+
+Recommended chat-first start note:
+
+- `Taking a local follow-up fix for the latest formatting failure in protocol.rs only.`
 
 Do not let two agents actively write the same issue unless the work is explicitly split into separate file regions.
 
@@ -180,6 +215,12 @@ When an agent stops or finishes, leave a short handoff:
 Recommended handoff format:
 
 - `Finished #4. Touched protocol.rs and object_verify_smoke.rs. Ran cargo test -p mycel-core and cargo test -p mycel-cli. Remaining follow-up: fixture-backed malformed snapshot cases.`
+
+For chat-first work with no issue, still leave the same handoff structure, but replace the issue reference with a short scope label.
+
+Example:
+
+- `Finished local CI-fix follow-up. Touched protocol.rs. Ran cargo fmt --all and cargo test --workspace. Remaining follow-up: none.`
 
 ## Maintainer View
 

@@ -6,16 +6,33 @@ Use this as the short maintainer view of [MULTI-AGENT-COORDINATION.md](./MULTI-A
 
 ## 10-Line Rule Set
 
-1. One agent owns one issue at a time.
-2. One active issue should map to one chat and one worktree or isolated session.
-3. Claim the issue before editing.
-4. Do not run two agents on the same primary file at the same time.
-5. Split work by file boundary, not by vague subtopic.
-6. Keep each diff issue-local and reviewable.
-7. Verify with the commands named in the issue before handoff.
-8. Push serially, never in parallel.
-9. If `origin/main` moved, fetch and rebase before retrying.
-10. If the spec is unclear, stop and mark the task `blocked-by-spec`.
+1. Default to hybrid mode, not issue-for-everything.
+2. Use one agent per issue when the work needs claims, handoff, or more than one commit.
+3. One active issue should map to one chat and one worktree or isolated session.
+4. Small local fixes can stay chat-first, but do not let them widen silently.
+5. Claim the issue before editing, or leave a short local-scope note for chat-first work.
+6. Do not run two agents on the same primary file at the same time.
+7. Split work by file boundary, not by vague subtopic.
+8. Verify with the commands named in the issue or local scope before handoff.
+9. Push serially, never in parallel.
+10. If `origin/main` moved, fetch and rebase before retrying. If the spec is unclear, stop and mark the task `blocked-by-spec`.
+
+## Hybrid Rule
+
+Use issue-first for:
+
+- multi-commit work
+- multi-file work
+- bot-ready tasks
+- anything that needs acceptance criteria or handoff
+
+Use chat-first for:
+
+- formatting-only follow-up
+- tiny assertion alignment
+- one-file typo or wording cleanup
+
+If a chat-first fix expands, convert it into issue-first mode.
 
 ## Milestone Batch Done
 
@@ -62,3 +79,4 @@ Every handoff should say:
 Recommended format:
 
 - `Finished #4. Touched protocol.rs and object_verify_smoke.rs. Ran cargo test -p mycel-core and cargo test -p mycel-cli. Remaining follow-up: malformed snapshot fixtures.`
+- `Finished local CI-fix follow-up. Touched protocol.rs. Ran cargo fmt --all and cargo test --workspace. Remaining follow-up: none.`
