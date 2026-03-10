@@ -1,13 +1,13 @@
 # Mycel Roadmap
 
-狀態：late partial progress，已在最近一批 M1 inspect parity、strictness 與 docs sync 工作後刷新
+狀態：late partial progress，已在最近一批 M1 inspect parity、strictness 與文件同步工作後刷新
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的建置順序。
 
 它刻意維持窄版範圍：
 
-- 先做第一個可互通 client
-- 對 protocol-core 變更保持保守
+- 先做第一個可互通客戶端
+- 對協定核心變更保持保守
 - 在擴大範圍前，先把成熟想法落成 profiles、schemas 與 tests
 
 ## 目前位置
@@ -15,7 +15,7 @@
 目前 repository 已具備：
 
 - 持續成長中的 v0.1 protocol 與 wire-spec 文件集
-- 適合做內部 validation 與 deterministic simulator workflows 的 Rust CLI
+- 適合做內部驗證與決定性模擬器工作流程的 Rust CLI
 - `mycel-core` 對 object schema metadata、object-envelope parsing、replay-based revision verification、local object-store ingest/rebuild、persisted store indexes，以及 accepted-head inspection 的支援
 - `document`、`block`、`patch`、`revision`、`view`、`snapshot` 在 parser / verify / CLI 路徑更廣的 strictness-surface coverage、更完整的 `object inspect` warning surface，以及 isolate 過的 validate-peer fixtures
 - 以 `assert_cmd`、`predicates`、`tempfile` 與小範圍 `rstest` 建立的較可維護 CLI test base
@@ -23,10 +23,10 @@
 
 目前 repository 尚未具備：
 
-- 完整可互通的 node 實作
+- 完整可互通的節點實作
 - 完成的 object-authoring 與 storage-write path
 - 端到端 wire sync
-- production-ready 的公開 CLI 或 app
+- 正式可上線的公開 CLI 或 app
 
 ## Roadmap 摘要
 
@@ -34,15 +34,15 @@
 
 目前的 lane 是：
 
-1. 完成窄版 first-client core
-2. 收掉 shared-core 在 parsing 與 canonicalization 上剩餘的缺口
-3. 一邊持續擴充 fixtures、simulator coverage 與 negative tests，一邊開始 reader-plus-governance 的讀取路徑
+1. 完成窄版的第一個客戶端核心
+2. 收掉 shared core 在 parsing 與 canonicalization 上剩餘的缺口
+3. 一邊持續擴充 fixtures、模擬器 coverage 與負向測試，一邊開始 reader-plus-governance 的讀取路徑
 
 ### 下一步
 
 當窄版 core 穩定後，下一條 lane 是：
 
-1. 面向 reader 的 accepted-head 與 governance workflows
+1. 面向 reader 的 accepted-head 與 governance 工作流程
 2. fixed-profile accepted reading
 3. reader-first 的 text reconstruction 與 inspection
 
@@ -76,24 +76,24 @@
 
 ## Phase 1: Minimal
 
-目標：達到一個窄版 first client，能夠以 deterministic 方式 parse、verify、store、replay，並 inspect Mycel objects。
+目標：達到一個窄版的第一個客戶端，能夠以決定性的方式 parse、verify、store、replay，並 inspect Mycel objects。
 
 ### Deliverables
 
 1. 所有 v0.1 object families 的 shared protocol object model
 2. canonical serialization、derived ID recomputation 與 signature verification
 3. replay-based revision verification 與 `state_hash` 檢查
-4. local object store 與可重建的 indexes
+4. 本地物件儲存與可重建的索引
 5. 穩定的內部 CLI/API，可做 validation、object verification、object inspection 與 accepted-head inspection
 6. object 與 simulator validation 的 interop fixtures 與 negative tests
 
 ### Exit Criteria
 
 1. 必要 object types 可以穩定地 parse 與 validate
-2. canonical IDs 與 signatures 是 deterministic 的
+2. canonical IDs 與 signatures 是決定性的
 3. revision replay 可只靠 stored objects 通過
-4. fixed profile 下的 accepted-head selection 是 deterministic 的
-5. local store 可以只靠 canonical objects 重建
+4. fixed profile 下的 accepted-head selection 是決定性的
+5. 本地儲存可以只靠 canonical objects 重建
 
 ### Current Status
 
