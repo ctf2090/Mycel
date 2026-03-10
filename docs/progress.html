@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mycel Progress</title>
+    <meta
+      name="description"
+      content="A visual summary of the Mycel roadmap and implementation checklist."
+    >
+    <meta name="theme-color" content="#0d6b57">
+    <style>
+      :root {
+        --bg: #f3efe6;
+        --surface: rgba(255, 250, 242, 0.9);
+        --surface-strong: #fffaf1;
+        --text: #1d2a26;
+        --muted: #5a6a62;
+        --accent: #0d6b57;
+        --accent-strong: #084d3f;
+        --line: rgba(29, 42, 38, 0.12);
+        --shadow: 0 24px 80px rgba(20, 32, 27, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(13, 107, 87, 0.14), transparent 34%),
+          radial-gradient(circle at top right, rgba(175, 126, 53, 0.12), transparent 30%),
+          linear-gradient(180deg, #f8f3ea 0%, var(--bg) 54%, #ece5d8 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+
+      .brand {
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero {
+        padding: 34px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(13, 107, 87, 0.08);
+        color: var(--accent-strong);
+        font-size: 0.9rem;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: "IBM Plex Serif", Georgia, serif;
+        line-height: 1.04;
+      }
+
+      h1 {
+        margin-top: 18px;
+        font-size: clamp(1.8rem, 4.2vw, 3.4rem);
+        max-width: 14ch;
+      }
+
+      .lead {
+        margin: 18px 0 0;
+        max-width: 70ch;
+        font-size: 1.02rem;
+        line-height: 1.72;
+        color: var(--muted);
+      }
+
+      .lane-list {
+        margin: 20px 0 0;
+        padding-left: 20px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      section {
+        margin-top: 22px;
+      }
+
+      .section-panel {
+        padding: 30px;
+      }
+
+      .section-panel h2 {
+        font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+        margin-bottom: 10px;
+      }
+
+      .section-panel > p {
+        margin: 0 0 18px;
+        max-width: 72ch;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .milestones {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        padding: 20px;
+        border-radius: 20px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .stage {
+        margin-bottom: 8px;
+        font-size: 0.82rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 10px 0 14px;
+      }
+
+      .status.mostly-done {
+        background: rgba(13, 107, 87, 0.12);
+        color: var(--accent-strong);
+      }
+
+      .status.partial {
+        background: rgba(175, 126, 53, 0.14);
+        color: #7f5419;
+      }
+
+      .status.later {
+        background: rgba(29, 42, 38, 0.08);
+        color: var(--muted);
+      }
+
+      .card p,
+      .card li,
+      table {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 18px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        font-size: 0.86rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .sources {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .sources a {
+        color: var(--accent-strong);
+      }
+
+      footer {
+        margin-top: 22px;
+        padding: 22px 4px 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 980px) {
+        .milestones,
+        .sources {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100% - 20px, 100%);
+          padding: 18px 0 40px;
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .milestones,
+        .sources {
+          grid-template-columns: 1fr;
+        }
+
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td {
+          display: block;
+        }
+
+        thead {
+          display: none;
+        }
+
+        tr + tr {
+          border-top: 1px solid var(--line);
+        }
+
+        td {
+          padding: 10px 14px;
+          border-bottom: 0;
+        }
+
+        td::before {
+          content: attr(data-label);
+          display: block;
+          margin-bottom: 4px;
+          font-size: 0.78rem;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: var(--accent-strong);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <div class="brand">Mycel / Progress</div>
+        <div class="nav-links">
+          <a href="/Mycel/">Home</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Roadmap</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.en.md">Checklist</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/docs/PROGRESS.md">Source</a>
+        </div>
+      </nav>
+
+      <header class="panel hero">
+        <div class="eyebrow">Visual progress summary</div>
+        <h1>Roadmap order and implementation status in one view.</h1>
+        <p class="lead">
+          Mycel is still in the narrow first-client lane. The immediate goal is to close shared-core
+          parsing, canonicalization, replay, and rebuild work before widening the reader, sync, and
+          app-layer surface.
+        </p>
+        <ol class="lane-list">
+          <li>Close <code>M1</code> parsing and canonicalization debt.</li>
+          <li>Finish <code>M2</code> replay, rebuild, and narrow write-path closure.</li>
+          <li>Delay <code>M3+</code> expansion until the shared core is stable.</li>
+        </ol>
+      </header>
+
+      <section class="panel section-panel">
+        <h2>Milestone Timeline</h2>
+        <p>
+          The roadmap is sequential: each later phase assumes the earlier one is already stable.
+          Right now, the center of gravity is still the end of <code>M1</code> and the closure of <code>M2</code>.
+        </p>
+        <div class="milestones">
+          <article class="card">
+            <div class="stage">Minimal</div>
+            <h3>M1</h3>
+            <div class="status mostly-done">Mostly complete</div>
+            <ul>
+              <li>Shared parsing and schema layer</li>
+              <li>Canonical validation utilities</li>
+              <li>Verification test depth</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="stage">Minimal</div>
+            <h3>M2</h3>
+            <div class="status partial">Substantially underway</div>
+            <ul>
+              <li>Replay and <code>state_hash</code></li>
+              <li>Store rebuild and indexes</li>
+              <li>Narrow write-path closure</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="stage">Reader-plus-governance</div>
+            <h3>M3</h3>
+            <div class="status partial">Planned next</div>
+            <ul>
+              <li>Accepted-head reader workflows</li>
+              <li>Fixed-profile reading</li>
+              <li>Reader-first text inspection</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="stage">Full-stack</div>
+            <h3>M4</h3>
+            <div class="status later">Later</div>
+            <ul>
+              <li>Wire envelope and sync</li>
+              <li>Peer interop</li>
+              <li>Canonical object exchange</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="stage">Full-stack</div>
+            <h3>M5</h3>
+            <div class="status later">Later</div>
+            <ul>
+              <li>Selective app-layer growth</li>
+              <li>Profiles on stable core</li>
+              <li>Limited surface expansion</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>Implementation Matrix</h2>
+        <p>
+          This matrix compresses the checklist into section-level status so we can see what is
+          substantively done, what is only partial, and what still belongs to later phases.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Status</th>
+              <th>Milestone</th>
+              <th>Current read</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Area">1. Repo and Build Setup</td>
+              <td data-label="Status">Mostly done</td>
+              <td data-label="Milestone">M1</td>
+              <td data-label="Current read">Only the shared canonical JSON utility remains open.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">2. Object Types and IDs</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">M1</td>
+              <td data-label="Current read">Several families are typed; logical-ID and stricter field-shape closure remain.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">3. Canonical Serialization and Hashing</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">M1</td>
+              <td data-label="Current read">Core rules exist, but duplicate-key rejection and shared reuse are still open.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">4. Signature Verification</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">M1</td>
+              <td data-label="Current read">Object signature rules are mostly present; wire-envelope verification is not.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">5. Patch and Revision Engine</td>
+              <td data-label="Status">Mostly done</td>
+              <td data-label="Milestone">M2</td>
+              <td data-label="Current read">Replay and <code>state_hash</code> are in place; the patch-op base is strong.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">6. Local State and Storage</td>
+              <td data-label="Status">Mostly done</td>
+              <td data-label="Milestone">M2</td>
+              <td data-label="Current read">Store ingest, rebuild, and indexes exist; policy separation still remains.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">7. Wire Protocol</td>
+              <td data-label="Status">Not started</td>
+              <td data-label="Milestone">M4</td>
+              <td data-label="Current read">Canonical wire envelope and message validation remain future work.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">8. Sync Workflow</td>
+              <td data-label="Status">Not started</td>
+              <td data-label="Milestone">M4</td>
+              <td data-label="Current read">First-time and incremental sync are still future work.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">9. Views and Head Selection</td>
+              <td data-label="Status">Mostly done</td>
+              <td data-label="Milestone">M3</td>
+              <td data-label="Current read">The deterministic selector core exists; multi-profile and dual-role closure remain.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">10. Merge Generation</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">M2</td>
+              <td data-label="Current read">Replay verification is present, but local merge authoring is not built.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">11. CLI or API Surface</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">M2 / M3</td>
+              <td data-label="Current read">Verification and inspection exist; authoring, sync, and workflow split remain.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">12. Interop Test Minimum</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">M1 / M2</td>
+              <td data-label="Current read">Fixtures and smoke coverage exist, but several normative and round-trip checks remain.</td>
+            </tr>
+            <tr>
+              <td data-label="Area">13. Ready-to-Build Gate</td>
+              <td data-label="Status">Partial</td>
+              <td data-label="Milestone">Whole plan</td>
+              <td data-label="Current read">Replay, head selection, and rebuild are green; parse, wire sync, and merge generation are not.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>Source Files</h2>
+        <p>
+          This page is intentionally a summary. The authoritative wording still lives in the repo-level
+          planning documents below.
+        </p>
+        <div class="sources">
+          <article class="card">
+            <h3>Roadmap</h3>
+            <p>The repo-level build order, milestones, and phase transitions.</p>
+            <p><a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Open ROADMAP.md</a></p>
+          </article>
+          <article class="card">
+            <h3>Implementation Checklist</h3>
+            <p>The detailed v0.1 capability checklist for the minimal interoperable client.</p>
+            <p><a href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.en.md">Open IMPLEMENTATION-CHECKLIST.en.md</a></p>
+          </article>
+          <article class="card">
+            <h3>Progress Source</h3>
+            <p>The Markdown summary that this visual page is based on.</p>
+            <p><a href="https://github.com/ctf2090/Mycel/blob/main/docs/PROGRESS.md">Open PROGRESS.md</a></p>
+          </article>
+        </div>
+      </section>
+
+      <footer>
+        Public summary for roadmap order and checklist status. Authoritative planning still lives in the
+        source Markdown files.
+      </footer>
+    </div>
+  </body>
+</html>
