@@ -30,37 +30,40 @@
 
   <g>
     <rect x="84" y="84" width="292" height="38" rx="19" fill="#0d6b57" fill-opacity="0.1" />
-    <text x="108" y="109" font-family="'DejaVu Sans', sans-serif" font-size="20" fill="#084d3f" letter-spacing="0.04em">Protocol-first text systems</text>
+    <text x="108" y="109" font-family="'DejaVu Sans', sans-serif" font-size="18" fill="#084d3f" letter-spacing="0.04em">Protocol-first text systems</text>
   </g>
 
   <g>
-    <text x="84" y="214" font-family="'DejaVu Serif', Georgia, serif" font-size="100" fill="#1d2a26">Mycel</text>
-    <text x="84" y="282" font-family="'DejaVu Sans', sans-serif" font-size="34" fill="#40524b">Verifiable text history, governed reading state,</text>
-    <text x="84" y="328" font-family="'DejaVu Sans', sans-serif" font-size="34" fill="#40524b">and decentralized replication.</text>
+    <text x="84" y="204" font-family="'DejaVu Serif', Georgia, serif" font-size="88" fill="#1d2a26">Mycel</text>
+    <text x="84" y="266" font-family="'DejaVu Sans', sans-serif" font-size="30" fill="#40524b">Verifiable text history, governed reading state,</text>
+    <text x="84" y="308" font-family="'DejaVu Sans', sans-serif" font-size="30" fill="#40524b">and decentralized replication.</text>
   </g>
 
   <g>
-    <line x1="84" y1="374" x2="1116" y2="374" stroke="#1d2a26" stroke-opacity="0.08" />
+    <line x1="84" y1="356" x2="1116" y2="356" stroke="#1d2a26" stroke-opacity="0.08" />
   </g>
 
   <g>
-    <rect x="84" y="406" width="314" height="134" rx="22" fill="#f8f3ea" stroke="#1d2a26" stroke-opacity="0.1" />
-    <text x="112" y="452" font-family="'DejaVu Sans', sans-serif" font-size="18" fill="#084d3f" letter-spacing="0.06em">REPLAY-VERIFIABLE HISTORY</text>
-    <text x="112" y="495" font-family="'DejaVu Sans', sans-serif" font-size="23" fill="#40524b">Revisions are meant to be</text>
-    <text x="112" y="526" font-family="'DejaVu Sans', sans-serif" font-size="23" fill="#40524b">replayed, checked, and rebuilt.</text>
+    <rect x="84" y="390" width="314" height="142" rx="22" fill="#f8f3ea" stroke="#1d2a26" stroke-opacity="0.1" />
+    <text x="112" y="434" font-family="'DejaVu Sans', sans-serif" font-size="16" fill="#084d3f" letter-spacing="0.05em">REPLAY-VERIFIABLE HISTORY</text>
+    <text x="112" y="476" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">Revisions are meant to be</text>
+    <text x="112" y="506" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">replayed, checked, and</text>
+    <text x="112" y="536" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">rebuilt.</text>
   </g>
 
   <g>
-    <rect x="442" y="406" width="314" height="134" rx="22" fill="#f8f3ea" stroke="#1d2a26" stroke-opacity="0.1" />
-    <text x="470" y="452" font-family="'DejaVu Sans', sans-serif" font-size="18" fill="#084d3f" letter-spacing="0.06em">GOVERNED READING STATE</text>
-    <text x="470" y="495" font-family="'DejaVu Sans', sans-serif" font-size="23" fill="#40524b">Accepted heads come from fixed</text>
-    <text x="470" y="526" font-family="'DejaVu Sans', sans-serif" font-size="23" fill="#40524b">profile rules and verified Views.</text>
+    <rect x="442" y="390" width="314" height="142" rx="22" fill="#f8f3ea" stroke="#1d2a26" stroke-opacity="0.1" />
+    <text x="470" y="434" font-family="'DejaVu Sans', sans-serif" font-size="16" fill="#084d3f" letter-spacing="0.05em">GOVERNED READING STATE</text>
+    <text x="470" y="476" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">Accepted heads come from fixed</text>
+    <text x="470" y="506" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">profile rules and verified</text>
+    <text x="470" y="536" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">Views.</text>
   </g>
 
   <g>
-    <rect x="800" y="406" width="314" height="134" rx="22" fill="#f8f3ea" stroke="#1d2a26" stroke-opacity="0.1" />
-    <text x="828" y="452" font-family="'DejaVu Sans', sans-serif" font-size="18" fill="#084d3f" letter-spacing="0.06em">FORK-TOLERANT REPLICATION</text>
-    <text x="828" y="495" font-family="'DejaVu Sans', sans-serif" font-size="23" fill="#40524b">Multiple valid heads can coexist</text>
-    <text x="828" y="526" font-family="'DejaVu Sans', sans-serif" font-size="23" fill="#40524b">without mandatory global consensus.</text>
+    <rect x="800" y="390" width="314" height="142" rx="22" fill="#f8f3ea" stroke="#1d2a26" stroke-opacity="0.1" />
+    <text x="828" y="434" font-family="'DejaVu Sans', sans-serif" font-size="16" fill="#084d3f" letter-spacing="0.05em">FORK-TOLERANT REPLICATION</text>
+    <text x="828" y="476" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">Multiple valid heads can coexist</text>
+    <text x="828" y="506" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">without mandatory global</text>
+    <text x="828" y="536" font-family="'DejaVu Sans', sans-serif" font-size="21" fill="#40524b">consensus.</text>
   </g>
 </svg>
