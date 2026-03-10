@@ -8,6 +8,7 @@ Use it together with:
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 - [AGENTS.md](./AGENTS.md)
 - [`.github/labels.yml`](./.github/labels.yml) for the repo-tracked bot/task label set
+- [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) to apply tracked labels back to GitHub
 
 ## What Kind of Work Fits This Repo Best
 
