@@ -14,7 +14,7 @@ Use it together with:
 - [docs/PLANNING-SYNC-PLAN.md](./docs/PLANNING-SYNC-PLAN.md) for keeping roadmap, checklist, issues, and Pages summaries aligned
 - [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) to apply tracked labels back to GitHub
 - [`scripts/check-labels.sh`](./scripts/check-labels.sh) to verify GitHub labels still match the tracked set
-- [`scripts/check-doc-refresh.sh`](./scripts/check-doc-refresh.sh) to check whether roadmap and checklist refresh is due
+- [`scripts/check-doc-refresh.sh`](./scripts/check-doc-refresh.sh) to check whether planning-doc refresh is due
 
 ## Agent Onboarding
 
@@ -26,7 +26,7 @@ If you are starting fresh in this repo, use this order:
 4. Read [`.github/labels.yml`](./.github/labels.yml) and [docs/LABELS.md](./docs/LABELS.md) before creating or triaging bot-ready issues.
 5. Run [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) only if GitHub labels need to be applied or refreshed.
 6. Run [`scripts/check-labels.sh`](./scripts/check-labels.sh) if you need to verify that the tracked labels still match GitHub.
-7. Run [`scripts/check-doc-refresh.sh`](./scripts/check-doc-refresh.sh) before or after a work batch if roadmap/checklist cadence may be due.
+7. Run [`scripts/check-doc-refresh.sh`](./scripts/check-doc-refresh.sh) before or after a work batch if planning-doc cadence may be due.
 8. Use [`.github/ISSUE_TEMPLATE/ai_ready_task.yml`](./.github/ISSUE_TEMPLATE/ai_ready_task.yml) and [docs/PROGRESS.md](./docs/PROGRESS.md) when shaping or selecting work.
 
 This keeps scope, labels, and task shape aligned before implementation work starts.

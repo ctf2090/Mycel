@@ -249,6 +249,7 @@ scripts/check-doc-refresh.sh
 若它回報 `due`，則在下一個 docs-sync batch 更新：
 
 - `ROADMAP.md`
+- `ROADMAP.zh-TW.md`
 - `IMPLEMENTATION-CHECKLIST.en.md`
 - `IMPLEMENTATION-CHECKLIST.zh-TW.md`
 - 對齊的 GitHub Issues

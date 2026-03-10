@@ -248,6 +248,7 @@ scripts/check-doc-refresh.sh
 If it reports `due`, refresh:
 
 - `ROADMAP.md`
+- `ROADMAP.zh-TW.md`
 - `IMPLEMENTATION-CHECKLIST.en.md`
 - `IMPLEMENTATION-CHECKLIST.zh-TW.md`
 - aligned GitHub Issues

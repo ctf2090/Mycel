@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Check whether roadmap and implementation checklist refresh is due.
+Check whether planning-doc refresh is due.
 
 Usage:
   scripts/check-doc-refresh.sh [--threshold N]
@@ -58,6 +58,7 @@ fi
 
 tracked_files=(
   "ROADMAP.md"
+  "ROADMAP.zh-TW.md"
   "IMPLEMENTATION-CHECKLIST.en.md"
   "IMPLEMENTATION-CHECKLIST.zh-TW.md"
 )
