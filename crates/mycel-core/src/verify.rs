@@ -301,7 +301,7 @@ fn verify_object_value_with_summary(
         ));
     }
 
-    if let Some((id_field, prefix)) = schema.derived_id() {
+    if let Some((id_field, _prefix)) = schema.derived_id() {
         match envelope.declared_derived_id() {
             Ok(Some(declared)) => {
                 summary.declared_id = Some(declared.value.to_string());
@@ -314,22 +314,26 @@ fn verify_object_value_with_summary(
             }
             Ok(None) => {}
         }
-
-        match recompute_object_id(&value, id_field, prefix) {
-            Ok(recomputed_id) => {
-                summary.recomputed_id = Some(recomputed_id.clone());
-                if summary.declared_id.as_deref() != Some(recomputed_id.as_str()) {
-                    summary.push_error(format!(
-                        "declared {id_field} does not match recomputed canonical object ID"
-                    ));
-                }
-            }
-            Err(err) => summary.push_error(err),
-        }
     }
 
     if summary.errors.is_empty() {
         validate_typed_object_shape(object_type, &value, &mut summary);
+    }
+
+    if let Some((id_field, prefix)) = schema.derived_id() {
+        if summary.errors.is_empty() {
+            match recompute_object_id(&value, id_field, prefix) {
+                Ok(recomputed_id) => {
+                    summary.recomputed_id = Some(recomputed_id.clone());
+                    if summary.declared_id.as_deref() != Some(recomputed_id.as_str()) {
+                        summary.push_error(format!(
+                            "declared {id_field} does not match recomputed canonical object ID"
+                        ));
+                    }
+                }
+                Err(err) => summary.push_error(err),
+            }
+        }
     }
 
     if object_type == "revision"
@@ -1078,6 +1082,42 @@ mod tests {
     }
 
     #[test]
+    fn revision_wrong_derived_id_prefix_is_rejected() {
+        let (signing_key, public_key) = signer_material();
+        let mut revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        });
+        let revision_id = super::recompute_object_id(&revision, "revision_id", "rev")
+            .expect("revision ID should recompute");
+        revision["revision_id"] = Value::String(revision_id.replacen("rev:", "patch:", 1));
+        revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+        let path = write_test_file(
+            "revision-wrong-derived-id-prefix",
+            &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'revision_id' must use 'rev:' prefix")),
+            "expected revision_id prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn patch_wrong_base_revision_prefix_is_rejected() {
         let (signing_key, public_key) = signer_material();
         let mut patch = json!({
@@ -1106,6 +1146,41 @@ mod tests {
                 message.contains("top-level 'base_revision' must use 'rev:' prefix")
             }),
             "expected base_revision prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn patch_wrong_derived_id_prefix_is_rejected() {
+        let (signing_key, public_key) = signer_material();
+        let mut patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 11u64,
+            "ops": []
+        });
+        let patch_id = super::recompute_object_id(&patch, "patch_id", "patch")
+            .expect("patch ID should recompute");
+        patch["patch_id"] = Value::String(patch_id.replacen("patch:", "rev:", 1));
+        patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+        let path = write_test_file(
+            "patch-wrong-derived-id-prefix",
+            &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'patch_id' must use 'patch:' prefix")),
+            "expected patch_id prefix error, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);
@@ -1839,6 +1914,43 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_wrong_derived_id_prefix_is_rejected() {
+        let (signing_key, public_key) = signer_material();
+        let mut snapshot = json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": public_key,
+            "timestamp": 9u64
+        });
+        let snapshot_id = super::recompute_object_id(&snapshot, "snapshot_id", "snap")
+            .expect("snapshot ID should recompute");
+        snapshot["snapshot_id"] = Value::String(snapshot_id.replacen("snap:", "view:", 1));
+        snapshot["signature"] = Value::String(sign_value(&signing_key, &snapshot));
+        let path = write_test_file(
+            "snapshot-wrong-derived-id-prefix",
+            &serde_json::to_string_pretty(&snapshot).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'snapshot_id' must use 'snap:' prefix")),
+            "expected snapshot_id prefix error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn snapshot_duplicate_included_objects_are_rejected() {
         let (signing_key, public_key) = signer_material();
         let mut snapshot = json!({
@@ -2272,6 +2384,44 @@ mod tests {
                 .any(|message| message
                     .contains("signer field must use format 'pk:ed25519:<base64>'")),
             "expected maintainer signer-format error, got {summary:?}"
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn view_wrong_derived_id_prefix_is_rejected_by_typed_validation() {
+        let (signing_key, public_key) = signer_material();
+        let mut view = json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "maintainer": public_key,
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 12u64
+        });
+        let view_id =
+            super::recompute_object_id(&view, "view_id", "view").expect("view ID should recompute");
+        view["view_id"] = Value::String(view_id.replacen("view:", "snap:", 1));
+        view["signature"] = Value::String(sign_value(&signing_key, &view));
+        let path = write_test_file(
+            "view-wrong-derived-id-prefix",
+            &serde_json::to_string_pretty(&view).expect("test JSON should serialize"),
+        );
+
+        let summary = verify_object_path(&path);
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert!(
+            summary
+                .errors
+                .iter()
+                .any(|message| message.contains("top-level 'view_id' must use 'view:' prefix")),
+            "expected view_id prefix error, got {summary:?}"
         );
 
         let _ = std::fs::remove_file(path);

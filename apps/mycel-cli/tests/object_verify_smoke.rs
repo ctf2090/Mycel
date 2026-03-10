@@ -716,6 +716,53 @@ fn object_verify_json_fails_for_mismatched_revision_id() {
 }
 
 #[test]
+fn object_verify_json_fails_for_revision_with_wrong_revision_id_prefix() {
+    let mut revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": "hash:test-state",
+            "timestamp": 1777778890u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    revision["revision_id"] = Value::String(
+        revision["revision_id"]
+            .as_str()
+            .expect("revision_id should exist")
+            .replacen("rev:", "patch:", 1),
+    );
+    revision["signature"] = Value::String(sign_value(&signing_key(), &revision));
+    let object = write_object_file(
+        "object-verify-revision-wrong-derived-id-prefix",
+        "revision.json",
+        revision,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'revision_id' must use 'rev:' prefix")
+                })
+            })),
+        "expected revision_id prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_duplicate_revision_parent_ids() {
     let revision = signed_object(
         json!({
@@ -911,6 +958,54 @@ fn object_verify_json_fails_for_mismatched_snapshot_id() {
                 .as_str()
                 .is_some_and(|message| message.contains("declared snapshot_id does not match")))),
         "expected snapshot derived ID mismatch error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_snapshot_with_wrong_snapshot_id_prefix() {
+    let mut snapshot = signed_object(
+        json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "timestamp": 9u64
+        }),
+        "created_by",
+        "snapshot_id",
+        "snap",
+    );
+    snapshot["snapshot_id"] = Value::String(
+        snapshot["snapshot_id"]
+            .as_str()
+            .expect("snapshot_id should exist")
+            .replacen("snap:", "view:", 1),
+    );
+    snapshot["signature"] = Value::String(sign_value(&signing_key(), &snapshot));
+    let object = write_object_file(
+        "object-verify-snapshot-wrong-derived-id-prefix",
+        "snapshot.json",
+        snapshot,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "snapshot");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'snapshot_id' must use 'snap:' prefix")
+                })
+            })),
+        "expected snapshot_id prefix error, stdout: {}",
         stdout_text(&output)
     );
 }
@@ -1483,6 +1578,47 @@ fn object_verify_json_fails_for_view_with_wrong_maintainer_prefix() {
 }
 
 #[test]
+fn object_verify_json_fails_for_view_with_wrong_view_id_prefix() {
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": signer_id(&signing_key()),
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "policy": {
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 1777778891u64
+    });
+    let view_id = recompute_id(&view, "view_id", "view");
+    view["view_id"] = Value::String(view_id.replacen("view:", "snap:", 1));
+    view["signature"] = Value::String(sign_value(&signing_key(), &view));
+    let object = write_object_file(
+        "object-verify-view-wrong-derived-id-prefix",
+        "view.json",
+        view,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "view");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'view_id' must use 'view:' prefix")
+                })
+            })),
+        "expected view_id prefix error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_for_view_with_non_object_policy() {
     let view = signed_object(
         json!({
@@ -1935,6 +2071,52 @@ fn object_verify_json_fails_for_patch_with_wrong_author_prefix() {
                 })
             })),
         "expected signer-format error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_patch_with_wrong_patch_id_prefix() {
+    let mut patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    patch["patch_id"] = Value::String(
+        patch["patch_id"]
+            .as_str()
+            .expect("patch_id should exist")
+            .replacen("patch:", "rev:", 1),
+    );
+    patch["signature"] = Value::String(sign_value(&signing_key(), &patch));
+    let object = write_object_file(
+        "object-verify-patch-wrong-derived-id-prefix",
+        "patch.json",
+        patch,
+    );
+    let path = path_arg(&object.path);
+    let output = run_mycel(&["object", "verify", &path, "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "patch");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("top-level 'patch_id' must use 'patch:' prefix")
+                })
+            })),
+        "expected patch_id prefix error, stdout: {}",
         stdout_text(&output)
     );
 }

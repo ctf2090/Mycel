@@ -1771,6 +1771,26 @@ mod tests {
     }
 
     #[test]
+    fn parse_patch_object_rejects_wrong_patch_id_prefix() {
+        let error = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "rev:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": []
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'patch_id' must use 'patch:' prefix"
+        );
+    }
+
+    #[test]
     fn parse_patch_object_rejects_wrong_author_prefix() {
         let error = parse_patch_object(&json!({
             "type": "patch",
@@ -2028,6 +2048,27 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "top-level 'parents[0]' must use 'rev:' prefix"
+        );
+    }
+
+    #[test]
+    fn parse_revision_object_rejects_wrong_revision_id_prefix() {
+        let error = parse_revision_object(&json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "patch:test",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": ["patch:test"],
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 2u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'revision_id' must use 'rev:' prefix"
         );
     }
 
@@ -2325,6 +2366,29 @@ mod tests {
         .unwrap_err();
 
         assert_eq!(error.to_string(), "top-level 'documents' must not be empty");
+    }
+
+    #[test]
+    fn parse_view_object_rejects_wrong_view_id_prefix() {
+        let error = parse_view_object(&json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "view_id": "snap:test",
+            "maintainer": "pk:ed25519:test",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 7u64
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "top-level 'view_id' must use 'view:' prefix"
+        );
     }
 
     #[test]
