@@ -432,6 +432,105 @@ fn store_index_path_only_rejects_json() {
 }
 
 #[test]
+fn store_index_filters_only_json_emits_query_metadata() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--doc-id",
+        "doc:index",
+        "--head-only",
+        "--filters-only",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    let object = json
+        .as_object()
+        .expect("filters-only output should be a JSON object");
+    assert_eq!(json["filters"]["doc_id"], "doc:index");
+    assert_eq!(json["projection"], "head-only");
+    assert!(
+        !object.contains_key("doc_revisions"),
+        "filters-only output should omit full indexes, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        !object.contains_key("profile_heads"),
+        "filters-only output should omit profile heads, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn store_index_counts_only_json_emits_section_counts() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--counts-only",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    let object = json
+        .as_object()
+        .expect("counts-only output should be a JSON object");
+    assert_eq!(json["stored_object_count"], 3);
+    assert_eq!(json["object_type_index_count"], 3);
+    assert_eq!(json["document_revision_index_count"], 1);
+    assert_eq!(json["revision_parent_index_count"], 1);
+    assert_eq!(json["author_patch_index_count"], 1);
+    assert_eq!(json["view_governance_record_count"], 1);
+    assert_eq!(json["profile_head_index_count"], 1);
+    assert!(
+        !object.contains_key("object_ids_by_type"),
+        "counts-only output should omit full indexes, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn store_index_manifest_only_json_emits_manifest_metadata() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--manifest-only",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    let object = json
+        .as_object()
+        .expect("manifest-only output should be a JSON object");
+    assert_eq!(json["version"], "mycel-store-index/0.1");
+    assert_eq!(json["stored_object_count"], 3);
+    assert_eq!(json["object_type_count"], 3);
+    assert_eq!(
+        json["manifest_path"],
+        fixture
+            .store_dir
+            .path()
+            .join("indexes")
+            .join("manifest.json")
+            .to_string_lossy()
+            .as_ref()
+    );
+    assert!(
+        !object.contains_key("filters"),
+        "manifest-only output should omit query filters, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn store_index_doc_only_json_prunes_other_sections() {
     let fixture = build_store_with_view();
     let output = run_mycel(&[
@@ -653,6 +752,24 @@ fn store_index_rejects_multiple_projection_flags() {
     assert_stderr_contains(
         &output,
         "store index projection flags are mutually exclusive",
+    );
+}
+
+#[test]
+fn store_index_rejects_multiple_output_modes() {
+    let fixture = build_store_with_view();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(&fixture.store_dir.path().to_path_buf()),
+        "--filters-only",
+        "--counts-only",
+    ]);
+
+    assert_exit_code(&output, 2);
+    assert_stderr_contains(
+        &output,
+        "store index output mode flags are mutually exclusive",
     );
 }
 
