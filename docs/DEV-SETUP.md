@@ -137,6 +137,7 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 scripts/check-dev-env.sh
 scripts/check-labels.sh
 scripts/check-doc-refresh.sh
+scripts/check-doc-refresh.sh --json
 ```
 
 ## 8. If You Are a New AI Agent

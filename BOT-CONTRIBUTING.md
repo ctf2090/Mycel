@@ -47,6 +47,22 @@ The JSON output includes:
 - `checks[]`
 - `error` when the check fails
 
+If you need a machine-readable planning-sync gate, use:
+
+```bash
+scripts/check-doc-refresh.sh --json
+```
+
+The JSON output includes:
+
+- `status` (`ok`, `due`, or `failed`)
+- `threshold`
+- `repo_root`
+- `highest_commit_distance`
+- `remaining_commits`
+- `checks[]`
+- `error` when the script itself cannot complete
+
 ## What Kind of Work Fits This Repo Best
 
 Mycel is easiest to contribute to when the work is:
