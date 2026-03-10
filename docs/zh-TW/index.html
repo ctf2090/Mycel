@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Mycel</title>
     <meta
       name="description"
-      content="Mycel is a protocol stack for verifiable text history, governed reading state, and decentralized replication."
+      content="Mycel 是一個用於可驗證文本歷史、受治理閱讀狀態與去中心化複製的協議棧。"
     >
     <meta name="theme-color" content="#0d6b57">
     <meta property="og:type" content="website">
@@ -14,19 +14,19 @@
     <meta property="og:title" content="Mycel">
     <meta
       property="og:description"
-      content="A protocol stack for verifiable text history, governed reading state, and decentralized replication."
+      content="一個用於可驗證文本歷史、受治理閱讀狀態與去中心化複製的協議棧。"
     >
-    <meta property="og:url" content="https://ctf2090.github.io/Mycel/">
+    <meta property="og:url" content="https://ctf2090.github.io/Mycel/zh-TW/">
     <meta property="og:image" content="https://ctf2090.github.io/Mycel/social-preview.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Mycel protocol-first social preview banner">
-    <link rel="alternate" hreflang="zh-TW" href="https://ctf2090.github.io/Mycel/zh-TW/">
+    <link rel="alternate" hreflang="en" href="https://ctf2090.github.io/Mycel/">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Mycel">
     <meta
       name="twitter:description"
-      content="A protocol stack for verifiable text history, governed reading state, and decentralized replication."
+      content="一個用於可驗證文本歷史、受治理閱讀狀態與去中心化複製的協議棧。"
     >
     <meta name="twitter:image" content="https://ctf2090.github.io/Mycel/social-preview.png">
     <style>
@@ -48,7 +48,7 @@
 
       body {
         margin: 0;
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
         color: var(--text);
         background:
           radial-gradient(circle at top left, rgba(13, 107, 87, 0.14), transparent 34%),
@@ -126,21 +126,21 @@
       h2,
       h3 {
         margin: 0;
-        font-family: "IBM Plex Serif", Georgia, serif;
-        line-height: 1.04;
+        font-family: "Noto Serif TC", "PMingLiU", serif;
+        line-height: 1.08;
       }
 
       h1 {
         margin-top: 18px;
-        font-size: clamp(2.6rem, 6vw, 5.2rem);
-        max-width: 11ch;
+        font-size: clamp(2.4rem, 5vw, 4.6rem);
+        max-width: 12ch;
       }
 
       .lead {
         margin: 18px 0 0;
         max-width: 56ch;
         font-size: 1.08rem;
-        line-height: 1.7;
+        line-height: 1.8;
         color: var(--muted);
       }
 
@@ -201,7 +201,7 @@
       .card p,
       .card li {
         margin: 0;
-        line-height: 1.65;
+        line-height: 1.72;
         color: var(--muted);
       }
 
@@ -229,7 +229,7 @@
         margin: 0 0 18px;
         max-width: 70ch;
         color: var(--muted);
-        line-height: 1.72;
+        line-height: 1.82;
       }
 
       ul {
@@ -277,10 +277,10 @@
       <nav class="nav">
         <div class="brand">Mycel</div>
         <div class="nav-links">
-          <a href="https://ctf2090.github.io/Mycel/zh-TW/">繁體中文</a>
+          <a href="https://ctf2090.github.io/Mycel/">English</a>
           <a href="https://github.com/ctf2090/Mycel">GitHub</a>
-          <a href="https://github.com/ctf2090/Mycel/blob/main/README.md">README</a>
-          <a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.en.md">Protocol</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/README.zh-TW.md">README</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.zh-TW.md">Protocol</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/docs/OUTWARD-RELEASE-CHECKLIST.md">Checklist</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Roadmap</a>
         </div>
@@ -288,103 +288,99 @@
 
       <section class="hero">
         <div class="panel hero-copy">
-          <div class="eyebrow">Verifiable text history without mandatory global consensus</div>
-          <h1>Text history, accepted reading, and replication.</h1>
+          <div class="eyebrow">Protocol-first 文字系統</div>
+          <h1>文本歷史、accepted reading 與 replication。</h1>
           <p class="lead">
-            Mycel is a protocol stack for long-lived texts, commentary systems, and governed
-            reference corpora. It separates replay-verifiable history, governance signals, and
-            replication while keeping them interoperable.
+            Mycel 是一個適合長期文本、評註系統與受治理參考文本集合的協議棧。
+            它把可重播驗證的歷史、治理訊號與去中心化複製拆成不同層次，同時保留彼此互通。
           </p>
           <div class="actions">
-            <a class="button primary" href="https://github.com/ctf2090/Mycel">Open Repository</a>
-            <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.en.md">Read the Spec</a>
+            <a class="button primary" href="https://github.com/ctf2090/Mycel">開啟 Repository</a>
+            <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.zh-TW.md">閱讀規格</a>
           </div>
         </div>
 
         <div class="panel hero-card">
           <div class="status-card">
-            <strong>Current State</strong>
+            <strong>目前狀態</strong>
             <p>
-              `v0.1` spec-first project. Current work is focused on first-client scoping,
-              deterministic verification, replay behavior, and simulator-backed validation.
+              `v0.1` spec-first 專案。目前工作集中在 first-client 範圍收斂、deterministic verification、
+              replay 行為，以及 simulator 驗證流程。
             </p>
           </div>
           <div class="status-card">
-            <strong>What It Is Not</strong>
+            <strong>它不是什麼</strong>
             <p>
-              Not a blockchain, not a Git clone, and not a generic file-transfer layer. Mycel is
-              aimed at governed text systems with verifiable history.
+              它不是 blockchain，不是 Git 複製品，也不是泛用檔案傳輸層。Mycel 針對的是有治理需求的文字系統。
             </p>
           </div>
           <div class="status-card">
-            <strong>Try It</strong>
+            <strong>今天能做什麼</strong>
             <p>
-              The Rust CLI already supports repo-local validation, object inspection, accepted-head
-              inspection, report inspection, and deterministic simulator runs.
+              Rust CLI 已能支援 repo-local validation、object inspection、accepted-head inspection、
+              report inspection 與 deterministic simulator runs。
             </p>
           </div>
         </div>
       </section>
 
       <section class="panel section-panel">
-        <h2>Why Mycel</h2>
+        <h2>為什麼是 Mycel</h2>
         <p>
-          Most distributed collaboration systems either centralize mutable state or optimize for code
-          collaboration and global consensus. Mycel takes a narrower path: text-first history,
-          profile-governed accepted reading, and decentralized replication with explicit replay and
-          verification boundaries.
+          多數分散式協作系統要嘛把狀態集中在平台，要嘛為程式碼協作或全域共識最佳化。
+          Mycel 走的是更窄但更明確的路徑：text-first 歷史、由 profile 決定的 accepted reading，
+          以及帶有明確 replay 與 verification 邊界的 replication。
         </p>
         <div class="grid">
           <div class="card">
-            <strong>Verifiable History</strong>
-            <p>Revisions are meant to be replayed, checked, and rebuilt from canonical objects.</p>
+            <strong>可驗證歷史</strong>
+            <p>revision 預期可以從 canonical objects replay、驗證與重建。</p>
           </div>
           <div class="card">
-            <strong>Governed Reading State</strong>
-            <p>Accepted heads come from fixed selector rules and verified View objects.</p>
+            <strong>受治理的閱讀狀態</strong>
+            <p>accepted head 來自固定 selector 規則與已驗證的 View objects。</p>
           </div>
           <div class="card">
-            <strong>Fork-Tolerant Model</strong>
-            <p>Multiple valid heads can coexist without forcing one global truth for all readers.</p>
+            <strong>容許分叉</strong>
+            <p>多個有效 head 可以並存，不需要把整個網路壓成一個全域真相。</p>
           </div>
         </div>
       </section>
 
       <section class="panel section-panel">
-        <h2>What You Can Do Today</h2>
+        <h2>今天就能試什麼</h2>
         <p>
-          The current CLI is not yet a production client or node, but it is useful for internal
-          validation and simulator workflows inside this repository.
+          現在的 CLI 還不是 production client 或 node，但已經適合在本 repo 內做驗證與 simulator 流程。
         </p>
         <div class="grid">
           <div class="card">
-            <strong>Inspect the Workspace</strong>
+            <strong>檢查 Workspace</strong>
             <p><code>cargo run -p mycel-cli -- info</code></p>
           </div>
           <div class="card">
-            <strong>Validate Fixtures</strong>
+            <strong>驗證 Fixtures</strong>
             <p><code>cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json</code></p>
           </div>
           <div class="card">
-            <strong>Run the Simulator</strong>
+            <strong>執行 Simulator</strong>
             <p><code>cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json --json</code></p>
           </div>
         </div>
       </section>
 
       <section class="panel section-panel">
-        <h2>Read by Goal</h2>
+        <h2>依目的閱讀</h2>
         <div class="read-grid">
           <div class="card">
-            <strong>Understand the Core</strong>
+            <strong>理解 Core</strong>
             <ul>
-              <li><a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.en.md">PROTOCOL.en.md</a></li>
-              <li><a href="https://github.com/ctf2090/Mycel/blob/main/WIRE-PROTOCOL.en.md">WIRE-PROTOCOL.en.md</a></li>
+              <li><a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.zh-TW.md">PROTOCOL.zh-TW.md</a></li>
+              <li><a href="https://github.com/ctf2090/Mycel/blob/main/WIRE-PROTOCOL.zh-TW.md">WIRE-PROTOCOL.zh-TW.md</a></li>
               <li><a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">ROADMAP.md</a></li>
             </ul>
           </div>
           <div class="card">
-            <strong>Understand the Implementation</strong>
+            <strong>理解實作</strong>
             <ul>
               <li><a href="https://github.com/ctf2090/Mycel/blob/main/RUST-WORKSPACE.md">RUST-WORKSPACE.md</a></li>
               <li><a href="https://github.com/ctf2090/Mycel/blob/main/sim/README.md">sim/README.md</a></li>
@@ -392,18 +388,18 @@
             </ul>
           </div>
           <div class="card">
-            <strong>Understand the Design Layer</strong>
+            <strong>理解設計層</strong>
             <ul>
-              <li><a href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md">First-client Scope</a></li>
-              <li><a href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md">Full-stack Map</a></li>
-              <li><a href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md">Upgrade Philosophy</a></li>
+              <li><a href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md">First-client Scope</a></li>
+              <li><a href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.zh-TW.md">Full-stack Map</a></li>
+              <li><a href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md">Upgrade Philosophy</a></li>
             </ul>
           </div>
         </div>
       </section>
 
       <footer>
-        Source repository:
+        原始碼 repository：
         <a href="https://github.com/ctf2090/Mycel">github.com/ctf2090/Mycel</a>
       </footer>
     </div>
