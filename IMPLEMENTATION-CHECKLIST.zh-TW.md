@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 接近完成
+狀態：late partial progress，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 接近完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
@@ -44,7 +44,7 @@
 - [x] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
 - [x] 拒絕任何內嵌導出 ID 與重算 canonical ID 不一致的內容定址物件。
 - [x] 在 shared parsing 與 verification 中，拒絕 typed object 的未知頂層欄位與非法必要欄位型別。
-- [ ] 在最近 strictness-surface 擴張後，完成剩餘 malformed field-shape depth、inspect-surface parity polish 與 semantic edge case 的收尾。
+- [ ] 在最近 strictness-surface 與 replay/verify smoke 擴張後，完成剩餘 malformed field-shape depth 與 semantic edge case 的收尾。
 - [ ] 將 editor-maintainer 與 view-maintainer 的角色指派分開建模。
 
 ## 3. Canonical Serialization 與 Hashing

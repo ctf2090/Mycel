@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, fixture isolation, test-foundation cleanup, and canonical reproducibility core nearly complete
+Status: late partial progress, M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core nearly complete
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -44,7 +44,7 @@ Defer if needed:
 - [x] Implement `snapshot` parsing with derived `snapshot_id`.
 - [x] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
 - [x] Reject unknown top-level typed-object fields and invalid required field types in shared parsing and verification.
-- [ ] Finish the remaining malformed field-shape depth, inspect-surface parity polish, and semantic edge-case closure required after the recent strictness-surface expansion.
+- [ ] Finish the remaining malformed field-shape depth and semantic edge-case closure required after the recent strictness-surface expansion and replay/verify smoke expansion.
 - [ ] Model editor-maintainer and view-maintainer role assignment independently.
 
 ## 3. Canonical Serialization and Hashing
