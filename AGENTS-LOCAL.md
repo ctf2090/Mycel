@@ -10,6 +10,7 @@ This file holds repo-local or user-local overlays that are intentionally narrowe
 - For a single user message, provide the English rephrase once at the start of the turn. Do not repeat the same rephrase in intermediary progress updates; only rephrase again after a new user message arrives.
 - When the final answer is written in Chinese, do not include an automatic English translation unless the user explicitly asks for it.
 - If you use an uncommon English term, include a brief Traditional Chinese translation the first time you use it (for example: “orchestrator (流程編排器)”).
+- When translating or refining `zh-TW` documents, prefer Taiwan-local usage and phrasing, not just Traditional Chinese characters.
 
 ## Timezone
 - For timestamps in logs/messages/docs, default to `Asia/Taipei (UTC+8)` unless the user explicitly asks for another timezone.
