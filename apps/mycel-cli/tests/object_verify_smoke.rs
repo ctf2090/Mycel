@@ -511,3 +511,188 @@ fn object_verify_json_fails_for_revision_state_hash_mismatch() {
         stdout_text(&output)
     );
 }
+
+#[test]
+fn object_verify_json_fails_for_revision_with_invalid_move_cycle() {
+    let dir = create_temp_dir("object-verify-revision-move-cycle");
+    let parent_patch_path = dir.path().join("patch-parent.json");
+    let child_patch_path = dir.path().join("patch-child.json");
+    let base_revision_path = dir.path().join("revision-base.json");
+    let move_patch_path = dir.path().join("patch-move.json");
+    let moved_revision_path = dir.path().join("revision-move.json");
+
+    let parent_patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Parent",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &parent_patch_path,
+        serde_json::to_string_pretty(&parent_patch).expect("parent patch JSON should serialize"),
+    )
+    .expect("parent patch JSON should be written");
+
+    let child_patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778889u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "parent_block_id": "blk:001",
+                    "new_block": {
+                        "block_id": "blk:002",
+                        "block_type": "paragraph",
+                        "content": "Child",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &child_patch_path,
+        serde_json::to_string_pretty(&child_patch).expect("child patch JSON should serialize"),
+    )
+    .expect("child patch JSON should be written");
+
+    let base_state_hash = state_hash(&json!({
+        "doc_id": "doc:test",
+        "blocks": [
+            {
+                "block_id": "blk:001",
+                "block_type": "paragraph",
+                "content": "Parent",
+                "attrs": {},
+                "children": [
+                    {
+                        "block_id": "blk:002",
+                        "block_type": "paragraph",
+                        "content": "Child",
+                        "attrs": {},
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    }));
+    let base_revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [
+                parent_patch["patch_id"].as_str().expect("parent patch id should exist"),
+                child_patch["patch_id"].as_str().expect("child patch id should exist")
+            ],
+            "state_hash": base_state_hash,
+            "timestamp": 1777778890u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &base_revision_path,
+        serde_json::to_string_pretty(&base_revision).expect("base revision JSON should serialize"),
+    )
+    .expect("base revision JSON should be written");
+
+    let move_patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": base_revision["revision_id"].as_str().expect("base revision id should exist"),
+            "timestamp": 1777778891u64,
+            "ops": [
+                {
+                    "op": "move_block",
+                    "block_id": "blk:001",
+                    "parent_block_id": "blk:002"
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        &move_patch_path,
+        serde_json::to_string_pretty(&move_patch).expect("move patch JSON should serialize"),
+    )
+    .expect("move patch JSON should be written");
+
+    let moved_revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [base_revision["revision_id"].as_str().expect("base revision id should exist")],
+            "patches": [move_patch["patch_id"].as_str().expect("move patch id should exist")],
+            "state_hash": "hash:placeholder",
+            "timestamp": 1777778892u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &moved_revision_path,
+        serde_json::to_string_pretty(&moved_revision)
+            .expect("moved revision JSON should serialize"),
+    )
+    .expect("moved revision JSON should be written");
+
+    let output = run_mycel(&[
+        "object",
+        "verify",
+        &path_arg(&moved_revision_path),
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "failed");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(
+                |errors| errors
+                    .iter()
+                    .any(|entry| entry.as_str().is_some_and(|message| {
+                        message.contains("move_block destination parent cannot be the moved block")
+                    }))
+            ),
+        "expected move-cycle replay error, stdout: {}",
+        stdout_text(&output)
+    );
+}

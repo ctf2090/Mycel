@@ -190,6 +190,11 @@ fn apply_patch_op(state: &mut DocumentState, op: &PatchOperation) -> Result<(), 
         } => annotate_block(&mut state.blocks, block_id, annotation.clone()),
         PatchOperation::SetMetadata { entries } => {
             for (key, value) in entries {
+                if key.is_empty() {
+                    return Err(ReplayError::new(
+                        "set_metadata keys must not be empty strings",
+                    ));
+                }
                 state.metadata.insert(key.clone(), value.clone());
             }
             Ok(())
@@ -278,6 +283,27 @@ fn move_block(
     parent_block_id: Option<&str>,
     after_block_id: Option<&str>,
 ) -> Result<(), ReplayError> {
+    if parent_block_id.is_none() && after_block_id.is_none() {
+        return Err(ReplayError::new(
+            "move_block requires at least one destination reference",
+        ));
+    }
+
+    let moving_block = find_block(blocks, block_id)
+        .ok_or_else(|| ReplayError::new(format!("move_block target '{block_id}' was not found")))?;
+    if parent_block_id.is_some_and(|parent_id| block_contains_ref(moving_block, parent_id)) {
+        return Err(ReplayError::new(format!(
+            "move_block destination parent cannot be the moved block '{}' or its descendant",
+            block_id
+        )));
+    }
+    if after_block_id.is_some_and(|after_id| block_contains_ref(moving_block, after_id)) {
+        return Err(ReplayError::new(format!(
+            "move_block destination after target cannot be the moved block '{}' or its descendant",
+            block_id
+        )));
+    }
+
     let block = detach_block(blocks, block_id)?
         .ok_or_else(|| ReplayError::new(format!("move_block target '{block_id}' was not found")))?;
 
@@ -288,9 +314,9 @@ fn move_block(
                     "move_block parent '{parent_block_id}' was not found"
                 ))
             })?;
-            if !insert_after_in_blocks(children, after_block_id, block.clone()) {
+            if !insert_after_direct(children, after_block_id, block.clone()) {
                 return Err(ReplayError::new(format!(
-                    "move_block after target '{after_block_id}' was not found"
+                    "move_block after target '{after_block_id}' was not found in parent '{parent_block_id}'"
                 )));
             }
             Ok(())
@@ -324,15 +350,21 @@ fn annotate_block(
     block_id: &str,
     annotation: BlockObject,
 ) -> Result<(), ReplayError> {
-    let block = find_block_mut(blocks, block_id).ok_or_else(|| {
-        ReplayError::new(format!("annotate_block target '{block_id}' was not found"))
-    })?;
-    if block_exists(&block.children, &annotation.block_id) {
+    if annotation.block_type != "annotation" {
         return Err(ReplayError::new(format!(
-            "annotate_block would duplicate child block_id '{}'",
+            "annotate_block requires annotation block_type 'annotation', found '{}'",
+            annotation.block_type
+        )));
+    }
+    if block_exists(blocks, &annotation.block_id) {
+        return Err(ReplayError::new(format!(
+            "annotate_block would duplicate block_id '{}'",
             annotation.block_id
         )));
     }
+    let block = find_block_mut(blocks, block_id).ok_or_else(|| {
+        ReplayError::new(format!("annotate_block target '{block_id}' was not found"))
+    })?;
     block.children.push(annotation);
     Ok(())
 }
@@ -380,6 +412,22 @@ fn insert_after_in_blocks(
     false
 }
 
+fn insert_after_direct(
+    blocks: &mut Vec<BlockObject>,
+    after_block_id: &str,
+    new_block: BlockObject,
+) -> bool {
+    if let Some(index) = blocks
+        .iter()
+        .position(|block| block.block_id == after_block_id)
+    {
+        blocks.insert(index + 1, new_block);
+        true
+    } else {
+        false
+    }
+}
+
 fn find_block_mut<'a>(
     blocks: &'a mut [BlockObject],
     block_id: &str,
@@ -389,6 +437,18 @@ fn find_block_mut<'a>(
             return Some(block);
         }
         if let Some(child) = find_block_mut(&mut block.children, block_id) {
+            return Some(child);
+        }
+    }
+    None
+}
+
+fn find_block<'a>(blocks: &'a [BlockObject], block_id: &str) -> Option<&'a BlockObject> {
+    for block in blocks {
+        if block.block_id == block_id {
+            return Some(block);
+        }
+        if let Some(child) = find_block(&block.children, block_id) {
             return Some(child);
         }
     }
@@ -431,6 +491,14 @@ fn block_exists(blocks: &[BlockObject], block_id: &str) -> bool {
     blocks
         .iter()
         .any(|block| block.block_id == block_id || block_exists(&block.children, block_id))
+}
+
+fn block_contains_ref(block: &BlockObject, block_id: &str) -> bool {
+    block.block_id == block_id
+        || block
+            .children
+            .iter()
+            .any(|child| block_contains_ref(child, block_id))
 }
 
 fn state_to_value(state: &DocumentState) -> Value {
@@ -600,6 +668,154 @@ mod tests {
         assert_eq!(
             summary.recomputed_state_hash,
             compute_state_hash(&summary.state).unwrap()
+        );
+    }
+
+    #[test]
+    fn move_block_rejects_cycle_into_descendant() {
+        let patch = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 3u64,
+            "ops": [
+                {
+                    "op": "move_block",
+                    "block_id": "blk:001",
+                    "parent_block_id": "blk:002"
+                }
+            ]
+        }))
+        .expect("patch should parse");
+        let mut parent = block("blk:001", "Parent");
+        parent.children.push(block("blk:002", "Child"));
+        let mut state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![parent],
+            metadata: Map::new(),
+        };
+
+        let error = apply_patch_ops(&mut state, &patch).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "move_block destination parent cannot be the moved block 'blk:001' or its descendant"
+        );
+    }
+
+    #[test]
+    fn annotate_block_requires_annotation_type() {
+        let patch = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 4u64,
+            "ops": [
+                {
+                    "op": "annotate_block",
+                    "block_id": "blk:001",
+                    "annotation": {
+                        "block_id": "blk:ann01",
+                        "block_type": "paragraph",
+                        "content": "Not an annotation",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }))
+        .expect("patch should parse");
+        let mut state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![block("blk:001", "Target")],
+            metadata: Map::new(),
+        };
+
+        let error = apply_patch_ops(&mut state, &patch).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "annotate_block requires annotation block_type 'annotation', found 'paragraph'"
+        );
+    }
+
+    #[test]
+    fn set_metadata_rejects_empty_key() {
+        let patch = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 5u64,
+            "ops": [
+                {
+                    "op": "set_metadata",
+                    "metadata": {
+                        "": "bad"
+                    }
+                }
+            ]
+        }))
+        .expect("patch should parse");
+        let mut state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![],
+            metadata: Map::new(),
+        };
+
+        let error = apply_patch_ops(&mut state, &patch).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "set_metadata keys must not be empty strings"
+        );
+    }
+
+    #[test]
+    fn move_block_requires_parent_after_target_to_match_same_sibling_list() {
+        let patch = parse_patch_object(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 6u64,
+            "ops": [
+                {
+                    "op": "move_block",
+                    "block_id": "blk:move",
+                    "parent_block_id": "blk:parent",
+                    "after_block_id": "blk:other-root"
+                }
+            ]
+        }))
+        .expect("patch should parse");
+        let mut parent = block("blk:parent", "Parent");
+        parent.children.push(block("blk:child", "Child"));
+        let mut state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![
+                parent,
+                block("blk:other-root", "Other"),
+                block("blk:move", "Move"),
+            ],
+            metadata: Map::new(),
+        };
+
+        let error = apply_patch_ops(&mut state, &patch).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "move_block after target 'blk:other-root' was not found in parent 'blk:parent'"
         );
     }
 }
