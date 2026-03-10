@@ -189,6 +189,14 @@ fn store_ingest_json_writes_verified_objects_into_store_layout() {
     assert_eq!(json["written_object_count"], 2);
     assert_eq!(json["existing_object_count"], 0);
     assert_eq!(json["skipped_object_count"], 0);
+    assert_eq!(json["indexed_object_count"], 2);
+    assert!(
+        json["index_manifest_path"]
+            .as_str()
+            .is_some_and(|path| path.ends_with("/indexes/manifest.json")),
+        "expected persisted manifest path, stdout: {}",
+        stdout_text(&output)
+    );
 
     let patch_hash = patch["patch_id"]
         .as_str()
@@ -220,6 +228,22 @@ fn store_ingest_json_writes_verified_objects_into_store_layout() {
             .exists(),
         "expected stored revision, stdout: {}",
         stdout_text(&output)
+    );
+    let manifest_path = store_dir.path().join("indexes").join("manifest.json");
+    assert!(
+        manifest_path.exists(),
+        "expected persisted index manifest, stdout: {}",
+        stdout_text(&output)
+    );
+    let manifest: Value =
+        serde_json::from_str(&fs::read_to_string(&manifest_path).expect("manifest should read"))
+            .expect("manifest should parse");
+    assert_eq!(manifest["stored_object_count"], 2);
+    assert!(
+        manifest["doc_revisions"]["doc:store-ingest"]
+            .as_array()
+            .is_some_and(|values| values.len() == 1),
+        "expected manifest doc revision index"
     );
 
     let rebuild = run_mycel(&[
@@ -278,6 +302,8 @@ fn store_ingest_text_reports_existing_objects_on_repeat_ingest() {
     let stdout = stdout_text(&second);
     assert!(stdout.contains("existing objects: 1"), "stdout: {stdout}");
     assert!(stdout.contains("written objects: 0"), "stdout: {stdout}");
+    assert!(stdout.contains("indexed objects: 1"), "stdout: {stdout}");
+    assert!(stdout.contains("index manifest:"), "stdout: {stdout}");
     assert!(stdout.contains("store ingest: ok"), "stdout: {stdout}");
 }
 

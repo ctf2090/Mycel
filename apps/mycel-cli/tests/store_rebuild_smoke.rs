@@ -258,6 +258,70 @@ fn store_rebuild_text_reports_summary() {
 }
 
 #[test]
+fn store_rebuild_store_root_persists_index_manifest() {
+    let source_dir = create_temp_dir("store-rebuild-source");
+    let store_dir = create_temp_dir("store-rebuild-root");
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:store-root",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    fs::write(
+        source_dir.path().join("patch.json"),
+        serde_json::to_string_pretty(&patch).expect("patch should serialize"),
+    )
+    .expect("patch should write");
+
+    let ingest = run_mycel(&[
+        "store",
+        "ingest",
+        &path_arg(&source_dir.path().to_path_buf()),
+        "--into",
+        &path_arg(&store_dir.path().to_path_buf()),
+    ]);
+    assert_success(&ingest);
+
+    let output = run_mycel(&[
+        "store",
+        "rebuild",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(json["stored_object_count"], 1);
+    assert!(
+        json["index_manifest_path"]
+            .as_str()
+            .is_some_and(|path| path.ends_with("/indexes/manifest.json")),
+        "expected persisted manifest path, stdout: {}",
+        stdout_text(&output)
+    );
+
+    let manifest_path = store_dir.path().join("indexes").join("manifest.json");
+    assert!(manifest_path.exists(), "expected persisted manifest");
+    let manifest: Value =
+        serde_json::from_str(&fs::read_to_string(&manifest_path).expect("manifest should read"))
+            .expect("manifest should parse");
+    assert_eq!(manifest["stored_object_count"], 1);
+    assert!(
+        manifest["object_ids_by_type"]["patch"]
+            .as_array()
+            .is_some_and(|values| values.len() == 1),
+        "expected patch object index"
+    );
+}
+
+#[test]
 fn store_rebuild_missing_target_fails_cleanly() {
     let output = run_mycel(&["store", "rebuild"]);
 

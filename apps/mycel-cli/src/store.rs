@@ -75,6 +75,9 @@ fn print_store_rebuild_text(summary: &StoreRebuildSummary) -> i32 {
     println!("author patch indexes: {}", summary.author_patches.len());
     println!("view governance records: {}", summary.view_governance.len());
     println!("profile head indexes: {}", summary.profile_heads.len());
+    if let Some(path) = &summary.index_manifest_path {
+        println!("index manifest: {}", path.display());
+    }
 
     for note in &summary.notes {
         println!("note: {note}");
@@ -116,6 +119,10 @@ fn print_store_ingest_text(summary: &StoreIngestSummary) -> i32 {
     println!("written objects: {}", summary.written_object_count);
     println!("existing objects: {}", summary.existing_object_count);
     println!("skipped objects: {}", summary.skipped_object_count);
+    println!("indexed objects: {}", summary.indexed_object_count);
+    if let Some(path) = &summary.index_manifest_path {
+        println!("index manifest: {}", path.display());
+    }
 
     for note in &summary.notes {
         println!("note: {note}");

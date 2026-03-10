@@ -3,7 +3,7 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -19,12 +19,24 @@ pub struct StoredObjectRecord {
     pub path: PathBuf,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ViewGovernanceRecord {
     pub view_id: String,
     pub maintainer: String,
     pub profile_id: String,
     pub documents: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoreIndexManifest {
+    pub version: String,
+    pub stored_object_count: usize,
+    pub object_ids_by_type: BTreeMap<String, Vec<String>>,
+    pub doc_revisions: BTreeMap<String, Vec<String>>,
+    pub revision_parents: BTreeMap<String, Vec<String>>,
+    pub author_patches: BTreeMap<String, Vec<String>>,
+    pub view_governance: Vec<ViewGovernanceRecord>,
+    pub profile_heads: BTreeMap<String, BTreeMap<String, Vec<String>>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -39,6 +51,8 @@ pub struct StoreIngestSummary {
     pub existing_object_count: usize,
     pub skipped_object_count: usize,
     pub stored_objects: Vec<StoredObjectRecord>,
+    pub indexed_object_count: usize,
+    pub index_manifest_path: Option<PathBuf>,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
 }
@@ -57,6 +71,7 @@ pub struct StoreRebuildSummary {
     pub author_patches: BTreeMap<String, Vec<String>>,
     pub view_governance: Vec<ViewGovernanceRecord>,
     pub profile_heads: BTreeMap<String, BTreeMap<String, Vec<String>>>,
+    pub index_manifest_path: Option<PathBuf>,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
 }
@@ -97,6 +112,7 @@ impl StoreRebuildSummary {
             author_patches: BTreeMap::new(),
             view_governance: Vec::new(),
             profile_heads: BTreeMap::new(),
+            index_manifest_path: None,
             notes: Vec::new(),
             errors: Vec::new(),
         }
@@ -132,6 +148,8 @@ impl StoreIngestSummary {
             existing_object_count: 0,
             skipped_object_count: 0,
             stored_objects: Vec::new(),
+            indexed_object_count: 0,
+            index_manifest_path: None,
             notes: Vec::new(),
             errors: Vec::new(),
         }
@@ -157,10 +175,10 @@ impl StoreIngestSummary {
 pub fn rebuild_store_from_path(target: &Path) -> Result<StoreRebuildSummary, StoreRebuildError> {
     let target = normalize_path(target);
     let mut summary = StoreRebuildSummary::new(&target);
-    let json_paths = collect_json_paths(&target, "store target")?;
-    summary.discovered_file_count = json_paths.len();
+    let discovery = discover_store_paths(&target, "store target")?;
+    summary.discovered_file_count = discovery.json_paths.len();
 
-    let loaded = load_objects(&json_paths, SummaryAdapter::Rebuild(&mut summary))?;
+    let loaded = load_objects(&discovery.json_paths, SummaryAdapter::Rebuild(&mut summary))?;
     let object_index = build_object_index(&loaded, SummaryAdapter::Rebuild(&mut summary));
     summary.identified_object_count = object_index.len();
 
@@ -206,6 +224,13 @@ pub fn rebuild_store_from_path(target: &Path) -> Result<StoreRebuildSummary, Sto
     sort_string_map_values(&mut summary.author_patches);
     sort_profile_heads(&mut summary.profile_heads);
 
+    if summary.is_ok() {
+        if let Some(store_root) = discovery.store_root {
+            let manifest_path = persist_store_index_manifest(&store_root, &summary)?;
+            summary.index_manifest_path = Some(manifest_path);
+        }
+    }
+
     Ok(summary)
 }
 
@@ -218,10 +243,10 @@ pub fn ingest_store_from_path(
     ensure_store_root(&store_root)?;
 
     let mut summary = StoreIngestSummary::new(&source, &store_root);
-    let json_paths = collect_json_paths(&source, "ingest source")?;
-    summary.discovered_file_count = json_paths.len();
+    let discovery = discover_store_paths(&source, "ingest source")?;
+    summary.discovered_file_count = discovery.json_paths.len();
 
-    let loaded = load_objects(&json_paths, SummaryAdapter::Ingest(&mut summary))?;
+    let loaded = load_objects(&discovery.json_paths, SummaryAdapter::Ingest(&mut summary))?;
     let object_index = build_object_index(&loaded, SummaryAdapter::Ingest(&mut summary));
     summary.identified_object_count = object_index.len();
 
@@ -273,6 +298,16 @@ pub fn ingest_store_from_path(
             .cmp(&right.object_id)
             .then_with(|| left.path.cmp(&right.path))
     });
+
+    match rebuild_store_from_path(&store_root) {
+        Ok(rebuilt) => {
+            summary.indexed_object_count = rebuilt.stored_object_count;
+            summary.index_manifest_path = rebuilt.index_manifest_path;
+        }
+        Err(error) => summary.push_error(format!(
+            "failed to rebuild store indexes after ingest: {error}"
+        )),
+    }
 
     Ok(summary)
 }
@@ -334,6 +369,14 @@ fn ensure_store_root(store_root: &Path) -> Result<(), StoreRebuildError> {
 
 fn objects_root(store_root: &Path) -> PathBuf {
     store_root.join("objects")
+}
+
+fn indexes_root(store_root: &Path) -> PathBuf {
+    store_root.join("indexes")
+}
+
+fn store_index_manifest_path(store_root: &Path) -> PathBuf {
+    indexes_root(store_root).join("manifest.json")
 }
 
 fn store_path_for_record(
@@ -430,6 +473,47 @@ fn collect_json_paths(
     collect_json_paths_recursive(target, &mut paths)?;
     paths.sort();
     Ok(paths)
+}
+
+struct StorePathDiscovery {
+    json_paths: Vec<PathBuf>,
+    store_root: Option<PathBuf>,
+}
+
+fn discover_store_paths(
+    target: &Path,
+    target_label: &str,
+) -> Result<StorePathDiscovery, StoreRebuildError> {
+    if !target.exists() {
+        return Err(StoreRebuildError::new(format!(
+            "{target_label} does not exist: {}",
+            target.display()
+        )));
+    }
+
+    if target.is_file() {
+        return Ok(StorePathDiscovery {
+            json_paths: vec![target.to_path_buf()],
+            store_root: None,
+        });
+    }
+
+    let looks_like_store_root = objects_root(target).exists() || indexes_root(target).exists();
+    let json_paths = if looks_like_store_root {
+        let objects_dir = objects_root(target);
+        if objects_dir.exists() {
+            collect_json_paths(&objects_dir, "store objects root")?
+        } else {
+            Vec::new()
+        }
+    } else {
+        collect_json_paths(target, target_label)?
+    };
+
+    Ok(StorePathDiscovery {
+        json_paths,
+        store_root: looks_like_store_root.then(|| target.to_path_buf()),
+    })
 }
 
 fn collect_json_paths_recursive(
@@ -652,6 +736,78 @@ fn sort_profile_heads(index: &mut BTreeMap<String, BTreeMap<String, Vec<String>>
     }
 }
 
+impl StoreIndexManifest {
+    fn from_rebuild_summary(summary: &StoreRebuildSummary) -> Self {
+        let mut object_ids_by_type = BTreeMap::<String, Vec<String>>::new();
+        for record in &summary.stored_objects {
+            object_ids_by_type
+                .entry(record.object_type.clone())
+                .or_default()
+                .push(record.object_id.clone());
+        }
+        sort_string_map_values(&mut object_ids_by_type);
+
+        Self {
+            version: "mycel-store-index/0.1".to_string(),
+            stored_object_count: summary.stored_object_count,
+            object_ids_by_type,
+            doc_revisions: summary.doc_revisions.clone(),
+            revision_parents: summary.revision_parents.clone(),
+            author_patches: summary.author_patches.clone(),
+            view_governance: summary.view_governance.clone(),
+            profile_heads: summary.profile_heads.clone(),
+        }
+    }
+}
+
+fn persist_store_index_manifest(
+    store_root: &Path,
+    summary: &StoreRebuildSummary,
+) -> Result<PathBuf, StoreRebuildError> {
+    let indexes_dir = indexes_root(store_root);
+    fs::create_dir_all(&indexes_dir).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to create store index directory {}: {error}",
+            indexes_dir.display()
+        ))
+    })?;
+
+    let manifest = StoreIndexManifest::from_rebuild_summary(summary);
+    let manifest_path = store_index_manifest_path(store_root);
+    let rendered = serde_json::to_string_pretty(&manifest).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to serialize store index manifest {}: {error}",
+            manifest_path.display()
+        ))
+    })?;
+    fs::write(&manifest_path, rendered).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to write store index manifest {}: {error}",
+            manifest_path.display()
+        ))
+    })?;
+
+    Ok(manifest_path)
+}
+
+pub fn load_store_index_manifest(
+    store_root: &Path,
+) -> Result<StoreIndexManifest, StoreRebuildError> {
+    let manifest_path = store_index_manifest_path(store_root);
+    let content = fs::read_to_string(&manifest_path).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to read store index manifest {}: {error}",
+            manifest_path.display()
+        ))
+    })?;
+    serde_json::from_str(&content).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to parse store index manifest {}: {error}",
+            manifest_path.display()
+        ))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -662,7 +818,7 @@ mod tests {
     use serde_json::{json, Value};
     use sha2::{Digest, Sha256};
 
-    use super::{ingest_store_from_path, rebuild_store_from_path};
+    use super::{ingest_store_from_path, load_store_index_manifest, rebuild_store_from_path};
 
     fn signing_key() -> SigningKey {
         SigningKey::from_bytes(&[7u8; 32])
@@ -976,6 +1132,14 @@ mod tests {
         assert_eq!(summary.written_object_count, 2);
         assert_eq!(summary.existing_object_count, 0);
         assert_eq!(summary.skipped_object_count, 0);
+        assert_eq!(summary.indexed_object_count, 2);
+        assert_eq!(
+            summary
+                .index_manifest_path
+                .as_ref()
+                .map(|path| path.file_name().and_then(|value| value.to_str())),
+            Some(Some("manifest.json"))
+        );
 
         let patch_hash = patch["patch_id"]
             .as_str()
@@ -997,6 +1161,13 @@ mod tests {
             .join("revision")
             .join(format!("{revision_hash}.json"))
             .exists());
+        let manifest = load_store_index_manifest(&store_dir)
+            .expect("ingested store should expose a persisted index manifest");
+        assert_eq!(manifest.stored_object_count, 2);
+        assert_eq!(
+            manifest.doc_revisions.get("doc:ingest"),
+            Some(&vec![revision_id.clone()])
+        );
 
         let rebuild =
             rebuild_store_from_path(&store_dir).expect("rebuild from ingested store should work");
@@ -1005,6 +1176,13 @@ mod tests {
             "expected ok rebuild summary, got {rebuild:?}"
         );
         assert_eq!(rebuild.stored_object_count, 2);
+        assert_eq!(
+            rebuild
+                .index_manifest_path
+                .as_ref()
+                .map(|path| path.file_name().and_then(|value| value.to_str())),
+            Some(Some("manifest.json"))
+        );
 
         let _ = fs::remove_dir_all(source_dir);
         let _ = fs::remove_dir_all(store_dir);
@@ -1045,6 +1223,10 @@ mod tests {
         assert_eq!(second.written_object_count, 0);
         assert_eq!(second.existing_object_count, 1);
         assert_eq!(second.verified_object_count, 1);
+        assert_eq!(second.indexed_object_count, 1);
+        let manifest = load_store_index_manifest(&store_dir)
+            .expect("repeat ingest should keep the persisted index manifest updated");
+        assert_eq!(manifest.stored_object_count, 1);
 
         let _ = fs::remove_dir_all(source_dir);
         let _ = fs::remove_dir_all(store_dir);
