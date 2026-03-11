@@ -231,7 +231,7 @@ Main remaining gaps:
 
 1. broader reuse of persisted store indexes across reader workflows
 2. broader replay and store reconstruction coverage tied to more realistic fixture sets beyond the current direct store-backed replay proof point
-3. conservative merge authoring now covers basic move/reorder, insert/delete composition, and reparenting into newly introduced parents, but broader nested/reparenting cases and richer conflict classification still require manual curation
+3. conservative merge authoring now covers basic move/reorder, insert/delete composition, reparenting into newly introduced parents, and simple composed parent-chain reparenting, but broader nested/reparenting cases and richer conflict classification still require manual curation
 4. broader core reuse so authoring and replay helpers do not remain disproportionately CLI-driven
 
 Implementation anchors:

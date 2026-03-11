@@ -579,7 +579,7 @@ fn assess_merge_resolution(
 
         if primary_content_variant == "<absent>"
             || resolved_content_variant == "<absent>"
-            || resolved_parent_is_new_in_resolved(&block_id, &primary_blocks, &resolved_blocks)
+            || resolved_parent_is_composed_in_resolved(&block_id, &primary_blocks, &resolved_blocks)
         {
             continue;
         }
@@ -708,18 +708,26 @@ fn block_parent_variant(block: Option<&BlockPlacement>) -> String {
     }
 }
 
-fn resolved_parent_is_new_in_resolved(
+fn resolved_parent_is_composed_in_resolved(
     block_id: &str,
     primary_blocks: &HashMap<String, BlockPlacement>,
     resolved_blocks: &HashMap<String, BlockPlacement>,
 ) -> bool {
-    resolved_blocks
+    let Some(parent_block_id) = resolved_blocks
         .get(block_id)
         .and_then(|placement| placement.parent_block_id.as_ref())
-        .is_some_and(|parent_block_id| {
-            !primary_blocks.contains_key(parent_block_id)
-                && resolved_blocks.contains_key(parent_block_id)
-        })
+    else {
+        return false;
+    };
+
+    let Some(resolved_parent) = resolved_blocks.get(parent_block_id) else {
+        return false;
+    };
+    let Some(primary_parent) = primary_blocks.get(parent_block_id) else {
+        return true;
+    };
+
+    block_parent_variant(Some(resolved_parent)) != block_parent_variant(Some(primary_parent))
 }
 
 fn metadata_variant(value: Option<&Value>) -> Result<String, StoreRebuildError> {
@@ -1766,6 +1774,124 @@ mod tests {
             op,
             PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
             if block_id == "blk:reparent-leaf" && parent_block_id == "blk:reparent-parent"
+        )));
+
+        let _ = fs::remove_dir_all(store_root);
+    }
+
+    #[test]
+    fn merge_authoring_supports_reparenting_through_a_composed_parent_chain() {
+        let store_root = temp_dir("merge-reparent-parent-chain");
+        let signing_key = signing_key();
+        let document = create_document_in_store(
+            &store_root,
+            &signing_key,
+            &DocumentCreateParams {
+                doc_id: "doc:merge-parent-chain".to_string(),
+                title: "Merge Parent Chain".to_string(),
+                language: "en".to_string(),
+                timestamp: 34,
+            },
+        )
+        .expect("document should be created");
+
+        let base_revision_id = commit_ops_revision(
+            &store_root,
+            &signing_key,
+            "doc:merge-parent-chain",
+            &document.genesis_revision_id,
+            35,
+            36,
+            json!([
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:chain-parent",
+                        "block_type": "paragraph",
+                        "content": "Chain Parent",
+                        "attrs": {},
+                        "children": []
+                    }
+                },
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:chain-leaf",
+                        "block_type": "paragraph",
+                        "content": "Chain Leaf",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]),
+        );
+
+        let wrapper_revision_id = commit_ops_revision(
+            &store_root,
+            &signing_key,
+            "doc:merge-parent-chain",
+            &base_revision_id,
+            37,
+            38,
+            json!([
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:chain-wrapper",
+                        "block_type": "paragraph",
+                        "content": "Chain Wrapper",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]),
+        );
+
+        let summary = create_merge_revision_in_store(
+            &store_root,
+            &signing_key,
+            &MergeRevisionCreateParams {
+                doc_id: "doc:merge-parent-chain".to_string(),
+                parents: vec![base_revision_id, wrapper_revision_id],
+                resolved_state: crate::replay::DocumentState {
+                    doc_id: "doc:merge-parent-chain".to_string(),
+                    blocks: vec![paragraph_block_with_children(
+                        "blk:chain-wrapper",
+                        "Chain Wrapper",
+                        vec![paragraph_block_with_children(
+                            "blk:chain-parent",
+                            "Chain Parent",
+                            vec![paragraph_block("blk:chain-leaf", "Chain Leaf")],
+                        )],
+                    )],
+                    metadata: serde_json::Map::new(),
+                },
+                merge_strategy: "semantic-block-merge".to_string(),
+                timestamp: 39,
+            },
+        )
+        .expect("merge revision should be created");
+
+        assert_eq!(summary.merge_outcome, MergeOutcome::AutoMerged);
+        assert_eq!(summary.patch_op_count, 3);
+        let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+            .expect("generated merge patch should be stored");
+        let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+        assert_eq!(patch.ops.len(), 3);
+        assert!(patch.ops.iter().any(|op| matches!(
+            op,
+            PatchOperation::InsertBlock { new_block, .. }
+            if new_block.block_id == "blk:chain-wrapper" && new_block.children.is_empty()
+        )));
+        assert!(patch.ops.iter().any(|op| matches!(
+            op,
+            PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+            if block_id == "blk:chain-parent" && parent_block_id == "blk:chain-wrapper"
+        )));
+        assert!(patch.ops.iter().any(|op| matches!(
+            op,
+            PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+            if block_id == "blk:chain-leaf" && parent_block_id == "blk:chain-parent"
         )));
 
         let _ = fs::remove_dir_all(store_root);

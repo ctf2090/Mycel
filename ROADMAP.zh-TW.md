@@ -231,7 +231,7 @@ Implementation anchors：
 
 1. 持久化 store indexes 在 reader workflows 中的更廣 reuse
 2. 在目前直接 store-backed replay proof point 之外，進一步補強與更真實 fixture sets 綁定的 replay 與 store reconstruction coverage
-3. 保守型 merge authoring 現在已覆蓋基本 move/reorder、insert/delete 組合，以及 reparent 到新引入 parent 的 case，但更廣的 nested/reparenting case 與更豐富的 conflict classification 仍需 manual curation
+3. 保守型 merge authoring 現在已覆蓋基本 move/reorder、insert/delete 組合、reparent 到新引入 parent 的 case，以及簡單的 composed parent-chain reparenting，但更廣的 nested/reparenting case 與更豐富的 conflict classification 仍需 manual curation
 4. 擴大 shared core reuse，避免 authoring 與 replay helpers 過度停留在 CLI-driven glue
 
 Implementation anchors：
