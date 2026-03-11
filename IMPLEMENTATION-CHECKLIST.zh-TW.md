@@ -157,11 +157,11 @@
 - [ ] 提供 sync pull 入口。
 - [x] 提供 view inspection 或 head inspection 入口。
 - [x] 提供可從 stored objects 或明確 object bundles 進行 accepted-head render 的入口。
-- [ ] 把 reader-facing accepted-head inspection 與 curator-facing View publication workflow 分開。
+- [x] 把 reader-facing accepted-head inspection 與 curator-facing View publication workflow 分開。
 - [x] 讓 head inspection 的 `decision_trace` 只保留高階摘要層。
 - [x] 把 maintainer、weight、violation 的機器可消費細節放在 `effective_weights[]`、`maintainer_support[]`、`critical_violations[]` 這類 typed arrays，而不是塞進 `decision_trace`。
 - [x] 把 `decision_trace` 視為給人讀的解釋輸出；把 typed arrays 視為給工具與測試依賴的穩定細節介面。
-- [ ] 把 editor-maintainer revision publication 與 view-maintainer governance publication workflow 分開。
+- [x] 把 editor-maintainer revision publication 與 view-maintainer governance publication workflow 分開。
 - [x] 提供 store-rebuild 或 reindex 入口，以利復原。
 
 ## 12. Interop Test 最低門檻

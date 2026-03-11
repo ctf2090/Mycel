@@ -13,10 +13,12 @@ mod head;
 mod object;
 mod report;
 mod store;
+mod view;
 use head::HeadCliArgs;
 use object::ObjectCliArgs;
 use report::ReportCliArgs;
 use store::StoreCliArgs;
+use view::ViewCliArgs;
 
 #[derive(Debug, Error)]
 pub(crate) enum CliError {
@@ -96,6 +98,8 @@ enum CliCommand {
     Store(StoreCliArgs),
     #[command(about = "Validate the repo root, one file, or one supported directory")]
     Validate(ValidateCliArgs),
+    #[command(about = "Publish and inspect governance View objects")]
+    View(ViewCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
 }
@@ -397,6 +401,7 @@ fn main() {
         Some(CliCommand::Sim(command)) => handle_sim_command(command),
         Some(CliCommand::Store(command)) => store::handle_store_command(command),
         Some(CliCommand::Validate(command)) => handle_validate_command(command),
+        Some(CliCommand::View(command)) => view::handle_view_command(command),
         Some(CliCommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
             Err(CliError::usage(format!("unknown command: {other}")))

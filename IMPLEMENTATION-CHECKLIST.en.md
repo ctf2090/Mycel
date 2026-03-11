@@ -157,11 +157,11 @@ Defer if needed:
 - [ ] Provide sync pull entry points.
 - [x] Provide view inspection or head-inspection entry points.
 - [x] Provide accepted-head render entry points from stored objects or explicit object bundles.
-- [ ] Separate reader-facing accepted-head inspection from curator-facing View publication workflows.
+- [x] Separate reader-facing accepted-head inspection from curator-facing View publication workflows.
 - [x] Keep head-inspection `decision_trace` at a high-level summary layer only.
 - [x] Put machine-consumable maintainer, weight, and violation details in typed arrays such as `effective_weights[]`, `maintainer_support[]`, and `critical_violations[]`, not in `decision_trace`.
 - [x] Treat `decision_trace` as explanatory output for humans; treat typed arrays as the stable detail surface for tools and tests.
-- [ ] Separate editor-maintainer revision publication from view-maintainer governance publication workflows.
+- [x] Separate editor-maintainer revision publication from view-maintainer governance publication workflows.
 - [x] Provide store-rebuild or reindex entry points for recovery.
 
 ## 12. Interop Test Minimum

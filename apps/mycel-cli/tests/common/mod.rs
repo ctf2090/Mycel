@@ -220,6 +220,10 @@ pub fn assert_top_level_help(stdout: &str) {
         "expected report command in help, stdout: {stdout}"
     );
     assert!(
+        predicate::str::contains("view").eval(stdout),
+        "expected view command in help, stdout: {stdout}"
+    );
+    assert!(
         predicate::str::contains("validate").eval(stdout),
         "expected validate command in help, stdout: {stdout}"
     );
@@ -284,6 +288,52 @@ pub fn assert_head_render_help(stdout: &str) {
     assert!(
         stdout.contains("--profile-id <PROFILE_ID>"),
         "expected profile-id flag in help, stdout: {stdout}"
+    );
+}
+
+pub fn assert_view_inspect_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel view inspect"),
+        "expected view inspect usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Inspect one persisted governance View object"),
+        "expected view inspect description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("VIEW_ID"),
+        "expected view id argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--store-root <STORE_ROOT>"),
+        "expected store-root flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in help, stdout: {stdout}"
+    );
+}
+
+pub fn assert_view_publish_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel view publish"),
+        "expected view publish usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Verify and publish one governance View object into the store"),
+        "expected view publish description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("<PATH>"),
+        "expected source path argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--into <STORE_ROOT>"),
+        "expected into flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in help, stdout: {stdout}"
     );
 }
 
