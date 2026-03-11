@@ -2,7 +2,9 @@
 
 Language: English | [繁體中文](./README.zh-TW.md) | [简体中文](./README.zh-CN.md)
 
-Mycel is a Rust-based protocol stack for verifiable text history, governed reading state, and decentralized replication.
+MycelLayer is the public-facing name for Mycel, a Rust-based protocol stack for verifiable text history, governed reading state, and decentralized replication.
+
+Within this repository and the specification set, the canonical technical name remains `Mycel`.
 
 It is aimed at text-bearing systems that need:
 
@@ -11,7 +13,7 @@ It is aimed at text-bearing systems that need:
 - multiple valid branches without global mandatory consensus
 - profile-governed accepted reading instead of ad hoc local preference
 
-## Why Mycel
+## Why MycelLayer
 
 Most collaboration tools force one of two shapes:
 
