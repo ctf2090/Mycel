@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mycel的價值</title>
+    <meta
+      name="description"
+      content="從現存應用的痛點出發，理解 Mycel 為什麼值得存在。"
+    >
+    <meta name="theme-color" content="#0d6b57">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Mycel">
+    <meta property="og:title" content="Mycel的價值">
+    <meta
+      property="og:description"
+      content="從現存應用的痛點出發，理解 Mycel 為什麼值得存在。"
+    >
+    <meta property="og:url" content="https://ctf2090.github.io/Mycel/zh-TW/value.html">
+    <meta property="og:image" content="https://ctf2090.github.io/Mycel/social-preview.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Mycel的價值">
+    <meta
+      name="twitter:description"
+      content="從現存應用的痛點出發，理解 Mycel 為什麼值得存在。"
+    >
+    <meta name="twitter:image" content="https://ctf2090.github.io/Mycel/social-preview.png">
+    <style>
+      :root {
+        --bg: #f3efe6;
+        --surface: rgba(255, 250, 242, 0.88);
+        --surface-strong: #fffaf1;
+        --text: #1d2a26;
+        --muted: #5a6a62;
+        --accent: #0d6b57;
+        --accent-strong: #084d3f;
+        --line: rgba(29, 42, 38, 0.12);
+        --shadow: 0 24px 80px rgba(20, 32, 27, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(13, 107, 87, 0.14), transparent 34%),
+          radial-gradient(circle at top right, rgba(175, 126, 53, 0.12), transparent 30%),
+          linear-gradient(180deg, #f8f3ea 0%, var(--bg) 54%, #ece5d8 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+
+      .brand {
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .brand a:hover {
+        text-decoration: underline;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .hero-copy {
+        padding: 40px;
+      }
+
+      .hero-card {
+        display: grid;
+        gap: 16px;
+        padding: 24px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(13, 107, 87, 0.08);
+        color: var(--accent-strong);
+        font-size: 0.9rem;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: "Noto Serif TC", "PMingLiU", serif;
+        line-height: 1.08;
+      }
+
+      h1 {
+        margin-top: 18px;
+        font-size: clamp(1.6rem, 3.8vw, 3rem);
+        max-width: 10ch;
+      }
+
+      h2 {
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        margin-bottom: 12px;
+      }
+
+      .lead {
+        margin: 18px 0 0;
+        max-width: 58ch;
+        font-size: 1.08rem;
+        line-height: 1.82;
+        color: var(--muted);
+      }
+
+      .hero-note,
+      p,
+      li {
+        line-height: 1.78;
+        color: var(--muted);
+      }
+
+      .hero-note {
+        margin: 16px 0 0;
+      }
+
+      .status-card,
+      .card {
+        padding: 22px;
+        border-radius: 20px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .status-card strong,
+      .card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.92rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 13px 18px;
+        border-radius: 999px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid transparent;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #f7f3ea;
+      }
+
+      .button.secondary {
+        background: transparent;
+        border-color: var(--line);
+        color: var(--text);
+      }
+
+      section {
+        margin-top: 22px;
+      }
+
+      .section-panel {
+        padding: 30px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .message-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: var(--surface-strong);
+        border-radius: 18px;
+        overflow: hidden;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 16px 14px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .comparison-table th {
+        font-size: 0.88rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+        background: rgba(13, 107, 87, 0.06);
+      }
+
+      .comparison-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      footer {
+        margin-top: 22px;
+        padding: 22px 4px 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .grid,
+        .message-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 880px) {
+        .comparison-table,
+        .comparison-table thead,
+        .comparison-table tbody,
+        .comparison-table th,
+        .comparison-table td,
+        .comparison-table tr {
+          display: block;
+          width: 100%;
+        }
+
+        .comparison-table thead {
+          display: none;
+        }
+
+        .comparison-table tr {
+          border-bottom: 1px solid var(--line);
+          padding: 10px 0;
+        }
+
+        .comparison-table td {
+          border-bottom: 0;
+          padding: 10px 14px;
+        }
+
+        .comparison-table td::before {
+          content: attr(data-label);
+          display: block;
+          margin-bottom: 6px;
+          font-size: 0.8rem;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: var(--accent-strong);
+        }
+
+        .hero-copy,
+        .hero-card,
+        .section-panel {
+          padding: 26px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <div class="brand"><a href="/Mycel/zh-TW/" aria-label="返回 Mycel 繁體中文首頁">Mycel</a> / 價值</div>
+        <div class="nav-links">
+          <a href="https://github.com/ctf2090/Mycel">GitHub</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/README.zh-TW.md">README</a>
+          <a href="/Mycel/zh-TW/progress.html">進度</a>
+          <a href="/Mycel/zh-TW/support.html">贊助</a>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div class="panel hero-copy">
+          <div class="eyebrow">從現存應用的痛點出發</div>
+          <h1>Mycel的價值</h1>
+          <p class="lead">
+            與其先講協定特性，不如先講人們今天已經感受到的痛點：
+            版本看得到卻不容易驗證，分歧一出現就難以閱讀，平台又把歷史、治理與展示綁在一起。
+            Mycel 想補上的，就是這些痛點之間長期缺的一層。
+          </p>
+          <p class="hero-note">
+            它不是再做一個一般協作介面，而是讓文本歷史可重播、讓預設閱讀可推導，
+            並讓資料不必綁死在單一平台。
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.zh-TW.md">閱讀 Markdown 原文</a>
+            <a class="button secondary" href="/Mycel/zh-TW/">回到首頁</a>
+          </div>
+        </div>
+
+        <div class="panel hero-card">
+          <div class="status-card">
+            <strong>不是只有歷史</strong>
+            <p>而是可驗證、可重播、可重建的歷史。</p>
+          </div>
+          <div class="status-card">
+            <strong>不是只有多版本</strong>
+            <p>而是在分歧存在時，仍能導出可解釋的預設閱讀版本。</p>
+          </div>
+          <div class="status-card">
+            <strong>不是只有平台資料</strong>
+            <p>而是讓歷史、治理與複製可以分層存在並保持互通。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>現存應用痛點 vs Mycel</h2>
+        <p>
+          下面這張表不是從協定功能倒推，而是從人們已經感受到的摩擦出發，
+          直接對照 Mycel 想解決的核心價值。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>現存應用痛點</th>
+              <th>常見感受</th>
+              <th>Mycel 的對應價值</th>
+              <th>可用說法</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="現存應用痛點">歷史存在，但不容易驗證</td>
+              <td data-label="常見感受">我看得到版本紀錄，但很難確定這個結果怎麼來的。</td>
+              <td data-label="Mycel 的對應價值">可重播、可驗證的文本歷史</td>
+              <td data-label="可用說法">不只是有版本，而是歷史可以被重建與檢查。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">預設版本是平台狀態，不是可解釋結果</td>
+              <td data-label="常見感受">現在看到這一版，但我不知道為什麼是這一版。</td>
+              <td data-label="Mycel 的對應價值">預設閱讀版本由固定規則導出</td>
+              <td data-label="可用說法">預設版本不是黑箱，也不是管理員手動拍板。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">分歧常被硬壓成單一版本</td>
+              <td data-label="常見感受">不同看法只能被覆蓋，最後只剩一個官方答案。</td>
+              <td data-label="Mycel 的對應價值">允許多個有效分支並存</td>
+              <td data-label="可用說法">不假裝世界上只有一個真版本。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">分叉存在時，閱讀體驗就會變亂</td>
+              <td data-label="常見感受">一旦出現多版本，就不知道預設該讀哪個。</td>
+              <td data-label="Mycel 的對應價值">在保留分歧下仍可導出 accepted reading</td>
+              <td data-label="可用說法">可以同時容納分歧與預設閱讀。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">平台把編輯、治理、展示全綁在一起</td>
+              <td data-label="常見感受">資料在哪裡、怎麼顯示、誰說了算，全都綁在同一套產品裡。</td>
+              <td data-label="Mycel 的對應價值">把歷史、治理訊號與複製拆層但保持互通</td>
+              <td data-label="可用說法">資料不必等於平台。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">離開原平台後，語境與規則很難保留</td>
+              <td data-label="常見感受">匯出內容可以，但匯不出判斷邏輯。</td>
+              <td data-label="Mycel 的對應價值">規則與物件關係可以被保留與重建</td>
+              <td data-label="可用說法">帶走的不只是內容，還有結果如何形成。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">協作工具擅長編輯，不擅長長期保存</td>
+              <td data-label="常見感受">短期寫作方便，但不適合做長期文化或知識保存。</td>
+              <td data-label="Mycel 的對應價值">面向長期文本、評註與參考文本集合</td>
+              <td data-label="可用說法">為長期可驗證保存而設計，而不只是日常協作。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">共識型系統太重，文件型工具又太輕</td>
+              <td data-label="常見感受">區塊鏈太重，文件平台又不夠可信。</td>
+              <td data-label="Mycel 的對應價值">位在中心化協作平台與全域共識系統之間</td>
+              <td data-label="可用說法">補上兩者之間缺的那一層。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">很難把治理訊號變成可檢查的輸入</td>
+              <td data-label="常見感受">誰支持哪個版本常常散落在會議、聊天室或平台權限裡。</td>
+              <td data-label="Mycel 的對應價值">把治理訊號當成可驗證物件處理</td>
+              <td data-label="可用說法">治理不再只是口頭或後台操作。</td>
+            </tr>
+            <tr>
+              <td data-label="現存應用痛點">工具常逼你接受單一產品 worldview</td>
+              <td data-label="常見感受">產品怎麼定義內容、版本與權限，我們就得跟著接受。</td>
+              <td data-label="Mycel 的對應價值">協定核心保持中立，語意放在 profile 與 app layer</td>
+              <td data-label="可用說法">不把單一應用邏輯寫死進底層。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>三個最強訊息</h2>
+        <div class="message-grid">
+          <div class="card">
+            <strong>可驗證的歷史</strong>
+            <p>不是只有歷史，而是歷史可以被重播、驗證與重建。</p>
+          </div>
+          <div class="card">
+            <strong>可解釋的預設閱讀</strong>
+            <p>不是只有多版本，而是分歧存在時仍有可預期、可檢查的預設閱讀版本。</p>
+          </div>
+          <div class="card">
+            <strong>資料不等於平台</strong>
+            <p>不是把資料鎖進平台，而是讓歷史、治理與複製可以分開存在。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>建議的對外敘事順序</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>1. 先講痛點</strong>
+            <p>現有工具不是沒有版本，而是版本結果通常不可驗證、不可解釋。</p>
+          </div>
+          <div class="card">
+            <strong>2. 再講 Mycel</strong>
+            <p>Mycel 讓文本歷史可重播，讓預設閱讀可推導，讓資料不綁死在單一平台。</p>
+          </div>
+          <div class="card">
+            <strong>3. 最後講場景</strong>
+            <p>特別適合長期文本、評註系統、治理型知識庫與文化保存。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>可直接使用的對外說法</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>版本 A：痛點導向</strong>
+            <p>現有工具要嘛把歷史藏在平台狀態裡，要嘛只能告訴你現在是什麼，卻很難告訴你為什麼會變成這樣。</p>
+          </div>
+          <div class="card">
+            <strong>版本 B：治理導向</strong>
+            <p>真正困難的不是編輯，而是如何在保留分歧的同時，仍然導出一個可預期、可解釋的預設版本。</p>
+          </div>
+          <div class="card">
+            <strong>版本 C：文化保存導向</strong>
+            <p>長期保存的文本不只需要現在看到的版本，還需要知道這個結果如何形成，是否能在別處重建。</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Markdown 原文：
+        <a href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.zh-TW.md">docs/MYCEL-VALUE.zh-TW.md</a>
+      </footer>
+    </div>
+  </body>
+</html>
