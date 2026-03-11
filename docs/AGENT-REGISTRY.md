@@ -222,6 +222,8 @@ Recovery rules:
 3. preserve the old agent entry for auditability; do not overwrite its `id`
 4. if the old chat is clearly gone, mark that agent `paused` with `scripts/agent-stop.sh <agent-id>`
 5. claim a new id for the replacement chat and continue from the mailbox handoff
+6. if a previously forgotten chat is reopened later, that chat must run `scripts/agent-status.sh <its-agent-id>` before doing tracked work again
+7. if the reopened chat is no longer `active`, it must stop and must not resume tracked work under the old id
 
 Recommended recovery sequence:
 
@@ -268,6 +270,12 @@ Keep this recovery startup output narrow:
 - confirm that the old mailbox was read before resumed work
 - use the new replacement id in the self-label and agent identity line
 - do not claim new file-level context until the user gives the next concrete task
+
+Forgotten-chat note:
+
+- a reopened old chat is not trusted just because the window still exists
+- it must re-check its own registry status before resuming work
+- if another chat already recovered the scope and the old id is now `paused`, the reopened old chat must stop and yield to the replacement id
 
 Role note:
 
