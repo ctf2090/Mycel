@@ -143,10 +143,10 @@
 ## 10. Merge Generation
 
 - [x] 保持 revision 驗證為 replay-based；不要要求接收端重跑 merge generation。
-- [ ] 為本地作者工具實作保守版 merge generation profile。
-- [ ] 區分 `Auto-merged`、`Multi-variant`、`Manual-curation-required`。
-- [ ] 把 merge 結果實體化成一般 patch operations。
-- [ ] 拒絕用隱藏 merge metadata 取代顯式狀態變更。
+- [x] 為本地作者工具實作保守版 merge generation profile。
+- [x] 區分 `Auto-merged`、`Multi-variant`、`Manual-curation-required`。
+- [x] 把 merge 結果實體化成一般 patch operations。
+- [x] 拒絕用隱藏 merge metadata 取代顯式狀態變更。
 
 ## 11. CLI 或 API 介面
 
@@ -183,5 +183,5 @@
 - [x] revision replay 與 `state_hash` 驗證通過
 - [ ] 最小 wire sync 可端到端跑通
 - [x] 決定性 head selection 產出穩定結果
-- [ ] merge generation 能產生有效且可 replay 的 patch operations
+- [x] merge generation 能產生有效且可 replay 的 patch operations
 - [x] 本地 store 可只靠 canonical objects 完整重建
