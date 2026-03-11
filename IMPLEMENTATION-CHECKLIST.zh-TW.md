@@ -169,7 +169,7 @@
 - [ ] 對 example `patch`、`revision`、`view`、`snapshot` 重算 derived IDs。
 - [x] 至少對一個 single-parent revision 與一個 merge revision 重算 `state_hash`。
 - [ ] 驗證 example wire envelopes 與 `OBJECT` 驗證行為。
-- [ ] 加入 hash mismatch、signature mismatch、invalid parent ordering 的 negative tests。
+- [x] 加入 hash mismatch、signature mismatch、invalid parent ordering 的 negative tests。
 - [x] 加入 canonical serialization 的 round-trip test。
 - [x] 加入只靠儲存物件重建 document state 的 replay test。
 

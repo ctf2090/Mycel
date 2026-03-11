@@ -169,7 +169,7 @@ Defer if needed:
 - [ ] Recompute derived IDs for example `patch`, `revision`, `view`, and `snapshot` objects.
 - [x] Recompute `state_hash` for at least one single-parent revision and one merge revision.
 - [ ] Verify example wire envelopes and `OBJECT` validation behavior.
-- [ ] Add negative tests for hash mismatch, signature mismatch, and invalid parent ordering.
+- [x] Add negative tests for hash mismatch, signature mismatch, and invalid parent ordering.
 - [x] Add a round-trip test for canonical serialization.
 - [x] Add a replay test that rebuilds document state from stored objects only.
 

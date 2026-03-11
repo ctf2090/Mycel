@@ -761,6 +761,77 @@ mod tests {
     }
 
     #[test]
+    fn replay_merge_revision_rejects_swapped_parent_order() {
+        let base_state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![block("blk:001", "Base")],
+            metadata: Map::new(),
+        };
+        let side_state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![block("blk:002", "Side")],
+            metadata: Map::new(),
+        };
+        let base_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:base",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": compute_state_hash(&base_state).expect("base hash should compute"),
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64
+        });
+        let side_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:side",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": compute_state_hash(&side_state).expect("side hash should compute"),
+            "author": "pk:ed25519:test",
+            "timestamp": 2u64
+        });
+        let merge_patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:merge",
+            "doc_id": "doc:test",
+            "base_revision": "rev:base",
+            "author": "pk:ed25519:test",
+            "timestamp": 3u64,
+            "ops": []
+        });
+        let merge_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:merge",
+            "doc_id": "doc:test",
+            "parents": ["rev:side", "rev:base"],
+            "patches": ["patch:merge"],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": compute_state_hash(&side_state).expect("side hash should compute"),
+            "author": "pk:ed25519:test",
+            "timestamp": 4u64
+        });
+
+        let mut index = HashMap::new();
+        index.insert("rev:base".to_string(), base_revision);
+        index.insert("rev:side".to_string(), side_revision);
+        index.insert("patch:merge".to_string(), merge_patch);
+        index.insert("rev:merge".to_string(), merge_revision.clone());
+
+        let error = replay_revision_from_index(&merge_revision, &index).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "patch 'patch:merge' base_revision 'rev:base' does not match expected 'rev:side'"
+        );
+    }
+
+    #[test]
     fn replay_merge_revision_uses_only_primary_parent_state() {
         let base_patch = json!({
             "type": "patch",

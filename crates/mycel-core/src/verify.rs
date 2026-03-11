@@ -4277,6 +4277,115 @@ mod tests {
     }
 
     #[test]
+    fn merge_revision_replay_rejects_swapped_parent_order() {
+        let (signing_key, public_key) = signer_material();
+        let mut base_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": state_hash_for_blocks(
+                "doc:test",
+                vec![BlockObject {
+                    block_id: "blk:001".to_string(),
+                    block_type: "paragraph".to_string(),
+                    content: "Base".to_string(),
+                    attrs: Map::new(),
+                    children: Vec::new()
+                }]
+            ),
+            "author": public_key,
+            "timestamp": 9u64
+        });
+        let base_revision_id = super::recompute_object_id(&base_revision, "revision_id", "rev")
+            .expect("base revision ID should recompute");
+        base_revision["revision_id"] = Value::String(base_revision_id.clone());
+        base_revision["signature"] = Value::String(sign_value(&signing_key, &base_revision));
+
+        let mut side_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [],
+            "state_hash": state_hash_for_blocks(
+                "doc:test",
+                vec![BlockObject {
+                    block_id: "blk:002".to_string(),
+                    block_type: "paragraph".to_string(),
+                    content: "Side".to_string(),
+                    attrs: Map::new(),
+                    children: Vec::new()
+                }]
+            ),
+            "author": public_key,
+            "timestamp": 10u64
+        });
+        let side_revision_id = super::recompute_object_id(&side_revision, "revision_id", "rev")
+            .expect("side revision ID should recompute");
+        side_revision["revision_id"] = Value::String(side_revision_id.clone());
+        side_revision["signature"] = Value::String(sign_value(&signing_key, &side_revision));
+
+        let mut merge_patch = json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": base_revision_id.clone(),
+            "author": public_key,
+            "timestamp": 11u64,
+            "ops": []
+        });
+        let merge_patch_id = super::recompute_object_id(&merge_patch, "patch_id", "patch")
+            .expect("merge patch ID should recompute");
+        merge_patch["patch_id"] = Value::String(merge_patch_id.clone());
+        merge_patch["signature"] = Value::String(sign_value(&signing_key, &merge_patch));
+
+        let mut merge_revision = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [side_revision_id.clone(), base_revision_id.clone()],
+            "patches": [merge_patch_id.clone()],
+            "merge_strategy": "semantic-block-merge",
+            "state_hash": state_hash_for_blocks(
+                "doc:test",
+                vec![BlockObject {
+                    block_id: "blk:002".to_string(),
+                    block_type: "paragraph".to_string(),
+                    content: "Side".to_string(),
+                    attrs: Map::new(),
+                    children: Vec::new()
+                }]
+            ),
+            "author": public_key,
+            "timestamp": 12u64
+        });
+        let merge_revision_id = super::recompute_object_id(&merge_revision, "revision_id", "rev")
+            .expect("merge revision ID should recompute");
+        merge_revision["revision_id"] = Value::String(merge_revision_id);
+        merge_revision["signature"] = Value::String(sign_value(&signing_key, &merge_revision));
+
+        let object_index = HashMap::from([
+            (base_revision_id.clone(), base_revision),
+            (side_revision_id.clone(), side_revision),
+            (merge_patch_id.clone(), merge_patch),
+        ]);
+        let summary = verify_object_value_with_object_index(&merge_revision, Some(&object_index));
+
+        assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+        assert_eq!(summary.state_hash_verification.as_deref(), Some("failed"));
+        assert!(
+            summary.errors.iter().any(|message| {
+                message.contains(&format!("patch '{merge_patch_id}'"))
+                    && message.contains(&format!("base_revision '{base_revision_id}'"))
+                    && message.contains(&format!("expected '{side_revision_id}'"))
+            }),
+            "expected swapped-parent-order replay error, got {summary:?}"
+        );
+    }
+
+    #[test]
     fn revision_replay_rejects_patch_from_other_document() {
         let (signing_key, public_key) = signer_material();
         let mut patch = json!({
