@@ -82,6 +82,9 @@ struct ViewListSummary {
     manifest_path: PathBuf,
     status: String,
     sort: ViewListSort,
+    summary_only: bool,
+    latest_per_profile: bool,
+    limit: Option<usize>,
     record_count: usize,
     filters: ViewListFilters,
     group_by: Vec<ViewListGroupBy>,
@@ -205,6 +208,19 @@ struct ViewListCliArgs {
     sort: ViewListSort,
     #[arg(
         long,
+        value_name = "COUNT",
+        help = "Return at most this many records after projection"
+    )]
+    limit: Option<usize>,
+    #[arg(
+        long,
+        help = "Keep only the latest governance record for each profile ID"
+    )]
+    latest_per_profile: bool,
+    #[arg(long, help = "Omit per-record output and emit only summary metadata")]
+    summary_only: bool,
+    #[arg(
+        long,
         value_name = "GROUP_BY",
         value_enum,
         help = "Emit grouped summaries by one governance field"
@@ -279,6 +295,9 @@ impl ViewListSummary {
         store_root: &Path,
         filters: ViewListFilters,
         sort: ViewListSort,
+        summary_only: bool,
+        latest_per_profile: bool,
+        limit: Option<usize>,
         group_by: Vec<ViewListGroupBy>,
     ) -> Self {
         Self {
@@ -286,6 +305,9 @@ impl ViewListSummary {
             manifest_path: store_root.join("indexes").join("manifest.json"),
             status: "ok".to_string(),
             sort,
+            summary_only,
+            latest_per_profile,
+            limit,
             record_count: 0,
             filters,
             group_by,
@@ -364,6 +386,21 @@ fn print_view_list_text(summary: &ViewListSummary) -> i32 {
     println!("store root: {}", summary.store_root.display());
     println!("manifest path: {}", summary.manifest_path.display());
     println!("sort: {}", summary.sort.as_str());
+    println!(
+        "latest per profile: {}",
+        if summary.latest_per_profile {
+            "yes"
+        } else {
+            "no"
+        }
+    );
+    println!(
+        "summary only: {}",
+        if summary.summary_only { "yes" } else { "no" }
+    );
+    if let Some(limit) = summary.limit {
+        println!("limit: {limit}");
+    }
     println!("record count: {}", summary.record_count);
     if let Some(view_id) = &summary.filters.view_id {
         println!("filter view_id: {view_id}");
@@ -637,6 +674,26 @@ fn sort_view_records(records: &mut [ViewListRecord], sort: ViewListSort) {
     });
 }
 
+fn latest_profile_records(records: Vec<ViewListRecord>) -> Vec<ViewListRecord> {
+    let mut latest_by_profile = BTreeMap::<String, ViewListRecord>::new();
+
+    for record in records {
+        latest_by_profile
+            .entry(record.profile_id.clone())
+            .and_modify(|current| {
+                let is_newer = record.timestamp > current.timestamp;
+                let breaks_tie =
+                    record.timestamp == current.timestamp && record.view_id < current.view_id;
+                if is_newer || breaks_tie {
+                    *current = record.clone();
+                }
+            })
+            .or_insert(record);
+    }
+
+    latest_by_profile.into_values().collect()
+}
+
 fn build_view_group_summary(
     records: &[ViewListRecord],
     group_by: ViewListGroupBy,
@@ -701,11 +758,22 @@ fn build_view_group_summary(
 fn view_list(
     filters: ViewListFilters,
     sort: ViewListSort,
+    summary_only: bool,
+    latest_per_profile: bool,
+    limit: Option<usize>,
     group_by: Vec<ViewListGroupBy>,
     store_root: PathBuf,
     json: bool,
 ) -> Result<i32, CliError> {
-    let mut summary = ViewListSummary::new(&store_root, filters, sort, group_by);
+    let mut summary = ViewListSummary::new(
+        &store_root,
+        filters,
+        sort,
+        summary_only,
+        latest_per_profile,
+        limit,
+        group_by,
+    );
     let manifest = match load_store_index_manifest(&store_root) {
         Ok(manifest) => manifest,
         Err(error) => {
@@ -766,7 +834,13 @@ fn view_list(
         });
     }
 
+    if summary.latest_per_profile {
+        summary.records = latest_profile_records(std::mem::take(&mut summary.records));
+    }
     sort_view_records(&mut summary.records, summary.sort);
+    if let Some(limit) = summary.limit {
+        summary.records.truncate(limit);
+    }
     summary.record_count = summary.records.len();
     summary.groups = summary
         .group_by
@@ -778,6 +852,17 @@ fn view_list(
         "governance record listing is separate from reader-facing accepted-head workflows"
             .to_string(),
     );
+    if summary.latest_per_profile {
+        summary.notes.push(
+            "records were projected to the latest persisted view for each profile".to_string(),
+        );
+    }
+    if summary.summary_only {
+        summary
+            .notes
+            .push("per-record output was omitted because summary-only was requested".to_string());
+        summary.records.clear();
+    }
 
     if json {
         print_view_list_json(&summary)
@@ -978,6 +1063,9 @@ pub(crate) fn handle_view_command(command: ViewCliArgs) -> Result<i32, CliError>
                 timestamp_min,
                 timestamp_max,
                 sort,
+                limit,
+                latest_per_profile,
+                summary_only,
                 group_by: raw_group_by,
                 json,
                 extra: _,
@@ -1008,6 +1096,9 @@ pub(crate) fn handle_view_command(command: ViewCliArgs) -> Result<i32, CliError>
                     timestamp_max,
                 },
                 sort,
+                summary_only,
+                latest_per_profile,
+                limit,
                 group_by,
                 PathBuf::from(store_root),
                 json,

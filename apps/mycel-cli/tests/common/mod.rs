@@ -356,6 +356,18 @@ pub fn assert_view_list_help(stdout: &str) {
         "expected sort flag in help, stdout: {stdout}"
     );
     assert!(
+        stdout.contains("--limit <COUNT>"),
+        "expected limit flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--latest-per-profile"),
+        "expected latest-per-profile flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--summary-only"),
+        "expected summary-only flag in help, stdout: {stdout}"
+    );
+    assert!(
         stdout.contains("--group-by <GROUP_BY>"),
         "expected group-by flag in help, stdout: {stdout}"
     );

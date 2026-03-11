@@ -296,7 +296,7 @@ Still missing or incomplete:
 
 1. Broader governance-state persistence beyond selector and replay inputs
 2. Reader-facing profile ergonomics beyond the minimal named fixed-profile surface
-3. Richer governance retrieval and publication surfaces beyond the initial filtered/sorted `view` inspection/listing/publication surface
+3. Richer governance retrieval and publication surfaces beyond the initial filtered/sorted/projected `view` inspection/listing/publication surface
 4. Stronger dedicated governance-state tooling once wire and sync work begin to land
 
 ### Milestones in This Phase
@@ -328,7 +328,7 @@ Already visible in the repo:
 3. store-backed selector object loading for accepted-head inspection
 4. accepted-head rendering from persisted store state or explicit bundle objects
 5. named fixed-profile selection for accepted-head inspection and render workflows
-6. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, and grouped summaries
+6. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, grouped summaries, and projection modes
 7. simulator and validation workflows around peer, topology, test, and report scopes
 
 Main remaining gaps:
@@ -352,7 +352,7 @@ Implementation anchors:
    `cargo run -p mycel-cli -- head inspect <doc-id> --input <path-or-fixture> --json`
    `cargo run -p mycel-cli -- head render <doc-id> --input <path-or-fixture> --json`
    `cargo run -p mycel-cli -- view inspect <view-id> --store-root <store> --json`
-   `cargo run -p mycel-cli -- view list --store-root <store> --sort timestamp-desc --group-by profile-id --json`
+   `cargo run -p mycel-cli -- view list --store-root <store> --latest-per-profile --limit 10 --summary-only --group-by profile-id --json`
    `cargo run -p mycel-cli -- view publish <path> --into <store> --json`
    `cargo test -p mycel-cli head_inspect`
 
