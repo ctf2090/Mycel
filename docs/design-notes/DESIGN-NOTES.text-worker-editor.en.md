@@ -174,7 +174,39 @@ Pain points:
 - export may preserve content but not the reasoning chain behind accepted results
 - these tools help collect evidence, but they do not provide a governed text surface
 
-### 2.5 Shared Cross-domain Pain Points
+### 2.5 Annotation-first and Review-oriented Systems
+
+Some current tools do treat annotations as more explicit objects.
+They are important reference points even when they are not complete text-worker editors.
+
+Representative examples:
+
+- Microsoft Word comments
+- Google Docs comments
+- PDF annotation systems
+- Hypothesis
+- CATMA
+- INCEpTION
+
+Useful comparison:
+
+- Word and Google Docs have convenient annotation editors, but the annotation layer remains largely subordinate to a platform-owned document model
+- PDF annotation systems have strong annotation objects, but they are attached to fixed reading artifacts rather than living authoring documents
+- Hypothesis is strongly annotation-first and object-oriented, but it is primarily a reading and discussion system rather than a rich text authoring environment
+- CATMA and INCEpTION treat annotations as first-class structures, but they are oriented toward research annotation workflows more than familiar word-processor-style writing
+
+This produces a recurring split in current tooling:
+
+- mainstream editors are easier to write in
+- annotation-first systems are better at making annotations explicit and durable
+
+Mycel should not copy either side blindly.
+It should aim to combine:
+
+- the ease of Word- or Docs-like editorial interaction
+- the explicit annotation object model found in annotation-first systems
+
+### 2.6 Shared Cross-domain Pain Points
 
 Across law, scriptural work, and historical scholarship, the repeated problem is not lack of editing tools.
 The repeated problem is that the important layers are fragmented.
