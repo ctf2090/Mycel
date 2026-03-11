@@ -241,25 +241,25 @@ Recommended takeover note:
 
 - `taking over from coding-2 after interrupted chat`
 
-Recommended reopened coding chat startup:
+Recommended reopened chat startup:
 
 ```text
-coding-3 | pending-user-task
+<new-agent-id> | <scope-label>
 
-Please read AGENTS.md and operate as the coding agent.
+Please read AGENTS.md and operate as the <role> agent.
 
-已完成 interrupted-chat recovery，接下來我會接手前一個 coding chat 的工作。
+已完成 interrupted-chat recovery，接下來我會接手前一個中斷 chat 的工作。
 
 目前狀態：
 - repo 乾淨：## main...origin/main
 - 已讀取並套用 AGENTS.md、AGENTS-LOCAL.md、docs/AGENT-REGISTRY.md
-- 已執行 `scripts/agent-status.sh` 並確認舊 agent `coding-2` 需要接手
-- 已執行 `scripts/agent-recover.sh coding-2`，目前這個 chat 是 `coding-3`，狀態 active
-- 已讀取舊 mailbox `.agent-local/coding-2.md` 與新 mailbox `.agent-local/coding-3.md`
+- 已執行 `scripts/agent-status.sh` 並確認舊 agent `<old-agent-id>` 需要接手
+- 已執行 `scripts/agent-recover.sh <old-agent-id>`，目前這個 chat 是 `<new-agent-id>`，狀態 active
+- 已讀取舊 mailbox `.agent-local/<old-agent-id>.md` 與新 mailbox `.agent-local/<new-agent-id>.md`
 - 前一次已完成的 CI 正常：latest completed workflow success
-- 後續 commit 會用 `gpt-5:coding-3` 作為 agent identity
+- 後續 commit 會用 `gpt-5:<new-agent-id>` 作為 agent identity
 
-把接續的 coding 任務丟給我，我就直接開始做。
+把接續的任務丟給我，我就直接開始做。
 ```
 
 Keep this recovery startup output narrow:
@@ -268,6 +268,11 @@ Keep this recovery startup output narrow:
 - confirm that the old mailbox was read before resumed work
 - use the new replacement id in the self-label and agent identity line
 - do not claim new file-level context until the user gives the next concrete task
+
+Role note:
+
+- `coding` should keep the CI line because that role owns CI checks after pushes
+- `doc` can omit the CI line unless the maintainer explicitly asked that chat to monitor CI
 
 ## Mailbox Rule
 

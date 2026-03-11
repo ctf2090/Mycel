@@ -59,14 +59,19 @@ Interrupted chat recovery:
 3. either `scripts/agent-recover.sh <old-agent-id>` or run `scripts/agent-stop.sh <old-agent-id>` then `scripts/agent-claim.sh <role>` and `scripts/agent-start.sh <new-agent-id>`
 4. read the stale mailbox before resuming tracked work
 
-Reopened coding chat startup:
+Reopened chat startup:
 
-1. `read AGENTS.md, you are coding`
+1. `read AGENTS.md, you are <role>`
 2. `scripts/agent-status.sh`
 3. `scripts/agent-recover.sh <old-agent-id>`
 4. read `.agent-local/<old-agent-id>.md`
 5. read `.agent-local/<new-agent-id>.md`
 6. first chat line: `<new-agent-id> | <scope-label>`
+
+Role note:
+
+- `coding` usually reports the latest completed CI result after recovery
+- `doc` usually skips CI unless explicitly asked
 
 ## 10-Line Rule Set
 
