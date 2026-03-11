@@ -82,8 +82,8 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 - 协议核心：[PROTOCOL.en.md](./PROTOCOL.en.md)
 - 传输规则：[WIRE-PROTOCOL.en.md](./WIRE-PROTOCOL.en.md)
-- 实现顺序：[ROADMAP.md](./ROADMAP.md)
-- 实现检查清单：[IMPLEMENTATION-CHECKLIST.en.md](./IMPLEMENTATION-CHECKLIST.en.md)
+- 实现顺序：[ROADMAP.zh-CN.md](./ROADMAP.zh-CN.md)
+- 实现检查清单：[IMPLEMENTATION-CHECKLIST.zh-CN.md](./IMPLEMENTATION-CHECKLIST.zh-CN.md)
 
 ## 从这里开始参与贡献
 
@@ -103,13 +103,15 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 - [docs/MYCEL-GAP.zh-CN.md](./docs/MYCEL-GAP.zh-CN.md)
 - [docs/DEV-SETUP.zh-CN.md](./docs/DEV-SETUP.zh-CN.md)
 - [docs/TERMINOLOGY.zh-CN.md](./docs/TERMINOLOGY.zh-CN.md)
+- [ROADMAP.zh-CN.md](./ROADMAP.zh-CN.md)
+- [IMPLEMENTATION-CHECKLIST.zh-CN.md](./IMPLEMENTATION-CHECKLIST.zh-CN.md)
 
 后续如果继续扩展，优先顺序应该是：
 
-1. `ROADMAP.zh-CN.md`
-2. `IMPLEMENTATION-CHECKLIST.zh-CN.md`
-3. `PROTOCOL.zh-CN.md`
-4. `WIRE-PROTOCOL.zh-CN.md`
+1. `PROTOCOL.zh-CN.md`
+2. `WIRE-PROTOCOL.zh-CN.md`
+3. `PROJECT-INTENT.zh-CN.md`
+4. `docs/PLANNING-SYNC-PLAN.zh-CN.md`
 
 ## 许可证
 
