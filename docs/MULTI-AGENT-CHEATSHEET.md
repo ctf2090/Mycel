@@ -4,6 +4,15 @@ Status: draft
 
 Use this as the short maintainer view of [MULTI-AGENT-COORDINATION.md](./MULTI-AGENT-COORDINATION.md).
 
+## Agent Roles
+
+- `coding`: owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push
+- `doc`: owns document sync, design notes, roadmap/checklist refresh, and planning-surface wording; this role does not check CI by default
+
+Use `coding` when the main output is behavior, tests, fixtures, parser/verifier work, or CLI changes.
+
+Use `doc` when the main output is syncing planning or explanatory docs after behavior is already settled.
+
 ## 10-Line Rule Set
 
 1. Default to hybrid mode, not issue-for-everything.
@@ -73,10 +82,18 @@ Every handoff should say:
 
 - which issue was worked
 - which files changed
+- what behavior changed
+- whether protocol, schema, CLI, or fixture meaning changed
 - which verify commands passed
+- which docs are impacted
+- whether planning impact is `none`, `design-note`, `progress`, `roadmap`, `checklist`, or a short combination
 - what remains open
 
 Recommended format:
 
 - `Finished #4. Touched protocol.rs and object_verify_smoke.rs. Ran cargo test -p mycel-core and cargo test -p mycel-cli. Remaining follow-up: malformed snapshot fixtures.`
 - `Finished local CI-fix follow-up. Touched protocol.rs. Ran cargo fmt --all and cargo test --workspace. Remaining follow-up: none.`
+
+For `coding` to `doc` handoff, prefer:
+
+- `Finished #12. Touched verify.rs and object_verify_smoke.rs. Behavior change: reject duplicate revision parents earlier. Protocol/schema impact: none. Verify: cargo test -p mycel-core and cargo test -p mycel-cli. Docs impacted: none. Planning impact: checklist. Remaining follow-up: update IMPLEMENTATION-CHECKLIST after the batch lands.`
