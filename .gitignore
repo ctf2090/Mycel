@@ -1,4 +1,5 @@
 AGENTS-LOCAL.md
+.agent-local/
 target/
 sim/runtime/*
 !sim/runtime/README.md

@@ -1,38 +1,60 @@
-# Agent Handoff Log
+# Agent Handoff Protocol
 
-Status: active shared handoff surface for `coding` and `doc` roles
+Status: active local-mailbox protocol for `coding` and `doc` modes
 
-Use this file when one agent needs to pass implementation state to another agent without requiring both chats to be active at the same time.
+Use this file as the tracked specification for how the two agent modes communicate through local gitignored files.
 
-Primary use:
+The active mailbox files are not committed:
 
-- `coding` to `doc` handoff after issue resolution, feature work, or behavior-changing maintenance
-- `doc` follow-through notes after planning or explanatory docs are synced
-- chat-first work that still needs a durable repo-local handoff record
+- `.agent-local/coding-to-doc.md`
+- `.agent-local/doc-to-coding.md`
 
-Do not use this file for:
+The directory is ignored by git through `.gitignore`, so agents can exchange local state without polluting repo history.
 
-- long design discussion
-- speculative roadmap ideas not grounded in landed code or accepted design notes
-- replacing issue acceptance criteria or repo-level planning documents
+## Modes
+
+Use exactly two execution modes:
+
+- `coding`
+  resolves issues, implements features, runs local verification, commits and pushes, and checks CI after each push
+- `doc`
+  syncs design notes, roadmap/checklist surfaces, and explanatory docs; this mode does not check CI by default
+
+Use `coding` when the main output is behavior, tests, fixtures, parser/verifier work, or CLI changes.
+
+Use `doc` when the main output is document sync after implementation or accepted design direction already exists.
+
+## Mailbox Files
+
+Use one mailbox file in each direction:
+
+- `.agent-local/coding-to-doc.md`
+  implementation handoff, doc-impact notes, planning-surface follow-up, and unresolved doc requests
+- `.agent-local/doc-to-coding.md`
+  clarification requests, ambiguity reports, missing-source warnings, and doc-triggered follow-up requests
+
+Keep the newest entry at the top of each file.
+
+If the file does not exist yet, create it locally when the first message is needed.
 
 ## Workflow
 
-1. `coding` finishes one issue slice or one chat-first local scope.
-2. `coding` appends one new handoff entry at the top of this file.
-3. `coding` commits and pushes the related code or doc change.
-4. `doc` reads the newest unresolved handoff entry.
-5. `doc` updates only the docs named in the handoff.
-6. `doc` marks the handoff resolved, superseded, or blocked.
+1. `coding` finishes one issue slice or chat-first implementation slice.
+2. `coding` appends a new entry to `.agent-local/coding-to-doc.md`.
+3. `coding` commits and pushes the tracked code or doc changes.
+4. `doc` reads the newest open entry in `.agent-local/coding-to-doc.md`.
+5. `doc` updates only the docs justified by that message.
+6. `doc` appends any follow-up or blocking question to `.agent-local/doc-to-coding.md`.
+7. `doc` marks the original mailbox entry `resolved`, `blocked`, or `superseded`.
 
-If the work is issue-first, prefer leaving the same summary in the issue comment as well. This file is the repo-local fallback and shared queue.
+If the work is issue-first, the same summary can also be mirrored into the issue comment, but the local mailbox remains the default agent-to-agent transport.
 
 ## Required Fields
 
-Every handoff entry should include:
+Every mailbox entry should include:
 
 - date
-- role
+- mode
 - scope
 - status
 - files touched
@@ -61,7 +83,7 @@ Suggested `planning impact` values:
 
 ## Entry Template
 
-Copy this block for each new handoff and keep the newest entries first.
+Copy this block into either mailbox file and keep the newest entries first.
 
 ```md
 ## 2026-03-11 - coding - <scope>
@@ -76,15 +98,24 @@ Copy this block for each new handoff and keep the newest entries first.
 - Remaining follow-up: <one short sentence>
 ```
 
-When `doc` resolves a handoff, update the same entry:
+When `doc` resolves or responds, either update the original entry status or append a reply entry in `.agent-local/doc-to-coding.md`:
 
 ```md
+## 2026-03-11 - doc - <scope>
+
 - Status: resolved
-- Docs updated: `<path>`, `<path>`
-- Resolution note: <one short sentence>
+- Files touched: `<path>`, `<path>`
+- Behavior change: none
+- Protocol/schema/CLI/fixture impact: none
+- Verify commands: `not run`
+- Docs impacted: `<path>`, `<path>`
+- Planning impact: `checklist`
+- Remaining follow-up: none
 ```
 
 ## Example
+
+Example `coding` to `doc` message in `.agent-local/coding-to-doc.md`:
 
 ```md
 ## 2026-03-11 - coding - #12 duplicate revision parent strictness
@@ -98,7 +129,3 @@ When `doc` resolves a handoff, update the same entry:
 - Planning impact: `checklist`
 - Remaining follow-up: update the checklist after the batch lands
 ```
-
-## Current Queue
-
-No open handoffs yet.

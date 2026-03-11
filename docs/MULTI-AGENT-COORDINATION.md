@@ -2,7 +2,7 @@
 
 Status: draft
 
-This note describes how multiple AI coding agents should work in parallel in the Mycel repository without colliding on scope, files, or push order.
+This note describes how the `coding` and `doc` agent modes should work in parallel in the Mycel repository without colliding on scope, files, push order, or handoff flow.
 
 For the higher-level operating model that connects planning, issue intake, execution, verification, and human control, see [AI-CO-WORKING-MODEL.md](./AI-CO-WORKING-MODEL.md).
 
@@ -36,7 +36,7 @@ If a task cannot stay mostly inside one issue boundary, split the task instead o
 
 ## Agent Roles
 
-Use two explicit agent roles:
+Use two explicit agent modes:
 
 - `coding`
   owns issue resolution, feature work, local verification, commit and push flow, and CI checks after each push
@@ -250,7 +250,9 @@ When `coding` hands work to `doc`, use a real-time handoff that is structured en
 
 Default repo-local handoff surface:
 
-- append the entry to [AGENT-HANDOFF.md](./AGENT-HANDOFF.md)
+- write `coding` messages to the local gitignored file `.agent-local/coding-to-doc.md`
+- write `doc` replies or follow-up requests to the local gitignored file `.agent-local/doc-to-coding.md`
+- use [AGENT-HANDOFF.md](./AGENT-HANDOFF.md) only as the tracked protocol and template reference
 - if the work is issue-first, mirror the same summary in the issue comment when useful
 
 Required fields:
@@ -273,7 +275,7 @@ Recommended `doc` follow-through:
 - update only the docs named in the handoff
 - do not restate implementation details that are not confirmed by code or accepted design notes
 - if planning impact is `none`, avoid widening scope into roadmap or checklist edits
-- mark the handoff entry in [AGENT-HANDOFF.md](./AGENT-HANDOFF.md) as `resolved`, `blocked`, or `superseded`
+- mark the local mailbox entry as `resolved`, `blocked`, or `superseded`
 
 ## Maintainer View
 
