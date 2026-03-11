@@ -225,13 +225,13 @@ Implementation anchors：
 
 目前判讀：
 
-已大幅展開，但尚未完成。
+已大幅展開，但尚未完成。replay-based verification、store rebuild、persisted indexes，以及直接的 store-backed replay proof point 都已存在，但這個 milestone 仍未到可關閉狀態。
 
 主要剩餘缺口：
 
 1. 窄版 object-authoring 與 builder path
 2. 持久化 store indexes 在 reader workflows 中的更廣 reuse
-3. 與更真實 fixture sets 綁定的 replay 與 store reconstruction coverage
+3. 在目前直接 store-backed replay proof point 之外，進一步補強與更真實 fixture sets 綁定的 replay 與 store reconstruction coverage
 4. 文件清理，讓 roadmap 與 checklist 正確反映目前 store/replay baseline
 
 Implementation anchors：

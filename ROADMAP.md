@@ -225,13 +225,13 @@ Completion gate:
 
 Current read:
 
-Substantially underway.
+Substantially underway. Replay-based verification, store rebuild, persisted indexes, and a direct store-backed replay proof point now exist, but the milestone is still not closeable.
 
 Main remaining gaps:
 
 1. narrow object-authoring and builder path
 2. broader reuse of persisted store indexes across reader workflows
-3. stronger replay and store reconstruction coverage tied to more realistic fixture sets
+3. broader replay and store reconstruction coverage tied to more realistic fixture sets beyond the current direct store-backed replay proof point
 4. documentation cleanup so roadmap and checklist reflect the implemented store/replay baseline
 
 Implementation anchors:

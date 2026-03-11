@@ -852,7 +852,11 @@ mod tests {
     use serde_json::{json, Value};
     use sha2::{Digest, Sha256};
 
-    use super::{ingest_store_from_path, load_store_index_manifest, rebuild_store_from_path};
+    use super::{
+        ingest_store_from_path, load_store_index_manifest, load_stored_object_value,
+        rebuild_store_from_path,
+    };
+    use crate::replay::{compute_state_hash, replay_revision_from_index, DocumentState};
 
     fn signing_key() -> SigningKey {
         SigningKey::from_bytes(&[7u8; 32])
@@ -896,6 +900,16 @@ mod tests {
                 format!("{{{}}}", parts.join(","))
             }
         }
+    }
+
+    fn block(block_id: &str, content: &str) -> Value {
+        json!({
+            "block_id": block_id,
+            "block_type": "paragraph",
+            "content": content,
+            "attrs": {},
+            "children": []
+        })
     }
 
     fn recompute_id(value: &Value, id_field: &str, prefix: &str) -> String {
@@ -1407,6 +1421,183 @@ mod tests {
                 .as_ref()
                 .map(|path| path.file_name().and_then(|value| value.to_str())),
             Some(Some("manifest.json"))
+        );
+
+        let _ = fs::remove_dir_all(source_dir);
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn replay_rebuilds_document_state_from_stored_objects_only() {
+        let source_dir = write_temp_dir("replay-store-source");
+        let store_dir = write_temp_dir("replay-store-target");
+        let signer = signing_key();
+        let author = signer_id(&signer);
+
+        let base_patch = signed_object(
+            json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "doc_id": "doc:store-replay",
+                "base_revision": "rev:genesis-null",
+                "timestamp": 1u64,
+                "ops": [
+                    {
+                        "op": "insert_block",
+                        "new_block": {
+                            "block_id": "blk:001",
+                            "block_type": "paragraph",
+                            "content": "Hello",
+                            "attrs": {},
+                            "children": []
+                        }
+                    }
+                ]
+            }),
+            "author",
+            "patch_id",
+            "patch",
+        );
+        let base_patch_id = base_patch["patch_id"]
+            .as_str()
+            .expect("base patch id should exist")
+            .to_string();
+        fs::write(
+            source_dir.join("patch-base.json"),
+            serde_json::to_string_pretty(&base_patch).expect("base patch should serialize"),
+        )
+        .expect("base patch should write");
+
+        let base_state = DocumentState {
+            doc_id: "doc:store-replay".to_string(),
+            blocks: vec![
+                crate::protocol::parse_block_object(&block("blk:001", "Hello"))
+                    .expect("base block should parse"),
+            ],
+            metadata: serde_json::Map::new(),
+        };
+        let base_revision = signed_object(
+            json!({
+                "type": "revision",
+                "version": "mycel/0.1",
+                "doc_id": "doc:store-replay",
+                "parents": [],
+                "patches": [base_patch_id.clone()],
+                "state_hash": compute_state_hash(&base_state).expect("base state hash should compute"),
+                "timestamp": 2u64
+            }),
+            "author",
+            "revision_id",
+            "rev",
+        );
+        let base_revision_id = base_revision["revision_id"]
+            .as_str()
+            .expect("base revision id should exist")
+            .to_string();
+        fs::write(
+            source_dir.join("revision-base.json"),
+            serde_json::to_string_pretty(&base_revision).expect("base revision should serialize"),
+        )
+        .expect("base revision should write");
+
+        let child_patch = signed_object(
+            json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "doc_id": "doc:store-replay",
+                "base_revision": base_revision_id.clone(),
+                "timestamp": 3u64,
+                "ops": [
+                    {
+                        "op": "replace_block",
+                        "block_id": "blk:001",
+                        "new_content": "Hello from store"
+                    }
+                ]
+            }),
+            "author",
+            "patch_id",
+            "patch",
+        );
+        let child_patch_id = child_patch["patch_id"]
+            .as_str()
+            .expect("child patch id should exist")
+            .to_string();
+        fs::write(
+            source_dir.join("patch-child.json"),
+            serde_json::to_string_pretty(&child_patch).expect("child patch should serialize"),
+        )
+        .expect("child patch should write");
+
+        let expected_state = DocumentState {
+            doc_id: "doc:store-replay".to_string(),
+            blocks: vec![crate::protocol::parse_block_object(&block(
+                "blk:001",
+                "Hello from store",
+            ))
+            .expect("expected block should parse")],
+            metadata: serde_json::Map::new(),
+        };
+        let child_revision = signed_object(
+            json!({
+                "type": "revision",
+                "version": "mycel/0.1",
+                "doc_id": "doc:store-replay",
+                "parents": [base_revision_id.clone()],
+                "patches": [child_patch_id.clone()],
+                "state_hash": compute_state_hash(&expected_state).expect("child state hash should compute"),
+                "timestamp": 4u64
+            }),
+            "author",
+            "revision_id",
+            "rev",
+        );
+        let child_revision_id = child_revision["revision_id"]
+            .as_str()
+            .expect("child revision id should exist")
+            .to_string();
+        fs::write(
+            source_dir.join("revision-child.json"),
+            serde_json::to_string_pretty(&child_revision).expect("child revision should serialize"),
+        )
+        .expect("child revision should write");
+
+        let ingest =
+            ingest_store_from_path(&source_dir, &store_dir).expect("store ingest should succeed");
+        assert!(ingest.is_ok(), "expected ok ingest summary, got {ingest:?}");
+
+        let manifest =
+            load_store_index_manifest(&store_dir).expect("store manifest should be readable");
+        let mut object_index = std::collections::HashMap::new();
+        for object_ids in manifest.object_ids_by_type.values() {
+            for object_id in object_ids {
+                let value = load_stored_object_value(&store_dir, object_id)
+                    .expect("stored object should be readable");
+                object_index.insert(object_id.clone(), value);
+            }
+        }
+
+        let replay_revision = load_stored_object_value(&store_dir, &child_revision_id)
+            .expect("child revision should load from store");
+        let replay = replay_revision_from_index(&replay_revision, &object_index)
+            .expect("replay should work");
+
+        assert_eq!(replay.revision_id, child_revision_id);
+        assert_eq!(replay.state, expected_state);
+        assert_eq!(
+            replay.recomputed_state_hash,
+            compute_state_hash(&expected_state).expect("expected state hash should compute")
+        );
+        assert_eq!(
+            manifest.doc_revisions.get("doc:store-replay"),
+            Some(&vec![base_revision_id, child_revision_id.clone()])
+        );
+        assert_eq!(
+            manifest
+                .author_patches
+                .get(&author)
+                .expect("author patch index should exist"),
+            &vec![base_patch_id, child_patch_id]
         );
 
         let _ = fs::remove_dir_all(source_dir);

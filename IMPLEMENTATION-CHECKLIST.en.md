@@ -171,7 +171,7 @@ Defer if needed:
 - [ ] Verify example wire envelopes and `OBJECT` validation behavior.
 - [ ] Add negative tests for hash mismatch, signature mismatch, and invalid parent ordering.
 - [x] Add a round-trip test for canonical serialization.
-- [ ] Add a replay test that rebuilds document state from stored objects only.
+- [x] Add a replay test that rebuilds document state from stored objects only.
 
 ## 13. Ready-to-Build Gate
 

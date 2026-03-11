@@ -171,7 +171,7 @@
 - [ ] 驗證 example wire envelopes 與 `OBJECT` 驗證行為。
 - [ ] 加入 hash mismatch、signature mismatch、invalid parent ordering 的 negative tests。
 - [x] 加入 canonical serialization 的 round-trip test。
-- [ ] 加入只靠儲存物件重建 document state 的 replay test。
+- [x] 加入只靠儲存物件重建 document state 的 replay test。
 
 ## 13. 可開始建 client 的門檻
 
