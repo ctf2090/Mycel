@@ -930,6 +930,139 @@ fn head_render_json_replays_selected_head_from_store() {
 }
 
 #[test]
+fn head_render_store_backed_applies_editor_admission_from_profile() {
+    let doc_id = "doc:render-store-editor-admission";
+    let admitted_author = signing_key(87);
+    let non_admitted_author = signing_key(88);
+    let policy = json!({
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let admitted_patch = signed_patch(
+        &admitted_author,
+        doc_id,
+        "rev:genesis-null",
+        1000,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:render-admitted-001",
+                    "block_type": "paragraph",
+                    "content": "Admitted render line",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let admitted_revision = signed_revision_with_patches(
+        &admitted_author,
+        doc_id,
+        vec![],
+        vec![admitted_patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string()],
+        1010,
+        &document_state_hash(
+            doc_id,
+            vec![json!({
+                "block_id": "blk:render-admitted-001",
+                "block_type": "paragraph",
+                "content": "Admitted render line",
+                "attrs": {},
+                "children": []
+            })],
+        ),
+    );
+    let non_admitted_patch = signed_patch(
+        &non_admitted_author,
+        doc_id,
+        "rev:genesis-null",
+        1020,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:render-non-admitted-001",
+                    "block_type": "paragraph",
+                    "content": "Non-admitted render line",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let non_admitted_revision = signed_revision_with_patches(
+        &non_admitted_author,
+        doc_id,
+        vec![],
+        vec![non_admitted_patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string()],
+        1030,
+        &document_state_hash(
+            doc_id,
+            vec![json!({
+                "block_id": "blk:render-non-admitted-001",
+                "block_type": "paragraph",
+                "content": "Non-admitted render line",
+                "attrs": {},
+                "children": []
+            })],
+        ),
+    );
+    let store_dir = build_store_from_objects(&[
+        admitted_patch,
+        admitted_revision.clone(),
+        non_admitted_patch,
+        non_admitted_revision.clone(),
+    ]);
+    let mut profile = head_profile(hash_json(&policy), 1200);
+    profile["editor_admission"] = json!({
+        "mode": "admitted-only",
+        "admitted_keys": [signer_id(&admitted_author)]
+    });
+    let input = write_input_file(
+        "head-render-store-editor-admission",
+        "input.json",
+        json!({
+            "profile": profile,
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+
+    let output = run_mycel(&[
+        "head",
+        "render",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], admitted_revision["revision_id"]);
+    assert_eq!(json["rendered_text"], "Admitted render line");
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| entry
+                .as_str()
+                .is_some_and(|message| message.contains("store-backed replay")))),
+        "expected store-backed render note, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn head_render_text_reports_rendered_text() {
     let doc_id = "doc:render-text";
     let revision_author = signing_key(82);
@@ -1212,6 +1345,126 @@ fn head_render_json_uses_requested_named_profile_from_bundle() {
     assert_eq!(json["profile_id"], "preview");
     assert_eq!(json["selected_head"], revision_b["revision_id"]);
     assert_eq!(json["rendered_text"], "Preview line");
+}
+
+#[test]
+fn head_render_named_profile_applies_requested_editor_admission_mode() {
+    let doc_id = "doc:render-editor-profile";
+    let admitted_author = signing_key(89);
+    let non_admitted_author = signing_key(90);
+    let policy = json!({
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let admitted_patch = signed_patch(
+        &admitted_author,
+        doc_id,
+        "rev:genesis-null",
+        1000,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:render-profile-admitted-001",
+                    "block_type": "paragraph",
+                    "content": "Named admitted line",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let admitted_revision = signed_revision_with_patches(
+        &admitted_author,
+        doc_id,
+        vec![],
+        vec![admitted_patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string()],
+        1010,
+        &document_state_hash(
+            doc_id,
+            vec![json!({
+                "block_id": "blk:render-profile-admitted-001",
+                "block_type": "paragraph",
+                "content": "Named admitted line",
+                "attrs": {},
+                "children": []
+            })],
+        ),
+    );
+    let non_admitted_patch = signed_patch(
+        &non_admitted_author,
+        doc_id,
+        "rev:genesis-null",
+        1020,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:render-profile-non-admitted-001",
+                    "block_type": "paragraph",
+                    "content": "Named non-admitted line",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let non_admitted_revision = signed_revision_with_patches(
+        &non_admitted_author,
+        doc_id,
+        vec![],
+        vec![non_admitted_patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string()],
+        1030,
+        &document_state_hash(
+            doc_id,
+            vec![json!({
+                "block_id": "blk:render-profile-non-admitted-001",
+                "block_type": "paragraph",
+                "content": "Named non-admitted line",
+                "attrs": {},
+                "children": []
+            })],
+        ),
+    );
+    let stable = head_profile(hash_json(&policy), 1200);
+    let mut preview = head_profile(hash_json(&policy), 1200);
+    preview["editor_admission"] = json!({
+        "mode": "admitted-only",
+        "admitted_keys": [signer_id(&admitted_author)]
+    });
+    let bundle = json!({
+        "profiles": named_profiles(&[
+            ("stable", stable),
+            ("preview", preview)
+        ]),
+        "revisions": [admitted_revision.clone(), non_admitted_revision],
+        "objects": [admitted_patch, non_admitted_patch],
+        "views": [],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-render-editor-profile", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "render",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--profile-id",
+        "preview",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["profile_id"], "preview");
+    assert_eq!(json["selected_head"], admitted_revision["revision_id"]);
+    assert_eq!(json["rendered_text"], "Named admitted line");
 }
 
 #[test]
