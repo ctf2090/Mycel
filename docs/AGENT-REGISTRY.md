@@ -170,6 +170,43 @@ Recommended enforcement:
 
 If two `coding` agents would touch the same primary file or issue, one must pause or choose a narrower scope before proceeding.
 
+## Standard New Chat Startup
+
+Use this sequence in order. Do not run the registry commands in parallel.
+
+1. read `AGENTS.md`, `AGENTS-LOCAL.md`, and `docs/AGENT-REGISTRY.md`
+2. run `git status -sb`
+3. check `rg` and `gh`
+4. check the latest CI status from the previous push
+5. if the user declared only a role, run `scripts/agent-claim.sh <role> [--scope <scope>]`
+6. run `scripts/agent-start.sh <agent-id>`
+7. run `scripts/agent-status.sh <agent-id>`
+8. begin the chat with the startup self-label: `<agent-id> | <scope-label>`
+9. only after that, report repo status and wait for the concrete task
+
+Recommended startup output:
+
+```text
+coding-1 | pending-user-task
+
+Please read AGENTS.md and operate as the coding agent.
+
+目前已完成啟動流程，接下來我會照 coding agent 規則執行。
+
+目前狀態：
+- repo 狀態乾淨：main...origin/main，沒有未提交變更
+- 最新 CI 狀態正常
+- 已讀取並套用 AGENTS.md、AGENTS-LOCAL.md、docs/AGENT-REGISTRY.md
+- 已註冊為本地 coding agent：coding-1 | pending-user-task
+- 後續 commit 會用 `gpt-5:coding-1` 作為 agent identity
+```
+
+Keep this startup output narrow:
+
+- do not claim file-specific context before the user gives a concrete task
+- do not run `agent-claim`, `agent-start`, and `agent-status` in parallel
+- do not omit the startup self-label line
+
 ## Mailbox Rule
 
 The registry tells agents who exists. Mailboxes carry the actual messages.

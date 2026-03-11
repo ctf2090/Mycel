@@ -42,6 +42,15 @@ Startup self-label:
 
 - `<agent-id> | <scope-label>`
 
+Startup order:
+
+1. `scripts/agent-claim.sh <role> [--scope <scope>]` if needed
+2. `scripts/agent-start.sh <agent-id>`
+3. `scripts/agent-status.sh <agent-id>`
+4. first chat line: `<agent-id> | <scope-label>`
+
+Do not run `claim`, `start`, and `status` in parallel.
+
 ## 10-Line Rule Set
 
 1. Default to hybrid mode, not issue-for-everything.
