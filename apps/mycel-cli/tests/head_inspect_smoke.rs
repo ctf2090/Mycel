@@ -548,6 +548,87 @@ fn head_inspect_json_can_source_objects_from_store_index() {
 }
 
 #[test]
+fn head_inspect_store_backed_applies_editor_admission_from_profile() {
+    let doc_id = "doc:store-backed-editor-admission";
+    let admitted_author = signing_key(64);
+    let non_admitted_author = signing_key(65);
+    let policy = json!({
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let state_hash = empty_document_state_hash(doc_id);
+    let admitted_revision = signed_revision(&admitted_author, doc_id, vec![], 1000, &state_hash);
+    let non_admitted_revision =
+        signed_revision(&non_admitted_author, doc_id, vec![], 1010, &state_hash);
+    let store_dir =
+        build_store_from_objects(&[admitted_revision.clone(), non_admitted_revision.clone()]);
+    let mut profile = head_profile(hash_json(&policy), 1200);
+    profile["editor_admission"] = json!({
+        "mode": "admitted-only",
+        "admitted_keys": [signer_id(&admitted_author)]
+    });
+    let input = write_input_file(
+        "head-inspect-store-backed-editor-admission",
+        "input.json",
+        json!({
+            "profile": profile,
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], admitted_revision["revision_id"]);
+    let editor_candidates = json["editor_candidates"]
+        .as_array()
+        .expect("editor_candidates should be array");
+    assert!(
+        editor_candidates.iter().any(|entry| {
+            entry["revision_id"] == admitted_revision["revision_id"]
+                && entry["editor_admitted"] == Value::Bool(true)
+                && entry["candidate_eligible"] == Value::Bool(true)
+        }),
+        "expected admitted store-backed candidate summary, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        editor_candidates.iter().any(|entry| {
+            entry["revision_id"] == non_admitted_revision["revision_id"]
+                && entry["editor_admitted"] == Value::Bool(false)
+                && entry["candidate_eligible"] == Value::Bool(false)
+        }),
+        "expected filtered store-backed candidate summary, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("editor_admission")
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("mode=admitted-only")
+                            && detail.contains("structural_heads=2")
+                            && detail.contains("eligible=1")
+                    })
+            })),
+        "expected store-backed editor_admission trace, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn head_inspect_json_selects_requested_named_profile() {
     let doc_id = "doc:selected-profile";
     let revision_author = signing_key(63);
@@ -608,6 +689,75 @@ fn head_inspect_json_selects_requested_named_profile() {
     assert_eq!(json["profile_id"], "preview");
     assert_eq!(json["selected_head"], revision_b["revision_id"]);
     assert_eq!(json["effective_selection_time"], 30);
+}
+
+#[test]
+fn head_inspect_named_profile_applies_requested_editor_admission_mode() {
+    let doc_id = "doc:selected-editor-profile";
+    let admitted_author = signing_key(66);
+    let non_admitted_author = signing_key(67);
+    let policy = json!({
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let state_hash = empty_document_state_hash(doc_id);
+    let admitted_revision = signed_revision(&admitted_author, doc_id, vec![], 10, &state_hash);
+    let non_admitted_revision =
+        signed_revision(&non_admitted_author, doc_id, vec![], 20, &state_hash);
+    let stable = head_profile(hash_json(&policy), 30);
+    let mut preview = head_profile(hash_json(&policy), 30);
+    preview["editor_admission"] = json!({
+        "mode": "admitted-only",
+        "admitted_keys": [signer_id(&admitted_author)]
+    });
+    let bundle = json!({
+        "profiles": named_profiles(&[
+            ("stable", stable),
+            ("preview", preview)
+        ]),
+        "revisions": [admitted_revision.clone(), non_admitted_revision.clone()],
+        "views": [],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-selected-editor-profile", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--profile-id",
+        "preview",
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["profile_id"], "preview");
+    assert_eq!(json["selected_head"], admitted_revision["revision_id"]);
+    let eligible_heads = json["eligible_heads"]
+        .as_array()
+        .expect("eligible_heads should be array");
+    assert_eq!(eligible_heads.len(), 1);
+    assert_eq!(
+        eligible_heads[0]["revision_id"],
+        admitted_revision["revision_id"]
+    );
+    assert_eq!(eligible_heads[0]["editor_admitted"], Value::Bool(true));
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("editor_admission")
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("mode=admitted-only")
+                            && detail.contains("structural_heads=2")
+                            && detail.contains("eligible=1")
+                    })
+            })),
+        "expected named-profile editor_admission trace, stdout: {}",
+        stdout_text(&output)
+    );
 }
 
 #[test]
