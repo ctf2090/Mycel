@@ -241,6 +241,34 @@ Recommended takeover note:
 
 - `taking over from coding-2 after interrupted chat`
 
+Recommended reopened coding chat startup:
+
+```text
+coding-3 | pending-user-task
+
+Please read AGENTS.md and operate as the coding agent.
+
+已完成 interrupted-chat recovery，接下來我會接手前一個 coding chat 的工作。
+
+目前狀態：
+- repo 乾淨：## main...origin/main
+- 已讀取並套用 AGENTS.md、AGENTS-LOCAL.md、docs/AGENT-REGISTRY.md
+- 已執行 `scripts/agent-status.sh` 並確認舊 agent `coding-2` 需要接手
+- 已執行 `scripts/agent-recover.sh coding-2`，目前這個 chat 是 `coding-3`，狀態 active
+- 已讀取舊 mailbox `.agent-local/coding-2.md` 與新 mailbox `.agent-local/coding-3.md`
+- 前一次已完成的 CI 正常：latest completed workflow success
+- 後續 commit 會用 `gpt-5:coding-3` 作為 agent identity
+
+把接續的 coding 任務丟給我，我就直接開始做。
+```
+
+Keep this recovery startup output narrow:
+
+- identify the stale agent id explicitly
+- confirm that the old mailbox was read before resumed work
+- use the new replacement id in the self-label and agent identity line
+- do not claim new file-level context until the user gives the next concrete task
+
 ## Mailbox Rule
 
 The registry tells agents who exists. Mailboxes carry the actual messages.
