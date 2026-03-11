@@ -1074,14 +1074,14 @@ mod tests {
 
     use base64::Engine;
     use ed25519_dalek::SigningKey;
-    use serde_json::json;
+    use serde_json::{json, Value};
 
     use super::{
         commit_revision_to_store, create_document_in_store, create_merge_revision_in_store,
         create_patch_in_store, parse_signing_key_seed, signer_id, DocumentCreateParams,
         MergeOutcome, MergeRevisionCreateParams, PatchCreateParams, RevisionCommitParams,
     };
-    use crate::protocol::{parse_patch_object, PatchOperation};
+    use crate::protocol::{parse_patch_object, BlockObject, PatchOperation};
     use crate::replay::replay_revision_from_index;
     use crate::store::{load_store_index_manifest, load_stored_object_value};
 
@@ -1098,6 +1098,73 @@ mod tests {
     fn signing_key() -> SigningKey {
         parse_signing_key_seed(&base64::engine::general_purpose::STANDARD.encode([7u8; 32]))
             .expect("signing key seed should parse")
+    }
+
+    fn paragraph_block(block_id: &str, content: &str) -> BlockObject {
+        BlockObject {
+            block_id: block_id.to_string(),
+            block_type: "paragraph".to_string(),
+            content: content.to_string(),
+            attrs: serde_json::Map::new(),
+            children: Vec::new(),
+        }
+    }
+
+    fn paragraph_block_with_children(
+        block_id: &str,
+        content: &str,
+        children: Vec<BlockObject>,
+    ) -> BlockObject {
+        BlockObject {
+            children,
+            ..paragraph_block(block_id, content)
+        }
+    }
+
+    fn paragraph_block_with_attrs(
+        block_id: &str,
+        content: &str,
+        attrs: serde_json::Map<String, Value>,
+    ) -> BlockObject {
+        BlockObject {
+            attrs,
+            ..paragraph_block(block_id, content)
+        }
+    }
+
+    fn commit_ops_revision(
+        store_root: &std::path::Path,
+        signing_key: &SigningKey,
+        doc_id: &str,
+        base_revision: &str,
+        patch_timestamp: u64,
+        revision_timestamp: u64,
+        ops: Value,
+    ) -> String {
+        let patch = create_patch_in_store(
+            store_root,
+            signing_key,
+            &PatchCreateParams {
+                doc_id: doc_id.to_string(),
+                base_revision: base_revision.to_string(),
+                timestamp: patch_timestamp,
+                ops,
+            },
+        )
+        .expect("patch should be created");
+        commit_revision_to_store(
+            store_root,
+            signing_key,
+            &RevisionCommitParams {
+                doc_id: doc_id.to_string(),
+                parents: vec![base_revision.to_string()],
+                patches: vec![patch.patch_id],
+                merge_strategy: None,
+                timestamp: revision_timestamp,
+            },
+        )
+        .expect("revision should be committed")
+        .revision_id
     }
 
     #[test]
@@ -1519,6 +1586,207 @@ mod tests {
             PatchOperation::InsertBlockAfter { after_block_id, new_block }
             if after_block_id == "blk:merge-a" && new_block.block_id == "blk:merge-c"
         )));
+
+        let _ = fs::remove_dir_all(store_root);
+    }
+
+    #[test]
+    fn merge_authoring_marks_non_primary_structural_parent_choice_as_multi_variant() {
+        let store_root = temp_dir("merge-parent-choice");
+        let signing_key = signing_key();
+        let document = create_document_in_store(
+            &store_root,
+            &signing_key,
+            &DocumentCreateParams {
+                doc_id: "doc:merge-parent-choice".to_string(),
+                title: "Merge Parent Choice".to_string(),
+                language: "en".to_string(),
+                timestamp: 30,
+            },
+        )
+        .expect("document should be created");
+
+        let base_revision_id = commit_ops_revision(
+            &store_root,
+            &signing_key,
+            "doc:merge-parent-choice",
+            &document.genesis_revision_id,
+            31,
+            32,
+            json!([
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:merge-parent",
+                        "block_type": "paragraph",
+                        "content": "Parent",
+                        "attrs": {},
+                        "children": []
+                    }
+                },
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:merge-leaf",
+                        "block_type": "paragraph",
+                        "content": "Leaf",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]),
+        );
+
+        let moved_revision_id = commit_ops_revision(
+            &store_root,
+            &signing_key,
+            "doc:merge-parent-choice",
+            &base_revision_id,
+            33,
+            34,
+            json!([
+                {
+                    "op": "move_block",
+                    "block_id": "blk:merge-leaf",
+                    "parent_block_id": "blk:merge-parent"
+                }
+            ]),
+        );
+
+        let summary = create_merge_revision_in_store(
+            &store_root,
+            &signing_key,
+            &MergeRevisionCreateParams {
+                doc_id: "doc:merge-parent-choice".to_string(),
+                parents: vec![base_revision_id, moved_revision_id],
+                resolved_state: crate::replay::DocumentState {
+                    doc_id: "doc:merge-parent-choice".to_string(),
+                    blocks: vec![paragraph_block_with_children(
+                        "blk:merge-parent",
+                        "Parent",
+                        vec![paragraph_block("blk:merge-leaf", "Leaf")],
+                    )],
+                    metadata: serde_json::Map::new(),
+                },
+                merge_strategy: "semantic-block-merge".to_string(),
+                timestamp: 35,
+            },
+        )
+        .expect("merge revision should be created");
+
+        assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+        assert!(
+            summary
+                .merge_reasons
+                .iter()
+                .any(|reason| reason.contains("selected a non-primary parent variant")),
+            "expected structural multi-variant reason, got {summary:?}"
+        );
+        let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+            .expect("generated merge patch should be stored");
+        let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+        assert!(patch.ops.iter().any(|op| matches!(
+            op,
+            PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+            if block_id == "blk:merge-leaf" && parent_block_id == "blk:merge-parent"
+        )));
+
+        let _ = fs::remove_dir_all(store_root);
+    }
+
+    #[test]
+    fn merge_authoring_rejects_parent_matched_attr_variant_as_manual_curation_required() {
+        let store_root = temp_dir("merge-attrs-manual");
+        let signing_key = signing_key();
+        let document = create_document_in_store(
+            &store_root,
+            &signing_key,
+            &DocumentCreateParams {
+                doc_id: "doc:merge-attrs".to_string(),
+                title: "Merge Attrs".to_string(),
+                language: "en".to_string(),
+                timestamp: 40,
+            },
+        )
+        .expect("document should be created");
+
+        let base_revision_id = commit_ops_revision(
+            &store_root,
+            &signing_key,
+            "doc:merge-attrs",
+            &document.genesis_revision_id,
+            41,
+            42,
+            json!([
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:merge-attrs",
+                        "block_type": "paragraph",
+                        "content": "Attrs",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]),
+        );
+
+        let attrs_revision_id = commit_ops_revision(
+            &store_root,
+            &signing_key,
+            "doc:merge-attrs",
+            &base_revision_id,
+            43,
+            44,
+            json!([
+                {
+                    "op": "delete_block",
+                    "block_id": "blk:merge-attrs"
+                },
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:merge-attrs",
+                        "block_type": "paragraph",
+                        "content": "Attrs",
+                        "attrs": {
+                            "style": "note"
+                        },
+                        "children": []
+                    }
+                }
+            ]),
+        );
+
+        let mut attrs = serde_json::Map::new();
+        attrs.insert("style".to_string(), Value::String("note".to_string()));
+        let error = create_merge_revision_in_store(
+            &store_root,
+            &signing_key,
+            &MergeRevisionCreateParams {
+                doc_id: "doc:merge-attrs".to_string(),
+                parents: vec![base_revision_id, attrs_revision_id],
+                resolved_state: crate::replay::DocumentState {
+                    doc_id: "doc:merge-attrs".to_string(),
+                    blocks: vec![paragraph_block_with_attrs(
+                        "blk:merge-attrs",
+                        "Attrs",
+                        attrs,
+                    )],
+                    metadata: serde_json::Map::new(),
+                },
+                merge_strategy: "semantic-block-merge".to_string(),
+                timestamp: 45,
+            },
+        )
+        .expect_err("merge revision should require manual curation");
+
+        assert!(
+            error
+                .to_string()
+                .contains("manual-curation-required: block 'blk:merge-attrs' changes attrs in an unsupported way"),
+            "expected attrs manual-curation error, got {error}"
+        );
 
         let _ = fs::remove_dir_all(store_root);
     }

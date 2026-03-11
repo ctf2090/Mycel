@@ -65,7 +65,7 @@ Legend:
 | 9. Views and Head Selection | Mostly done | `M3` | deterministic selector core and named fixed-profile selection exist; dual-role closure remains |
 | 10. Merge Generation | Partial | `M2` | replay verification and a conservative local merge-authoring profile exist, including basic structural move/reorder coverage, but broader nested/reparenting merges still fall back to manual curation |
 | 11. CLI or API Surface | Partial | `M2` / `M3` | verification, authoring, conservative merge authoring, reader inspection/render, governance inspect/list/publish, and persisted governance index query surfaces exist; sync remains open |
-| 12. Interop Test Minimum | Partial | `M1` / `M2` | fixture isolation, reproducibility, and smoke coverage exist, but several normative wire and replay checks remain |
+| 12. Interop Test Minimum | Partial | `M1` / `M2` | fixture isolation, reproducibility, smoke coverage, and a broader merge-authoring structural matrix exist, but several normative wire and replay checks remain |
 | 13. Ready-to-Build Gate | Partial | whole plan | replay, head selection, rebuild, and conservative merge authoring are green; parse closure and wire sync are not |
 
 ## Suggested Reading Path
