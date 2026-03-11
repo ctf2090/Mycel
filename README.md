@@ -1,6 +1,6 @@
 # Mycel
 
-Language: English | [繁體中文](./README.zh-TW.md)
+Language: English | [繁體中文](./README.zh-TW.md) | [简体中文](./README.zh-CN.md)
 
 Mycel is a Rust-based protocol stack for verifiable text history, governed reading state, and decentralized replication.
 

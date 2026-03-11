@@ -1,6 +1,6 @@
 # Mycel
 
-語言：繁體中文 | [English](./README.md)
+語言：繁體中文 | [English](./README.md) | [简体中文](./README.zh-CN.md)
 
 Mycel 是一個以 Rust 實作為主的協定，用於可驗證的修訂歷史、依規則導出的預設閱讀版本，以及去中心化複製。
 
