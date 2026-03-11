@@ -108,18 +108,58 @@ fn signed_revision(
     timestamp: u64,
     state_hash: &str,
 ) -> Value {
+    signed_revision_with_patches(
+        signing_key,
+        doc_id,
+        parents,
+        Vec::new(),
+        timestamp,
+        state_hash,
+    )
+}
+
+fn signed_revision_with_patches(
+    signing_key: &SigningKey,
+    doc_id: &str,
+    parents: Vec<String>,
+    patches: Vec<String>,
+    timestamp: u64,
+    state_hash: &str,
+) -> Value {
     let mut value = json!({
         "type": "revision",
         "version": "mycel/0.1",
         "doc_id": doc_id,
         "parents": parents,
-        "patches": [],
+        "patches": patches,
         "state_hash": state_hash,
         "author": signer_id(signing_key),
         "timestamp": timestamp
     });
     let id = recompute_id(&value, "revision_id", "rev");
     value["revision_id"] = Value::String(id);
+    value["signature"] = Value::String(sign_value(signing_key, &value));
+    value
+}
+
+fn signed_patch(
+    signing_key: &SigningKey,
+    doc_id: &str,
+    base_revision: &str,
+    timestamp: u64,
+    ops: Value,
+) -> Value {
+    let mut value = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": doc_id,
+        "base_revision": base_revision,
+        "author": signer_id(signing_key),
+        "timestamp": timestamp,
+        "ops": ops
+    });
+    let id = recompute_id(&value, "patch_id", "patch");
+    value["patch_id"] = Value::String(id);
     value["signature"] = Value::String(sign_value(signing_key, &value));
     value
 }
@@ -182,6 +222,13 @@ fn empty_document_state_hash(doc_id: &str) -> String {
     hash_json(&json!({
         "doc_id": doc_id,
         "blocks": []
+    }))
+}
+
+fn document_state_hash(doc_id: &str, blocks: Vec<Value>) -> String {
+    hash_json(&json!({
+        "doc_id": doc_id,
+        "blocks": blocks
     }))
 }
 
@@ -475,6 +522,224 @@ fn head_inspect_store_root_reports_missing_manifest() {
         "expected missing manifest error, stdout: {}",
         stdout_text(&output)
     );
+}
+
+#[test]
+fn head_render_json_replays_selected_head_from_store() {
+    let doc_id = "doc:render";
+    let revision_author = signing_key(81);
+    let maintainer_a = signing_key(91);
+    let maintainer_b = signing_key(92);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let genesis_hash = empty_document_state_hash(doc_id);
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 1000, &genesis_hash);
+    let patch = signed_patch(
+        &revision_author,
+        doc_id,
+        revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist"),
+        1010,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:render-001",
+                    "block_type": "paragraph",
+                    "content": "Hello render",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:render-002",
+                            "block_type": "paragraph",
+                            "content": "Nested reply",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+    let revision_b = signed_revision_with_patches(
+        &revision_author,
+        doc_id,
+        vec![revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist")
+            .to_string()],
+        vec![patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string()],
+        1020,
+        &document_state_hash(
+            doc_id,
+            vec![json!({
+                "block_id": "blk:render-001",
+                "block_type": "paragraph",
+                "content": "Hello render",
+                "attrs": {},
+                "children": [
+                    {
+                        "block_id": "blk:render-002",
+                        "block_type": "paragraph",
+                        "content": "Nested reply",
+                        "attrs": {},
+                        "children": []
+                    }
+                ]
+            })],
+        ),
+    );
+    let view_a = signed_view(
+        &maintainer_a,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1100,
+    );
+    let view_b = signed_view(
+        &maintainer_b,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1110,
+    );
+    let store_dir =
+        build_store_from_objects(&[revision_a, patch, revision_b.clone(), view_a, view_b]);
+    let input = write_input_file(
+        "head-render-store-backed",
+        "input.json",
+        json!({
+            "profile": head_profile(hash_json(&policy), 1200),
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+
+    let output = run_mycel(&[
+        "head",
+        "render",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    assert_eq!(json["rendered_block_count"], 2);
+    assert_eq!(json["rendered_text"], "Hello render\n  Nested reply");
+    assert!(json["recomputed_state_hash"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("hash:")));
+    assert_eq!(
+        json["rendered_blocks"]
+            .as_array()
+            .and_then(|blocks| blocks.first())
+            .and_then(|block| block["content"].as_str()),
+        Some("Hello render")
+    );
+}
+
+#[test]
+fn head_render_text_reports_rendered_text() {
+    let doc_id = "doc:render-text";
+    let revision_author = signing_key(82);
+    let maintainer = signing_key(93);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let genesis_hash = empty_document_state_hash(doc_id);
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 1000, &genesis_hash);
+    let patch = signed_patch(
+        &revision_author,
+        doc_id,
+        revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist"),
+        1010,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:render-text-001",
+                    "block_type": "paragraph",
+                    "content": "Rendered line",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let revision_b = signed_revision_with_patches(
+        &revision_author,
+        doc_id,
+        vec![revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist")
+            .to_string()],
+        vec![patch["patch_id"]
+            .as_str()
+            .expect("patch id should exist")
+            .to_string()],
+        1020,
+        &document_state_hash(
+            doc_id,
+            vec![json!({
+                "block_id": "blk:render-text-001",
+                "block_type": "paragraph",
+                "content": "Rendered line",
+                "attrs": {},
+                "children": []
+            })],
+        ),
+    );
+    let view = signed_view(
+        &maintainer,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1100,
+    );
+    let store_dir = build_store_from_objects(&[revision_a, patch, revision_b, view]);
+    let input = write_input_file(
+        "head-render-store-backed-text",
+        "input.json",
+        json!({
+            "profile": head_profile(hash_json(&policy), 1200),
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+
+    let output = run_mycel(&[
+        "head",
+        "render",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "head render: ok");
+    assert_stdout_contains(&output, "rendered text:");
+    assert_stdout_contains(&output, "Rendered line");
 }
 
 #[test]

@@ -1,10 +1,11 @@
 mod common;
 
 use common::{
-    assert_head_inspect_help, assert_object_inspect_help, assert_object_verify_help,
-    assert_report_diff_help, assert_report_inspect_help, assert_report_latest_help,
-    assert_report_list_help, assert_report_stats_help, assert_sim_run_help, assert_stderr_text,
-    assert_stdout_text, assert_top_level_help, assert_validate_help, mycel_command,
+    assert_head_inspect_help, assert_head_render_help, assert_object_inspect_help,
+    assert_object_verify_help, assert_report_diff_help, assert_report_inspect_help,
+    assert_report_latest_help, assert_report_list_help, assert_report_stats_help,
+    assert_sim_run_help, assert_stderr_text, assert_stdout_text, assert_top_level_help,
+    assert_validate_help, mycel_command,
 };
 
 #[test]
@@ -51,6 +52,17 @@ fn head_inspect_help_prints_structured_clap_help() {
 
     assert_eq!(assert_stderr_text(&assert), "");
     assert_head_inspect_help(&stdout);
+}
+
+#[test]
+fn head_render_help_prints_structured_clap_help() {
+    let assert = mycel_command(&["head", "render", "--help"])
+        .assert()
+        .success();
+    let stdout = assert_stdout_text(&assert);
+
+    assert_eq!(assert_stderr_text(&assert), "");
+    assert_head_render_help(&stdout);
 }
 
 #[test]

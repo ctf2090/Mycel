@@ -256,6 +256,29 @@ pub fn assert_head_inspect_help(stdout: &str) {
     );
 }
 
+pub fn assert_head_render_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel head render"),
+        "expected head render usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Render one document's accepted text state from the store"),
+        "expected head render description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("DOC_ID"),
+        "expected doc id argument in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--input"),
+        "expected input flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--store-root <STORE_ROOT>"),
+        "expected required store-root flag in help, stdout: {stdout}"
+    );
+}
+
 pub fn assert_report_inspect_help(stdout: &str) {
     assert!(
         stdout.contains("Usage: mycel report inspect"),

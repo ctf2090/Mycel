@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::protocol::{canonical_json, hex_encode, parse_json_strict};
-use crate::store::{load_store_index_manifest, load_stored_object_value};
+use crate::protocol::{canonical_json, hex_encode, parse_json_strict, BlockObject};
+use crate::replay::{replay_revision_from_index, DocumentState};
+use crate::store::{load_store_index_manifest, load_store_object_index, load_stored_object_value};
 use crate::verify::verify_object_value;
 
 #[derive(Debug, Clone, Serialize)]
@@ -75,6 +76,32 @@ pub struct EligibleHeadSummary {
     pub weighted_support: u64,
     pub supporter_count: u64,
     pub selector_score: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HeadRenderSummary {
+    pub input_path: PathBuf,
+    pub store_root: PathBuf,
+    pub status: String,
+    pub doc_id: String,
+    pub profile_id: Option<String>,
+    pub effective_selection_time: Option<u64>,
+    pub selected_head: Option<String>,
+    pub recomputed_state_hash: Option<String>,
+    pub rendered_block_count: usize,
+    pub rendered_blocks: Vec<RenderedBlockSummary>,
+    pub rendered_text: String,
+    pub notes: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RenderedBlockSummary {
+    pub block_id: String,
+    pub block_type: String,
+    pub depth: usize,
+    pub content: String,
+    pub child_count: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -169,6 +196,35 @@ impl HeadInspectSummary {
     }
 }
 
+impl HeadRenderSummary {
+    fn new(input_path: &Path, store_root: &Path, doc_id: &str) -> Self {
+        Self {
+            input_path: input_path.to_path_buf(),
+            store_root: store_root.to_path_buf(),
+            status: "ok".to_string(),
+            doc_id: doc_id.to_string(),
+            profile_id: None,
+            effective_selection_time: None,
+            selected_head: None,
+            recomputed_state_hash: None,
+            rendered_block_count: 0,
+            rendered_blocks: Vec::new(),
+            rendered_text: String::new(),
+            notes: Vec::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn is_ok(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    fn push_error(&mut self, message: impl Into<String>) {
+        self.status = "failed".to_string();
+        self.errors.push(message.into());
+    }
+}
+
 pub fn inspect_heads_from_path(input_path: &Path, doc_id: &str) -> HeadInspectSummary {
     let (resolved_input_path, input) = match load_head_inspect_input(input_path, doc_id) {
         Ok(loaded) => loaded,
@@ -189,6 +245,67 @@ pub fn inspect_heads_from_store_path(
     };
 
     inspect_heads_from_loaded_input(resolved_input_path, input, doc_id, Some(store_root))
+}
+
+pub fn render_head_from_store_path(
+    input_path: &Path,
+    store_root: &Path,
+    doc_id: &str,
+) -> HeadRenderSummary {
+    let inspect_summary = inspect_heads_from_store_path(input_path, store_root, doc_id);
+    let mut summary = HeadRenderSummary::new(&inspect_summary.input_path, store_root, doc_id);
+    summary.profile_id = inspect_summary.profile_id.clone();
+    summary.effective_selection_time = inspect_summary.effective_selection_time;
+    summary.selected_head = inspect_summary.selected_head.clone();
+    summary.notes = inspect_summary.notes.clone();
+
+    if !inspect_summary.is_ok() {
+        summary.status = "failed".to_string();
+        summary.errors = inspect_summary.errors.clone();
+        return summary;
+    }
+
+    let Some(selected_head) = &inspect_summary.selected_head else {
+        summary.push_error("accepted-head inspection did not select a head");
+        return summary;
+    };
+
+    let object_index = match load_store_object_index(store_root) {
+        Ok(index) => index,
+        Err(error) => {
+            summary.push_error(format!("failed to load store object index: {error}"));
+            return summary;
+        }
+    };
+    let revision_value = match load_stored_object_value(store_root, selected_head) {
+        Ok(value) => value,
+        Err(error) => {
+            summary.push_error(format!(
+                "failed to load selected head '{selected_head}': {error}"
+            ));
+            return summary;
+        }
+    };
+    let replay = match replay_revision_from_index(&revision_value, &object_index) {
+        Ok(replay) => replay,
+        Err(error) => {
+            summary.push_error(format!(
+                "failed to replay selected head '{selected_head}': {error}"
+            ));
+            return summary;
+        }
+    };
+
+    summary.recomputed_state_hash = Some(replay.recomputed_state_hash);
+    summary.rendered_blocks = summarize_rendered_blocks(&replay.state);
+    summary.rendered_block_count = summary.rendered_blocks.len();
+    summary.rendered_text = render_document_text(&replay.state);
+    summary.notes.push(format!(
+        "rendered accepted head '{}' from store-backed replay",
+        selected_head
+    ));
+
+    summary
 }
 
 fn load_head_inspect_input(
@@ -1056,4 +1173,46 @@ fn hash_json(value: &Value) -> Result<String, String> {
     hasher.update(canonical.as_bytes());
     let digest = hasher.finalize();
     Ok(format!("hash:{}", hex_encode(&digest)))
+}
+
+fn summarize_rendered_blocks(state: &DocumentState) -> Vec<RenderedBlockSummary> {
+    let mut blocks = Vec::new();
+    collect_rendered_blocks(&state.blocks, 0, &mut blocks);
+    blocks
+}
+
+fn collect_rendered_blocks(
+    source: &[BlockObject],
+    depth: usize,
+    blocks: &mut Vec<RenderedBlockSummary>,
+) {
+    for block in source {
+        blocks.push(RenderedBlockSummary {
+            block_id: block.block_id.clone(),
+            block_type: block.block_type.clone(),
+            depth,
+            content: block.content.clone(),
+            child_count: block.children.len(),
+        });
+        collect_rendered_blocks(&block.children, depth + 1, blocks);
+    }
+}
+
+fn render_document_text(state: &DocumentState) -> String {
+    let mut lines = Vec::new();
+    render_block_lines(&state.blocks, 0, &mut lines);
+    lines.join("\n")
+}
+
+fn render_block_lines(blocks: &[BlockObject], depth: usize, lines: &mut Vec<String>) {
+    for block in blocks {
+        let indent = "  ".repeat(depth);
+        let line = if block.content.is_empty() {
+            format!("{indent}[{}]", block.block_type)
+        } else {
+            format!("{indent}{}", block.content)
+        };
+        lines.push(line);
+        render_block_lines(&block.children, depth + 1, lines);
+    }
 }

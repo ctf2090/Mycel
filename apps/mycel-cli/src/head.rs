@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
 use mycel_core::head::{
-    inspect_heads_from_path, inspect_heads_from_store_path, HeadInspectSummary,
+    inspect_heads_from_path, inspect_heads_from_store_path, render_head_from_store_path,
+    HeadInspectSummary, HeadRenderSummary,
 };
 
 use crate::{emit_error_line, CliError};
@@ -17,6 +18,8 @@ pub(crate) struct HeadCliArgs {
 enum HeadSubcommand {
     #[command(about = "Inspect one document's accepted head")]
     Inspect(HeadInspectCliArgs),
+    #[command(about = "Render one document's accepted text state from the store")]
+    Render(HeadRenderCliArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
 }
@@ -44,6 +47,35 @@ struct HeadInspectCliArgs {
     )]
     store_root: Option<String>,
     #[arg(long, help = "Emit machine-readable head inspection output")]
+    json: bool,
+    #[arg(hide = true, allow_hyphen_values = true)]
+    extra: Vec<String>,
+}
+
+#[derive(Args)]
+struct HeadRenderCliArgs {
+    #[arg(
+        value_name = "DOC_ID",
+        help = "Document identifier to render",
+        required = true,
+        allow_hyphen_values = true
+    )]
+    doc_id: String,
+    #[arg(
+        long,
+        value_name = "PATH_OR_FIXTURE",
+        help = "Input bundle path or repo fixture name",
+        required = true
+    )]
+    input: String,
+    #[arg(
+        long,
+        value_name = "STORE_ROOT",
+        help = "Load selector and replay objects from a persisted store index",
+        required = true
+    )]
+    store_root: String,
+    #[arg(long, help = "Emit machine-readable accepted-head render output")]
     json: bool,
     #[arg(hide = true, allow_hyphen_values = true)]
     extra: Vec<String>,
@@ -111,6 +143,57 @@ fn print_head_inspect_json(summary: &HeadInspectSummary) -> Result<i32, CliError
     }
 }
 
+fn print_head_render_text(summary: &HeadRenderSummary) -> i32 {
+    println!("input path: {}", summary.input_path.display());
+    println!("store root: {}", summary.store_root.display());
+    println!("doc id: {}", summary.doc_id);
+    if let Some(profile_id) = &summary.profile_id {
+        println!("profile id: {profile_id}");
+    }
+    if let Some(effective_selection_time) = summary.effective_selection_time {
+        println!("effective selection time: {effective_selection_time}");
+    }
+    if let Some(selected_head) = &summary.selected_head {
+        println!("selected head: {selected_head}");
+    }
+    if let Some(recomputed_state_hash) = &summary.recomputed_state_hash {
+        println!("recomputed state hash: {recomputed_state_hash}");
+    }
+    println!("rendered blocks: {}", summary.rendered_block_count);
+    if !summary.rendered_text.is_empty() {
+        println!("rendered text:");
+        println!("{}", summary.rendered_text);
+    }
+    for note in &summary.notes {
+        println!("note: {note}");
+    }
+
+    if summary.is_ok() {
+        println!("head render: ok");
+        0
+    } else {
+        println!("head render: failed");
+        for error in &summary.errors {
+            emit_error_line(error);
+        }
+        1
+    }
+}
+
+fn print_head_render_json(summary: &HeadRenderSummary) -> Result<i32, CliError> {
+    match serde_json::to_string_pretty(summary) {
+        Ok(json) => {
+            println!("{json}");
+            if summary.is_ok() {
+                Ok(0)
+            } else {
+                Ok(1)
+            }
+        }
+        Err(source) => Err(CliError::serialization("head render summary", source)),
+    }
+}
+
 fn head_inspect(
     doc_id: String,
     input_path: PathBuf,
@@ -125,6 +208,20 @@ fn head_inspect(
         print_head_inspect_json(&summary)
     } else {
         Ok(print_head_inspect_text(&summary))
+    }
+}
+
+fn head_render(
+    doc_id: String,
+    input_path: PathBuf,
+    store_root: PathBuf,
+    json: bool,
+) -> Result<i32, CliError> {
+    let summary = render_head_from_store_path(&input_path, &store_root, &doc_id);
+    if json {
+        print_head_render_json(&summary)
+    } else {
+        Ok(print_head_render_text(&summary))
     }
 }
 
@@ -145,6 +242,18 @@ pub(crate) fn handle_head_command(command: HeadCliArgs) -> Result<i32, CliError>
                 args.doc_id,
                 PathBuf::from(args.input),
                 args.store_root.map(PathBuf::from),
+                args.json,
+            )
+        }
+        Some(HeadSubcommand::Render(args)) => {
+            if let Some(message) = unexpected_extra(&args.extra, "head render") {
+                return Err(CliError::usage(message));
+            }
+
+            head_render(
+                args.doc_id,
+                PathBuf::from(args.input),
+                PathBuf::from(args.store_root),
                 args.json,
             )
         }
