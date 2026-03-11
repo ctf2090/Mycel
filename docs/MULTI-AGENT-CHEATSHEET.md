@@ -4,6 +4,8 @@ Status: draft
 
 Use this as the short maintainer view of [MULTI-AGENT-COORDINATION.md](./MULTI-AGENT-COORDINATION.md).
 
+Repo-local handoff queue: [AGENT-HANDOFF.md](./AGENT-HANDOFF.md)
+
 ## Agent Roles
 
 - `coding`: owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push
@@ -97,3 +99,5 @@ Recommended format:
 For `coding` to `doc` handoff, prefer:
 
 - `Finished #12. Touched verify.rs and object_verify_smoke.rs. Behavior change: reject duplicate revision parents earlier. Protocol/schema impact: none. Verify: cargo test -p mycel-core and cargo test -p mycel-cli. Docs impacted: none. Planning impact: checklist. Remaining follow-up: update IMPLEMENTATION-CHECKLIST after the batch lands.`
+
+If there is no active issue comment thread, append the same content to [AGENT-HANDOFF.md](./AGENT-HANDOFF.md).

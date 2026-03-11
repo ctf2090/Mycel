@@ -11,6 +11,7 @@ For the short maintainer version, see [MULTI-AGENT-CHEATSHEET.md](./MULTI-AGENT-
 Use it together with:
 
 - [AI-CO-WORKING-MODEL.md](./AI-CO-WORKING-MODEL.md)
+- [AGENT-HANDOFF.md](./AGENT-HANDOFF.md)
 - [BOT-CONTRIBUTING.md](../BOT-CONTRIBUTING.md)
 - [ROADMAP.md](../ROADMAP.md)
 - [IMPLEMENTATION-CHECKLIST.en.md](../IMPLEMENTATION-CHECKLIST.en.md)
@@ -247,6 +248,11 @@ Example:
 
 When `coding` hands work to `doc`, use a real-time handoff that is structured enough for doc sync without rereading the full diff.
 
+Default repo-local handoff surface:
+
+- append the entry to [AGENT-HANDOFF.md](./AGENT-HANDOFF.md)
+- if the work is issue-first, mirror the same summary in the issue comment when useful
+
 Required fields:
 
 - scope or issue label
@@ -267,6 +273,7 @@ Recommended `doc` follow-through:
 - update only the docs named in the handoff
 - do not restate implementation details that are not confirmed by code or accepted design notes
 - if planning impact is `none`, avoid widening scope into roadmap or checklist edits
+- mark the handoff entry in [AGENT-HANDOFF.md](./AGENT-HANDOFF.md) as `resolved`, `blocked`, or `superseded`
 
 ## Maintainer View
 
