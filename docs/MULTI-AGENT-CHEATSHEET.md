@@ -33,13 +33,14 @@ No tracked work starts until the agent confirms its own entry in `.agent-local/a
 
 Startup command:
 
+- `scripts/agent-claim.sh <role> [--scope <scope>]`
 - `scripts/agent-start.sh <agent-id>`
 - `scripts/agent-status.sh [<agent-id>]`
 
 ## 10-Line Rule Set
 
 1. Default to hybrid mode, not issue-for-everything.
-2. Read `.agent-local/agents.json` and confirm your assigned role before editing tracked files.
+2. Read `.agent-local/agents.json`; if the user declared only a role, claim an id first with `scripts/agent-claim.sh <role>`.
 3. Use one agent per issue when the work needs claims, handoff, or more than one commit.
 4. One active issue should map to one chat and one worktree or isolated session.
 5. Small local fixes can stay chat-first, but do not let them widen silently.

@@ -10,6 +10,7 @@ The live registry file is local and gitignored:
 
 Recommended startup gate:
 
+- `scripts/agent-claim.sh <role> [--scope <scope>]`
 - `scripts/agent-start.sh <agent-id>`
 
 Recommended status command:
@@ -25,6 +26,8 @@ Agents should read `.agent-local/agents.json` at the start of work to discover:
 - whether the agent has already confirmed that assignment
 - each agent's current scope
 - whether a peer agent is active, paused, or done
+
+If a new chat receives only a role declaration such as `you are coding` or `you are doc`, the agent should claim a fresh id with `scripts/agent-claim.sh <role>` before running `scripts/agent-start.sh <agent-id>`.
 
 ## Role Model
 
@@ -138,21 +141,22 @@ If any of those checks fail, the agent must stop before editing tracked files an
 
 Recommended enforcement:
 
-1. a maintainer or coordinator writes the assignment entry
+1. either a maintainer writes the assignment entry or the agent claims a new entry with `scripts/agent-claim.sh <role>`
 2. the agent runs `scripts/agent-start.sh <agent-id>`
-3. the script confirms the role, sets `confirmed_by_agent: true`, stamps `confirmed_at`, and creates the mailbox if needed
+3. the start script confirms the role, sets `confirmed_by_agent: true`, stamps `confirmed_at`, and creates the mailbox if needed
 4. only then may tracked work begin
 
 ## Workflow
 
 1. Before starting work, an agent reads `.agent-local/agents.json`.
 2. The agent confirms the current agent count and scans the existing scopes and file sets.
-3. A maintainer or coordinator writes the agent entry with `role`, `assigned_by`, `assigned_at`, `scope`, and `mailbox`.
-4. The agent confirms its own assignment by running `scripts/agent-start.sh <agent-id>`.
-5. Only after confirmation may the agent start tracked work.
-6. The agent uses its own `mailbox` file for peer coordination and handoff traffic.
-7. When scope changes, the agent updates its registry entry.
-8. When work is finished or paused, the agent updates `status`.
+3. If no entry exists yet but the role is known, the agent may claim a new id with `scripts/agent-claim.sh <role>`.
+4. Otherwise, a maintainer or coordinator writes the agent entry with `role`, `assigned_by`, `assigned_at`, `scope`, and `mailbox`.
+5. The agent confirms its own assignment by running `scripts/agent-start.sh <agent-id>`.
+6. Only after confirmation may the agent start tracked work.
+7. The agent uses its own `mailbox` file for peer coordination and handoff traffic.
+8. When scope changes, the agent updates its registry entry.
+9. When work is finished or paused, the agent updates `status`.
 
 If two `coding` agents would touch the same primary file or issue, one must pause or choose a narrower scope before proceeding.
 

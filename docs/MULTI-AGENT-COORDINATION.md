@@ -56,6 +56,7 @@ No agent may start tracked work until it has confirmed its own assigned role in 
 
 Recommended startup command:
 
+- `scripts/agent-claim.sh <role> [--scope <scope>]`
 - `scripts/agent-start.sh <agent-id>`
 - `scripts/agent-status.sh [<agent-id>]`
 
@@ -94,14 +95,15 @@ Practical default:
 Before an agent starts:
 
 1. read `.agent-local/agents.json`
-2. confirm the entry has `role`, `assigned_by`, and `assigned_at`
-3. run `scripts/agent-start.sh <agent-id>`
-4. only then decide whether the task is issue-first or chat-first
-5. if it is issue-first, choose one open issue
-6. check whether another agent or human is already working on it
-7. leave a short claim note in the issue or team channel
-8. confirm the likely file set before editing
-9. update the local registry entry when scope or status changes
+2. if the user already declared a role but no entry exists, run `scripts/agent-claim.sh <role>`
+3. confirm the entry has `role`, `assigned_by`, and `assigned_at`
+4. run `scripts/agent-start.sh <agent-id>`
+5. only then decide whether the task is issue-first or chat-first
+6. if it is issue-first, choose one open issue
+7. check whether another agent or human is already working on it
+8. leave a short claim note in the issue or team channel
+9. confirm the likely file set before editing
+10. update the local registry entry when scope or status changes
 
 Recommended claim format:
 
