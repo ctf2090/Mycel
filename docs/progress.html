@@ -83,6 +83,13 @@
         color: var(--muted);
       }
 
+      .nav-links a[aria-current="page"] {
+        color: var(--ink);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 0.18em;
+      }
+
       .panel {
         background: var(--surface);
         border: 1px solid var(--line);
@@ -327,7 +334,7 @@
           <a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.md">Dev Setup</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/README.md">README</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.en.md">Protocol</a>
-          <a href="/Mycel/progress.html">Progress</a>
+          <a href="/Mycel/progress.html" aria-current="page">Progress</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/docs/OUTWARD-RELEASE-CHECKLIST.md">Checklist</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Roadmap</a>
         </div>

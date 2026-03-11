@@ -83,6 +83,13 @@
         color: var(--muted);
       }
 
+      .nav-links a[aria-current="page"] {
+        color: var(--ink);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 0.18em;
+      }
+
       .panel {
         background: var(--surface);
         border: 1px solid var(--line);
@@ -327,7 +334,7 @@
           <a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.zh-CN.md">开发环境</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/README.zh-CN.md">README</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.zh-CN.md">协议</a>
-          <a href="/Mycel/zh-CN/progress.html">进度</a>
+          <a href="/Mycel/zh-CN/progress.html" aria-current="page">进度</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/docs/OUTWARD-RELEASE-CHECKLIST.md">检查清单</a>
           <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.zh-CN.md">路线图</a>
         </div>
