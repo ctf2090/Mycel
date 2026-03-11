@@ -11,6 +11,10 @@
 - optional runtime 可協助做檢索、通知或草稿準備
 - core protocol 保持中立且純技術化
 
+另見：
+
+- [`DESIGN-NOTES.forum-qa-relationship.zh-TW.md`](./DESIGN-NOTES.forum-qa-relationship.zh-TW.md)：說明 Q&A 與 Forum app-layer examples 的邊界
+
 ## 0. 目標
 
 讓 Mycel 可以承載一個可持久保存的 Q&A 系統，同時不把核心協議變成特定領域的問答引擎。

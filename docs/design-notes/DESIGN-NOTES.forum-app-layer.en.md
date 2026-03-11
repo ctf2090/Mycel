@@ -12,6 +12,10 @@ The main design principle is:
 - one accepted forum reading is derived under the active profile
 - the core protocol remains neutral and purely technical
 
+See also:
+
+- [`DESIGN-NOTES.forum-qa-relationship.en.md`](./DESIGN-NOTES.forum-qa-relationship.en.md) for the boundary between the Forum and Q&A app-layer examples
+
 ## 0. Goal
 
 Enable Mycel to carry a durable forum system without turning the core protocol into a forum-specific primitive set.

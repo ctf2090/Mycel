@@ -11,6 +11,10 @@ The main design principle is:
 - an optional runtime assists with retrieval, notification, or draft preparation
 - the core protocol remains neutral and purely technical
 
+See also:
+
+- [`DESIGN-NOTES.forum-qa-relationship.en.md`](./DESIGN-NOTES.forum-qa-relationship.en.md) for the boundary between the Q&A and Forum app-layer examples
+
 ## 0. Goal
 
 Enable Mycel to carry a durable Q&A system without turning the core protocol into a domain-specific answer engine.

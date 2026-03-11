@@ -12,6 +12,10 @@
 - 在 active profile 下導出一個 accepted forum reading
 - core protocol 保持中立且純技術化
 
+另見：
+
+- [`DESIGN-NOTES.forum-qa-relationship.zh-TW.md`](./DESIGN-NOTES.forum-qa-relationship.zh-TW.md)：說明 Forum 與 Q&A app-layer examples 的邊界
+
 ## 0. 目標
 
 讓 Mycel 可以承載一個可持久保存的 forum system，同時不把 core protocol 變成 forum-specific 的 primitive set。
