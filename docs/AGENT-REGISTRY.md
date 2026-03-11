@@ -13,6 +13,7 @@ Recommended startup gate:
 - `scripts/agent-claim.sh <role> [--scope <scope>]`
 - `scripts/agent-start.sh <agent-id>`
 - `scripts/agent-stop.sh <agent-id> [--status paused|done]`
+- `scripts/agent-recover.sh <stale-agent-id> [--scope <scope>]`
 
 Recommended status command:
 
@@ -227,10 +228,14 @@ Recommended recovery sequence:
 1. run `scripts/agent-status.sh`
 2. identify the stale `active` agent
 3. read `.agent-local/<agent-id>.md`
-4. run `scripts/agent-stop.sh <old-agent-id>`
-5. run `scripts/agent-claim.sh <role> [--scope <scope>]`
-6. run `scripts/agent-start.sh <new-agent-id>`
-7. append a takeover note in the new mailbox
+4. either run `scripts/agent-stop.sh <old-agent-id>` then `scripts/agent-claim.sh <role>` plus `scripts/agent-start.sh <new-agent-id>`, or use `scripts/agent-recover.sh <old-agent-id>`
+5. read the stale mailbox before resuming tracked work
+
+Recommended scripted shortcut:
+
+- `scripts/agent-recover.sh <old-agent-id>`
+
+The recovery helper pauses the stale agent, creates a fresh id for the same role, starts the replacement entry immediately, and appends the default takeover note to the new mailbox.
 
 Recommended takeover note:
 

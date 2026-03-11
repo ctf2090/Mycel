@@ -60,6 +60,7 @@ Recommended startup command:
 - `scripts/agent-start.sh <agent-id>`
 - `scripts/agent-status.sh [<agent-id>]`
 - `scripts/agent-stop.sh <agent-id> [--status paused|done]`
+- `scripts/agent-recover.sh <stale-agent-id> [--scope <scope>]`
 
 Recommended startup self-label:
 
@@ -261,9 +262,9 @@ Recovery sequence:
 1. inspect `.agent-local/agents.json`
 2. run `scripts/agent-status.sh`
 3. read the stale agent's mailbox
-4. if the chat is clearly gone, run `scripts/agent-stop.sh <agent-id>` and mark it `paused`
-5. claim and start a new agent id for the replacement chat
-6. leave a takeover note in the new mailbox before resuming tracked work
+4. if the chat is clearly gone, either run `scripts/agent-recover.sh <agent-id>` or run `scripts/agent-stop.sh <agent-id>` followed by `scripts/agent-claim.sh <role>` and `scripts/agent-start.sh <new-agent-id>`
+5. read the stale mailbox before resuming tracked work
+6. continue work only under the new agent id
 
 Do not silently reuse the old agent id for a new chat after an interruption.
 

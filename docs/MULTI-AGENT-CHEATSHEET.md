@@ -37,6 +37,7 @@ Startup command:
 - `scripts/agent-start.sh <agent-id>`
 - `scripts/agent-status.sh [<agent-id>]`
 - `scripts/agent-stop.sh <agent-id> [--status paused|done]`
+- `scripts/agent-recover.sh <stale-agent-id> [--scope <scope>]`
 
 Startup self-label:
 
@@ -55,10 +56,8 @@ Interrupted chat recovery:
 
 1. `scripts/agent-status.sh`
 2. read the stale agent mailbox
-3. `scripts/agent-stop.sh <old-agent-id>`
-4. `scripts/agent-claim.sh <role>`
-5. `scripts/agent-start.sh <new-agent-id>`
-6. leave a takeover note
+3. either `scripts/agent-recover.sh <old-agent-id>` or run `scripts/agent-stop.sh <old-agent-id>` then `scripts/agent-claim.sh <role>` and `scripts/agent-start.sh <new-agent-id>`
+4. read the stale mailbox before resuming tracked work
 
 ## 10-Line Rule Set
 
