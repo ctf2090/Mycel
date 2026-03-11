@@ -35,7 +35,169 @@ The target user is a text worker such as:
 The goal is not to clone one existing word processor.
 The goal is to identify what those users actually need, and how that should map onto Mycel objects, history, governance, and accepted reading.
 
-## 1. Why This Needs Its Own Note
+## 1. Why This May Become the First Major App-layer Demand
+
+The text-worker editor is likely to become the first major app-layer demand on top of Mycel.
+
+That does not mean it should be the first fully delivered app.
+It means this is the first place where Mycel's protocol value turns into an obvious product need.
+
+This demand is strong because serious text work often requires all of the following at once:
+
+- long-lived revision history
+- heavy annotation and commentary
+- multiple candidate readings or branches
+- explicit citation and provenance
+- a visible distinction between draft state and accepted state
+
+Those needs appear directly in legal drafting, scriptural and commentary work, historical scholarship, governed reference texts, and archival curation.
+
+In those domains, ordinary word processors are familiar but insufficient, and protocol-inspection tooling is precise but insufficient.
+Mycel therefore needs an authoring client that can bridge the two.
+
+This is why the editor should be treated as a likely first major app-layer demand, even if reader-first protocol validation still comes earlier in the build order.
+
+## 2. Current Tooling and Its Pain Points
+
+Text workers who produce or maintain heavily annotated texts do not use one perfect editor today.
+They usually assemble a tool stack.
+
+### 2.1 Word Processors
+
+Common tools:
+
+- Microsoft Word
+- LibreOffice Writer
+
+Common users:
+
+- legal drafters
+- policy writers
+- historians writing long-form prose with notes
+- many religious-studies and commentary authors during drafting
+
+Strengths:
+
+- mature footnotes and endnotes
+- comments and tracked changes
+- familiar rich-text editing
+- print-oriented output
+
+Pain points:
+
+- long documents with dense notes become hard to manage
+- version branches are awkward and often collapse into file duplication
+- commentary, body text, and source logic are mixed together
+- revision history is visible but not strongly verifiable
+
+### 2.2 Scholarly Typesetting Systems
+
+Common tools:
+
+- LaTeX
+- Overleaf
+
+Common users:
+
+- historians
+- textual scholars
+- religious and classical studies authors
+- citation-heavy academic writers
+
+Strengths:
+
+- strong footnotes, references, and cross-references
+- good control over long-form structure
+- strong export and publication output
+
+Pain points:
+
+- authoring is not comfortable for many non-technical text workers
+- collaboration and commentary often feel bolted on
+- the system is strong at typesetting but weak at representing competing accepted readings
+- branch meaning is still mostly external to the text model
+
+### 2.3 Structured Text and Encoding Editors
+
+Common tools:
+
+- TEI XML workflows
+- oXygen XML Editor
+
+Common users:
+
+- scripture editors
+- critical edition teams
+- digital-humanities projects
+- archivists and textual curators
+
+Strengths:
+
+- excellent structural precision
+- explicit markup for variants, references, and semantic units
+- good fit for preservation-oriented text engineering
+
+Pain points:
+
+- editing feels far from ordinary writing tools
+- training cost is high
+- reading and editing surfaces are often separate
+- structure is explicit, but accepted-state and governance reasoning are still not naturally presented to end users
+
+### 2.4 PDF, Annotation, and Research Stacks
+
+Common tools:
+
+- Adobe Acrobat
+- Zotero
+- Hypothes.is
+- Obsidian
+
+Common users:
+
+- legal researchers
+- historians
+- religion and scripture researchers
+- commentary-heavy scholars
+
+Strengths:
+
+- convenient highlighting, side notes, and research collection
+- useful for source reading and excerpt gathering
+- good for personal workflows
+
+Pain points:
+
+- annotations often remain trapped in the reading tool
+- reading notes and accepted text history are split across systems
+- export may preserve content but not the reasoning chain behind accepted results
+- these tools help collect evidence, but they do not provide a governed text surface
+
+### 2.5 Shared Cross-domain Pain Points
+
+Across law, scriptural work, and historical scholarship, the repeated problem is not lack of editing tools.
+The repeated problem is that the important layers are fragmented.
+
+What is usually split apart today:
+
+- main text
+- annotations and commentary
+- source references
+- branch alternatives
+- review and acceptance logic
+- durable, replayable history
+
+This fragmentation produces the same recurring failures:
+
+- users can see revisions but cannot easily verify how a final state was formed
+- multiple valid alternatives exist, but the default reading is hard to explain
+- exported artifacts preserve text better than they preserve decision logic
+- the platform or file format often becomes the hidden authority
+
+Mycel's opportunity is not to build another generic rich-text editor.
+It is to build a text-worker editor where text, annotation, branching, accepted reading, and governance remain part of one explicit and inspectable system.
+
+## 3. Why This Needs Its Own Note
 
 Mycel can succeed as a protocol before it succeeds as a rich editor.
 That does not mean the editor question is secondary in the long run.
@@ -49,7 +211,7 @@ If Mycel is meant for serious text systems, a strong text-worker editor is event
 
 The editor therefore deserves explicit design boundaries rather than being treated as a generic future UI task.
 
-## 2. Core Design Rule
+## 4. Core Design Rule
 
 The editor should behave like a capable word-processor-style client at the surface layer while preserving Mycel's protocol discipline underneath.
 
@@ -67,7 +229,7 @@ In short:
 - replay-safe history
 - profile-governed reading
 
-## 3. What Must Feel Familiar
+## 5. What Must Feel Familiar
 
 The editor should feel familiar to text workers in at least these ways:
 
@@ -82,7 +244,7 @@ The editor should feel familiar to text workers in at least these ways:
 
 Users should feel that the tool is capable of real editorial work, not merely protocol inspection.
 
-## 4. What Must Not Be Copied Blindly
+## 6. What Must Not Be Copied Blindly
 
 A Word-like experience is useful as a usability reference, but not as a storage model.
 
@@ -96,7 +258,7 @@ The editor should not assume:
 
 The editor must not make Mycel look simpler by hiding the very properties that make Mycel valuable.
 
-## 5. Recommended Model Split
+## 7. Recommended Model Split
 
 The text-worker editor should be treated as three coordinated surfaces:
 
@@ -106,7 +268,7 @@ The text-worker editor should be treated as three coordinated surfaces:
 
 These surfaces may live in one client, but they should remain conceptually separate.
 
-### 5.1 Authoring Surface
+### 7.1 Authoring Surface
 
 Used for writing, restructuring, and preparing candidate revisions.
 
@@ -117,7 +279,7 @@ It should optimize for:
 - annotation workflows
 - revision production
 
-### 5.2 Reading Surface
+### 7.2 Reading Surface
 
 Used for reading accepted text or an explicitly chosen alternative branch.
 
@@ -128,7 +290,7 @@ It should optimize for:
 - citation and note visibility
 - minimal noise
 
-### 5.3 History and Governance Surface
+### 7.3 History and Governance Surface
 
 Used for understanding why one reading is accepted and what alternatives exist.
 
@@ -142,7 +304,7 @@ It should optimize for:
 
 The editor should not collapse these three concerns into one undifferentiated screen.
 
-## 6. Recommended Text Model
+## 8. Recommended Text Model
 
 The editor should be block-aware and structure-aware.
 
@@ -168,7 +330,7 @@ Recommended visible units:
 - footnote or note reference
 - citation anchor
 
-## 7. Formatting Philosophy
+## 9. Formatting Philosophy
 
 Formatting should support meaning rather than dominate meaning.
 
@@ -187,7 +349,7 @@ The protocol-facing authoring model should favor:
 
 The editor may allow presentation-oriented controls, but those should map to constrained structures where possible.
 
-## 8. Revision and Change Tracking
+## 10. Revision and Change Tracking
 
 A serious text-worker editor must make revision history usable.
 
@@ -208,7 +370,7 @@ Recommended behaviors:
 The editor should not pretend that all edits are equivalent.
 Structural edits, textual edits, and governance effects should remain distinguishable.
 
-## 9. Branches, Alternatives, and Acceptance
+## 11. Branches, Alternatives, and Acceptance
 
 This is where the editor most strongly differs from ordinary word processors.
 
@@ -229,7 +391,7 @@ The editor should therefore provide:
 
 If this is not legible, Mycel's governance model will feel arbitrary.
 
-## 10. Commentary and Annotation
+## 12. Commentary and Annotation
 
 Text work often includes more than linear prose authoring.
 
@@ -248,7 +410,7 @@ Recommended rule:
 
 This keeps annotation durable, addressable, and auditable.
 
-## 11. Offline and Local-first Behavior
+## 13. Offline and Local-first Behavior
 
 The editor should assume intermittent connectivity and delayed publication.
 
@@ -265,7 +427,7 @@ The editor should avoid:
 - silently rewriting local authoring history after sync
 - hiding failed publication or signature checks
 
-## 12. Import and Export
+## 14. Import and Export
 
 A serious editor should not trap users in a purely internal format.
 
@@ -284,7 +446,7 @@ The preferred direction is:
 
 Mycel should not treat arbitrary external word-processor markup as canonical truth.
 
-## 13. Explicit Non-goals
+## 15. Explicit Non-goals
 
 The first version of a text-worker editor should not attempt all of the following at once:
 
@@ -297,7 +459,7 @@ The first version of a text-worker editor should not attempt all of the followin
 
 The first serious editor should be text-first, structure-first, and history-first.
 
-## 14. Recommended Build Sequence
+## 16. Recommended Build Sequence
 
 The text-worker editor should be built only after the reader-first core is stable.
 
@@ -312,7 +474,7 @@ Recommended phases:
 This sequence matters.
 If the project starts with surface polish before accepted-state clarity, the editor will look powerful while hiding the protocol's real model.
 
-## 15. Minimal Success Criteria
+## 17. Minimal Success Criteria
 
 A first serious text-worker editor is successful if an editor can:
 
@@ -326,7 +488,7 @@ A first serious text-worker editor is successful if an editor can:
 
 If those seven things work, Mycel has moved from protocol-only credibility to real text-work usability.
 
-## 16. Open Questions
+## 18. Open Questions
 
 - Should comments and annotations be separate commentary objects by default, or may some profiles allow inline note objects inside the main text flow?
 - How much presentation freedom should the editor allow before it begins to undermine canonical-text stability?
