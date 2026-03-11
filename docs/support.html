@@ -79,6 +79,15 @@
         text-transform: uppercase;
       }
 
+      .brand a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .brand a:hover {
+        text-decoration: underline;
+      }
+
       .nav-links {
         display: flex;
         flex-wrap: wrap;
@@ -224,14 +233,18 @@
   <body>
     <div class="page">
       <nav class="nav">
-        <div class="brand">Mycel</div>
+        <div class="brand"><a href="/Mycel/" aria-label="Back to the Mycel landing page">Mycel</a> / Support</div>
         <div class="nav-links">
-          <a href="/Mycel/">Home</a>
           <a href="https://ctf2090.github.io/Mycel/zh-TW/support.html">繁體中文</a>
           <a href="https://ctf2090.github.io/Mycel/zh-CN/support.html">简体中文</a>
           <a href="https://github.com/ctf2090/Mycel">GitHub</a>
           <a href="https://www.twitch.tv/ctf2090">Live Build</a>
-          <a href="https://github.com/ctf2090/Mycel/discussions">Discussions</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.md">Dev Setup</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/README.md">README</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.en.md">Protocol</a>
+          <a href="/Mycel/progress.html">Progress</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/docs/OUTWARD-RELEASE-CHECKLIST.md">Checklist</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Roadmap</a>
         </div>
       </nav>
 
