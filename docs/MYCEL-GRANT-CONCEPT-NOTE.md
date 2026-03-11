@@ -20,6 +20,8 @@ Mycel proposes a different model: history, accepted reading, and replication sho
 
 In that sense, Mycel fills the gap between centralized collaboration platforms and global-consensus blockchains. It offers verifiable history, rule-derived default reading, and decentralized replication without forcing the whole network into one canonical truth.
 
+It is addressing an awkward in-between problem that has historically been easy to fragment and hard to explain: stricter than ordinary document collaboration, less consensus-heavy than blockchains, more reader-governance-aware than Git, and more portability-focused than a typical application backend.
+
 ## Problem Statement
 
 Many important text systems need more than document editing and less than blockchain consensus.
@@ -41,6 +43,35 @@ In these settings, stakeholders need to know:
 - how alternative valid branches remain visible and auditable
 
 Existing systems typically optimize for one requirement while weakening another. Mycel is intended to support all of these requirements together.
+
+## Why This Gap Has Stayed Underserved
+
+This layer has remained underbuilt partly because the need is distributed rather than concentrated.
+
+Most users first ask for:
+
+- a usable editor
+- document versioning
+- a centralized backend
+- web collaboration
+
+Far fewer start by asking for all of the following at once:
+
+- verifiable history
+- multiple valid branches
+- default reading derived from fixed rules
+- decentralized replication
+
+That means the demand has often been absorbed piecemeal by existing categories instead of producing a dedicated protocol layer.
+
+In practice, the problem has usually been split across four approaches:
+
+- centralized platforms, which are convenient but weak on independent verification and portability
+- Git-style workflows, which preserve history well but are not designed around governed default reading
+- blockchains and smart contracts, which provide strong consensus at a cost and with assumptions that are often unnecessary for text-governance systems
+- custom application backends, which are practical to ship but rarely interoperable and usually lack protocol-level verification
+
+Part of the opportunity for Mycel is to turn that scattered set of needs into one layered, specifiable, and reusable public infrastructure surface.
 
 ## Proposed Approach
 
@@ -107,6 +138,8 @@ This work has public value because it supports:
 - text-governance and cultural-preservation infrastructure
 - reproducible interpretation and commentary workflows
 - open protocol alternatives to closed platforms
+
+It also matters because this is exactly the sort of infrastructure gap that markets do not reliably fill on their own: the engineering burden is real, but the benefits are shared across many domains rather than concentrated in one obvious product category.
 
 ## Funding Fit
 
