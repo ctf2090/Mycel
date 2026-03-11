@@ -38,6 +38,10 @@ Startup command:
 - `scripts/agent-status.sh [<agent-id>]`
 - `scripts/agent-stop.sh <agent-id> [--status paused|done]`
 
+Startup self-label:
+
+- `<agent-id> | <scope-label>`
+
 ## 10-Line Rule Set
 
 1. Default to hybrid mode, not issue-for-everything.

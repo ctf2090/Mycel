@@ -61,6 +61,10 @@ Recommended startup command:
 - `scripts/agent-status.sh [<agent-id>]`
 - `scripts/agent-stop.sh <agent-id> [--status paused|done]`
 
+Recommended startup self-label:
+
+- first chat line: `<agent-id> | <scope-label>`
+
 ## Hybrid Issue Mode
 
 Do not force every coding action through a GitHub issue first.
@@ -105,6 +109,11 @@ Before an agent starts:
 8. leave a short claim note in the issue or team channel
 9. confirm the likely file set before editing
 10. update the local registry entry when scope or status changes
+
+When the chat itself starts, use one short self-label line first, such as:
+
+- `coding-2 | forum-design-note-sync`
+- `doc-1 | planning-sync-for-m1`
 
 Recommended claim format:
 

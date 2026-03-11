@@ -18,6 +18,10 @@ Recommended status command:
 
 - `scripts/agent-status.sh [<agent-id>]`
 
+Recommended startup self-label:
+
+- `<agent-id> | <scope-label>`
+
 Agents should read `.agent-local/agents.json` at the start of work to discover:
 
 - how many agents are currently active
@@ -29,6 +33,11 @@ Agents should read `.agent-local/agents.json` at the start of work to discover:
 - whether a peer agent is active, paused, or done
 
 If a new chat receives only a role declaration such as `you are coding` or `you are doc`, the agent should claim a fresh id with `scripts/agent-claim.sh <role>` before running `scripts/agent-start.sh <agent-id>`.
+
+After claim/start, the agent should begin the chat with one fixed self-label line using the registry id and current scope, for example:
+
+- `coding-2 | forum-design-note-sync`
+- `doc-1 | roadmap-sync-for-forum`
 
 ## Role Model
 
