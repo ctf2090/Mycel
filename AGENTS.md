@@ -10,8 +10,7 @@
 - During rebase conflicts, preserve user changes first, then already-pushed `origin/main` changes from other chats, and then re-apply this chat's work on top; if the conflict cannot be resolved confidently, stop and ask the user instead of guessing.
 - On every 20 commits to `origin/main`, check [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single planning-sync entry point and follow it to refresh the current planning surfaces.
 - Use `scripts/check-doc-refresh.sh` to check that 20-commit planning-sync cadence before or after a work batch; if it reports `due`, use [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single entry point for the next docs sync.
-- After each completed code change and push, proactively check the latest CI workflow status and report any failures, but do not wait for CI to finish unless explicitly asked.
-- Before starting any new work, first re-check the latest CI workflow status from the previous push and report any failures.
+- Do not check CI immediately after each push, since the workflow may still be running. Before starting the next piece of work, check the latest completed CI status for the previous push and report any failures.
 
 ## Git identity (User vs Agent)
 - User commits should keep the user's normal local git identity.
