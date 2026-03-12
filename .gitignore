@@ -1,5 +1,8 @@
 AGENTS-LOCAL.md
-.agent-local/
+.agent-local/*
+!.agent-local/mailboxes/
+.agent-local/mailboxes/*
+!.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md
 target/
 sim/runtime/*
 !sim/runtime/README.md

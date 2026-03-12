@@ -15,6 +15,7 @@ Local registry file:
 Local mailbox files:
 
 - `.agent-local/mailboxes/<agent_uid>.md`
+- example template: `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 - fallback: `.agent-local/coding-to-doc.md`
 - fallback: `.agent-local/doc-to-coding.md`
 

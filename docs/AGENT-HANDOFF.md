@@ -6,9 +6,9 @@ Use this file as the tracked specification for how agents communicate through lo
 
 For agent discovery and role lookup, read [AGENT-REGISTRY.md](./AGENT-REGISTRY.md) and the local `.agent-local/agents.json` file first. Do not use mailbox traffic as a substitute for registry assignment confirmation.
 
-Mailbox files are local and not committed. Each agent should use the mailbox path declared in `.agent-local/agents.json`.
+Live mailbox files are local and not committed. Each agent should use the mailbox path declared in `.agent-local/agents.json`.
 
-The directory is ignored by git through `.gitignore`, so agents can exchange local state without polluting repo history.
+The directory is ignored by git through `.gitignore`, except for tracked template examples such as `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`.
 
 ## Modes
 

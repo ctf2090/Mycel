@@ -192,6 +192,7 @@ The registry tells agents who exists. Mailboxes carry the actual messages.
 Recommended mailbox pattern:
 
 - `.agent-local/mailboxes/<agent_uid>.md`
+- copyable planning-sync example: `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 
 Fallback shared mailboxes such as `.agent-local/coding-to-doc.md` and `.agent-local/doc-to-coding.md` may still be used if the team explicitly wants them, but the registry remains the source of truth for role assignment.
 
@@ -229,6 +230,7 @@ Recommended mailbox handoff template:
 Minimum handoff quality:
 
 - include enough detail for `doc` to identify the affected files, the likely planning surfaces, whether checklist closure changed, and what verification or evidence supports the claim
+- if an agent wants a ready-made starting point instead of copying the Markdown block manually, use `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 
 ## Startup Gate
 
