@@ -178,6 +178,16 @@ def extract_open_handoff(path: Path) -> dict[str, Any] | None:
     return candidates[0][1]
 
 
+def suggested_takeover(entry: dict[str, Any], handoff: dict[str, Any]) -> dict[str, str]:
+    agent_uid = str(entry.get("agent_uid") or "")
+    scope = str(handoff.get("scope") or entry.get("scope") or "takeover-scope")
+    return {
+        "stale_agent_ref": agent_uid,
+        "scope": scope,
+        "command": f"python3 scripts/agent_registry.py takeover {agent_uid} --scope {scope}",
+    }
+
+
 def scan_inactive_coding_handoffs() -> dict[str, Any]:
     registry = load_registry()
     matching_agents = [
@@ -229,6 +239,7 @@ def scan_inactive_coding_handoffs() -> dict[str, Any]:
                 **summary,
                 "mailbox": relative_to_root(mailbox_path),
                 "handoff": handoff,
+                "suggested_takeover": suggested_takeover(entry, handoff),
             }
         )
 
@@ -263,6 +274,9 @@ def print_human(data: dict[str, Any]) -> None:
             print(f"    scope: {handoff.get('scope') or entry.get('scope') or 'unknown'}")
             print(f"    date: {handoff.get('date') or 'unknown'}")
             print(f"    source_agent: {handoff.get('source_agent') or 'unknown'}")
+            suggested = entry.get("suggested_takeover") or {}
+            if suggested.get("command"):
+                print(f"    takeover: {suggested['command']}")
             next_steps = handoff.get("next_suggested_step") or []
             if next_steps:
                 print(f"    next_step: {next_steps[0]}")

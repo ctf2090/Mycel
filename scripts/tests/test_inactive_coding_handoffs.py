@@ -146,6 +146,12 @@ class InactiveCodingHandoffsCliTest(unittest.TestCase):
         first = next(entry for entry in payload["handoffs"] if entry["agent_uid"] == "agt_one")
         self.assertEqual("newer-scope", first["handoff"]["scope"])
         self.assertEqual(["newer next step"], first["handoff"]["next_suggested_step"])
+        self.assertEqual("agt_one", first["suggested_takeover"]["stale_agent_ref"])
+        self.assertEqual("newer-scope", first["suggested_takeover"]["scope"])
+        self.assertEqual(
+            "python3 scripts/agent_registry.py takeover agt_one --scope newer-scope",
+            first["suggested_takeover"]["command"],
+        )
 
     def test_scan_reports_missing_mailbox_and_agents_without_open_handoff(self) -> None:
         self.write_registry(
@@ -207,6 +213,7 @@ class InactiveCodingHandoffsCliTest(unittest.TestCase):
 
         self.assertIn("inactive_coding_agents: 1", proc.stdout)
         self.assertIn("open_handoffs:", proc.stdout)
+        self.assertIn("python3 scripts/agent_registry.py takeover agt_human --scope human-scope", proc.stdout)
         self.assertIn("continue from the handoff", proc.stdout)
 
 

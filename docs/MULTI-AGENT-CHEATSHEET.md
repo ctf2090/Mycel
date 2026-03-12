@@ -142,6 +142,34 @@ Interrupted chat recovery:
 4. if a different chat is taking over, run `scripts/agent_registry.py takeover <stale-agent-ref>`
 5. read the stale mailbox before resuming tracked work
 
+## Takeover Transcript
+
+Use this copyable pattern when a fresh `coding` chat is explicitly taking over an inactive coding handoff:
+
+```text
+Please take over the existing handoff.
+
+Repo status: `## main...origin/main`
+
+Short plan:
+1. Check the latest completed CI result for `main`.
+2. Scan leftover inactive-coding continuation handoffs and choose the takeover target.
+3. Run `takeover`, read the source mailbox, and begin the work cycle for the resumed scope.
+
+Background terminal finished with python scripts/agent_registry.py status
+Background terminal finished with gh run list --branch main --limit 1 --json databaseId,status,conclusion,workflowName,displayTitle,headSha,updatedAt
+Background terminal finished with npm run handoffs:inactive-coding
+Background terminal finished with python scripts/agent_registry.py takeover agt_example5678 --scope m4-snapshot-offer-sync
+Background terminal finished with python scripts/agent_registry.py status agt_newagent1234
+Background terminal finished with python scripts/agent_work_cycle.py begin agt_newagent1234 --scope m4-snapshot-offer-sync
+
+[2026-03-12 15:20:00 UTC+8] Before work | coding-3 | m4-snapshot-offer-sync
+
+Please take over the existing handoff.
+
+我已檢查 `main` 的最新 completed CI，並用 `npm run handoffs:inactive-coding` 掃描遺留 handoff。這個 chat 已透過 `takeover` 接手 `coding-4`（`agt_example5678`）留下的 `m4-snapshot-offer-sync` scope，新的 agent 是 `coding-3`（`agt_newagent1234`）。接下來我會先讀來源 mailbox 的最新 open `Work Continuation Handoff`，再從那個切片繼續實作。
+```
+
 Reopened chat startup:
 
 1. `read AGENTS.md, you are <role>`
