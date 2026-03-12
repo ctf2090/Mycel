@@ -531,13 +531,15 @@ fn store_rebuild_json_reports_multi_hop_ancestry_context_for_parent_missing_patc
     assert_exit_code(&output, 1);
     let json = assert_json_status(&output, "failed");
     assert!(
-        json["errors"].as_array().is_some_and(|errors| errors.iter().any(|entry| {
-            entry.as_str().is_some_and(|message| {
-                message.contains(&format!(
-                    "while verifying ancestry through parent revision '{parent_revision_id}'"
-                )) && message.contains("missing patch 'patch:missing-ancestor' for replay")
-            })
-        })),
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains(&format!(
+                        "while verifying ancestry through parent revision '{parent_revision_id}'"
+                    )) && message.contains("missing patch 'patch:missing-ancestor' for replay")
+                })
+            })),
         "expected nested ancestry-context replay error, stdout: {}",
         stdout_text(&output)
     );

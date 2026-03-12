@@ -346,7 +346,8 @@ pub fn render_head_from_store_path(
             return summary;
         }
     };
-    if let Err(error) = verify_selected_head_for_render(selected_head, &revision_value, &object_index)
+    if let Err(error) =
+        verify_selected_head_for_render(selected_head, &revision_value, &object_index)
     {
         summary.push_error(error);
         return summary;
@@ -420,7 +421,8 @@ pub fn render_head_from_path(
         ));
         return summary;
     };
-    if let Err(error) = verify_selected_head_for_render(selected_head, revision_value, &object_index)
+    if let Err(error) =
+        verify_selected_head_for_render(selected_head, revision_value, &object_index)
     {
         summary.push_error(error);
         return summary;

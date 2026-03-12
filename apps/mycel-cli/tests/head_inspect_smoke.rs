@@ -971,21 +971,20 @@ fn head_render_store_backed_reports_multi_hop_ancestry_context() {
     fs::create_dir_all(objects_dir.join("view")).expect("view store dir should exist");
     fs::create_dir_all(&indexes_dir).expect("index dir should exist");
 
-    let write_store_object =
-        |object_type: &str, object_id: &str, value: &Value| -> PathBuf {
-            let (_, object_hash) = object_id
-                .split_once(':')
-                .expect("object id should contain a type prefix");
-            let path = objects_dir
-                .join(object_type)
-                .join(format!("{object_hash}.json"));
-            fs::write(
-                &path,
-                serde_json::to_string_pretty(value).expect("store object should serialize"),
-            )
-            .expect("store object should write");
-            path
-        };
+    let write_store_object = |object_type: &str, object_id: &str, value: &Value| -> PathBuf {
+        let (_, object_hash) = object_id
+            .split_once(':')
+            .expect("object id should contain a type prefix");
+        let path = objects_dir
+            .join(object_type)
+            .join(format!("{object_hash}.json"));
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(value).expect("store object should serialize"),
+        )
+        .expect("store object should write");
+        path
+    };
     let parent_revision_id = parent_revision["revision_id"]
         .as_str()
         .expect("parent revision id should exist")
