@@ -1,6 +1,9 @@
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
+use crate::protocol::BlockObject;
+use crate::replay::DocumentState;
+
 pub fn ensure_supported_json_values(value: &Value) -> Result<(), String> {
     let mut errors = Vec::new();
     collect_unsupported_json_value_errors(value, "$", &mut errors);
@@ -103,6 +106,32 @@ pub fn signature_payload_bytes_for_field(
     canonical_object_bytes_excluding_fields(value, &[signature_field])
 }
 
+pub fn canonical_document_state_value(state: &DocumentState) -> Value {
+    let mut object = Map::new();
+    object.insert("doc_id".to_string(), Value::String(state.doc_id.clone()));
+    object.insert(
+        "blocks".to_string(),
+        Value::Array(
+            state
+                .blocks
+                .iter()
+                .map(canonical_block_state_value)
+                .collect::<Vec<_>>(),
+        ),
+    );
+    if !state.metadata.is_empty() {
+        object.insert(
+            "metadata".to_string(),
+            Value::Object(state.metadata.clone()),
+        );
+    }
+    Value::Object(object)
+}
+
+pub fn canonical_document_state_hash(state: &DocumentState) -> Result<String, String> {
+    prefixed_canonical_hash(&canonical_document_state_value(state), "hash")
+}
+
 fn write_canonical_json(value: &Value, output: &mut String) -> Result<(), String> {
     match value {
         Value::Null => Err("null is not allowed in canonical objects".to_string()),
@@ -176,6 +205,31 @@ fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     hex_encode(&hasher.finalize())
+}
+
+fn canonical_block_state_value(block: &BlockObject) -> Value {
+    let mut object = Map::new();
+    object.insert(
+        "block_id".to_string(),
+        Value::String(block.block_id.clone()),
+    );
+    object.insert(
+        "block_type".to_string(),
+        Value::String(block.block_type.clone()),
+    );
+    object.insert("content".to_string(), Value::String(block.content.clone()));
+    object.insert("attrs".to_string(), Value::Object(block.attrs.clone()));
+    object.insert(
+        "children".to_string(),
+        Value::Array(
+            block
+                .children
+                .iter()
+                .map(canonical_block_state_value)
+                .collect::<Vec<_>>(),
+        ),
+    );
+    Value::Object(object)
 }
 
 fn hex_encode(bytes: &[u8]) -> String {

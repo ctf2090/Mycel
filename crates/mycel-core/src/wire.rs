@@ -9,10 +9,11 @@ use serde_json::{Map, Value};
 use crate::canonical::wire_envelope_signed_payload_bytes;
 use crate::protocol::{
     ensure_supported_json_values, object_schema, parse_object_envelope, parse_patch_object,
-    parse_revision_object, parse_snapshot_object, parse_view_object, recompute_object_id,
-    reject_duplicate_strings, reject_unknown_fields, required_non_empty_string_array,
-    required_prefixed_string_map, required_string_field, validate_canonical_object_id,
-    validate_prefixed_string, StringFieldError, WIRE_PROTOCOL_VERSION,
+    parse_revision_object, parse_snapshot_object, parse_view_object,
+    recompute_declared_object_identity, reject_duplicate_strings, reject_unknown_fields,
+    required_non_empty_string_array, required_prefixed_string_map, required_string_field,
+    validate_canonical_object_id, validate_prefixed_string, StringFieldError,
+    WIRE_PROTOCOL_VERSION,
 };
 use crate::signature::verify_ed25519_signature;
 use crate::store::{load_store_object_index, StoreRebuildError};
@@ -652,31 +653,19 @@ pub fn validate_wire_object_payload_behavior(payload: &Map<String, Value>) -> Re
         ));
     }
 
-    let expected_object_id = match object_type.as_str() {
-        "patch" => recompute_object_id(body, "patch_id", "patch"),
-        "revision" => recompute_object_id(body, "revision_id", "rev"),
-        "view" => recompute_object_id(body, "view_id", "view"),
-        "snapshot" => recompute_object_id(body, "snapshot_id", "snap"),
-        other => return Err(format!("unsupported OBJECT object_type '{other}'")),
-    }
-    .map_err(|error| format!("failed to recompute OBJECT body ID: {error}"))?;
+    let expected_identity = recompute_declared_object_identity(body)
+        .map_err(|error| format!("failed to recompute OBJECT body ID: {error}"))?;
 
-    let expected_hash = format!(
-        "hash:{}",
-        expected_object_id
-            .split_once(':')
-            .map(|(_, suffix)| suffix)
-            .ok_or_else(|| "recomputed OBJECT ID is missing ':' separator".to_string())?
-    );
-
-    if object_id != expected_object_id {
+    if object_id != expected_identity.object_id {
         return Err(format!(
-            "OBJECT payload object_id '{object_id}' does not match recomputed '{expected_object_id}'"
+            "OBJECT payload object_id '{object_id}' does not match recomputed '{}'",
+            expected_identity.object_id
         ));
     }
-    if hash != expected_hash {
+    if hash != expected_identity.hash {
         return Err(format!(
-            "OBJECT payload hash '{hash}' does not match recomputed '{expected_hash}'"
+            "OBJECT payload hash '{hash}' does not match recomputed '{}'",
+            expected_identity.hash
         ));
     }
 
@@ -925,7 +914,7 @@ mod tests {
     use serde_json::{json, Value};
 
     use crate::canonical::{signed_payload_bytes, wire_envelope_signed_payload_bytes};
-    use crate::protocol::recompute_object_id;
+    use crate::protocol::{recompute_declared_object_identity, recompute_object_id};
     use crate::replay::{compute_state_hash, DocumentState};
     use crate::store::write_object_value_to_store;
 
@@ -1321,13 +1310,9 @@ mod tests {
             "ops": [],
             "signature": "sig:placeholder"
         });
-        let object_id = recompute_object_id(&body, "patch_id", "patch")
-            .expect("concrete wire object ID should recompute");
-        body["patch_id"] = Value::String(object_id.clone());
-        let object_hash = object_id
-            .split_once(':')
-            .map(|(_, hash)| hash.to_string())
-            .expect("wire object ID should contain hash");
+        let identity = recompute_declared_object_identity(&body)
+            .expect("concrete wire object identity should recompute");
+        body["patch_id"] = Value::String(identity.object_id.clone());
 
         let value = json!({
             "type": "OBJECT",
@@ -1336,11 +1321,11 @@ mod tests {
             "timestamp": "2026-03-08T20:01:02+08:00",
             "from": "node:alpha",
             "payload": {
-                "object_id": object_id,
+                "object_id": identity.object_id,
                 "object_type": "patch",
                 "encoding": "json",
                 "hash_alg": "sha256",
-                "hash": format!("hash:{object_hash}"),
+                "hash": identity.hash,
                 "body": body
             },
             "sig": "sig:..."

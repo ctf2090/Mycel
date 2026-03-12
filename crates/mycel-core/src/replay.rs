@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::canonical::prefixed_canonical_hash;
+use crate::canonical::canonical_document_state_hash;
 use crate::protocol::{
     parse_patch_object, parse_revision_object, BlockObject, PatchObject, PatchOperation,
     RevisionObject,
@@ -56,7 +56,7 @@ pub fn apply_patch_ops(state: &mut DocumentState, patch: &PatchObject) -> Result
 }
 
 pub fn compute_state_hash(state: &DocumentState) -> Result<String, ReplayError> {
-    prefixed_canonical_hash(&state_to_value(state), "hash")
+    canonical_document_state_hash(state)
         .map_err(|error| ReplayError::new(format!("failed to canonicalize state: {error}")))
 }
 
@@ -504,47 +504,6 @@ fn block_contains_ref(block: &BlockObject, block_id: &str) -> bool {
             .any(|child| block_contains_ref(child, block_id))
 }
 
-fn state_to_value(state: &DocumentState) -> Value {
-    let mut object = Map::new();
-    object.insert("doc_id".to_string(), Value::String(state.doc_id.clone()));
-    object.insert(
-        "blocks".to_string(),
-        Value::Array(state.blocks.iter().map(block_to_value).collect::<Vec<_>>()),
-    );
-    if !state.metadata.is_empty() {
-        object.insert(
-            "metadata".to_string(),
-            Value::Object(state.metadata.clone()),
-        );
-    }
-    Value::Object(object)
-}
-
-fn block_to_value(block: &BlockObject) -> Value {
-    let mut object = Map::new();
-    object.insert(
-        "block_id".to_string(),
-        Value::String(block.block_id.clone()),
-    );
-    object.insert(
-        "block_type".to_string(),
-        Value::String(block.block_type.clone()),
-    );
-    object.insert("content".to_string(), Value::String(block.content.clone()));
-    object.insert("attrs".to_string(), Value::Object(block.attrs.clone()));
-    object.insert(
-        "children".to_string(),
-        Value::Array(
-            block
-                .children
-                .iter()
-                .map(block_to_value)
-                .collect::<Vec<_>>(),
-        ),
-    );
-    Value::Object(object)
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -553,7 +512,7 @@ mod tests {
     use serde_json::Map;
 
     use super::{apply_patch_ops, compute_state_hash, replay_revision_from_index, DocumentState};
-    use crate::canonical::prefixed_canonical_hash;
+    use crate::canonical::{canonical_document_state_value, prefixed_canonical_hash};
     use crate::protocol::{parse_patch_object, BlockObject, PatchObject, PatchOperation};
 
     fn block(block_id: &str, content: &str) -> BlockObject {
@@ -683,6 +642,59 @@ mod tests {
         .expect("manual canonical state hash should compute");
 
         assert_eq!(state_hash, manual);
+    }
+
+    #[test]
+    fn canonical_document_state_value_matches_expected_shape() {
+        let mut attrs = Map::new();
+        attrs.insert("variant".to_string(), json!("callout"));
+
+        let state = DocumentState {
+            doc_id: "doc:test".to_string(),
+            blocks: vec![BlockObject {
+                block_id: "blk:001".to_string(),
+                block_type: "paragraph".to_string(),
+                content: "Hello".to_string(),
+                attrs,
+                children: vec![BlockObject {
+                    block_id: "blk:002".to_string(),
+                    block_type: "annotation".to_string(),
+                    content: "Note".to_string(),
+                    attrs: Map::new(),
+                    children: Vec::new(),
+                }],
+            }],
+            metadata: Map::from_iter([("topic".to_string(), json!("testing"))]),
+        };
+
+        assert_eq!(
+            canonical_document_state_value(&state),
+            json!({
+                "doc_id": "doc:test",
+                "blocks": [
+                    {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {
+                            "variant": "callout"
+                        },
+                        "children": [
+                            {
+                                "block_id": "blk:002",
+                                "block_type": "annotation",
+                                "content": "Note",
+                                "attrs": {},
+                                "children": []
+                            }
+                        ]
+                    }
+                ],
+                "metadata": {
+                    "topic": "testing"
+                }
+            })
+        );
     }
 
     #[test]

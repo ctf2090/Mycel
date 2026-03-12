@@ -224,6 +224,84 @@ fn recompute_object_id_is_reproducible_across_object_key_order() {
 }
 
 #[test]
+fn recompute_object_identity_returns_matching_object_id_and_hash() {
+    let value = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:declared",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [],
+        "signature": "sig:ed25519:test"
+    });
+
+    let identity = recompute_object_identity(&value, "patch_id", "patch")
+        .expect("patch identity should recompute");
+
+    assert_eq!(
+        identity.object_id,
+        recompute_object_id(&value, "patch_id", "patch").unwrap()
+    );
+    assert_eq!(
+        identity.hash,
+        format!(
+            "hash:{}",
+            identity
+                .object_id
+                .split_once(':')
+                .map(|(_, digest)| digest)
+                .expect("object ID should contain digest")
+        )
+    );
+}
+
+#[test]
+fn recompute_declared_object_identity_uses_object_schema() {
+    let value = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:declared",
+        "maintainer": "pk:ed25519:test",
+        "policy_hash": "hash:policy",
+        "timestamp": 1u64,
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "signature": "sig:ed25519:test"
+    });
+
+    let identity =
+        recompute_declared_object_identity(&value).expect("view identity should recompute");
+
+    assert!(identity.object_id.starts_with("view:"));
+    assert_eq!(
+        identity.hash,
+        format!(
+            "hash:{}",
+            identity
+                .object_id
+                .split_once(':')
+                .map(|(_, digest)| digest)
+                .expect("object ID should contain digest")
+        )
+    );
+}
+
+#[test]
+fn recompute_declared_object_identity_rejects_logical_id_only_objects() {
+    let error = recompute_declared_object_identity(&json!({
+        "type": "document",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test"
+    }))
+    .unwrap_err();
+
+    assert!(error.contains("does not use a derived canonical object ID"));
+}
+
+#[test]
 fn signed_payload_bytes_are_reproducible_across_object_key_order() {
     let left = json!({
         "type": "patch",

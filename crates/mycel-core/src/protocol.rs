@@ -14,11 +14,12 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
 
 pub use crate::canonical::{
-    canonical_bytes, canonical_json, canonical_object_bytes_excluding_fields,
-    canonical_object_json_excluding_fields, canonical_object_sha256_hex_excluding_fields,
-    canonical_sha256_hex, collect_unsupported_json_value_errors, ensure_supported_json_values,
-    prefixed_canonical_hash, prefixed_canonical_object_hash_excluding_fields,
-    signature_payload_bytes_for_field, signed_payload_bytes, wire_envelope_signed_payload_bytes,
+    canonical_bytes, canonical_document_state_hash, canonical_document_state_value, canonical_json,
+    canonical_object_bytes_excluding_fields, canonical_object_json_excluding_fields,
+    canonical_object_sha256_hex_excluding_fields, canonical_sha256_hex,
+    collect_unsupported_json_value_errors, ensure_supported_json_values, prefixed_canonical_hash,
+    prefixed_canonical_object_hash_excluding_fields, signature_payload_bytes_for_field,
+    signed_payload_bytes, wire_envelope_signed_payload_bytes,
 };
 
 pub const CORE_PROTOCOL_VERSION: &str = "mycel/0.1";
@@ -192,6 +193,12 @@ pub struct DeclaredDerivedId<'a> {
     pub field: &'static str,
     pub prefix: &'static str,
     pub value: &'a str,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CanonicalObjectIdentity {
+    pub object_id: String,
+    pub hash: String,
 }
 
 pub fn object_schema(object_type: &str) -> Option<ObjectSchema> {
@@ -748,7 +755,33 @@ pub fn recompute_object_id(
     derived_id_field: &str,
     prefix: &str,
 ) -> Result<String, String> {
-    prefixed_canonical_object_hash_excluding_fields(value, prefix, &[derived_id_field, "signature"])
+    recompute_object_identity(value, derived_id_field, prefix).map(|identity| identity.object_id)
+}
+
+pub fn recompute_object_identity(
+    value: &Value,
+    derived_id_field: &str,
+    prefix: &str,
+) -> Result<CanonicalObjectIdentity, String> {
+    let digest =
+        canonical_object_sha256_hex_excluding_fields(value, &[derived_id_field, "signature"])?;
+    Ok(CanonicalObjectIdentity {
+        object_id: format!("{prefix}:{digest}"),
+        hash: format!("hash:{digest}"),
+    })
+}
+
+pub fn recompute_declared_object_identity(
+    value: &Value,
+) -> Result<CanonicalObjectIdentity, String> {
+    let envelope = parse_object_envelope(value).map_err(|error| error.to_string())?;
+    let (derived_id_field, prefix) = envelope.schema().derived_id().ok_or_else(|| {
+        format!(
+            "object type '{}' does not use a derived canonical object ID",
+            envelope.object_type()
+        )
+    })?;
+    recompute_object_identity(value, derived_id_field, prefix)
 }
 
 pub fn parse_json_value_strict(input: &str) -> Result<Value, String> {
@@ -1367,7 +1400,8 @@ mod tests {
         ensure_supported_json_values, object_schema, parse_block_object, parse_document_object,
         parse_json_strict, parse_json_value_strict, parse_object_envelope, parse_patch_object,
         parse_revision_object, parse_snapshot_object, parse_view_object, prefixed_canonical_hash,
-        prefixed_canonical_object_hash_excluding_fields, recompute_object_id, signed_payload_bytes,
+        prefixed_canonical_object_hash_excluding_fields, recompute_declared_object_identity,
+        recompute_object_id, recompute_object_identity, signed_payload_bytes,
         wire_envelope_signed_payload_bytes, ObjectKind, ParseObjectEnvelopeError, SignatureRule,
         StringFieldError,
     };
