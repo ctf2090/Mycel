@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-狀態：late partial progress，已在最近一批 wire-session reachability、store-backed bootstrap 與 transcript-backed sync-pull 後刷新；`M4` 現在已有 object-body verification 與 first-time / incremental transcript-backed pull coverage，但 peer-driven end-to-end sync 仍未完成
+狀態：late partial progress，已在最近一批 canonical-helper convergence、peer-store sync driver、CLI peer-sync 與 simulator integration 後刷新；`M4` 現在已有最小 peer-driven first-time / incremental sync proof coverage，但 capability-gated optional flows 與更廣的 replication behavior 仍未完成
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的建置順序。
 
@@ -18,8 +18,8 @@
 - 適合做內部驗證與決定性模擬器工作流程的 Rust CLI
 - `mycel-core` 對 object schema metadata、object-envelope parsing、replay-based revision verification、local object-store ingest/rebuild、persisted store indexes，以及 accepted-head inspection 的支援
 - `mycel-core` 對早期 wire-envelope parsing、payload validation、通用 wire signature verification、sender mapping、minimal message set 的 inbound session sequencing/head-tracking、reachability gating，以及 store-backed session bootstrap 的支援
-- transcript-backed sync-pull core 與 CLI entry point，已具備 first-time 與 incremental verify/store coverage
-- 更集中化的 canonical hash 與 signed-payload helpers，已在 verification、replay、head/render 預先驗證、authoring，以及部分 CLI smoke 路徑之間重用
+- transcript-backed sync-pull core、peer-store sync driver 與 CLI entry points，已具備 first-time 與 incremental verify/store coverage
+- 更集中化的 canonical hash 與 signed-payload helpers，已在 verification、replay `state_hash`、head/render 預先驗證、authoring，以及 wire-object identity checks 之間重用
 - 早期 reader-plus-governance surfaces，涵蓋 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render workflows
 - `document`、`block`、`patch`、`revision`、`view`、`snapshot` 在 parser / verify / CLI 路徑更廣的 strictness-surface coverage、更完整的 `object inspect` warning surface、對 merge 與 cross-document revision edge 更強的 signature-edge 與 replay/verification smoke coverage、更清楚的 multi-hop ancestry replay failure context，以及 isolate 過的 validate-peer fixtures
 - 以 `assert_cmd`、`predicates`、`tempfile` 與小範圍 `rstest` 建立的較可維護 CLI test base
@@ -41,7 +41,7 @@
 1. 完成窄版的第一個客戶端核心
 2. 收掉 shared core 在 parsing 與 canonicalization 上剩餘的缺口
 3. 一邊持續擴充 fixtures、模擬器 coverage 與負向測試，一邊開始 reader-plus-governance 的讀取路徑
-4. 讓 `M4` 維持窄版範圍，把 transcript-backed first-time / incremental sync pull 往 minimal peer-driven sync 收斂
+4. 讓 `M4` 維持窄版範圍，把 peer-store first-time / incremental sync proof 往 optional-message 與更廣 interop closure 收斂
 
 ### 下一步
 
@@ -159,7 +159,7 @@
 
 1. 在廣泛 unknown-field 與 invalid-type rejection 之後，final malformed-field depth 與 semantic-edge strictness closure
 2. 目前 revision / patch、replay 與 view / snapshot batches 之外，其餘 semantic edge cases 的更深 `mycel-core` coverage
-3. 把剩餘 replay 衍生的 `state_hash` 與未來 wire-validation canonicalization 路徑收斂到 shared helper module 上
+3. 把剩餘 wire-validation canonicalization 路徑收斂到 shared helper module 上
 4. 在擴大更多表面前，先釐清 milestone-close criteria
 
 Implementation anchors：
@@ -384,7 +384,7 @@ Implementation anchors：
 
 目前判讀：
 
-`mycel-core` 已有 early groundwork：canonical envelope parsing、payload shape validation、RFC 3339 timestamp enforcement、通用 wire signature verification、sender checks、對 `HELLO`、`MANIFEST`、`HEADS`、`WANT`、`OBJECT`、`BYE`、`ERROR` 的 inbound sequencing/head-tracking、reachability gating、store-backed session bootstrap，以及 `OBJECT` body 衍生的 hash / `object_id` 驗證。現在也已有 transcript-backed `sync pull` path 與 CLI entry point，可證明 first-time 與 incremental 的 verify/store flow。仍缺的是 peer-driven 的端到端 sync driver、capability-gated optional flows，以及 production replication behavior。
+`mycel-core` 已有 early groundwork：canonical envelope parsing、payload shape validation、RFC 3339 timestamp enforcement、通用 wire signature verification、sender checks、對 `HELLO`、`MANIFEST`、`HEADS`、`WANT`、`OBJECT`、`BYE`、`ERROR` 的 inbound sequencing/head-tracking、reachability gating、store-backed session bootstrap，以及 `OBJECT` body 衍生的 hash / `object_id` 驗證。現在也已有 `mycel-core` 內的 peer-store sync path、CLI entry points，以及 simulator 的 positive-path coverage，可在不把手寫 transcript 當成唯一整合表面的前提下，證明 first-time 與 incremental 的 verify/store flow。仍缺的是 capability-gated optional flows、更廣的 peer-interop proof，以及 production replication behavior。
 
 Implementation anchors：
 

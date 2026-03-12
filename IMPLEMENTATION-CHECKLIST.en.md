@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, refreshed after the recent wire-session reachability, store-backed bootstrap, and transcript-backed sync-pull batch; implementation state now includes `OBJECT` body verification plus early `M4` sync-pull coverage while peer-driven end-to-end sync remains open
+Status: late partial progress, refreshed after the recent canonical-helper convergence, peer-store sync-driver, CLI peer-sync, and simulator integration batch; implementation state now includes replay `state_hash` helper convergence plus early `M4` peer-driven sync coverage while optional wire flows and broader replication behavior remain open
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -31,7 +31,7 @@ Defer if needed:
 - [x] Choose one implementation language and package layout.
 - [x] Fix one canonical hash algorithm for the network profile.
 - [x] Fix one signature algorithm set for the client profile.
-- [ ] Finish extending the shared canonical JSON utility across hash, signature, replay-derived `state_hash`, and future wire code.
+- [ ] Finish extending the shared canonical JSON utility across hash, signature, the remaining wire-validation paths, and future wire code.
 - [x] Add fixture loading for protocol examples and regression tests.
 
 ## 2. Object Types and IDs
@@ -55,7 +55,7 @@ Defer if needed:
 - [x] Reject duplicate keys.
 - [x] Reject unsupported value types such as `null` or floating-point numbers.
 - [x] Omit derived ID fields and `signature` when recomputing object IDs.
-- [ ] Finish reusing the same canonicalization rules for replay-derived `state_hash` paths and future wire envelope signatures.
+- [ ] Finish reusing the same canonicalization rules for the remaining wire-validation paths and future wire envelope signatures.
 
 ## 4. Signature Verification
 

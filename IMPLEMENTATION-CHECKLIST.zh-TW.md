@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，已在最近一批 wire-session reachability、store-backed bootstrap 與 transcript-backed sync-pull 後刷新；實作狀態現在已包含 `OBJECT` body 驗證與早期 `M4` sync-pull coverage，但 peer-driven 的 end-to-end sync 仍未完成
+狀態：late partial progress，已在最近一批 canonical-helper convergence、peer-store sync driver、CLI peer-sync 與 simulator integration 後刷新；實作狀態現在已包含 replay `state_hash` helper convergence 與早期 `M4` peer-driven sync coverage，但 optional wire flows 與更廣的 replication behavior 仍未完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
@@ -31,7 +31,7 @@
 - [x] 選定一個實作語言與 package layout。
 - [x] 為 network profile 固定一個 canonical hash algorithm。
 - [x] 為 client profile 固定一組 signature algorithms。
-- [ ] 完成 shared canonical JSON 工具，讓它可被 hash、signature、replay 衍生的 `state_hash`，以及未來 wire code 共用。
+- [ ] 完成 shared canonical JSON 工具，讓它可被 hash、signature、剩餘 wire-validation 路徑，以及未來 wire code 共用。
 - [x] 加入 protocol examples 與 regression tests 的 fixture 載入機制。
 
 ## 2. 物件型別與 ID
@@ -55,7 +55,7 @@
 - [x] 拒絕 duplicate keys。
 - [x] 拒絕 `null`、浮點數等不支援的值型別。
 - [x] 重算 object ID 時省略導出 ID 欄位與 `signature`。
-- [ ] 完成讓 replay 衍生的 `state_hash` 路徑與未來 wire envelope signature 重用同一套 canonicalization 規則。
+- [ ] 完成讓剩餘 wire-validation 路徑與未來 wire envelope signature 重用同一套 canonicalization 規則。
 
 ## 4. Signature 驗證
 
