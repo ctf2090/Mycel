@@ -30,9 +30,9 @@
 - As the project grows, proactively suggest mature modules, libraries, or frameworks at the right time when they would clearly reduce maintenance risk or simplify the design. Do not wait for the user to ask if the need is becoming obvious (for example, suggesting `clap` once CLI argument parsing becomes complex).
 - When code or tests start showing large repeated patterns, actively consider whether a mature module or tool should replace the repetition with a clearer structure (for example, `rstest` cases for repeated validation matrices).
 - When suggesting a mature module, library, or framework, explain why now is the right time, what problem it solves, and the main tradeoff of adopting it.
-- After completing a piece of work, end with a short evaluation of valuable next-stage work and let the user choose from multiple concrete options by default.
-- In final next-stage recommendations, put the highest-value option first by default.
-- In final next-stage recommendations, include each option's roadmap location when it maps to a milestone, phase, or named roadmap track, so the user can see where that work sits in the plan.
+- After completing a piece of work, end with a short evaluation of valuable next-stage work and, by default, offer multiple concrete options for the user to choose from.
+- In final next-stage recommendations, put the highest-value option first and mark it as `(highest value/最有價值)`.
+- When a next-stage option maps to a roadmap milestone, phase, or named track, include that roadmap location so the user can see where it fits in the plan.
 - If the right choice depends on unknown constraints, ask 1–2 short clarifying questions, but still provide a best-effort set of options based on common assumptions.
 
 ## New chat bootstrap
