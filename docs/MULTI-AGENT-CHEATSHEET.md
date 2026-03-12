@@ -33,12 +33,12 @@ No tracked work starts until the agent confirms its own entry in `.agent-local/a
 
 Startup command:
 
-- `scripts/agent-claim.sh <role> [--scope <scope>]`
-- `scripts/agent-start.sh <agent-id>`
-- `scripts/agent-status.sh [<agent-id>]`
-- `scripts/agent-resume-check.sh <agent-id>`
-- `scripts/agent-stop.sh <agent-id> [--status paused|done]`
-- `scripts/agent-recover.sh <stale-agent-id> [--scope <scope>]`
+- `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
+- `scripts/agent_registry.py start <agent-id>`
+- `scripts/agent_registry.py status [<agent-id>]`
+- `scripts/agent_registry.py resume-check <agent-id>`
+- `scripts/agent_registry.py stop <agent-id> [--status paused|done]`
+- `scripts/agent_registry.py recover <stale-agent-id> [--scope <scope>]`
 
 Startup self-label:
 
@@ -46,25 +46,25 @@ Startup self-label:
 
 Startup order:
 
-1. `scripts/agent-claim.sh <role> [--scope <scope>]` if needed
-2. `scripts/agent-start.sh <agent-id>`
-3. `scripts/agent-status.sh <agent-id>`
+1. `scripts/agent_registry.py claim <role|auto> [--scope <scope>]` if needed
+2. `scripts/agent_registry.py start <agent-id>`
+3. `scripts/agent_registry.py status <agent-id>`
 4. first chat line: `<agent-id> | <scope-label>`
 
 Do not run `claim`, `start`, and `status` in parallel.
 
 Interrupted chat recovery:
 
-1. `scripts/agent-status.sh`
+1. `scripts/agent_registry.py status`
 2. read the stale agent mailbox
-3. either `scripts/agent-recover.sh <old-agent-id>` or run `scripts/agent-stop.sh <old-agent-id>` then `scripts/agent-claim.sh <role>` and `scripts/agent-start.sh <new-agent-id>`
+3. either `scripts/agent_registry.py recover <old-agent-id>` or run `scripts/agent_registry.py stop <old-agent-id>` then `scripts/agent_registry.py claim <role>` and `scripts/agent_registry.py start <new-agent-id>`
 4. read the stale mailbox before resuming tracked work
 
 Reopened chat startup:
 
 1. `read AGENTS.md, you are <role>`
-2. `scripts/agent-status.sh`
-3. `scripts/agent-recover.sh <old-agent-id>`
+2. `scripts/agent_registry.py status`
+3. `scripts/agent_registry.py recover <old-agent-id>`
 4. read `.agent-local/<old-agent-id>.md`
 5. read `.agent-local/<new-agent-id>.md`
 6. first chat line: `<new-agent-id> | <scope-label>`
@@ -73,12 +73,12 @@ Role note:
 
 - `coding` usually reports the latest completed CI result after recovery
 - `doc` usually skips CI unless explicitly asked
-- if an old forgotten chat is reopened, run `scripts/agent-resume-check.sh <agent-id>` before doing any tracked work
+- if an old forgotten chat is reopened, run `scripts/agent_registry.py resume-check <agent-id>` before doing any tracked work
 
 ## 10-Line Rule Set
 
 1. Default to hybrid mode, not issue-for-everything.
-2. Read `.agent-local/agents.json`; if the user declared only a role, claim an id first with `scripts/agent-claim.sh <role>`.
+2. Read `.agent-local/agents.json`; if the user declared only a role, claim an id first with `scripts/agent_registry.py claim <role>`.
 3. Use one agent per issue when the work needs claims, handoff, or more than one commit.
 4. One active issue should map to one chat and one worktree or isolated session.
 5. Small local fixes can stay chat-first, but do not let them widen silently.

@@ -10,15 +10,15 @@ The live registry file is local and gitignored:
 
 Recommended startup gate:
 
-- `scripts/agent-claim.sh <role|auto> [--scope <scope>]`
-- `scripts/agent-start.sh <agent-id>`
-- `scripts/agent-stop.sh <agent-id> [--status paused|done]`
-- `scripts/agent-recover.sh <stale-agent-id> [--scope <scope>]`
+- `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
+- `scripts/agent_registry.py start <agent-id>`
+- `scripts/agent_registry.py stop <agent-id> [--status paused|done]`
+- `scripts/agent_registry.py recover <stale-agent-id> [--scope <scope>]`
 
 Recommended status command:
 
-- `scripts/agent-status.sh [<agent-id>]`
-- `scripts/agent-resume-check.sh <agent-id>`
+- `scripts/agent_registry.py status [<agent-id>]`
+- `scripts/agent_registry.py resume-check <agent-id>`
 
 Recommended startup self-label:
 
@@ -34,9 +34,9 @@ Agents should read `.agent-local/agents.json` at the start of work to discover:
 - each agent's current scope
 - whether a peer agent is active, paused, or done
 
-If a new chat receives only a role declaration such as `you are coding` or `you are doc`, the agent should claim a fresh id with `scripts/agent-claim.sh <role>` before running `scripts/agent-start.sh <agent-id>`.
+If a new chat receives only a role declaration such as `you are coding` or `you are doc`, the agent should claim a fresh id with `scripts/agent_registry.py claim <role>` before running `scripts/agent_registry.py start <agent-id>`.
 
-If the user does not assign any role in a new chat, the agent should use `scripts/agent-claim.sh auto` to choose the default role from `.agent-local/agents.json` before starting work:
+If the user does not assign any role in a new chat, the agent should use `scripts/agent_registry.py claim auto` to choose the default role from `.agent-local/agents.json` before starting work:
 
 - if there is no active `coding` agent, take `coding` first
 - if active `coding >= 1` and active `doc == 0`, take `doc`
@@ -161,8 +161,8 @@ If any of those checks fail, the agent must stop before editing tracked files an
 
 Recommended enforcement:
 
-1. either a maintainer writes the assignment entry or the agent claims a new entry with `scripts/agent-claim.sh <role|auto>`
-2. the agent runs `scripts/agent-start.sh <agent-id>`
+1. either a maintainer writes the assignment entry or the agent claims a new entry with `scripts/agent_registry.py claim <role|auto>`
+2. the agent runs `scripts/agent_registry.py start <agent-id>`
 3. the start script confirms the role, sets `confirmed_by_agent: true`, stamps `confirmed_at`, and creates the mailbox if needed
 4. only then may tracked work begin
 
@@ -170,13 +170,13 @@ Recommended enforcement:
 
 1. Before starting work, an agent reads `.agent-local/agents.json`.
 2. The agent confirms the current agent count and scans the existing scopes and file sets.
-3. If no entry exists yet but the role is known, the agent may claim a new id with `scripts/agent-claim.sh <role>`; if the role is not user-assigned, the agent may use `scripts/agent-claim.sh auto`.
+3. If no entry exists yet but the role is known, the agent may claim a new id with `scripts/agent_registry.py claim <role>`; if the role is not user-assigned, the agent may use `scripts/agent_registry.py claim auto`.
 4. Otherwise, a maintainer or coordinator writes the agent entry with `role`, `assigned_by`, `assigned_at`, `scope`, and `mailbox`.
-5. The agent confirms its own assignment by running `scripts/agent-start.sh <agent-id>`.
+5. The agent confirms its own assignment by running `scripts/agent_registry.py start <agent-id>`.
 6. Only after confirmation may the agent start tracked work.
 7. The agent uses its own `mailbox` file for peer coordination and handoff traffic.
 8. When scope changes, the agent updates its registry entry.
-9. When work is finished or paused, the agent updates `status`, preferably with `scripts/agent-stop.sh <agent-id> [--status paused|done]`.
+9. When work is finished or paused, the agent updates `status`, preferably with `scripts/agent_registry.py stop <agent-id> [--status paused|done]`.
 
 If two `coding` agents would touch the same primary file or issue, one must pause or choose a narrower scope before proceeding.
 
@@ -189,10 +189,10 @@ Use this sequence in order. Do not run the registry commands in parallel.
 3. check `rg` and `gh`
 4. check the latest CI status from the previous push
 5. determine the role for this chat:
-   - if the user explicitly assigned a role, use that role and run `scripts/agent-claim.sh <role> [--scope <scope>]`
-   - otherwise run `scripts/agent-claim.sh auto [--scope <scope>]`
-6. run `scripts/agent-start.sh <agent-id>`
-7. run `scripts/agent-status.sh <agent-id>`
+   - if the user explicitly assigned a role, use that role and run `scripts/agent_registry.py claim <role> [--scope <scope>]`
+   - otherwise run `scripts/agent_registry.py claim auto [--scope <scope>]`
+6. run `scripts/agent_registry.py start <agent-id>`
+7. run `scripts/agent_registry.py status <agent-id>`
 8. begin the chat with the startup self-label: `<agent-id> | <scope-label>`
 9. only after that, report repo status and wait for the concrete task
 
@@ -218,7 +218,7 @@ Please read AGENTS.md and operate as the coding agent.
 Keep this startup output narrow:
 
 - do not claim file-specific context before the user gives a concrete task
-- do not run `agent-claim`, `agent-start`, and `agent-status` in parallel
+- do not run `claim`, `start`, and `status` in parallel
 - do not omit the startup self-label line
 - keep the CI line about the latest completed workflow, not a possibly in-progress run
 
@@ -231,22 +231,22 @@ Recovery rules:
 1. do not assume an `active` agent is still reachable just because the registry says `active`
 2. read `.agent-local/agents.json` and the relevant mailbox file first
 3. preserve the old agent entry for auditability; do not overwrite its `id`
-4. if the old chat is clearly gone, mark that agent `paused` with `scripts/agent-stop.sh <agent-id>`
+4. if the old chat is clearly gone, mark that agent `paused` with `scripts/agent_registry.py stop <agent-id>`
 5. claim a new id for the replacement chat and continue from the mailbox handoff
-6. if a previously forgotten chat is reopened later, that chat must run `scripts/agent-resume-check.sh <its-agent-id>` before doing tracked work again
+6. if a previously forgotten chat is reopened later, that chat must run `scripts/agent_registry.py resume-check <its-agent-id>` before doing tracked work again
 7. if the reopened chat is no longer `active`, it must stop and must not resume tracked work under the old id
 
 Recommended recovery sequence:
 
-1. run `scripts/agent-status.sh`
+1. run `scripts/agent_registry.py status`
 2. identify the stale `active` agent
 3. read `.agent-local/<agent-id>.md`
-4. either run `scripts/agent-stop.sh <old-agent-id>` then `scripts/agent-claim.sh <role>` plus `scripts/agent-start.sh <new-agent-id>`, or use `scripts/agent-recover.sh <old-agent-id>`
+4. either run `scripts/agent_registry.py stop <old-agent-id>` then `scripts/agent_registry.py claim <role>` plus `scripts/agent_registry.py start <new-agent-id>`, or use `scripts/agent_registry.py recover <old-agent-id>`
 5. read the stale mailbox before resuming tracked work
 
 Recommended scripted shortcut:
 
-- `scripts/agent-recover.sh <old-agent-id>`
+- `scripts/agent_registry.py recover <old-agent-id>`
 
 The recovery helper pauses the stale agent, creates a fresh id for the same role, starts the replacement entry immediately, and appends the default takeover note to the new mailbox.
 
@@ -266,8 +266,8 @@ Please read AGENTS.md and operate as the <role> agent.
 目前狀態：
 - repo 乾淨：## main...origin/main
 - 已讀取並套用 AGENTS.md、AGENTS-LOCAL.md、docs/AGENT-REGISTRY.md
-- 已執行 `scripts/agent-status.sh` 並確認舊 agent `<old-agent-id>` 需要接手
-- 已執行 `scripts/agent-recover.sh <old-agent-id>`，目前這個 chat 是 `<new-agent-id>`，狀態 active
+- 已執行 `scripts/agent_registry.py status` 並確認舊 agent `<old-agent-id>` 需要接手
+- 已執行 `scripts/agent_registry.py recover <old-agent-id>`，目前這個 chat 是 `<new-agent-id>`，狀態 active
 - 已讀取舊 mailbox `.agent-local/<old-agent-id>.md` 與新 mailbox `.agent-local/<new-agent-id>.md`
 - 前一次已完成的 CI 正常：latest completed workflow success
 - 後續 commit 會用 `gpt-5:<new-agent-id>` 作為 agent identity
@@ -285,7 +285,7 @@ Keep this recovery startup output narrow:
 Forgotten-chat note:
 
 - a reopened old chat is not trusted just because the window still exists
-- it must re-check its own registry status before resuming work, preferably with `scripts/agent-resume-check.sh <agent-id>`
+- it must re-check its own registry status before resuming work, preferably with `scripts/agent_registry.py resume-check <agent-id>`
 - if another chat already recovered the scope and the old id is now `paused`, the reopened old chat must stop and yield to the replacement id
 
 Role note:

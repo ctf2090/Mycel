@@ -129,7 +129,7 @@ def print_claim(data: dict[str, Any]) -> None:
     print(f"assigned_by: {data['assigned_by']}")
     print(f"assigned_at: {data['assigned_at']}")
     print(f"mailbox: {data['mailbox']}")
-    print(f"next: scripts/agent-start.sh {data['agent_id']}")
+    print(f"next: scripts/agent_registry.py start {data['agent_id']}")
 
 
 def print_start(data: dict[str, Any]) -> None:
@@ -484,7 +484,10 @@ def cmd_recover(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage the local agent registry.")
+    parser = argparse.ArgumentParser(
+        prog="scripts/agent_registry.py",
+        description="Manage the local agent registry.",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     claim = subparsers.add_parser("claim", add_help=False)

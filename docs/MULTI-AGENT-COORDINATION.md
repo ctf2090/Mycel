@@ -56,11 +56,11 @@ No agent may start tracked work until it has confirmed its own assigned role in 
 
 Recommended startup command:
 
-- `scripts/agent-claim.sh <role> [--scope <scope>]`
-- `scripts/agent-start.sh <agent-id>`
-- `scripts/agent-status.sh [<agent-id>]`
-- `scripts/agent-stop.sh <agent-id> [--status paused|done]`
-- `scripts/agent-recover.sh <stale-agent-id> [--scope <scope>]`
+- `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
+- `scripts/agent_registry.py start <agent-id>`
+- `scripts/agent_registry.py status [<agent-id>]`
+- `scripts/agent_registry.py stop <agent-id> [--status paused|done]`
+- `scripts/agent_registry.py recover <stale-agent-id> [--scope <scope>]`
 
 Recommended startup self-label:
 
@@ -101,9 +101,9 @@ Practical default:
 Before an agent starts:
 
 1. read `.agent-local/agents.json`
-2. if the user already declared a role but no entry exists, run `scripts/agent-claim.sh <role>`
+2. if the user already declared a role but no entry exists, run `scripts/agent_registry.py claim <role>`
 3. confirm the entry has `role`, `assigned_by`, and `assigned_at`
-4. run `scripts/agent-start.sh <agent-id>`
+4. run `scripts/agent_registry.py start <agent-id>`
 5. only then decide whether the task is issue-first or chat-first
 6. if it is issue-first, choose one open issue
 7. check whether another agent or human is already working on it
@@ -260,9 +260,9 @@ If a chat stops unexpectedly, use the local registry and mailbox files as the re
 Recovery sequence:
 
 1. inspect `.agent-local/agents.json`
-2. run `scripts/agent-status.sh`
+2. run `scripts/agent_registry.py status`
 3. read the stale agent's mailbox
-4. if the chat is clearly gone, either run `scripts/agent-recover.sh <agent-id>` or run `scripts/agent-stop.sh <agent-id>` followed by `scripts/agent-claim.sh <role>` and `scripts/agent-start.sh <new-agent-id>`
+4. if the chat is clearly gone, either run `scripts/agent_registry.py recover <agent-id>` or run `scripts/agent_registry.py stop <agent-id>` followed by `scripts/agent_registry.py claim <role>` and `scripts/agent_registry.py start <new-agent-id>`
 5. read the stale mailbox before resuming tracked work
 6. continue work only under the new agent id
 
