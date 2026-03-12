@@ -2498,6 +2498,77 @@ fn object_verify_json_fails_when_sibling_object_has_invalid_declared_id() {
 }
 
 #[test]
+fn object_verify_json_fails_when_sibling_objects_duplicate_a_declared_id() {
+    let dir = create_temp_dir("object-verify-duplicate-sibling-id");
+    let sibling_a_path = dir.path().join("patch-a.json");
+    let sibling_b_path = dir.path().join("patch-b.json");
+    let revision_path = dir.path().join("revision.json");
+
+    let patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let patch_id = patch["patch_id"]
+        .as_str()
+        .expect("patch id should exist")
+        .to_string();
+    let patch_json =
+        serde_json::to_string_pretty(&patch).expect("sibling patch JSON should serialize");
+    fs::write(&sibling_a_path, &patch_json).expect("first sibling patch JSON should be written");
+    fs::write(&sibling_b_path, &patch_json).expect("second sibling patch JSON should be written");
+
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [patch_id.clone()],
+            "state_hash": state_hash(&json!({
+                "doc_id": "doc:test",
+                "blocks": [],
+                "metadata": {}
+            })),
+            "timestamp": 1777778891u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &revision_path,
+        serde_json::to_string_pretty(&revision).expect("revision JSON should serialize"),
+    )
+    .expect("revision JSON should be written");
+
+    let output = run_mycel(&["object", "verify", &path_arg(&revision_path), "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("duplicate sibling object ID") && message.contains(&patch_id)
+                })
+            })),
+        "expected duplicate sibling ID error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn object_verify_json_fails_when_sibling_json_entry_is_unreadable() {
     let dir = create_temp_dir("object-verify-unreadable-sibling-entry");
     let sibling_dir_path = dir.path().join("patch-dir.json");

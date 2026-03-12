@@ -744,3 +744,49 @@ pub(super) fn revision_replay_rejects_patch_from_other_document() {
         "expected cross-document replay error, got {summary:?}"
     );
 }
+
+#[test]
+pub(super) fn revision_replay_rejects_patch_dependency_that_fails_standalone_verification() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 10u64,
+        "ops": []
+    });
+    let invalid_patch_id = "patch:wrong".to_string();
+    patch["patch_id"] = Value::String(invalid_patch_id.clone());
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+
+    let mut revision = json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "parents": [],
+        "patches": [invalid_patch_id.clone()],
+        "state_hash": state_hash_for_blocks("doc:test", Vec::new()),
+        "author": public_key,
+        "timestamp": 11u64
+    });
+    let revision_id =
+        recompute_object_id(&revision, "revision_id", "rev").expect("revision ID should recompute");
+    revision["revision_id"] = Value::String(revision_id);
+    revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+
+    let object_index = HashMap::from([(invalid_patch_id.clone(), patch)]);
+    let summary = verify_object_value_with_object_index(&revision, Some(&object_index));
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert_eq!(summary.state_hash_verification.as_deref(), Some("failed"));
+    assert!(
+        summary.errors.iter().any(|message| {
+            message.contains(&format!("failed to verify patch '{invalid_patch_id}'"))
+                && message
+                    .contains("declared patch_id does not match recomputed canonical object ID")
+        }),
+        "expected dependency verification error, got {summary:?}"
+    );
+}

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -516,6 +516,8 @@ fn verify_revision_replay(
         }
     };
 
+    verify_revision_dependencies(value, object_index)
+        .map_err(|error| format!("revision replay failed: {error}"))?;
     let replay = replay_revision_from_index(value, object_index)
         .map_err(|error| format!("revision replay failed: {error}"))?;
     let declared_state_hash = value
@@ -532,6 +534,110 @@ fn verify_revision_replay(
     }
 
     Ok(replay.recomputed_state_hash)
+}
+
+fn verify_revision_dependencies(
+    revision_value: &Value,
+    object_index: &HashMap<String, Value>,
+) -> Result<(), String> {
+    let revision = parse_revision_object(revision_value)
+        .map_err(|error| format!("failed to parse revision object: {error}"))?;
+    let mut verified_revisions = HashSet::new();
+    let mut visiting_revisions = HashSet::new();
+    let mut verified_patches = HashSet::new();
+    verify_revision_dependency_closure(
+        &revision,
+        object_index,
+        &mut verified_revisions,
+        &mut visiting_revisions,
+        &mut verified_patches,
+    )
+}
+
+fn verify_revision_dependency_closure(
+    revision: &crate::protocol::RevisionObject,
+    object_index: &HashMap<String, Value>,
+    verified_revisions: &mut HashSet<String>,
+    visiting_revisions: &mut HashSet<String>,
+    verified_patches: &mut HashSet<String>,
+) -> Result<(), String> {
+    if verified_revisions.contains(&revision.revision_id) {
+        return Ok(());
+    }
+
+    if !visiting_revisions.insert(revision.revision_id.clone()) {
+        return Err(format!(
+            "revision replay dependency cycle detected at '{}'",
+            revision.revision_id
+        ));
+    }
+
+    for parent_id in &revision.parents {
+        let parent_value = object_index
+            .get(parent_id)
+            .ok_or_else(|| format!("missing parent revision '{parent_id}' for replay"))?;
+        verify_replay_dependency_object("parent revision", parent_id, "revision", parent_value)?;
+        let parent_revision = parse_revision_object(parent_value)
+            .map_err(|error| format!("failed to parse parent revision '{parent_id}': {error}"))?;
+        verify_revision_dependency_closure(
+            &parent_revision,
+            object_index,
+            verified_revisions,
+            visiting_revisions,
+            verified_patches,
+        )?;
+    }
+
+    for patch_id in &revision.patches {
+        if !verified_patches.insert(patch_id.clone()) {
+            continue;
+        }
+        let patch_value = object_index
+            .get(patch_id)
+            .ok_or_else(|| format!("missing patch '{patch_id}' for replay"))?;
+        verify_replay_dependency_object("patch", patch_id, "patch", patch_value)?;
+    }
+
+    visiting_revisions.remove(&revision.revision_id);
+    verified_revisions.insert(revision.revision_id.clone());
+    Ok(())
+}
+
+fn verify_replay_dependency_object(
+    label: &str,
+    object_id: &str,
+    expected_type: &str,
+    value: &Value,
+) -> Result<(), String> {
+    let summary = verify_object_value(value);
+    if !summary.is_ok() {
+        return Err(format!(
+            "failed to verify {label} '{object_id}': {}",
+            summary.errors.join("; ")
+        ));
+    }
+
+    match summary.object_type.as_deref() {
+        Some(actual_type) if actual_type == expected_type => {}
+        Some(actual_type) => {
+            return Err(format!(
+                "{label} '{object_id}' is a '{actual_type}' object instead of '{expected_type}'"
+            ))
+        }
+        None => {
+            return Err(format!(
+                "{label} '{object_id}' does not declare an object type"
+            ))
+        }
+    }
+
+    match summary.declared_id.as_deref() {
+        Some(declared_id) if declared_id == object_id => Ok(()),
+        Some(declared_id) => Err(format!(
+            "{label} '{object_id}' is declared as '{declared_id}' instead"
+        )),
+        None => Err(format!("{label} '{object_id}' is missing its declared ID")),
+    }
 }
 
 fn load_neighbor_object_index(
@@ -585,7 +691,14 @@ fn load_neighbor_object_index(
         else {
             continue;
         };
-        object_index.insert(declared_id.to_string(), value);
+        let declared_id = declared_id.to_string();
+        if let Some(existing) = object_index.insert(declared_id.clone(), value) {
+            let _ = existing;
+            return Err(format!(
+                "duplicate sibling object ID '{}' found while loading replay objects",
+                declared_id
+            ));
+        }
     }
 
     Ok(object_index)
