@@ -39,10 +39,7 @@
 
 .home-page .hero .lead {
   margin: 18px auto 0;
-  width: min(
-    var(--home-lead-max-width),
-    calc(100% - 2 * var(--home-copy-inline-gutter))
-  );
+  width: calc(100% - 2 * var(--home-copy-inline-gutter));
   font-size: 1.08rem;
   line-height: var(--home-lead-line-height);
   color: var(--muted);
@@ -51,10 +48,7 @@
 
 .home-page .hero .hero-note {
   margin: 16px auto 0;
-  width: min(
-    var(--home-note-max-width),
-    calc(100% - 2 * var(--home-copy-inline-gutter))
-  );
+  width: calc(100% - 2 * var(--home-copy-inline-gutter));
   font-size: 0.98rem;
   line-height: var(--home-note-line-height);
   color: var(--accent-strong);
