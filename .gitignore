@@ -11,3 +11,4 @@ sim/runtime/*
 sim/reports/out/
 apps/vscode-hover-translate/
 __pycache__
+tmp
