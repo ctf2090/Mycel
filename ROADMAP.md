@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: late partial progress, refreshed after the recent multi-agent registry and startup-gate coordination batch; milestone state unchanged
+Status: late partial progress, refreshed after the recent canonical-helper consolidation, broader merge-authoring coverage, and editor-admission head-workflow batch; milestone state unchanged
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -17,6 +17,8 @@ The repository already has:
 - a growing v0.1 protocol and wire-spec document set
 - a Rust CLI suitable for internal validation and deterministic simulator workflows
 - `mycel-core` support for object schema metadata, object-envelope parsing, replay-based revision verification, local object-store ingest/rebuild, persisted store indexes, and accepted-head inspection
+- more centralized canonical hash and signed-payload helpers reused across verification, replay, and authoring paths
+- early reader-plus-governance surfaces for accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render workflows
 - broader parser / verify / CLI strictness-surface coverage for `document`, `block`, `patch`, `revision`, `view`, and `snapshot`, a materially wider `object inspect` warning surface, stronger signature-edge and replay/verification smoke coverage for merge and cross-document revision edges, and isolated validate-peer fixtures
 - a more maintainable CLI test base with `assert_cmd`, `predicates`, `tempfile`, and small `rstest` use on high-duplication strictness matrices
 - simulator fixtures, topologies, tests, and reports for regression coverage
@@ -231,7 +233,7 @@ Main remaining gaps:
 
 1. broader reuse of persisted store indexes across reader workflows
 2. broader replay and store reconstruction coverage tied to more realistic fixture sets beyond the current direct store-backed replay proof point
-3. conservative merge authoring now covers basic move/reorder, insert/delete composition, reparenting into newly introduced parents, and simple composed parent-chain reparenting, but broader nested/reparenting cases and richer conflict classification still require manual curation
+3. conservative merge authoring now covers basic move/reorder, insert/delete composition, reparenting into newly introduced parents, simple composed parent-chain reparenting, and a broader initial nested structural matrix, but richer nested/reparenting conflict cases still require manual curation
 4. broader core reuse so authoring and replay helpers do not remain disproportionately CLI-driven
 
 Implementation anchors:
@@ -280,7 +282,7 @@ Goal: add a usable reader-oriented client layer with deterministic accepted-head
 
 ### Current Status
 
-Early partial progress, now with initial accepted-head rendering on top of the deterministic selector path.
+Early partial progress, now with accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render behavior on top of the deterministic selector path.
 
 Already in progress or partially implemented:
 
@@ -289,9 +291,10 @@ Already in progress or partially implemented:
 3. Store-backed accepted-head inspection using persisted store indexes
 4. Accepted-head render output from persisted store state or explicit bundle objects
 5. Named fixed-profile selection for accepted-head inspection and render workflows
-6. Dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands
-7. Persisted governance reverse indexes for maintainer, profile, and document view lookups
-8. Early simulator workflows around peer and topology validation
+6. Editor-admission-aware accepted-head inspect/render behavior for named-profile and store-backed paths
+7. Dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands
+8. Persisted governance reverse indexes for maintainer, profile, and document view lookups
+9. Early simulator workflows around peer and topology validation
 
 Still missing or incomplete:
 
@@ -320,7 +323,7 @@ Completion gate:
 
 Current read:
 
-Early partial progress, now with initial accepted-head render support from persisted stores and explicit replay bundles.
+Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, plus editor-admission-aware named-profile and store-backed flows.
 
 Already visible in the repo:
 
@@ -329,9 +332,10 @@ Already visible in the repo:
 3. store-backed selector object loading for accepted-head inspection
 4. accepted-head rendering from persisted store state or explicit bundle objects
 5. named fixed-profile selection for accepted-head inspection and render workflows
-6. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, grouped summaries, and projection modes
-7. persisted governance reverse indexes for maintainer, profile, and document-oriented view lookups
-8. simulator and validation workflows around peer, topology, test, and report scopes
+6. editor-admission-aware inspect/render behavior for named-profile and store-backed reader flows
+7. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, grouped summaries, and projection modes
+8. persisted governance reverse indexes for maintainer, profile, and document-oriented view lookups
+9. simulator and validation workflows around peer, topology, test, and report scopes
 
 Main remaining gaps:
 

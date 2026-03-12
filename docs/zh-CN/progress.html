@@ -341,12 +341,13 @@
         <h1>用一页看懂 Roadmap 顺序和 implementation 状态。</h1>
         <p class="lead">
           Mycel 目前仍处在窄版 first-client lane。眼前目标是先收掉 shared-core 的 parsing、
-          canonicalization、replay 和 rebuild，再向 reader、sync 和 app-layer 扩展。
+          canonicalization、replay 和 rebuild，同时只通过具备 editor-admission 感知的 accepted-head inspect/render 与 profile
+          workflows 谨慎扩展 reader surface。
         </p>
         <ol class="lane-list">
           <li>收掉 <code>M1</code> 的 malformed-field depth 和 canonicalization debt。</li>
-          <li>完成 <code>M2</code> 的 replay、rebuild 和 narrow write-path closure。</li>
-          <li>在 shared core 稳定之前，延后 <code>M3+</code> 的扩展。</li>
+          <li>完成 <code>M2</code> 的 replay、rebuild 和 merge-authoring closure。</li>
+          <li>在 accepted-head inspect/render 和命名 profile 基础上，谨慎扩展 <code>M3</code> reader workflows。</li>
         </ol>
       </header>
 
@@ -375,6 +376,7 @@
               <li>Replay 和 <code>state_hash</code></li>
               <li>Store rebuild 和 indexes</li>
               <li>Narrow write-path closure</li>
+              <li>Conservative merge authoring</li>
             </ul>
           </article>
           <article class="card">
@@ -383,8 +385,10 @@
             <div class="status partial">下一步</div>
             <ul>
               <li>Accepted-head reader workflows</li>
-              <li>Fixed-profile reading</li>
-              <li>Reader-first text inspection</li>
+              <li>Bundle 和 store rendering</li>
+              <li>命名 fixed-profile reading</li>
+              <li>具备 editor-admission 感知的 render flows</li>
+              <li>Persisted governance reverse indexes</li>
             </ul>
           </article>
           <article class="card">
@@ -441,7 +445,7 @@
               <td data-label="Area">3. Canonical Serialization and Hashing</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">核心规则和 reproducibility coverage 已经存在；<code>state_hash</code> 和 wire 仍然缺 shared canonical utility reuse。</td>
+              <td data-label="Current read">核心规则和 reproducibility coverage 已经存在，而且 canonical helper reuse 更集中；<code>state_hash</code> 和 wire 仍然缺完整 shared utility reuse。</td>
             </tr>
             <tr>
               <td data-label="Area">4. Signature Verification</td>
@@ -477,19 +481,19 @@
               <td data-label="Area">9. Views and Head Selection</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M3</td>
-              <td data-label="Current read">Deterministic selector core 已经存在；multi-profile 和 dual-role closure 还没有完成。</td>
+              <td data-label="Current read">Deterministic selector core、命名 fixed-profile selection，以及具备 editor-admission 感知的 inspect/render flows 已经存在；dual-role closure 还没有完成。</td>
             </tr>
             <tr>
               <td data-label="Area">10. Merge Generation</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Verification 采用 replay-based，但 local merge authoring 还没有建立。</td>
+              <td data-label="Current read">Replay-based verification 和保守型 local merge authoring 已经存在，涵盖 structural move/reorder、新 parent reparenting、简单 composed parent-chain coverage，以及更广的 nested structural matrix，但更丰富的 nested/reparenting conflict cases 仍然会回落到 manual curation。</td>
             </tr>
             <tr>
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3</td>
-              <td data-label="Current read">Verification 和 inspection 已经存在；authoring、sync 和 workflow split 还没有完成。</td>
+              <td data-label="Current read">Verification、authoring、保守型 merge authoring、具备 editor-admission 感知的 reader inspection/render、governance inspect/list/publish，以及 persisted governance index query surfaces 已经存在；sync 仍然没有完成。</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
@@ -501,7 +505,7 @@
               <td data-label="Area">13. Ready-to-Build Gate</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">Whole plan</td>
-              <td data-label="Current read">Replay、head selection 和 rebuild 已经绿了；parse、wire sync 和 merge generation 还没有完成。</td>
+              <td data-label="Current read">Replay、head selection、rebuild 和保守型 merge authoring 已经绿了；parse closure 和 wire sync 还没有完成。</td>
             </tr>
           </tbody>
         </table>

@@ -1,6 +1,6 @@
 # Mycel Progress View
 
-Status: draft, refreshed after the recent M2 authoring and M3 accepted-head render/profile-selection batch
+Status: draft, refreshed after the recent canonical-helper consolidation, broader merge-authoring coverage, and editor-admission-aware head workflow batch
 
 This page turns [`ROADMAP.md`](../ROADMAP.md) and [`IMPLEMENTATION-CHECKLIST.en.md`](../IMPLEMENTATION-CHECKLIST.en.md) into one quick progress view.
 
@@ -10,7 +10,7 @@ The current build lane is:
 
 1. close `M1` parsing and canonicalization debt
 2. finish `M2` replay, rebuild, and merge-authoring closure
-3. expand `M3` reader workflows carefully on top of the now-usable accepted-head inspection and render base
+3. expand `M3` reader workflows carefully on top of the now-usable accepted-head inspection, render, and editor-admission-aware profile base
 
 ## Milestone Timeline
 
@@ -37,9 +37,9 @@ flowchart LR
 
 | Milestone | Status | Main focus now | Main gaps |
 |---|---|---|---|
-| `M1` | Mostly complete | shared parsing, canonical helpers, strictness/fixture coverage | malformed field-shape depth closure, shared canonical utility reuse, milestone-close proof points |
-| `M2` | Substantially underway | replay, `state_hash`, store rebuild, persisted indexes, narrow write path, conservative merge authoring with basic structural move/reorder, new-parent reparenting, and simple composed parent-chain coverage | stronger replay/store fixtures, broader core reuse, nested/reparenting merge breadth |
-| `M3` | Early partial | accepted-head reader workflows, bundle/store rendering, named fixed-profile reading, initial filtered/sorted/projected `view` governance inspect/list/publish workflows, and persisted reverse governance indexes | broader governance persistence, richer governance tooling, reader profile ergonomics |
+| `M1` | Mostly complete | shared parsing, canonical helpers, strictness/fixture coverage | malformed field-shape depth closure, full canonical reuse for `state_hash`/wire, milestone-close proof points |
+| `M2` | Substantially underway | replay, `state_hash`, store rebuild, persisted indexes, narrow write path, and conservative merge authoring with broader structural coverage | stronger replay/store fixtures, broader core reuse, and richer nested/reparenting conflict classification |
+| `M3` | Early partial | accepted-head reader workflows, bundle/store rendering, named fixed-profile reading, editor-admission-aware inspect/render flows, initial filtered/sorted/projected `view` governance inspect/list/publish workflows, and persisted reverse governance indexes | broader governance persistence, richer governance tooling, reader profile ergonomics |
 | `M4` | Later | wire envelope, sync workflow, peer interop | depends on stable reader and store model |
 | `M5` | Later | selective app-layer growth | depends on stable protocol core and sync |
 
@@ -56,15 +56,15 @@ Legend:
 |---|---|---|---|
 | 1. Repo and Build Setup | Mostly done | `M1` | only the shared canonical JSON utility remains open |
 | 2. Object Types and IDs | Partial | `M1` | typed parsing exists for all required v0.1 families; remaining work is malformed field-shape depth, semantic-edge closure, and role modeling |
-| 3. Canonical Serialization and Hashing | Partial | `M1` | core rules and reproducibility coverage exist; shared canonical utility reuse for `state_hash` and wire remains open |
+| 3. Canonical Serialization and Hashing | Partial | `M1` | core rules and reproducibility coverage exist, and canonical helper reuse is more centralized; full shared utility reuse for `state_hash` and wire remains open |
 | 4. Signature Verification | Partial | `M1` | object signature rules are mostly present, and signature-edge verify smoke coverage is broader; wire-envelope checks are not |
 | 5. Patch and Revision Engine | Mostly done | `M2` | replay and `state_hash` are in place; patch-op base is strong |
 | 6. Local State and Storage | Mostly done | `M2` | store ingest, rebuild, and indexes exist; local transport/safety separation remains |
 | 7. Wire Protocol | Not started | `M4` | canonical wire envelope and message validation are still future work |
 | 8. Sync Workflow | Not started | `M4` | first-time and incremental sync remain future work |
-| 9. Views and Head Selection | Mostly done | `M3` | deterministic selector core and named fixed-profile selection exist; dual-role closure remains |
-| 10. Merge Generation | Partial | `M2` | replay verification and a conservative local merge-authoring profile exist, including basic structural move/reorder, new-parent reparenting, and simple composed parent-chain coverage, but broader nested/reparenting merges still fall back to manual curation |
-| 11. CLI or API Surface | Partial | `M2` / `M3` | verification, authoring, conservative merge authoring, reader inspection/render, governance inspect/list/publish, and persisted governance index query surfaces exist; sync remains open |
+| 9. Views and Head Selection | Mostly done | `M3` | deterministic selector core, named fixed-profile selection, and editor-admission-aware inspect/render flows exist; dual-role closure remains |
+| 10. Merge Generation | Partial | `M2` | replay verification and a conservative local merge-authoring profile exist, including structural move/reorder, new-parent reparenting, simple composed parent-chain coverage, and a broader nested structural matrix, but richer nested/reparenting conflict cases still fall back to manual curation |
+| 11. CLI or API Surface | Partial | `M2` / `M3` | verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, and persisted governance index query surfaces exist; sync remains open |
 | 12. Interop Test Minimum | Partial | `M1` / `M2` | fixture isolation, reproducibility, smoke coverage, and a broader merge-authoring structural matrix exist, but several normative wire and replay checks remain |
 | 13. Ready-to-Build Gate | Partial | whole plan | replay, head selection, rebuild, and conservative merge authoring are green; parse closure and wire sync are not |
 

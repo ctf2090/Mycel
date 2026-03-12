@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，已在最近一批 multi-agent startup-gate 協作流程工作後刷新；實作狀態未變，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、signature-edge 與 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 仍接近完成
+狀態：late partial progress，已在最近一批 canonical-helper consolidation、merge-authoring coverage 擴張，以及 editor-admission head inspect/render 工作後刷新；實作狀態未變，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、signature-edge 與 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 仍接近完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 

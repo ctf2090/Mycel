@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, refreshed after the recent multi-agent startup-gate coordination batch; implementation state unchanged, with M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, signature-edge and replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core still nearly complete
+Status: late partial progress, refreshed after the recent canonical-helper consolidation, broader merge-authoring coverage, and editor-admission head inspect/render batch; implementation state unchanged, with M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, signature-edge and replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core still nearly complete
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 

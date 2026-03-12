@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-狀態：late partial progress，已在最近一批 multi-agent registry 與 startup-gate 協作流程工作後刷新；里程碑狀態未變
+狀態：late partial progress，已在最近一批 canonical-helper consolidation、merge-authoring coverage 擴張，以及 editor-admission head workflow 工作後刷新；里程碑狀態未變
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的建置順序。
 
@@ -17,6 +17,8 @@
 - 持續成長中的 v0.1 protocol 與 wire-spec 文件集
 - 適合做內部驗證與決定性模擬器工作流程的 Rust CLI
 - `mycel-core` 對 object schema metadata、object-envelope parsing、replay-based revision verification、local object-store ingest/rebuild、persisted store indexes，以及 accepted-head inspection 的支援
+- 更集中化的 canonical hash 與 signed-payload helpers，已在 verification、replay 與 authoring 路徑之間重用
+- 早期 reader-plus-governance surfaces，涵蓋 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render workflows
 - `document`、`block`、`patch`、`revision`、`view`、`snapshot` 在 parser / verify / CLI 路徑更廣的 strictness-surface coverage、更完整的 `object inspect` warning surface、對 merge 與 cross-document revision edge 更強的 signature-edge 與 replay/verification smoke coverage，以及 isolate 過的 validate-peer fixtures
 - 以 `assert_cmd`、`predicates`、`tempfile` 與小範圍 `rstest` 建立的較可維護 CLI test base
 - simulator fixtures、topologies、tests 與 reports，作為 regression coverage
@@ -231,7 +233,7 @@ Implementation anchors：
 
 1. 持久化 store indexes 在 reader workflows 中的更廣 reuse
 2. 在目前直接 store-backed replay proof point 之外，進一步補強與更真實 fixture sets 綁定的 replay 與 store reconstruction coverage
-3. 保守型 merge authoring 現在已覆蓋基本 move/reorder、insert/delete 組合、reparent 到新引入 parent 的 case，以及簡單的 composed parent-chain reparenting，但更廣的 nested/reparenting case 與更豐富的 conflict classification 仍需 manual curation
+3. 保守型 merge authoring 現在已覆蓋基本 move/reorder、insert/delete 組合、reparent 到新引入 parent 的 case、簡單的 composed parent-chain reparenting，以及更廣的初步 nested structural matrix，但更豐富的 nested/reparenting conflict cases 仍需 manual curation
 4. 擴大 shared core reuse，避免 authoring 與 replay helpers 過度停留在 CLI-driven glue
 
 Implementation anchors：
@@ -280,7 +282,7 @@ Implementation anchors：
 
 ### Current Status
 
-屬早期 partial progress，現在已在 deterministic selector path 之上具備初步的 accepted-head rendering。
+屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render behavior。
 
 已在進行中或部分完成：
 
@@ -289,9 +291,10 @@ Implementation anchors：
 3. accepted-head inspection 的 store-backed selector object loading
 4. 可從 persisted store state 或 explicit bundle objects 產生 accepted-head render output
 5. 為 accepted-head inspection 與 render workflows 提供具名 fixed-profile selection
-6. 提供獨立於 reader-facing `head` commands 的 `view inspect` / `view list` / `view publish` governance workflows，並具備 listing filter、sort、time window、grouped summary 與 projection modes
-7. persisted governance reverse indexes，支援依 maintainer、profile 與 document 反查 view
-8. simulator 與 validation workflows，涵蓋 peer、topology、test 與 report 範圍
+6. 在具名 profile 與 store-backed 路徑中，提供具備 editor-admission 感知的 accepted-head inspect/render behavior
+7. 提供獨立於 reader-facing `head` commands 的 `view inspect` / `view list` / `view publish` governance workflows，並具備 listing filter、sort、time window、grouped summary 與 projection modes
+8. persisted governance reverse indexes，支援依 maintainer、profile 與 document 反查 view
+9. simulator 與 validation workflows，涵蓋 peer、topology、test 與 report 範圍
 
 主要剩餘缺口：
 
