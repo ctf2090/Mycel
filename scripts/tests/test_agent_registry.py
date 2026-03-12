@@ -59,6 +59,7 @@ class AgentRegistryCliTest(unittest.TestCase):
         confirmed_at: str | None = None,
         last_touched_at: str | None = None,
         inactive_at: str | None = None,
+        paused_at: str | None = None,
         recovery_of: str | None = None,
         superseded_by: str | None = None,
     ) -> dict:
@@ -83,6 +84,7 @@ class AgentRegistryCliTest(unittest.TestCase):
             "confirmed_at": confirmed_at or assigned_at,
             "last_touched_at": last_touched_at,
             "inactive_at": inactive_at,
+            "paused_at": paused_at,
             "status": status,
             "scope": scope,
             "files": [],
@@ -372,6 +374,82 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertEqual("agt_recent", cleanup["stale_agents"][0]["agent_uid"])
         self.assertEqual(1, status["agent_count"])
         self.assertEqual("agt_recent", status["agents"][0]["agent_uid"])
+
+    def test_cleanup_releases_and_removes_paused_entries_after_paused_retention(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        old_entry = self.make_v2_entry(
+            agent_uid="agt_paused_old",
+            role="coding",
+            display_id="coding-1",
+            assigned_at=self.timestamp(now - timedelta(days=16)),
+            status="paused",
+            scope="paused-old",
+            last_touched_at=self.timestamp(now - timedelta(days=16, minutes=5)),
+            paused_at=self.timestamp(now - timedelta(days=15)),
+        )
+        recent_entry = self.make_v2_entry(
+            agent_uid="agt_paused_recent",
+            role="coding",
+            display_id="coding-2",
+            assigned_at=self.timestamp(now - timedelta(days=9)),
+            status="paused",
+            scope="paused-recent",
+            last_touched_at=self.timestamp(now - timedelta(days=9, minutes=5)),
+            paused_at=self.timestamp(now - timedelta(days=8)),
+        )
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 2,
+                "agents": [old_entry, recent_entry],
+            }
+        )
+
+        cleanup = json.loads(self.run_cli("cleanup", "--json").stdout)
+        status = json.loads(self.run_cli("status", "--json").stdout)
+        retained_entry = status["agents"][0]
+
+        self.assertEqual(1, cleanup["removed_count"])
+        self.assertEqual("agt_paused_old", cleanup["removed_agents"][0]["agent_uid"])
+        self.assertEqual(1, cleanup["stale_count"])
+        self.assertEqual("agt_paused_recent", cleanup["stale_agents"][0]["agent_uid"])
+        self.assertEqual(1, status["agent_count"])
+        self.assertEqual("agt_paused_recent", retained_entry["agent_uid"])
+        self.assertIsNone(retained_entry["display_id"])
+
+    def test_cleanup_infers_paused_at_for_legacy_paused_entries(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [
+                    {
+                        **self.make_v2_entry(
+                            agent_uid="agt_paused_legacy",
+                            role="doc",
+                            display_id="doc-1",
+                            assigned_at=self.timestamp(now - timedelta(days=10)),
+                            status="paused",
+                            scope="legacy-paused",
+                            last_touched_at=self.timestamp(now - timedelta(days=8)),
+                        ),
+                        "paused_at": None,
+                    }
+                ],
+            }
+        )
+
+        cleanup = json.loads(self.run_cli("cleanup", "--json").stdout)
+        registry = self.read_registry()
+        entry = registry["agents"][0]
+
+        self.assertEqual(1, cleanup["stale_count"])
+        self.assertEqual("agt_paused_legacy", cleanup["stale_agents"][0]["agent_uid"])
+        self.assertIsNotNone(entry["paused_at"])
+        self.assertIsNone(entry["current_display_id"])
 
 
 if __name__ == "__main__":

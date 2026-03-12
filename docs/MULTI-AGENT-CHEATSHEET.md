@@ -83,7 +83,9 @@ Per-command activity:
 1. `scripts/agent_registry.py touch <agent-ref>` before working
 2. `scripts/agent_registry.py finish <agent-ref>` after the command completes
 3. inactive entries older than one hour become stale and release their `display_id`
-4. once an entry stays stale for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
+4. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
+5. paused entries older than 7 days become stale-paused and release their `display_id`
+6. once a stale-paused entry stays retained for 7 more days, `cleanup` removes it from `.agent-local/agents.json`
 
 Interrupted chat recovery:
 

@@ -86,6 +86,7 @@ The local registry must be valid JSON and use this top-level shape:
       "confirmed_at": "2026-03-12T11:01:00+0800",
       "last_touched_at": "2026-03-12T11:10:00+0800",
       "inactive_at": null,
+      "paused_at": null,
       "status": "active",
       "scope": "forum inbox sync",
       "files": [],
@@ -111,6 +112,7 @@ The local registry must be valid JSON and use this top-level shape:
       "confirmed_at": "2026-03-12T11:06:00+0800",
       "last_touched_at": "2026-03-12T11:15:00+0800",
       "inactive_at": null,
+      "paused_at": null,
       "status": "active",
       "scope": "registry design note",
       "files": [],
@@ -143,6 +145,7 @@ Per agent:
 - `confirmed_at`
 - `last_touched_at`
 - `inactive_at`
+- `paused_at`
 - `status`
 - `scope`
 - `files`
@@ -168,6 +171,7 @@ Field rules:
 - `agent_count` must match the number of entries in `agents`
 - `confirmed_by_agent` must be `true` before tracked work starts
 - `inactive_at` should be non-null only when `status == "inactive"`
+- `paused_at` should be non-null only when `status == "paused"`
 
 `scripts/agent_registry.py` writes timestamps in `Asia/Taipei (UTC+8)` using the `+0800` offset form.
 
@@ -286,6 +290,7 @@ Keep startup output narrow:
 4. before each user-command work cycle, run `scripts/agent_registry.py touch <agent-ref>`
 5. after that command's work is complete, run `scripts/agent_registry.py finish <agent-ref>`
 6. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
+7. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
 Planning-sync coordination:
 
@@ -308,7 +313,9 @@ Rules:
 4. when an entry becomes stale, its `display_id` is released and `current_display_id` becomes `null`
 5. while the stale entry is still retained, the old chat must use `resume-check` and then `recover` by `agent_uid`
 6. once an entry has remained stale for at least 24 more hours, `scripts/agent_registry.py` removes it from `.agent-local/agents.json`
-7. `cleanup` reports both retained stale agents and removed agents
+7. once an entry stays `paused` for at least 7 days, it becomes stale-paused and releases its `display_id`
+8. once a stale-paused entry remains retained for 7 more days, `scripts/agent_registry.py` removes it from `.agent-local/agents.json`
+9. `cleanup` reports both retained stale agents and removed agents
 
 ## Recovery Model
 
@@ -345,7 +352,8 @@ Example:
 1. if the agent is `active` or `inactive`, still confirmed, and still has `current_display_id`, it may directly resume
 2. if the agent is confirmed but `current_display_id == null`, it must recover before doing tracked work
 3. if the agent is `paused`, `blocked`, or `done`, it must stop instead of resuming
-4. if the stale entry has already been removed after the 24-hour retention window, the old chat must not continue under that old identity
+4. a stale-paused entry should normally be continued through `takeover`, not direct resume
+5. if the stale entry has already been removed after the retention window, the old chat must not continue under that old identity
 
 ## Transitional CLI Policy
 
@@ -384,6 +392,7 @@ Current CLI policy:
       "confirmed_at": "2026-03-12T11:02:00+0800",
       "last_touched_at": "2026-03-12T11:10:00+0800",
       "inactive_at": null,
+      "paused_at": null,
       "status": "active",
       "scope": "#17 store refactor",
       "files": [
@@ -412,6 +421,7 @@ Current CLI policy:
       "confirmed_at": "2026-03-12T11:06:00+0800",
       "last_touched_at": "2026-03-12T11:15:00+0800",
       "inactive_at": null,
+      "paused_at": null,
       "status": "active",
       "scope": "planning sync for #17",
       "files": [

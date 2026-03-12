@@ -19,6 +19,8 @@ ALLOWED_STATUSES = {"active", "inactive", "paused", "blocked", "done"}
 REGISTRY_VERSION = 2
 STALE_INACTIVE_SECONDS = 3600
 STALE_RETENTION_SECONDS = 24 * 3600
+STALE_PAUSED_SECONDS = 7 * 24 * 3600
+STALE_PAUSED_RETENTION_SECONDS = 7 * 24 * 3600
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 
 
@@ -238,6 +240,21 @@ def ensure_entry_v2(entry: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     if "superseded_by" not in entry:
         entry["superseded_by"] = None
         changed = True
+    if "paused_at" not in entry:
+        entry["paused_at"] = None
+        changed = True
+    if entry.get("status") == "paused":
+        paused_at = entry.get("paused_at")
+        if not isinstance(paused_at, str) or not paused_at.strip():
+            for field in ["last_touched_at", "confirmed_at", "assigned_at"]:
+                candidate = entry.get(field)
+                if isinstance(candidate, str) and candidate.strip():
+                    entry["paused_at"] = candidate
+                    changed = True
+                    break
+    elif entry.get("paused_at") is not None:
+        entry["paused_at"] = None
+        changed = True
     if "id" in entry:
         del entry["id"]
         changed = True
@@ -321,7 +338,7 @@ def next_display_id(registry: dict[str, Any], role: str) -> str:
     return f"{role}-{candidate}"
 
 
-def apply_inactive_lifecycle(
+def apply_agent_lifecycle(
     registry: dict[str, Any], *, now: datetime | None = None
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
     current_time = now or datetime.now(timezone.utc)
@@ -333,19 +350,31 @@ def apply_inactive_lifecycle(
 
     for entry in registry["agents"]:
         status = entry.get("status")
-        inactive_at = entry.get("inactive_at")
-        if status == "inactive" and isinstance(inactive_at, str) and inactive_at.strip():
+        lifecycle_field = None
+        stale_after_seconds = None
+        retention_seconds = None
+        if status == "inactive":
+            lifecycle_field = "inactive_at"
+            stale_after_seconds = STALE_INACTIVE_SECONDS
+            retention_seconds = STALE_RETENTION_SECONDS
+        elif status == "paused":
+            lifecycle_field = "paused_at"
+            stale_after_seconds = STALE_PAUSED_SECONDS
+            retention_seconds = STALE_PAUSED_RETENTION_SECONDS
+
+        lifecycle_at = entry.get(lifecycle_field) if lifecycle_field else None
+        if lifecycle_field and isinstance(lifecycle_at, str) and lifecycle_at.strip():
             try:
-                inactive_since = parse_utc_timestamp(inactive_at)
+                lifecycle_since = parse_utc_timestamp(lifecycle_at)
             except ValueError:
-                inactive_since = None
-            if inactive_since is not None:
-                age_seconds = (current_time - inactive_since).total_seconds()
-                if age_seconds >= STALE_INACTIVE_SECONDS + STALE_RETENTION_SECONDS:
+                lifecycle_since = None
+            if lifecycle_since is not None:
+                age_seconds = (current_time - lifecycle_since).total_seconds()
+                if age_seconds >= stale_after_seconds + retention_seconds:
                     removed_agents.append(entry_summary(entry))
                     changed = True
                     continue
-                if age_seconds >= STALE_INACTIVE_SECONDS:
+                if age_seconds >= stale_after_seconds:
                     if current_display_id(entry) is not None:
                         release_display_assignment(entry, release_time, "stale-recycled")
                         changed = True
@@ -368,7 +397,7 @@ def load_registry_with_cleanup(
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
     registry = load_registry(allow_missing=allow_missing)
     registry, migrated = migrate_registry_to_v2(registry)
-    stale_agents, removed_agents, lifecycle_changed = apply_inactive_lifecycle(registry)
+    stale_agents, removed_agents, lifecycle_changed = apply_agent_lifecycle(registry)
     if migrated or lifecycle_changed:
         save_registry(registry)
     return registry, stale_agents, removed_agents
@@ -396,6 +425,7 @@ def normalized_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "confirmed_at": normalize_timestamp_string(entry.get("confirmed_at")),
         "last_touched_at": normalize_timestamp_string(entry.get("last_touched_at")),
         "inactive_at": normalize_timestamp_string(entry.get("inactive_at")),
+        "paused_at": normalize_timestamp_string(entry.get("paused_at")),
         "files": entry.get("files", []),
         "mailbox": mailbox_display,
         "mailbox_exists": mailbox_exists,
@@ -462,6 +492,7 @@ def print_status(data: dict[str, Any]) -> None:
         print(f"  confirmed_at: {entry['confirmed_at']}")
         print(f"  last_touched_at: {entry['last_touched_at']}")
         print(f"  inactive_at: {entry['inactive_at']}")
+        print(f"  paused_at: {entry['paused_at']}")
         print(f"  mailbox: {entry['mailbox']}")
         print(f"  mailbox_exists: {entry['mailbox_exists']}")
         print(f"  recovery_of: {entry['recovery_of']}")
@@ -533,10 +564,10 @@ def print_finish(data: dict[str, Any]) -> None:
 
 
 def print_cleanup(data: dict[str, Any]) -> None:
-    print(f"removed_inactive_agents: {data['removed_count']}")
+    print(f"removed_agents: {data['removed_count']}")
     for entry in data["removed_agents"]:
         print(f"  - {entry['agent_uid']} ({entry.get('last_display_id')})")
-    print(f"stale_inactive_agents: {data['stale_count']}")
+    print(f"stale_agents: {data['stale_count']}")
     for entry in data["stale_agents"]:
         print(f"  - {entry['agent_uid']} ({entry.get('last_display_id')})")
 
@@ -573,6 +604,7 @@ def cmd_claim(args: argparse.Namespace) -> int:
         "mailbox": mailbox_rel,
         "last_touched_at": None,
         "inactive_at": None,
+        "paused_at": now,
         "recovery_of": None,
         "superseded_by": None,
     }
@@ -627,6 +659,7 @@ def cmd_start(args: argparse.Namespace) -> int:
     entry["status"] = "active"
     entry["last_touched_at"] = now
     entry["inactive_at"] = None
+    entry["paused_at"] = None
     registry["updated_at"] = now
 
     mailbox_path = resolve_mailbox_path(require_non_empty_str(entry, "mailbox", agent_uid))
@@ -661,8 +694,8 @@ def cmd_stop(args: argparse.Namespace) -> int:
 
     now = utc_now()
     entry["status"] = args.status
-    if args.status != "inactive":
-        entry["inactive_at"] = None
+    entry["inactive_at"] = None
+    entry["paused_at"] = now if args.status == "paused" else None
     registry["updated_at"] = now
     save_registry(registry)
 
@@ -795,6 +828,7 @@ def cmd_recover(args: argparse.Namespace) -> int:
     entry["scope"] = scope
     entry["last_touched_at"] = now
     entry["inactive_at"] = None
+    entry["paused_at"] = None
     if entry.get("confirmed_by_agent") is not True:
         entry["confirmed_by_agent"] = True
         entry["confirmed_at"] = now
@@ -858,6 +892,7 @@ def cmd_takeover(args: argparse.Namespace) -> int:
         "mailbox": replacement_mailbox_rel,
         "last_touched_at": now,
         "inactive_at": None,
+        "paused_at": None,
         "recovery_of": stale_agent_uid,
         "superseded_by": None,
     }
@@ -865,6 +900,7 @@ def cmd_takeover(args: argparse.Namespace) -> int:
 
     stale_entry["status"] = "paused"
     stale_entry["inactive_at"] = None
+    stale_entry["paused_at"] = now
     stale_entry["superseded_by"] = replacement_agent_uid
     registry["agents"].append(replacement_entry)
     registry["agent_count"] = len(registry["agents"])
@@ -922,6 +958,7 @@ def cmd_touch(args: argparse.Namespace) -> int:
     entry["status"] = "active"
     entry["last_touched_at"] = now
     entry["inactive_at"] = None
+    entry["paused_at"] = None
     registry["updated_at"] = now
     save_registry(registry)
 
@@ -954,6 +991,7 @@ def cmd_finish(args: argparse.Namespace) -> int:
     now = utc_now()
     entry["status"] = "inactive"
     entry["inactive_at"] = now
+    entry["paused_at"] = None
     registry["updated_at"] = now
     save_registry(registry)
 
