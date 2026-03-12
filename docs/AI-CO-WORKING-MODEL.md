@@ -94,6 +94,19 @@ Execution should follow:
 - one active issue per agent
 - one narrow scope per batch
 
+### 3.3.1 Long-Chat Context Risk
+
+Long-running agent chats can accumulate enough context that the host may compact earlier turns into a shorter summary. In some chat surfaces this appears as `Automatically compacting context`.
+
+Mycel should treat that event as a risk signal, not as a harmless UI detail. After compaction, the agent may retain the main direction while losing lower-level constraints, file targets, acceptance boundaries, or earlier wording decisions.
+
+For long-running work, the execution layer should prefer these mitigations:
+
+- keep scope narrow enough that a chat does not need to carry too many parallel decisions
+- ask the agent for a short checkpoint summary after each major step
+- if context may have been compacted, restate the goal, constraints, decisions, touched files, and next step before continuing
+- if any requirement is no longer certain after compaction, the agent should say so explicitly and ask for clarification instead of guessing
+
 ### 3.4 Verification Layer
 
 This layer decides whether a task is actually complete.
