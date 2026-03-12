@@ -40,6 +40,8 @@ If you need a machine-readable environment gate before starting work, use:
 scripts/check-dev-env.sh --json
 ```
 
+If `.agent-local/dev-setup-status.md` already exists and says `Status: ready`, a new chat can use that local record instead of repeating the same bootstrap setup checks. Use [`.agent-local/DEV-SETUP-STATUS.example.md`](./.agent-local/DEV-SETUP-STATUS.example.md) as the format reference when the local file needs to be created or refreshed.
+
 The JSON output includes:
 
 - `status`

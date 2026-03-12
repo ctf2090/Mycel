@@ -42,7 +42,10 @@
 ## New chat bootstrap
 - Run `git status -sb` to understand the repo state.
 - Scan the repo layout with `ls` and prefer `rg --files` for fast file discovery.
-- For a fresh local or Codespaces environment, ensure `gh` and `rg` are installed; install them if missing.
+- Before repeating environment checks, read `.agent-local/dev-setup-status.md` if it exists.
+- If `.agent-local/dev-setup-status.md` says `Status: ready` and records the required tool/setup checks for this workspace, a new chat does not need to re-check dev setup during bootstrap.
+- If `.agent-local/dev-setup-status.md` is missing or does not say `Status: ready`, read [`docs/DEV-SETUP.md`](docs/DEV-SETUP.md), ensure the required setup items are satisfied, and update `.agent-local/dev-setup-status.md` with the detailed tool/setup check results.
+- Use [`.agent-local/DEV-SETUP-STATUS.example.md`](.agent-local/DEV-SETUP-STATUS.example.md) as the template for the local status file.
 - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use `scripts/agent_registry.py` subcommands as defined there.
 - If the user did not assign a role for the new chat, use `scripts/agent_registry.py claim auto`: it takes `coding` when there is no active `coding` agent, takes `doc` when active `coding >= 1` and active `doc == 0`, and takes `coding` when active `coding >= 1` and active `doc >= 1`.
 - After claiming a role for the chat, tell the user which role was claimed before moving on to task work.

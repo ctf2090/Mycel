@@ -63,6 +63,38 @@ scripts/check-dev-env.sh --full --json
 `--full` goes beyond tool detection and also runs the current repo-local validation surface, so it can fail because of the present workspace state as well as missing setup.
 `--json` is intended for automation-oriented tools that need machine-readable pass/fail output.
 
+## 1.1 Local Ready File For New Chats
+
+Use `.agent-local/dev-setup-status.md` as the local readiness record for this workspace.
+
+New chats should:
+
+- read `.agent-local/dev-setup-status.md` first if it exists
+- skip repeated setup checks when the file says `Status: ready`
+- re-run the necessary checks when the file is missing or does not say `Status: ready`
+- keep the file detailed enough to show both tool presence and repo validation coverage
+
+Use [`.agent-local/DEV-SETUP-STATUS.example.md`](../.agent-local/DEV-SETUP-STATUS.example.md) as the format reference.
+
+The local status file should at minimum record:
+
+- overall status
+- checked-at timestamp
+- checked-by actor
+- tool checks for `cargo`, `rustup`, `rustc`, `gh`, and `rg`
+- Rust component checks for `rustfmt` and `clippy`
+- whether the full repo validation pass was run
+- the exact validation commands and whether they passed
+
+Recommended commands for populating the file:
+
+```bash
+scripts/check-dev-env.sh --json
+scripts/check-dev-env.sh --full --json
+```
+
+Treat `Status: ready` as valid only when the recorded checks cover the tools and validation surface you rely on for the current workspace.
+
 ## 2. Clone and Enter the Repo
 
 ```bash
