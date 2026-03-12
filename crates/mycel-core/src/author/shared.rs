@@ -4,7 +4,7 @@ use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey};
 use serde_json::Value;
 
-use crate::protocol::signed_payload_bytes;
+use crate::canonical::signed_payload_bytes;
 use crate::store::{load_stored_object_value, StoreRebuildError};
 
 pub fn parse_signing_key_seed(seed: &str) -> Result<SigningKey, String> {

@@ -6,10 +6,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::protocol::{
-    parse_json_strict, parse_object_envelope, prefixed_canonical_hash, BlockObject,
-    StringFieldError,
-};
+use crate::canonical::prefixed_canonical_hash;
+use crate::protocol::{parse_json_strict, parse_object_envelope, BlockObject, StringFieldError};
 use crate::replay::{replay_revision_from_index, DocumentState};
 use crate::store::{load_store_index_manifest, load_store_object_index, load_stored_object_value};
 use crate::verify::{verify_object_value, verify_object_value_with_object_index};

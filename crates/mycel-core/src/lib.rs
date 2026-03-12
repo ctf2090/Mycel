@@ -4,6 +4,7 @@
 //! workspace-level constants that both the simulator and CLI can depend on.
 
 pub mod author;
+pub mod canonical;
 pub mod head;
 pub mod protocol;
 pub mod replay;

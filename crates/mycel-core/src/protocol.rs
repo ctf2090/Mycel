@@ -12,7 +12,14 @@ use std::str::FromStr;
 use serde::de::{self, DeserializeOwned, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
-use sha2::{Digest, Sha256};
+
+pub use crate::canonical::{
+    canonical_bytes, canonical_json, canonical_object_bytes_excluding_fields,
+    canonical_object_json_excluding_fields, canonical_object_sha256_hex_excluding_fields,
+    canonical_sha256_hex, collect_unsupported_json_value_errors, ensure_supported_json_values,
+    prefixed_canonical_hash, prefixed_canonical_object_hash_excluding_fields,
+    signature_payload_bytes_for_field, signed_payload_bytes, wire_envelope_signed_payload_bytes,
+};
 
 pub const CORE_PROTOCOL_VERSION: &str = "mycel/0.1";
 pub const WIRE_PROTOCOL_VERSION: &str = "mycel-wire/0.1";
@@ -744,22 +751,6 @@ pub fn recompute_object_id(
     prefixed_canonical_object_hash_excluding_fields(value, prefix, &[derived_id_field, "signature"])
 }
 
-pub fn signed_payload_bytes(value: &Value) -> Result<Vec<u8>, String> {
-    signature_payload_bytes_for_field(value, "signature")
-}
-
-pub fn wire_envelope_signed_payload_bytes(value: &Value) -> Result<Vec<u8>, String> {
-    signature_payload_bytes_for_field(value, "sig")
-}
-
-pub fn signature_payload_bytes_for_field(
-    value: &Value,
-    signature_field: &str,
-) -> Result<Vec<u8>, String> {
-    let canonical = canonical_object_json_excluding_fields(value, &[signature_field])?;
-    Ok(canonical.into_bytes())
-}
-
 pub fn parse_json_value_strict(input: &str) -> Result<Value, String> {
     let mut deserializer = serde_json::Deserializer::from_str(input);
     let value = StrictJsonValue::deserialize(&mut deserializer)
@@ -776,88 +767,6 @@ where
     let value = parse_json_value_strict(input)?;
     ensure_supported_json_values(&value)?;
     serde_json::from_value(value).map_err(|error| error.to_string())
-}
-
-pub fn ensure_supported_json_values(value: &Value) -> Result<(), String> {
-    let mut errors = Vec::new();
-    collect_unsupported_json_value_errors(value, "$", &mut errors);
-    match errors.into_iter().next() {
-        Some(error) => Err(error),
-        None => Ok(()),
-    }
-}
-
-pub fn collect_unsupported_json_value_errors(value: &Value, path: &str, errors: &mut Vec<String>) {
-    match value {
-        Value::Null => errors.push(format!("{path}: null is not allowed")),
-        Value::Bool(_) | Value::String(_) => {}
-        Value::Number(number) => {
-            if !(number.is_i64() || number.is_u64()) {
-                errors.push(format!(
-                    "{path}: floating-point numbers are not allowed in canonical objects"
-                ));
-            }
-        }
-        Value::Array(values) => {
-            for (index, entry) in values.iter().enumerate() {
-                let entry_path = format!("{path}[{index}]");
-                collect_unsupported_json_value_errors(entry, &entry_path, errors);
-            }
-        }
-        Value::Object(entries) => {
-            for (key, entry) in entries {
-                let entry_path = format!("{path}.{key}");
-                collect_unsupported_json_value_errors(entry, &entry_path, errors);
-            }
-        }
-    }
-}
-
-pub fn canonical_json(value: &Value) -> Result<String, String> {
-    let mut output = String::new();
-    write_canonical_json(value, &mut output)?;
-    Ok(output)
-}
-
-pub fn canonical_object_json_excluding_fields(
-    value: &Value,
-    omitted_fields: &[&str],
-) -> Result<String, String> {
-    let object = object_without_fields(value, omitted_fields)?;
-    canonical_json(&Value::Object(object))
-}
-
-pub fn canonical_sha256_hex(value: &Value) -> Result<String, String> {
-    let canonical = canonical_json(value)?;
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.as_bytes());
-    let digest = hasher.finalize();
-    Ok(hex_encode(&digest))
-}
-
-pub fn canonical_object_sha256_hex_excluding_fields(
-    value: &Value,
-    omitted_fields: &[&str],
-) -> Result<String, String> {
-    let canonical = canonical_object_json_excluding_fields(value, omitted_fields)?;
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.as_bytes());
-    let digest = hasher.finalize();
-    Ok(hex_encode(&digest))
-}
-
-pub fn prefixed_canonical_hash(value: &Value, prefix: &str) -> Result<String, String> {
-    let digest = canonical_sha256_hex(value)?;
-    Ok(format!("{prefix}:{digest}"))
-}
-
-pub fn prefixed_canonical_object_hash_excluding_fields(
-    value: &Value,
-    prefix: &str,
-    omitted_fields: &[&str],
-) -> Result<String, String> {
-    let digest = canonical_object_sha256_hex_excluding_fields(value, omitted_fields)?;
-    Ok(format!("{prefix}:{digest}"))
 }
 
 #[derive(Debug)]
@@ -946,83 +855,6 @@ impl<'de> Visitor<'de> for StrictJsonVisitor {
         }
         Ok(StrictJsonValue(Value::Object(entries)))
     }
-}
-
-fn write_canonical_json(value: &Value, output: &mut String) -> Result<(), String> {
-    match value {
-        Value::Null => Err("null is not allowed in canonical objects".to_string()),
-        Value::Bool(boolean) => {
-            output.push_str(if *boolean { "true" } else { "false" });
-            Ok(())
-        }
-        Value::Number(number) => {
-            if !(number.is_i64() || number.is_u64()) {
-                return Err(
-                    "floating-point numbers are not allowed in canonical objects".to_string(),
-                );
-            }
-            output.push_str(&number.to_string());
-            Ok(())
-        }
-        Value::String(string) => {
-            let encoded = serde_json::to_string(string)
-                .map_err(|err| format!("failed to encode JSON string: {err}"))?;
-            output.push_str(&encoded);
-            Ok(())
-        }
-        Value::Array(values) => {
-            output.push('[');
-            for (index, entry) in values.iter().enumerate() {
-                if index > 0 {
-                    output.push(',');
-                }
-                write_canonical_json(entry, output)?;
-            }
-            output.push(']');
-            Ok(())
-        }
-        Value::Object(entries) => {
-            output.push('{');
-            let mut keys: Vec<&String> = entries.keys().collect();
-            keys.sort_unstable();
-
-            for (index, key) in keys.iter().enumerate() {
-                if index > 0 {
-                    output.push(',');
-                }
-
-                let encoded_key = serde_json::to_string(key)
-                    .map_err(|err| format!("failed to encode JSON object key: {err}"))?;
-                output.push_str(&encoded_key);
-                output.push(':');
-                write_canonical_json(&entries[*key], output)?;
-            }
-            output.push('}');
-            Ok(())
-        }
-    }
-}
-
-fn object_without_fields(
-    value: &Value,
-    omitted_fields: &[&str],
-) -> Result<Map<String, Value>, String> {
-    let mut object = value
-        .as_object()
-        .cloned()
-        .ok_or_else(|| "top-level JSON value must be an object".to_string())?;
-    for field in omitted_fields {
-        object.remove(*field);
-    }
-    Ok(object)
-}
-
-pub fn hex_encode(bytes: &[u8]) -> String {
-    let mut output = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        output.push_str(&format!("{byte:02x}"));
-    }
-    output
 }
 
 fn parse_patch_operation(value: &Value) -> Result<PatchOperation, TypedObjectError> {

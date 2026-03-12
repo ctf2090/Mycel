@@ -4,7 +4,8 @@ use std::path::Path;
 use ed25519_dalek::SigningKey;
 use serde_json::{json, Value};
 
-use crate::protocol::{canonical_json, BlockObject, PatchObject, PatchOperation};
+use crate::canonical::canonical_json;
+use crate::protocol::{BlockObject, PatchObject, PatchOperation};
 use crate::replay::{apply_patch_ops, replay_revision_from_index, DocumentState};
 use crate::store::{load_store_object_index, StoreRebuildError};
 

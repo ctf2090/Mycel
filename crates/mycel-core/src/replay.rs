@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::canonical::prefixed_canonical_hash;
 use crate::protocol::{
-    parse_patch_object, parse_revision_object, prefixed_canonical_hash, BlockObject, PatchObject,
-    PatchOperation, RevisionObject,
+    parse_patch_object, parse_revision_object, BlockObject, PatchObject, PatchOperation,
+    RevisionObject,
 };
 
 pub const GENESIS_BASE_REVISION: &str = "rev:genesis-null";

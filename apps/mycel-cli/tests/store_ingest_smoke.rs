@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use base64::Engine;
 use ed25519_dalek::{Signer, SigningKey};
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
+
+use mycel_core::canonical::{prefixed_canonical_hash, signed_payload_bytes};
 
 mod common;
 
@@ -28,38 +29,6 @@ fn signer_id(signing_key: &SigningKey) -> String {
     )
 }
 
-fn canonical_json(value: &Value) -> String {
-    match value {
-        Value::Null => panic!("test objects should not use null"),
-        Value::Bool(boolean) => boolean.to_string(),
-        Value::Number(number) => number.to_string(),
-        Value::String(string) => serde_json::to_string(string).expect("string should encode"),
-        Value::Array(values) => format!(
-            "[{}]",
-            values
-                .iter()
-                .map(canonical_json)
-                .collect::<Vec<_>>()
-                .join(",")
-        ),
-        Value::Object(entries) => {
-            let mut keys: Vec<&String> = entries.keys().collect();
-            keys.sort_unstable();
-            let parts = keys
-                .into_iter()
-                .map(|key| {
-                    format!(
-                        "{}:{}",
-                        serde_json::to_string(key).expect("key should encode"),
-                        canonical_json(&entries[key])
-                    )
-                })
-                .collect::<Vec<_>>();
-            format!("{{{}}}", parts.join(","))
-        }
-    }
-}
-
 fn recompute_id(value: &Value, id_field: &str, prefix: &str) -> String {
     let mut object = value
         .as_object()
@@ -67,20 +36,12 @@ fn recompute_id(value: &Value, id_field: &str, prefix: &str) -> String {
         .expect("test object should be JSON object");
     object.remove(id_field);
     object.remove("signature");
-    let canonical = canonical_json(&Value::Object(object));
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.as_bytes());
-    format!("{prefix}:{:x}", hasher.finalize())
+    prefixed_canonical_hash(&Value::Object(object), prefix).expect("object id should canonicalize")
 }
 
 fn sign_value(signing_key: &SigningKey, value: &Value) -> String {
-    let mut object = value
-        .as_object()
-        .cloned()
-        .expect("test object should be JSON object");
-    object.remove("signature");
-    let canonical = canonical_json(&Value::Object(object));
-    let signature = signing_key.sign(canonical.as_bytes());
+    let payload = signed_payload_bytes(value).expect("payload should canonicalize");
+    let signature = signing_key.sign(&payload);
     format!(
         "sig:ed25519:{}",
         base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
@@ -150,9 +111,8 @@ fn store_ingest_json_writes_verified_objects_into_store_layout() {
             }
         ]
     });
-    let mut hasher = Sha256::new();
-    hasher.update(canonical_json(&expected_state).as_bytes());
-    let state_hash = format!("hash:{:x}", hasher.finalize());
+    let state_hash =
+        prefixed_canonical_hash(&expected_state, "hash").expect("state hash should canonicalize");
 
     let revision = signed_object(
         json!({
