@@ -182,14 +182,15 @@ class AgentRegistryCliTest(unittest.TestCase):
         )
 
         cleanup = json.loads(self.run_cli("cleanup", "--json").stdout)
-        self.assertEqual(1, cleanup["removed_count"])
-        self.assertEqual(["doc-9"], cleanup["removed_ids"])
+        self.assertEqual(1, cleanup["stale_count"])
+        self.assertEqual(["doc-9"], cleanup["stale_ids"])
 
         status = json.loads(self.run_cli("status", "--json").stdout)
-        self.assertEqual(1, status["agent_count"])
-        self.assertEqual("coding-3", status["agents"][0]["id"])
+        self.assertEqual(2, status["agent_count"])
+        self.assertEqual(["doc-9"], status["stale_inactive_ids"])
+        self.assertEqual(["doc-9", "coding-3"], [entry["id"] for entry in status["agents"]])
 
-    def test_resume_check_refuses_inactive_agents(self) -> None:
+    def test_resume_check_allows_inactive_confirmed_agents_to_resume(self) -> None:
         claim = json.loads(self.run_cli("claim", "coding", "--scope", "lease-test", "--json").stdout)
         agent_id = claim["agent_id"]
         self.run_cli("start", agent_id, "--json")
@@ -197,10 +198,44 @@ class AgentRegistryCliTest(unittest.TestCase):
 
         resume = self.run_cli("resume-check", agent_id, "--json", check=False)
 
-        self.assertEqual(2, resume.returncode)
+        self.assertEqual(0, resume.returncode)
         payload = json.loads(resume.stdout)
-        self.assertFalse(payload["safe_to_resume"])
+        self.assertTrue(payload["safe_to_resume"])
         self.assertIn("inactive", payload["reason"])
+
+    def test_stale_inactive_id_is_not_reused_by_a_new_claim(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        self.write_registry(
+            {
+                "version": 1,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [
+                    {
+                        "id": "coding-1",
+                        "role": "coding",
+                        "assigned_by": "user",
+                        "assigned_at": self.timestamp(now - timedelta(hours=2)),
+                        "confirmed_by_agent": True,
+                        "confirmed_at": self.timestamp(now - timedelta(hours=2)),
+                        "last_touched_at": self.timestamp(now - timedelta(hours=2, minutes=5)),
+                        "inactive_at": self.timestamp(now - timedelta(hours=2, minutes=10)),
+                        "status": "inactive",
+                        "scope": "old-work",
+                        "files": [],
+                        "mailbox": ".agent-local/coding-1.md",
+                    }
+                ],
+            }
+        )
+
+        claim = json.loads(self.run_cli("claim", "auto", "--scope", "new-chat", "--json").stdout)
+        resume = json.loads(self.run_cli("resume-check", "coding-1", "--json").stdout)
+
+        self.assertEqual("coding-2", claim["agent_id"])
+        self.assertEqual("coding", claim["role"])
+        self.assertTrue(resume["safe_to_resume"])
+        self.assertIn("inactive", resume["reason"])
 
 
 if __name__ == "__main__":

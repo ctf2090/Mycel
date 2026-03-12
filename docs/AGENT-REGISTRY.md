@@ -206,9 +206,10 @@ Rules:
 
 1. on each new user command, the active agent should `touch` its own entry before starting work
 2. when that command's work is complete, the agent should `finish` its own entry so the role becomes `inactive`
-3. any entry that remains `inactive` for at least one hour should be cleared from the local registry
-4. `scripts/agent_registry.py` automatically prunes stale `inactive` entries before command execution
-5. `scripts/agent_registry.py cleanup` is available for a manual sweep when needed
+3. an entry that remains `inactive` for at least one hour becomes stale, but it is retained in the registry so its id is never reused automatically
+4. `scripts/agent_registry.py cleanup` reports stale `inactive` entries for review instead of deleting them
+5. a new chat should claim the next unused numeric suffix, not recycle the stale inactive id
+6. a previously inactive confirmed agent may resume by re-checking or touching its own retained entry
 
 ## Standard New Chat Startup
 
@@ -318,6 +319,7 @@ Forgotten-chat note:
 
 - a reopened old chat is not trusted just because the window still exists
 - it must re-check its own registry status before resuming work, preferably with `scripts/agent_registry.py resume-check <agent-id>`
+- if the old id is merely `inactive`, it may resume its own retained entry and a new chat should continue under a newer id such as `coding-2`
 - if another chat already recovered the scope and the old id is now `paused`, the reopened old chat must stop and yield to the replacement id
 
 Role note:

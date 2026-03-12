@@ -61,7 +61,7 @@ Per-command activity:
 
 1. `scripts/agent_registry.py touch <agent-id>` before working
 2. `scripts/agent_registry.py finish <agent-id>` after the command completes
-3. inactive entries older than one hour are cleanup candidates
+3. inactive entries older than one hour are stale-entry review candidates, not id-reuse candidates
 
 Interrupted chat recovery:
 
