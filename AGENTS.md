@@ -46,5 +46,9 @@
 ## .md
 - Read .md from the root folder and its sub-folders, if it exists.
 
+## Scripts
+- Do not inline Python code inside `scripts/*.sh`.
+- If a script job is better expressed in Python, implement it as a real `scripts/*.py` file and keep any `.sh` entrypoint as a thin wrapper.
+
 ## Feature policy
 - For new features, default to no backward compatibility unless the user explicitly requests compatibility support.
