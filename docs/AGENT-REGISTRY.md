@@ -288,15 +288,17 @@ Recommended startup sequence:
 7. immediately tell the user which role was claimed for this chat
 8. run `scripts/agent_registry.py start <agent-ref>`
 9. run `scripts/agent_registry.py status <agent-ref>`
-10. begin the chat with `<display-id> | <scope-label>`
-11. when the first concrete task arrives, run `scripts/agent_registry.py touch <agent-ref>`
-12. before doing the work, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it runs `touch` and prints the canonical `Asia/Taipei (UTC+8)` timestamp line, and that exact line must be surfaced in user-visible commentary rather than only terminal output
+10. if the role is `coding`, run `npm run handoffs:inactive-coding` and treat handoff scan as the next item before taking a new implementation scope
+11. begin the chat with `<display-id> | <scope-label>`
+12. when the first concrete task arrives, run `scripts/agent_registry.py touch <agent-ref>`
+13. before doing the work, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it runs `touch` and prints the canonical `Asia/Taipei (UTC+8)` timestamp line, and that exact line must be surfaced in user-visible commentary rather than only terminal output
 
 Keep startup output narrow:
 
 - do not claim file-specific context before the user gives a concrete task
 - do not run `claim`, `start`, and `status` in parallel
 - when the role is `coding`, keep the CI line about the latest completed workflow, not a possibly in-progress run
+- when the role is `coding`, treat `check handoffs` as the default next item after startup rather than an optional follow-up
 - after `claim`, include a short user-facing role announcement before moving on to task work
 
 ## Workflow
