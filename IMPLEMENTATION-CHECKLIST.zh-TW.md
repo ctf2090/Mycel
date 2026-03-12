@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，已在最近一批 wire-envelope parsing、signature verification 與 session sequencing groundwork 後刷新；實作狀態現在已包含早期 `M4` wire validation/session coverage，但 end-to-end sync 仍未完成
+狀態：late partial progress，已在最近一批 wire-session reachability、store-backed bootstrap 與 transcript-backed sync-pull 後刷新；實作狀態現在已包含 `OBJECT` body 驗證與早期 `M4` sync-pull coverage，但 peer-driven 的 end-to-end sync 仍未完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
@@ -68,7 +68,7 @@
 
 ## 5. Patch 與 Revision Engine
 
-- [ ] 實作 v0.1 patch operations：
+- [x] 實作 v0.1 patch operations：
 - [x] `insert_block`
 - [x] `insert_block_after`
 - [x] `delete_block`
@@ -110,14 +110,14 @@
 - [x] 實作 `ERROR`。
 - [ ] 只有在宣告 `snapshot-sync` 時才實作 `SNAPSHOT_OFFER`。
 - [ ] 只有在宣告 `view-sync` 時才實作 `VIEW_ANNOUNCE`。
-- [ ] 對每個 `OBJECT` 重算 `hash(body)`。
-- [ ] 依 `object_type` 與 `hash` 重建預期的 `object_id`。
-- [ ] 拒絕任何內嵌導出 ID 與 envelope `object_id` 不一致的 `OBJECT`。
+- [x] 對每個 `OBJECT` 重算 `hash(body)`。
+- [x] 依 `object_type` 與 `hash` 重建預期的 `object_id`。
+- [x] 拒絕任何內嵌導出 ID 與 envelope `object_id` 不一致的 `OBJECT`。
 
 ## 8. 同步流程
 
-- [ ] 支援首次同步：`HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`。
-- [ ] 支援從更新後 `HEADS` 進行增量同步。
+- [ ] 支援 peers 之間的首次同步：`HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`。
+- [ ] 支援 peers 之間從更新後 `HEADS` 進行增量同步。
 - [ ] 只以 canonical object ID 抓取缺失物件。
 - [ ] 先驗證物件，再建立索引或提供給 reader。
 - [ ] 若對方宣告 snapshot，可支援 snapshot-assisted catch-up。
@@ -154,7 +154,7 @@
 - [x] 提供 object verification 工具。
 - [x] 提供 document creation 與 patch authoring 入口。
 - [x] 提供 revision commit 入口。
-- [ ] 提供 sync pull 入口。
+- [x] 提供 sync pull 入口。
 - [x] 提供 view inspection 或 head inspection 入口。
 - [x] 提供可從 stored objects 或明確 object bundles 進行 accepted-head render 的入口。
 - [x] 把 reader-facing accepted-head inspection 與 curator-facing View publication workflow 分開。

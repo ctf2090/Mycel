@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: late partial progress, refreshed after the recent wire-envelope parsing, signature-verification, and session-sequencing groundwork batch; `M4` now has early implementation groundwork, but end-to-end sync is still open
+Status: late partial progress, refreshed after the recent wire-session reachability, store-backed bootstrap, and transcript-backed sync-pull batch; `M4` now has object-body verification plus first-time and incremental transcript-backed pull coverage, but peer-driven end-to-end sync is still open
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -17,7 +17,8 @@ The repository already has:
 - a growing v0.1 protocol and wire-spec document set
 - a Rust CLI suitable for internal validation and deterministic simulator workflows
 - `mycel-core` support for object schema metadata, object-envelope parsing, replay-based revision verification, local object-store ingest/rebuild, persisted store indexes, and accepted-head inspection
-- `mycel-core` support for early wire-envelope parsing, payload validation, generic wire-signature verification, sender mapping, and inbound session sequencing/head-tracking for the minimal message set
+- `mycel-core` support for early wire-envelope parsing, payload validation, generic wire-signature verification, sender mapping, inbound session sequencing/head-tracking, reachability gating, and store-backed session bootstrap for the minimal message set
+- a transcript-backed sync-pull core and CLI entry point with first-time and incremental verify/store coverage
 - more centralized canonical hash and signed-payload helpers reused across verification, replay, head/render pre-verification, authoring, and some CLI smoke paths
 - early reader-plus-governance surfaces for accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render workflows
 - broader parser / verify / CLI strictness-surface coverage for `document`, `block`, `patch`, `revision`, `view`, and `snapshot`, a materially wider `object inspect` warning surface, stronger signature-edge and replay/verification smoke coverage for merge and cross-document revision edges, clearer multi-hop ancestry context in replay-derived failures, and isolated validate-peer fixtures
@@ -40,7 +41,7 @@ The current lane is:
 1. finish the narrow first-client core
 2. close the remaining shared-core gaps in parsing and canonicalization
 3. keep expanding fixtures, simulator coverage, and negative tests while beginning reader-plus-governance read paths
-4. keep the new wire groundwork narrow until object-body verification and end-to-end sync are ready to land cleanly
+4. keep `M4` narrow while transcript-backed first-time and incremental sync pull grows toward minimal peer-driven sync
 
 ### Next
 
@@ -424,7 +425,7 @@ Completion gate:
 
 Current read:
 
-Early groundwork exists in `mycel-core`: canonical envelope parsing, payload-shape validation, RFC 3339 timestamp enforcement, generic wire-signature verification, sender checks, and inbound sequencing/head-tracking for `HELLO`, `MANIFEST`, `HEADS`, `WANT`, `OBJECT`, `BYE`, and `ERROR` now exist. What is still missing is the full fetch/verify/store sync loop, capability-gated optional flows, and wiring `OBJECT` body-derived verification into the main incoming path.
+Early groundwork exists in `mycel-core`: canonical envelope parsing, payload-shape validation, RFC 3339 timestamp enforcement, generic wire-signature verification, sender checks, inbound sequencing/head-tracking, reachability gating, store-backed session bootstrap, and `OBJECT` body-derived hash / `object_id` verification now exist. A transcript-backed `sync pull` path and CLI entry point also prove first-time and incremental verify/store flows. What is still missing is a peer-driven end-to-end sync driver, capability-gated optional flows, and production replication behavior.
 
 Implementation anchors:
 

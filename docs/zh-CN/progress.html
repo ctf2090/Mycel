@@ -45,14 +45,15 @@
         <div class="eyebrow">公开进度摘要</div>
         <h1>用一页看懂 Roadmap 顺序和 implementation 状态。</h1>
         <p class="lead">
-          Mycel 目前仍处在窄版 first-client lane。眼前目标是先收掉 shared-core 的 parsing、
-          canonicalization、replay 和 rebuild，同时只通过具备 editor-admission 感知的 accepted-head inspect/render 与 profile
-          workflows 谨慎扩展 reader surface。
+          Mycel 目前仍处在窄版 first-client lane。眼前目标是先收掉最后一批 shared-core closure，同时让
+          <code>M4</code> 保持窄范围，聚焦在 transcript-backed sync pull、已验证 wire-session
+          reachability，以及最小 peer-sync closure。
         </p>
         <ol class="lane-list">
           <li>收掉 <code>M1</code> 的 malformed-field depth 和 canonicalization debt。</li>
           <li>完成 <code>M2</code> 的 replay、rebuild 和 merge-authoring closure。</li>
           <li>在 accepted-head inspect/render 和命名 profile 基础上，谨慎扩展 <code>M3</code> reader workflows。</li>
+          <li>让 <code>M4</code> 保持窄范围，把 transcript-backed first-time / incremental sync pull 往 minimal peer-driven sync 收敛。</li>
         </ol>
       </header>
 
@@ -99,11 +100,11 @@
           <article class="card">
             <div class="stage">Full-stack</div>
             <h3>M4</h3>
-            <div class="status later">后续</div>
+            <div class="status partial">早期 partial</div>
             <ul>
-              <li>Wire envelope 和 sync</li>
-              <li>Peer interop</li>
-              <li>Canonical object exchange</li>
+              <li>Wire validation 与 <code>OBJECT</code> body 检查</li>
+              <li>Session reachability 与 store-backed bootstrap</li>
+              <li>Transcript-backed 的 first-time / incremental sync pull</li>
             </ul>
           </article>
           <article class="card">
@@ -155,8 +156,8 @@
             <tr>
               <td data-label="Area">4. Signature Verification</td>
               <td data-label="Status">Partial</td>
-              <td data-label="Milestone">M1</td>
-              <td data-label="Current read">Object signature rules 大多已到位，且 signature-edge verify smoke coverage 更完整；wire-envelope verification 还没有开始。</td>
+              <td data-label="Milestone">M1 / M4</td>
+              <td data-label="Current read">Object signature rules 已到位，通用 wire-envelope signature verification 也已存在，而 <code>OBJECT</code> body 的 hash / <code>object_id</code> 重算现在已接进 wire validation；剩下的是更完整的 shared-helper convergence 与 peer-driven sync plumbing。</td>
             </tr>
             <tr>
               <td data-label="Area">5. Patch and Revision Engine</td>
@@ -172,15 +173,15 @@
             </tr>
             <tr>
               <td data-label="Area">7. Wire Protocol</td>
-              <td data-label="Status">Not started</td>
+              <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Canonical wire envelope 和 message validation 仍然属于后续工作。</td>
+              <td data-label="Current read">Canonical wire-envelope parsing、field validation、sender checks、session sequencing/head tracking、reachability gating、store-backed bootstrap，以及 <code>OBJECT</code> body verification 现在都已存在于 <code>mycel-core</code>；capability-gated optional messages 与更完整的 peer interop 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">8. Sync Workflow</td>
-              <td data-label="Status">Not started</td>
+              <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">First-time 和 incremental sync 都还属于后续工作。</td>
+              <td data-label="Current read">Transcript-backed 的 first-time 与 incremental <code>sync pull</code> flow 现在已能 verify/store requested objects，且 <code>WireSession</code> 可从已验证 store state bootstrap；最小 peer-driven sync 与 optional flows 仍待完成。</td>
             </tr>
             <tr>
               <td data-label="Area">9. Views and Head Selection</td>
@@ -197,20 +198,20 @@
             <tr>
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
-              <td data-label="Milestone">M2 / M3</td>
-              <td data-label="Current read">Verification、authoring、保守型 merge authoring、具备 editor-admission 感知的 reader inspection/render、governance inspect/list/publish，以及 persisted governance index query surfaces 已经存在；sync 仍然没有完成。</td>
+              <td data-label="Milestone">M2 / M3 / M4</td>
+              <td data-label="Current read">Verification、authoring、保守型 merge authoring、具备 editor-admission 感知的 reader inspection/render、governance inspect/list/publish、persisted governance index query surfaces，以及 transcript-backed <code>sync pull</code> 都已存在；peer-driven sync 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
-              <td data-label="Milestone">M1 / M2</td>
-              <td data-label="Current read">Fixture isolation、reproducibility 和 smoke coverage 已经存在，但多条 normative wire 和 replay checks 还没有完成。</td>
+              <td data-label="Milestone">M1 / M2 / M4</td>
+              <td data-label="Current read">Fixture isolation、reproducibility、更严格的 parser/replay smoke coverage、直接的 wire-envelope/signature/session tests，以及 transcript-backed 的 first-time / incremental sync-pull smokes 已存在，但 peer-driven sync 与 optional-message cases 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">Whole plan</td>
-              <td data-label="Current read">Replay、head selection、rebuild 和保守型 merge authoring 已经绿了；parse closure 和 wire sync 还没有完成。</td>
+              <td data-label="Current read">Replay、head selection、rebuild、保守型 merge authoring，以及 transcript-backed sync-pull proofs 已经绿了；parse closure 与 peer-driven wire sync 还没有完成。</td>
             </tr>
           </tbody>
         </table>

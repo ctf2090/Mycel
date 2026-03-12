@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, refreshed after the recent wire-envelope parsing, signature-verification, and session-sequencing groundwork batch; implementation state now includes early `M4` wire validation/session coverage while end-to-end sync remains open
+Status: late partial progress, refreshed after the recent wire-session reachability, store-backed bootstrap, and transcript-backed sync-pull batch; implementation state now includes `OBJECT` body verification plus early `M4` sync-pull coverage while peer-driven end-to-end sync remains open
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -68,7 +68,7 @@ Defer if needed:
 
 ## 5. Patch and Revision Engine
 
-- [ ] Implement the v0.1 patch operations:
+- [x] Implement the v0.1 patch operations:
 - [x] `insert_block`
 - [x] `insert_block_after`
 - [x] `delete_block`
@@ -110,14 +110,14 @@ Defer if needed:
 - [x] Implement `ERROR`.
 - [ ] Implement `SNAPSHOT_OFFER` only if `snapshot-sync` is advertised.
 - [ ] Implement `VIEW_ANNOUNCE` only if `view-sync` is advertised.
-- [ ] Recompute `hash(body)` for every `OBJECT`.
-- [ ] Reconstruct expected `object_id` from `object_type` and `hash`.
-- [ ] Reject any `OBJECT` whose embedded derived ID disagrees with the envelope `object_id`.
+- [x] Recompute `hash(body)` for every `OBJECT`.
+- [x] Reconstruct expected `object_id` from `object_type` and `hash`.
+- [x] Reject any `OBJECT` whose embedded derived ID disagrees with the envelope `object_id`.
 
 ## 8. Sync Workflow
 
-- [ ] Support first-time sync: `HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`.
-- [ ] Support incremental sync from updated `HEADS`.
+- [ ] Support first-time sync end-to-end between peers: `HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`.
+- [ ] Support incremental sync from updated `HEADS` between peers.
 - [ ] Fetch missing objects only by canonical object ID.
 - [ ] Verify objects before indexing or exposing them to readers.
 - [ ] Support snapshot-assisted catch-up if snapshots are advertised.
@@ -154,7 +154,7 @@ Defer if needed:
 - [x] Provide object verification tooling.
 - [x] Provide document creation and patch authoring entry points.
 - [x] Provide revision commit entry points.
-- [ ] Provide sync pull entry points.
+- [x] Provide sync pull entry points.
 - [x] Provide view inspection or head-inspection entry points.
 - [x] Provide accepted-head render entry points from stored objects or explicit object bundles.
 - [x] Separate reader-facing accepted-head inspection from curator-facing View publication workflows.
