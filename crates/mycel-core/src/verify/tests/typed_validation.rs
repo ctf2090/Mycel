@@ -655,6 +655,53 @@ pub(super) fn patch_nested_new_block_unknown_field_is_rejected() {
 }
 
 #[test]
+pub(super) fn patch_nested_new_block_non_object_attrs_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:001",
+                    "block_type": "paragraph",
+                    "content": "Hello",
+                    "attrs": "not-an-object",
+                    "children": []
+                }
+            }
+        ]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-nested-new-block-non-object-attrs",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary.errors.iter().any(|message| {
+            message.contains(
+                "top-level 'ops[0]': top-level 'new_block': top-level 'attrs' must be an object",
+            )
+        }),
+        "expected nested new_block attrs type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 pub(super) fn patch_mixed_set_metadata_forms_are_rejected() {
     let (signing_key, public_key) = signer_material();
     let mut patch = json!({
@@ -1112,6 +1159,43 @@ pub(super) fn block_non_object_nested_child_is_rejected() {
             .iter()
             .any(|message| message.contains("top-level 'children[0]' must be a JSON object")),
         "expected nested child object-shape error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn block_nested_child_non_array_children_is_rejected() {
+    let path = write_test_file(
+        "block-nested-child-non-array-children",
+        &serde_json::to_string_pretty(&json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": "blk:001",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": [
+                {
+                    "block_id": "blk:002",
+                    "block_type": "paragraph",
+                    "content": "Child",
+                    "attrs": {},
+                    "children": "not-an-array"
+                }
+            ]
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary.errors.iter().any(|message| {
+            message.contains("top-level 'children[0]': top-level 'children' must be an array")
+        }),
+        "expected nested child children array-shape error, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);

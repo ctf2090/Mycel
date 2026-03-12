@@ -356,6 +356,43 @@ fn inspect_warns_when_block_nested_child_is_not_an_object() {
 }
 
 #[test]
+fn inspect_warns_when_block_nested_child_children_is_not_an_array() {
+    let path = write_test_file(
+        "block-nested-child-non-array-children-inspect",
+        &serde_json::to_string_pretty(&json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": "blk:test",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": [
+                {
+                    "block_id": "blk:child",
+                    "block_type": "paragraph",
+                    "content": "Child",
+                    "attrs": {},
+                    "children": "not-an-array"
+                }
+            ]
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary.notes.iter().any(|message| {
+            message.contains("top-level 'children[0]': top-level 'children' must be an array")
+        }),
+        "expected nested child children-array warning, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 fn inspect_warns_when_patch_base_revision_prefix_is_wrong() {
     let path = write_test_file(
         "patch-wrong-base-revision-prefix-inspect",
@@ -705,6 +742,50 @@ fn inspect_warns_when_genesis_revision_has_merge_strategy() {
             message.contains("top-level 'merge_strategy' is not allowed when 'parents' is empty")
         }),
         "expected genesis merge_strategy warning, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn inspect_warns_when_patch_nested_new_block_attrs_is_not_an_object() {
+    let path = write_test_file(
+        "patch-nested-new-block-non-object-attrs-inspect",
+        &serde_json::to_string_pretty(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 11u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": "not-an-object",
+                        "children": []
+                    }
+                }
+            ],
+            "signature": "sig:placeholder"
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary.notes.iter().any(|message| {
+            message.contains(
+                "top-level 'ops[0]': top-level 'new_block': top-level 'attrs' must be an object",
+            )
+        }),
+        "expected nested new_block attrs warning, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);
