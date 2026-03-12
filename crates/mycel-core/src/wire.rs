@@ -202,8 +202,17 @@ impl WirePeerDirectory {
 pub struct WirePeerSessionState {
     hello_received: bool,
     advertised_document_heads: BTreeMap<String, BTreeSet<String>>,
+    accepted_sync_roots: BTreeSet<String>,
     pending_object_ids: BTreeSet<String>,
     closed: bool,
+}
+
+impl WirePeerSessionState {
+    fn advertises_revision(&self, revision_id: &str) -> bool {
+        self.advertised_document_heads
+            .values()
+            .any(|revisions| revisions.contains(revision_id))
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -331,13 +340,38 @@ fn validate_wire_inbound_sequence(
         WireMessageType::Error => {}
     }
 
-    if matches!(envelope.message_type(), WireMessageType::Want)
-        && peer_session.advertised_document_heads.is_empty()
-    {
-        return Err(format!(
-            "wire WANT requires prior MANIFEST or HEADS from '{}'",
-            envelope.from()
-        ));
+    if matches!(envelope.message_type(), WireMessageType::Want) {
+        let requested_object_ids = validate_wire_string_array(envelope.payload(), "objects")?;
+        if peer_session.advertised_document_heads.is_empty() {
+            return Err(format!(
+                "wire WANT requires prior MANIFEST or HEADS from '{}'",
+                envelope.from()
+            ));
+        }
+
+        let establishes_sync_root = requested_object_ids.iter().any(|object_id| {
+            object_id.starts_with("rev:") && peer_session.advertises_revision(object_id)
+        });
+        let has_sync_context =
+            !peer_session.accepted_sync_roots.is_empty() || establishes_sync_root;
+
+        for object_id in requested_object_ids {
+            if object_id.starts_with("rev:") {
+                if !peer_session.advertises_revision(&object_id) {
+                    return Err(format!(
+                        "wire WANT revision '{}' was not advertised by '{}'",
+                        object_id,
+                        envelope.from()
+                    ));
+                }
+            } else if !has_sync_context {
+                return Err(format!(
+                    "wire WANT object '{}' requires an accepted revision sync root from '{}'",
+                    object_id,
+                    envelope.from()
+                ));
+            }
+        }
     }
 
     if matches!(envelope.message_type(), WireMessageType::Object) {
@@ -384,6 +418,9 @@ fn advance_wire_inbound_sequence(
         }
         WireMessageType::Want => {
             for object_id in validate_wire_string_array(envelope.payload(), "objects")? {
+                if object_id.starts_with("rev:") && peer_session.advertises_revision(&object_id) {
+                    peer_session.accepted_sync_roots.insert(object_id.clone());
+                }
                 peer_session.pending_object_ids.insert(object_id);
             }
         }
@@ -819,6 +856,29 @@ mod tests {
                 "heads": {
                     "doc:test": ["rev:test"]
                 }
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(signing_key, &value));
+        value
+    }
+
+    fn signed_manifest_message_with_heads(
+        signing_key: &SigningKey,
+        sender: &str,
+        payload_node_id: &str,
+        heads: Value,
+    ) -> Value {
+        let mut value = json!({
+            "type": "MANIFEST",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:manifest-signed-001",
+            "timestamp": "2026-03-08T20:00:10+08:00",
+            "from": sender,
+            "payload": {
+                "node_id": payload_node_id,
+                "capabilities": ["patch-sync"],
+                "heads": heads
             },
             "sig": "sig:placeholder"
         });
@@ -1297,6 +1357,92 @@ mod tests {
     }
 
     #[test]
+    fn wire_session_rejects_unadvertised_revision_want() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
+        let want = signed_want_message(&signing_key, "node:alpha", &["rev:missing"]);
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+        let error = session.verify_incoming(&want).unwrap_err();
+
+        assert_eq!(
+            error,
+            "wire WANT revision 'rev:missing' was not advertised by 'node:alpha'"
+        );
+    }
+
+    #[test]
+    fn wire_session_rejects_non_revision_want_without_sync_root() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
+        let want = signed_want_message(&signing_key, "node:alpha", &["patch:test"]);
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+        let error = session.verify_incoming(&want).unwrap_err();
+
+        assert_eq!(
+            error,
+            "wire WANT object 'patch:test' requires an accepted revision sync root from 'node:alpha'"
+        );
+    }
+
+    #[test]
+    fn wire_session_accepts_mixed_want_when_it_establishes_sync_root() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message_with_heads(
+            &signing_key,
+            "node:alpha",
+            "node:alpha",
+            json!({
+                "doc:test": ["rev:test", "rev:other"]
+            }),
+        );
+        let want = signed_want_message(&signing_key, "node:alpha", &["rev:test", "patch:test"]);
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+        session.verify_incoming(&want).expect("WANT should verify");
+
+        let state = session
+            .peer_session("node:alpha")
+            .expect("peer session should exist");
+        assert!(state.accepted_sync_roots.contains("rev:test"));
+        assert!(state.pending_object_ids.contains("patch:test"));
+    }
+
+    #[test]
     fn wire_session_accepts_requested_object_after_want() {
         let signing_key = signing_key();
         let sender_key = sender_public_key(&signing_key);
@@ -1311,7 +1457,11 @@ mod tests {
             .as_str()
             .expect("signed OBJECT payload should include object_id")
             .to_owned();
-        let want = signed_want_message(&signing_key, "node:alpha", &[object_id.as_str()]);
+        let want = signed_want_message(
+            &signing_key,
+            "node:alpha",
+            &["rev:test", object_id.as_str()],
+        );
 
         session
             .verify_incoming(&hello)
@@ -1329,8 +1479,11 @@ mod tests {
             session
                 .peer_session("node:alpha")
                 .map(|state| state.pending_object_ids.len()),
-            Some(0)
+            Some(1)
         );
+        assert!(session
+            .peer_session("node:alpha")
+            .is_some_and(|state| state.accepted_sync_roots.contains("rev:test")));
     }
 
     #[test]
