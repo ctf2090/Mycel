@@ -91,10 +91,11 @@ Per-command activity:
 1. prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]` before working; it wraps `touch` and prints the canonical before-work timestamp line, and that exact line should appear in user-visible commentary
 2. prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]` after the command completes; it wraps `finish` and prints the canonical after-work timestamp line, and that exact line should appear in user-visible commentary
 3. use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` only when you need the timestamp line without the registry change, and keep the same single-line `UTC+8` format
-4. inactive entries older than one hour become stale and release their `display_id`
-5. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
-6. paused entries older than 24 hours become stale-paused and release their `display_id`
-7. paused entries older than 3 days are cleanup candidates and should be removed from `.agent-local/agents.json`
+4. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
+5. inactive entries older than one hour become stale and release their `display_id`
+6. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
+7. paused entries older than 24 hours become stale-paused and release their `display_id`
+8. paused entries older than 3 days are cleanup candidates and should be removed from `.agent-local/agents.json`
 
 Interrupted chat recovery:
 

@@ -295,8 +295,9 @@ Keep startup output narrow:
 4. before each user-command work cycle, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py touch <agent-ref>` together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
 5. after that command's work is complete, prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py finish <agent-ref>` together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
 6. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` and keep the same single-line `UTC+8` format; do not hand-write or replace it with dual-timezone text
-7. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
-8. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
+7. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
+8. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
+9. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
 Planning-sync coordination:
 
