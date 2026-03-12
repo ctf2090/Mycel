@@ -277,7 +277,7 @@ Recommended startup sequence:
 9. run `scripts/agent_registry.py status <agent-ref>`
 10. begin the chat with `<display-id> | <scope-label>`
 11. when the first concrete task arrives, run `scripts/agent_registry.py touch <agent-ref>`
-12. before doing the work, post a short human-facing commentary line with an `Asia/Taipei (UTC+8)` timestamp; `scripts/agent_timestamp.py before --agent <display-id> --scope <scope-label>` is the preferred helper
+12. before doing the work, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it runs `touch` and prints a short human-facing commentary line with an `Asia/Taipei (UTC+8)` timestamp
 
 Keep startup output narrow:
 
@@ -291,12 +291,11 @@ Keep startup output narrow:
 1. before starting work, read `.agent-local/agents.json`
 2. confirm the current scopes and active peers
 3. use the mailbox declared in the registry for coordination
-4. before each user-command work cycle, run `scripts/agent_registry.py touch <agent-ref>`
-5. before the work starts, post a short human-facing commentary line with an `Asia/Taipei (UTC+8)` timestamp; `scripts/agent_timestamp.py before --agent <display-id> --scope <scope-label>` is the preferred helper
-6. after that command's work is complete, run `scripts/agent_registry.py finish <agent-ref>`
-7. after the work ends, post a short human-facing commentary line with an `Asia/Taipei (UTC+8)` timestamp; `scripts/agent_timestamp.py after --agent <display-id> --scope <scope-label>` is the preferred helper
-8. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
-9. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
+4. before each user-command work cycle, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py touch <agent-ref>` together with the human-facing timestamp line
+5. after that command's work is complete, prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py finish <agent-ref>` together with the human-facing timestamp line
+6. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>`
+7. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
+8. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
 Planning-sync coordination:
 

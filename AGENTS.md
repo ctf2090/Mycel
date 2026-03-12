@@ -47,7 +47,7 @@
 - If the user did not assign a role for the new chat, use `scripts/agent_registry.py claim auto`: it takes `coding` when there is no active `coding` agent, takes `doc` when active `coding >= 1` and active `doc == 0`, and takes `coding` when active `coding >= 1` and active `doc >= 1`.
 - After claiming a role for the chat, tell the user which role was claimed before moving on to task work.
 - For each user command work cycle, touch the active agent entry before working and mark it inactive after the work for that command finishes.
-- For each user command work cycle, post a short human-facing commentary line with a timestamp before work starts and after work ends. Use `scripts/agent_timestamp.py before|after [--agent <display-id>] [--scope <scope-label>]` or an equivalent `Asia/Taipei (UTC+8)` timestamp line.
+- For each user command work cycle, post a short human-facing commentary line with a timestamp before work starts and after work ends. Prefer `scripts/agent_work_cycle.py begin|end <agent-ref> [--scope <scope-label>]`; it wraps `touch`/`finish` together with the `Asia/Taipei (UTC+8)` timestamp line. `scripts/agent_timestamp.py` remains available when only the timestamp line is needed.
 - If a task needs an additional tool or module, the agent should install it directly unless the user explicitly says not to.
 - Reply with a short plan and the current repo status before making changes.
 

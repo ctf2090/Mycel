@@ -62,6 +62,8 @@ Startup command:
 - `scripts/agent_registry.py start <agent-ref>`
 - `scripts/agent_registry.py touch <agent-ref>`
 - `scripts/agent_registry.py finish <agent-ref>`
+- `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`
+- `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`
 - `scripts/agent_registry.py status [<agent-ref>]`
 - `scripts/agent_registry.py resume-check <agent-ref>`
 - `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
@@ -78,21 +80,20 @@ Startup order:
 1. `scripts/agent_registry.py claim <role|auto> [--scope <scope>]` if needed
 2. `scripts/agent_registry.py start <agent-ref>`
 3. `scripts/agent_registry.py status <agent-ref>`
-4. `scripts/agent_registry.py touch <agent-ref>` before working the current command
+4. `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]` before working the current command
 5. first chat line: `<display-id> | <scope-label>`
 
 Do not run `claim`, `start`, and `status` in parallel.
 
 Per-command activity:
 
-1. `scripts/agent_registry.py touch <agent-ref>` before working
-2. post a short human-facing commentary line before work with `scripts/agent_timestamp.py before --agent <display-id> --scope <scope-label>` or an equivalent `Asia/Taipei (UTC+8)` timestamp line
-3. `scripts/agent_registry.py finish <agent-ref>` after the command completes
-4. post a short human-facing commentary line after work with `scripts/agent_timestamp.py after --agent <display-id> --scope <scope-label>` or an equivalent `Asia/Taipei (UTC+8)` timestamp line
-5. inactive entries older than one hour become stale and release their `display_id`
-6. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
-7. paused entries older than 24 hours become stale-paused and release their `display_id`
-8. paused entries older than 3 days are cleanup candidates and should be removed from `.agent-local/agents.json`
+1. prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]` before working; it wraps `touch` and prints the before-work timestamp line
+2. prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]` after the command completes; it wraps `finish` and prints the after-work timestamp line
+3. use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` only when you need the timestamp line without the registry change
+4. inactive entries older than one hour become stale and release their `display_id`
+5. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
+6. paused entries older than 24 hours become stale-paused and release their `display_id`
+7. paused entries older than 3 days are cleanup candidates and should be removed from `.agent-local/agents.json`
 
 Interrupted chat recovery:
 
