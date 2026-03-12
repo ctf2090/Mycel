@@ -355,6 +355,30 @@ mod tests {
         value
     }
 
+    fn signed_heads_message(
+        signing_key: &SigningKey,
+        sender: &str,
+        revision_id: &str,
+        replace: bool,
+    ) -> Value {
+        let mut value = json!({
+            "type": "HEADS",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:heads-sync-001",
+            "timestamp": "2026-03-08T20:00:20+08:00",
+            "from": sender,
+            "payload": {
+                "documents": {
+                    "doc:test": [revision_id]
+                },
+                "replace": replace
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(signing_key, &value));
+        value
+    }
+
     fn signed_want_message(signing_key: &SigningKey, sender: &str, object_ids: &[&str]) -> Value {
         let mut value = json!({
             "type": "WANT",
@@ -543,6 +567,63 @@ mod tests {
                 .as_ref()
                 .is_some_and(|path| path.ends_with("indexes/manifest.json")),
             "expected manifest path in summary: {summary:?}"
+        );
+
+        let manifest =
+            load_store_index_manifest(&store_root).expect("store manifest should be readable");
+        assert_eq!(manifest.stored_object_count, 2);
+        assert_eq!(
+            manifest.doc_revisions.get("doc:test"),
+            Some(&vec![revision_id]),
+            "expected revision to be indexed"
+        );
+    }
+
+    #[test]
+    fn sync_pull_from_transcript_verifies_first_time_sync_from_heads() {
+        let signing_key = signing_key();
+        let sender = "node:alpha";
+        let patch_object = signed_patch_object_message(&signing_key, sender, "rev:genesis-null");
+        let patch_id = patch_object["payload"]["object_id"]
+            .as_str()
+            .expect("patch object should include object id")
+            .to_string();
+        let revision_object = signed_revision_object_message(&signing_key, sender, &[&patch_id]);
+        let revision_id = revision_object["payload"]["object_id"]
+            .as_str()
+            .expect("revision object should include object id")
+            .to_string();
+        let transcript = SyncPullTranscript {
+            peer: SyncPeer {
+                node_id: sender.to_string(),
+                public_key: sender_public_key(&signing_key),
+            },
+            messages: vec![
+                signed_hello_message(&signing_key, sender),
+                signed_heads_message(&signing_key, sender, &revision_id, true),
+                signed_want_message(&signing_key, sender, &[&revision_id]),
+                revision_object,
+                signed_want_message(&signing_key, sender, &[&patch_id]),
+                patch_object,
+                signed_bye_message(&signing_key, sender),
+            ],
+        };
+        let store_root = temp_dir("pull-heads-ok");
+
+        let summary =
+            sync_pull_from_transcript(&transcript, &store_root).expect("sync pull should run");
+
+        assert!(summary.is_ok(), "expected ok summary, got {summary:?}");
+        assert_eq!(summary.status, "ok");
+        assert_eq!(summary.message_count, 7);
+        assert_eq!(summary.verified_message_count, 7);
+        assert_eq!(summary.object_message_count, 2);
+        assert_eq!(summary.verified_object_count, 2);
+        assert_eq!(summary.written_object_count, 2);
+        assert_eq!(summary.existing_object_count, 0);
+        assert!(
+            summary.notes.is_empty(),
+            "expected closed first-time sync without warnings: {summary:?}"
         );
 
         let manifest =
