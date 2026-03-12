@@ -635,6 +635,80 @@ fn inspect_warns_when_patch_metadata_entries_are_empty() {
 }
 
 #[test]
+fn inspect_warns_when_patch_set_metadata_single_entry_is_missing_value() {
+    let path = write_test_file(
+        "patch-set-metadata-missing-value-inspect",
+        &serde_json::to_string_pretty(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "set_metadata",
+                    "key": "title"
+                }
+            ],
+            "signature": "sig:ed25519:test"
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary
+            .notes
+            .iter()
+            .any(|message| message.contains("top-level 'ops[0]': missing object field 'value'")),
+        "expected missing value warning, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn inspect_warns_when_patch_set_metadata_single_entry_has_empty_key() {
+    let path = write_test_file(
+        "patch-set-metadata-empty-key-inspect",
+        &serde_json::to_string_pretty(&json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:test",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "set_metadata",
+                    "key": "",
+                    "value": "Hello"
+                }
+            ],
+            "signature": "sig:ed25519:test"
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary.notes.iter().any(|message| {
+            message.contains("top-level 'ops[0]': top-level 'key' must not be an empty string")
+        }),
+        "expected empty key warning, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 fn inspect_warns_when_patch_mixes_set_metadata_forms() {
     let path = write_test_file(
         "patch-mixed-set-metadata-forms-inspect",

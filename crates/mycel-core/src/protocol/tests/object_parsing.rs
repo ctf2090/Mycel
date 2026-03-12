@@ -80,6 +80,57 @@ fn parse_patch_object_rejects_empty_metadata_entries() {
 }
 
 #[test]
+fn parse_patch_object_rejects_set_metadata_single_entry_missing_value() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:base",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [
+            {
+                "op": "set_metadata",
+                "key": "title"
+            }
+        ]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': missing object field 'value'"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_set_metadata_single_entry_empty_key() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:base",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [
+            {
+                "op": "set_metadata",
+                "key": "",
+                "value": "Hello"
+            }
+        ]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': top-level 'key' must not be an empty string"
+    );
+}
+
+#[test]
 fn parse_patch_object_rejects_wrong_block_reference_prefix() {
     let error = parse_patch_object(&json!({
         "type": "patch",

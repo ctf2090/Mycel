@@ -854,6 +854,86 @@ pub(super) fn patch_empty_metadata_entries_are_rejected() {
 }
 
 #[test]
+pub(super) fn patch_set_metadata_single_entry_missing_value_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [
+            {
+                "op": "set_metadata",
+                "key": "title"
+            }
+        ]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-set-metadata-missing-value",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'ops[0]': missing object field 'value'")),
+        "expected missing value error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn patch_set_metadata_single_entry_empty_key_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [
+            {
+                "op": "set_metadata",
+                "key": "",
+                "value": "Hello"
+            }
+        ]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-set-metadata-empty-key",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary.errors.iter().any(|message| {
+            message.contains("top-level 'ops[0]': top-level 'key' must not be an empty string")
+        }),
+        "expected empty key error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 pub(super) fn revision_duplicate_patch_ids_are_rejected_by_typed_validation() {
     let (signing_key, public_key) = signer_material();
     let mut revision = json!({
