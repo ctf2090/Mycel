@@ -258,6 +258,38 @@ fn parse_patch_object_rejects_mixed_set_metadata_forms() {
 }
 
 #[test]
+fn parse_patch_object_rejects_unknown_nested_new_block_field_with_path() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:base",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:001",
+                    "block_type": "paragraph",
+                    "content": "Hello",
+                    "attrs": {},
+                    "children": [],
+                    "unexpected": true
+                }
+            }
+        ]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': top-level 'new_block': top-level contains unexpected field 'unexpected'"
+    );
+}
+
+#[test]
 fn parse_document_object_reads_identity_and_baseline_fields() {
     let document = parse_document_object(&json!({
         "type": "document",
@@ -607,6 +639,23 @@ fn parse_block_object_rejects_unknown_nested_child_field_with_path() {
 }
 
 #[test]
+fn parse_block_object_rejects_non_object_nested_child_with_path() {
+    let error = parse_block_object(&json!({
+        "block_id": "blk:001",
+        "block_type": "paragraph",
+        "content": "Hello",
+        "attrs": {},
+        "children": ["not-an-object"]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'children[0]' must be a JSON object"
+    );
+}
+
+#[test]
 fn parse_view_object_reads_documents_and_policy() {
     let view = parse_view_object(&json!({
         "type": "view",
@@ -665,6 +714,46 @@ fn parse_view_object_rejects_non_object_policy() {
     .unwrap_err();
 
     assert_eq!(error.to_string(), "top-level 'policy' must be an object");
+}
+
+#[test]
+fn parse_view_object_rejects_missing_policy() {
+    let error = parse_view_object(&json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": "pk:ed25519:test",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "timestamp": 7u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(error.to_string(), "missing object field 'policy'");
+}
+
+#[test]
+fn parse_view_object_rejects_non_string_document_value() {
+    let error = parse_view_object(&json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": "pk:ed25519:test",
+        "documents": {
+            "doc:test": 7
+        },
+        "policy": {
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 7u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'documents.doc:test' must be a string"
+    );
 }
 
 #[test]
@@ -802,6 +891,28 @@ fn parse_snapshot_object_rejects_empty_documents() {
 }
 
 #[test]
+fn parse_snapshot_object_rejects_non_string_document_value() {
+    let error = parse_snapshot_object(&json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "snapshot_id": "snap:test",
+        "documents": {
+            "doc:test": 9
+        },
+        "included_objects": ["rev:test"],
+        "root_hash": "hash:test",
+        "created_by": "pk:ed25519:test",
+        "timestamp": 9u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'documents.doc:test' must be a string"
+    );
+}
+
+#[test]
 fn parse_snapshot_object_rejects_empty_included_object_entry() {
     let error = parse_snapshot_object(&json!({
         "type": "snapshot",
@@ -820,6 +931,28 @@ fn parse_snapshot_object_rejects_empty_included_object_entry() {
     assert_eq!(
         error.to_string(),
         "top-level 'included_objects[1]' must not be an empty string"
+    );
+}
+
+#[test]
+fn parse_snapshot_object_rejects_non_string_included_object_entry() {
+    let error = parse_snapshot_object(&json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "snapshot_id": "snap:test",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "included_objects": ["rev:test", 7],
+        "root_hash": "hash:test",
+        "created_by": "pk:ed25519:test",
+        "timestamp": 9u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'included_objects[1]' must be a string"
     );
 }
 
@@ -952,6 +1085,28 @@ fn parse_snapshot_object_rejects_wrong_root_hash_prefix() {
     assert_eq!(
         error.to_string(),
         "top-level 'root_hash' must use 'hash:' prefix"
+    );
+}
+
+#[test]
+fn parse_revision_object_rejects_non_string_merge_strategy() {
+    let error = parse_revision_object(&json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "revision_id": "rev:test",
+        "doc_id": "doc:test",
+        "parents": ["rev:base", "rev:side"],
+        "patches": ["patch:test"],
+        "merge_strategy": 7,
+        "state_hash": "hash:test",
+        "author": "pk:ed25519:test",
+        "timestamp": 2u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'merge_strategy' must be a string"
     );
 }
 

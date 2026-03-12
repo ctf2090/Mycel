@@ -586,6 +586,51 @@ pub(super) fn patch_move_without_destination_is_rejected() {
 }
 
 #[test]
+pub(super) fn patch_nested_new_block_unknown_field_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:001",
+                    "block_type": "paragraph",
+                    "content": "Hello",
+                    "attrs": {},
+                    "children": [],
+                    "unexpected": true
+                }
+            }
+        ]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-nested-new-block-unknown-field",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(summary.errors.iter().any(|message| {
+        message.contains(
+            "top-level 'ops[0]': top-level 'new_block': top-level contains unexpected field 'unexpected'",
+        )
+    }), "expected nested new_block unknown-field error, got {summary:?}");
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 pub(super) fn patch_mixed_set_metadata_forms_are_rejected() {
     let (signing_key, public_key) = signer_material();
     let mut patch = json!({
@@ -812,6 +857,43 @@ pub(super) fn multi_parent_revision_requires_merge_strategy() {
 }
 
 #[test]
+pub(super) fn revision_non_string_merge_strategy_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut revision = json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "parents": ["rev:base", "rev:side"],
+        "patches": [],
+        "merge_strategy": 7,
+        "state_hash": "hash:test",
+        "author": public_key,
+        "timestamp": 11u64
+    });
+    let revision_id =
+        recompute_object_id(&revision, "revision_id", "rev").expect("revision ID should recompute");
+    revision["revision_id"] = Value::String(revision_id);
+    revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+    let path = write_test_file(
+        "revision-non-string-merge-strategy",
+        &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'merge_strategy' must be a string")),
+        "expected merge_strategy type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 pub(super) fn revision_wrong_state_hash_prefix_is_rejected() {
     let (signing_key, public_key) = signer_material();
     let mut revision = json!({
@@ -976,6 +1058,36 @@ pub(super) fn block_unknown_nested_child_field_is_rejected() {
             message.contains("top-level 'children[0]' contains unexpected field 'unexpected'")
         }),
         "expected nested child unknown-field error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn block_non_object_nested_child_is_rejected() {
+    let path = write_test_file(
+        "block-non-object-nested-child",
+        &serde_json::to_string_pretty(&json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": "blk:001",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": ["not-an-object"]
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'children[0]' must be a JSON object")),
+        "expected nested child object-shape error, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);
@@ -1154,6 +1266,80 @@ pub(super) fn snapshot_non_canonical_included_object_id_is_rejected() {
                 .contains("top-level 'included_objects[0]' must use a canonical object ID prefix")
         }),
         "expected canonical included_objects ID error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn snapshot_non_string_document_value_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut snapshot = json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "documents": {
+            "doc:test": 9
+        },
+        "included_objects": ["rev:test"],
+        "root_hash": "hash:test",
+        "created_by": public_key,
+        "timestamp": 9u64
+    });
+    let snapshot_id = recompute_object_id(&snapshot, "snapshot_id", "snap")
+        .expect("snapshot ID should recompute");
+    snapshot["snapshot_id"] = Value::String(snapshot_id);
+    snapshot["signature"] = Value::String(sign_value(&signing_key, &snapshot));
+    let path = write_test_file(
+        "snapshot-non-string-document-value",
+        &serde_json::to_string_pretty(&snapshot).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'documents.doc:test' must be a string")),
+        "expected snapshot document value type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn snapshot_non_string_included_object_entry_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut snapshot = json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "included_objects": ["rev:test", 7],
+        "root_hash": "hash:test",
+        "created_by": public_key,
+        "timestamp": 9u64
+    });
+    let snapshot_id = recompute_object_id(&snapshot, "snapshot_id", "snap")
+        .expect("snapshot ID should recompute");
+    snapshot["snapshot_id"] = Value::String(snapshot_id);
+    snapshot["signature"] = Value::String(sign_value(&signing_key, &snapshot));
+    let path = write_test_file(
+        "snapshot-non-string-included-object-entry",
+        &serde_json::to_string_pretty(&snapshot).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'included_objects[1]' must be a string")),
+        "expected included_objects type error, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);
@@ -1482,6 +1668,77 @@ pub(super) fn view_non_object_policy_is_rejected_by_typed_validation() {
             .iter()
             .any(|message| message.contains("top-level 'policy' must be an object")),
         "expected non-object policy error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn view_missing_policy_is_rejected_by_typed_validation() {
+    let (signing_key, public_key) = signer_material();
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": public_key,
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "timestamp": 12u64
+    });
+    let view_id = recompute_object_id(&view, "view_id", "view").expect("view ID should recompute");
+    view["view_id"] = Value::String(view_id);
+    view["signature"] = Value::String(sign_value(&signing_key, &view));
+    let path = write_test_file(
+        "view-missing-policy",
+        &serde_json::to_string_pretty(&view).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("missing object field 'policy'")),
+        "expected missing policy error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn view_non_string_document_value_is_rejected_by_typed_validation() {
+    let (signing_key, public_key) = signer_material();
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": public_key,
+        "documents": {
+            "doc:test": 7
+        },
+        "policy": {
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 12u64
+    });
+    let view_id = recompute_object_id(&view, "view_id", "view").expect("view ID should recompute");
+    view["view_id"] = Value::String(view_id);
+    view["signature"] = Value::String(sign_value(&signing_key, &view));
+    let path = write_test_file(
+        "view-non-string-document-value",
+        &serde_json::to_string_pretty(&view).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'documents.doc:test' must be a string")),
+        "expected document value type error, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);
