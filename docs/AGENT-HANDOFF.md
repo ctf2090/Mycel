@@ -29,8 +29,13 @@ Multiple agents may use the same role if their scopes and file ownership do not 
 
 Default pattern:
 
-- `.agent-local/<agent-id>.md`
-  one mailbox per agent, with peer-to-peer handoff entries addressed by scope and agent id
+- `.agent-local/mailboxes/<agent_uid>.md`
+  one mailbox per agent, with peer-to-peer handoff entries addressed by scope and stable uid
+
+Archive pattern:
+
+- `.agent-local/mailboxes/archive/YYYY-MM/<agent_uid>.md`
+  archive destination for orphaned uid-based mailboxes that are no longer referenced by `.agent-local/agents.json`
 
 Shared fallback pattern:
 
@@ -46,6 +51,17 @@ If the file does not exist yet, create it locally when the first message is need
 If a chat is interrupted and another agent takes over, add one short takeover line near the top of the replacement mailbox, for example:
 
 - `taking over from coding-2 after interrupted chat`
+
+Mailbox retention and archive policy:
+
+- registry cleanup does not delete mailbox files automatically
+- active working-set uid-based mailboxes stay in `.agent-local/mailboxes/`
+- `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md` stays in place and is never archived
+- once an agent entry has been removed from `.agent-local/agents.json`, its uid-based mailbox becomes an orphaned mailbox candidate
+- orphaned uid-based mailboxes should be moved into `.agent-local/mailboxes/archive/YYYY-MM/` instead of being deleted
+- use `scripts/mailbox_gc.py scan` to inspect referenced, missing, orphaned, and archived uid-based mailboxes
+- use `scripts/mailbox_gc.py archive` to move orphaned uid-based mailboxes into the archive tree without deleting contents
+- shared fallback mailbox files outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`; retire or archive those only by explicit team decision
 
 ## Workflow
 
@@ -125,7 +141,7 @@ When `doc` resolves or responds, either update the original entry status or appe
 
 ## Example
 
-Example `coding` to `doc` message in `.agent-local/coding-1.md`:
+Example `coding` to `doc` message in `.agent-local/mailboxes/agt_example1234.md`:
 
 ```md
 ## 2026-03-11 - coding - #12 duplicate revision parent strictness
