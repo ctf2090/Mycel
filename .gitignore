@@ -3,6 +3,7 @@ AGENTS-LOCAL.md
 !.agent-local/mailboxes/
 .agent-local/mailboxes/*
 !.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md
+!.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md
 !.agent-local/DEV-SETUP-STATUS.example.md
 target/
 sim/runtime/*

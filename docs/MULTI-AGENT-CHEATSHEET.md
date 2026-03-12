@@ -108,7 +108,7 @@ Please read AGENTS.md and treat this chat as the coding role.
 Repo status: `## main...origin/main`
 
 Short plan:
-1. Read `AGENTS.md`, `AGENTS-LOCAL.md`, `docs/AGENT-REGISTRY.md`, and `.agent-local/agents.json`.
+1. Read `AGENTS.md`, `AGENTS-LOCAL.md` if it exists locally, `docs/AGENT-REGISTRY.md`, and `.agent-local/agents.json`.
 2. Claim the `coding` role for this chat and start the registry entry.
 3. Begin the current work cycle with the canonical timestamp line, then report the claimed role and repo status.
 
@@ -127,7 +127,7 @@ Background terminal finished with python scripts/agent_work_cycle.py end agt_exa
 
 Please read AGENTS.md and treat this chat as the coding role.
 
-我已讀過 AGENTS.md、AGENTS-LOCAL.md、docs/AGENT-REGISTRY.md 與 `.agent-local/agents.json`，並依流程認領 `coding` 角色為 `coding-1`（`agt_example1234`）。目前 repo 狀態是 `## main...origin/main`；若有既有未提交變更，我會避開它們。
+我已讀過 AGENTS.md、AGENTS-LOCAL.md（若本機存在）、docs/AGENT-REGISTRY.md 與 `.agent-local/agents.json`，並依流程認領 `coding` 角色為 `coding-1`（`agt_example1234`）。目前 repo 狀態是 `## main...origin/main`；若有既有未提交變更，我會避開它們。
 ```
 
 Interrupted chat recovery:

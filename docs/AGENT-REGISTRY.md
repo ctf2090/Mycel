@@ -267,7 +267,7 @@ No agent may start tracked work until all of the following are true:
 
 Recommended startup sequence:
 
-1. read `AGENTS.md`, `AGENTS-LOCAL.md`, and `docs/AGENT-REGISTRY.md`
+1. read `AGENTS.md`, `AGENTS-LOCAL.md` if it exists locally, and `docs/AGENT-REGISTRY.md`
 2. run `git status -sb`
 3. check `rg` and `gh`
 4. if the role is `coding`, check the latest completed CI status from the previous push
