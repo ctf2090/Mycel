@@ -1055,12 +1055,13 @@ mod tests {
     use base64::Engine;
     use ed25519_dalek::{Signer, SigningKey};
     use serde_json::{json, Value};
-    use sha2::{Digest, Sha256};
 
     use super::{
         ingest_store_from_path, load_store_index_manifest, load_stored_object_value,
         rebuild_store_from_path,
     };
+    use crate::canonical::{prefixed_canonical_hash, signed_payload_bytes};
+    use crate::protocol::recompute_object_id;
     use crate::replay::{compute_state_hash, replay_revision_from_index, DocumentState};
 
     fn signing_key() -> SigningKey {
@@ -1075,38 +1076,6 @@ mod tests {
         )
     }
 
-    fn canonical_json(value: &Value) -> String {
-        match value {
-            Value::Null => panic!("test values should not use null"),
-            Value::Bool(boolean) => boolean.to_string(),
-            Value::Number(number) => number.to_string(),
-            Value::String(string) => serde_json::to_string(string).expect("string should encode"),
-            Value::Array(values) => format!(
-                "[{}]",
-                values
-                    .iter()
-                    .map(canonical_json)
-                    .collect::<Vec<_>>()
-                    .join(",")
-            ),
-            Value::Object(entries) => {
-                let mut keys: Vec<&String> = entries.keys().collect();
-                keys.sort_unstable();
-                let parts = keys
-                    .into_iter()
-                    .map(|key| {
-                        format!(
-                            "{}:{}",
-                            serde_json::to_string(key).expect("key should encode"),
-                            canonical_json(&entries[key])
-                        )
-                    })
-                    .collect::<Vec<_>>();
-                format!("{{{}}}", parts.join(","))
-            }
-        }
-    }
-
     fn block(block_id: &str, content: &str) -> Value {
         json!({
             "block_id": block_id,
@@ -1118,26 +1087,12 @@ mod tests {
     }
 
     fn recompute_id(value: &Value, id_field: &str, prefix: &str) -> String {
-        let mut object = value
-            .as_object()
-            .cloned()
-            .expect("test object should be JSON object");
-        object.remove(id_field);
-        object.remove("signature");
-        let canonical = canonical_json(&Value::Object(object));
-        let mut hasher = Sha256::new();
-        hasher.update(canonical.as_bytes());
-        format!("{prefix}:{:x}", hasher.finalize())
+        recompute_object_id(value, id_field, prefix).expect("test object ID should recompute")
     }
 
     fn sign_value(signing_key: &SigningKey, value: &Value) -> String {
-        let mut object = value
-            .as_object()
-            .cloned()
-            .expect("test object should be JSON object");
-        object.remove("signature");
-        let canonical = canonical_json(&Value::Object(object));
-        let signature = signing_key.sign(canonical.as_bytes());
+        let payload = signed_payload_bytes(value).expect("payload should canonicalize");
+        let signature = signing_key.sign(&payload);
         format!(
             "sig:ed25519:{}",
             base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
@@ -1218,9 +1173,8 @@ mod tests {
                 }
             ]
         });
-        let mut hasher = Sha256::new();
-        hasher.update(canonical_json(&state).as_bytes());
-        let state_hash = format!("hash:{:x}", hasher.finalize());
+        let state_hash =
+            prefixed_canonical_hash(&state, "hash").expect("state hash should compute");
 
         let revision = signed_object(
             json!({
@@ -1428,9 +1382,8 @@ mod tests {
             "doc_id": "doc:parent",
             "blocks": []
         });
-        let mut hasher = Sha256::new();
-        hasher.update(canonical_json(&parent_state).as_bytes());
-        let parent_state_hash = format!("hash:{:x}", hasher.finalize());
+        let parent_state_hash = prefixed_canonical_hash(&parent_state, "hash")
+            .expect("parent state hash should compute");
 
         let parent_revision = signed_object(
             json!({
@@ -1543,9 +1496,8 @@ mod tests {
                 }
             ]
         });
-        let mut hasher = Sha256::new();
-        hasher.update(canonical_json(&state).as_bytes());
-        let state_hash = format!("hash:{:x}", hasher.finalize());
+        let state_hash =
+            prefixed_canonical_hash(&state, "hash").expect("state hash should compute");
 
         let revision = signed_object(
             json!({
