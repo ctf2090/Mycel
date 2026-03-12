@@ -15,9 +15,19 @@ Local registry file:
 Local mailbox files:
 
 - `.agent-local/mailboxes/<agent_uid>.md`
+- archive: `.agent-local/mailboxes/archive/YYYY-MM/<agent_uid>.md`
 - example template: `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 - fallback: `.agent-local/coding-to-doc.md`
 - fallback: `.agent-local/doc-to-coding.md`
+
+Mailbox retention:
+
+- registry cleanup does not delete mailbox files automatically
+- active working-set uid-based mailboxes stay in `.agent-local/mailboxes/`
+- orphaned uid-based mailboxes should move into `.agent-local/mailboxes/archive/YYYY-MM/`
+- use `scripts/mailbox_gc.py scan` to inspect referenced, missing, orphaned, and archived uid-based mailboxes
+- use `scripts/mailbox_gc.py archive` to move orphaned uid-based mailboxes without deleting contents
+- shared fallback mailboxes outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`
 
 ## Agent Roles
 
@@ -72,7 +82,7 @@ Per-command activity:
 1. `scripts/agent_registry.py touch <agent-ref>` before working
 2. `scripts/agent_registry.py finish <agent-ref>` after the command completes
 3. inactive entries older than one hour become stale and release their `display_id`
-4. stale entries older than 24 hours are cleanup candidates and should be removed from `.agent-local/agents.json`
+4. once an entry stays stale for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
 
 Interrupted chat recovery:
 
