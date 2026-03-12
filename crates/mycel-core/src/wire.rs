@@ -70,11 +70,16 @@ impl FromStr for WireMessageType {
 
 #[derive(Debug)]
 pub struct ParsedWireEnvelope<'a> {
+    from: &'a str,
     message_type: WireMessageType,
     payload: &'a Map<String, Value>,
 }
 
 impl<'a> ParsedWireEnvelope<'a> {
+    pub fn from(&self) -> &'a str {
+        self.from
+    }
+
     pub fn message_type(&self) -> WireMessageType {
         self.message_type
     }
@@ -127,6 +132,10 @@ pub fn parse_wire_envelope(value: &Value) -> Result<ParsedWireEnvelope<'_>, Stri
         "node:",
     )
     .map_err(|error| error.to_string())?;
+    let from = object
+        .get("from")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "wire envelope is missing string field 'from'".to_string())?;
     validate_prefixed_string(
         &required_wire_string(object, "sig", "wire envelope")?,
         "sig",
@@ -141,6 +150,7 @@ pub fn parse_wire_envelope(value: &Value) -> Result<ParsedWireEnvelope<'_>, Stri
     };
 
     Ok(ParsedWireEnvelope {
+        from,
         message_type,
         payload,
     })
@@ -157,6 +167,76 @@ pub fn verify_wire_envelope_signature<'a>(
     sender_public_key: &str,
 ) -> Result<ParsedWireEnvelope<'a>, String> {
     let envelope = validate_wire_envelope(value)?;
+    verify_wire_envelope_signature_bytes(value, sender_public_key, "sender public key")?;
+    Ok(envelope)
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WirePeerDirectory {
+    sender_public_keys: BTreeMap<String, String>,
+}
+
+impl WirePeerDirectory {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn register_known_peer(
+        &mut self,
+        node_id: &str,
+        public_key: &str,
+    ) -> Result<Option<String>, String> {
+        validate_prefixed_string(node_id, "node_id", "node:").map_err(|error| error.to_string())?;
+        crate::signature::parse_ed25519_public_key(public_key, "public key")?;
+        Ok(self
+            .sender_public_keys
+            .insert(node_id.to_owned(), public_key.to_owned()))
+    }
+
+    pub fn sender_public_key(&self, node_id: &str) -> Option<&str> {
+        self.sender_public_keys.get(node_id).map(String::as_str)
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WireSession {
+    known_peers: WirePeerDirectory,
+}
+
+impl WireSession {
+    pub fn new(known_peers: WirePeerDirectory) -> Self {
+        Self { known_peers }
+    }
+
+    pub fn register_known_peer(
+        &mut self,
+        node_id: &str,
+        public_key: &str,
+    ) -> Result<Option<String>, String> {
+        self.known_peers.register_known_peer(node_id, public_key)
+    }
+
+    pub fn known_peers(&self) -> &WirePeerDirectory {
+        &self.known_peers
+    }
+
+    pub fn verify_incoming<'a>(&self, value: &'a Value) -> Result<ParsedWireEnvelope<'a>, String> {
+        let envelope = validate_wire_envelope(value)?;
+        validate_wire_sender_identity(&envelope)?;
+        let sender_public_key = self
+            .known_peers
+            .sender_public_key(envelope.from())
+            .ok_or_else(|| format!("unknown wire sender '{}'", envelope.from()))?;
+        verify_wire_envelope_signature_bytes(value, sender_public_key, "known sender public key")?;
+        Ok(envelope)
+    }
+}
+
+fn verify_wire_envelope_signature_bytes(
+    value: &Value,
+    sender_public_key: &str,
+    sender_public_key_label: &str,
+) -> Result<(), String> {
     let signature = value
         .as_object()
         .and_then(|object| object.get("sig"))
@@ -167,10 +247,25 @@ pub fn verify_wire_envelope_signature<'a>(
         &payload,
         sender_public_key,
         signature,
-        "sender public key",
+        sender_public_key_label,
         "sig field",
-    )?;
-    Ok(envelope)
+    )
+}
+
+fn validate_wire_sender_identity(envelope: &ParsedWireEnvelope<'_>) -> Result<(), String> {
+    match envelope.message_type() {
+        WireMessageType::Hello | WireMessageType::Manifest => {
+            let node_id = required_wire_string(envelope.payload(), "node_id", "wire payload")?;
+            if node_id != envelope.from() {
+                return Err(format!(
+                    "wire {} payload 'node_id' must equal envelope 'from'",
+                    envelope.message_type()
+                ));
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 pub fn validate_wire_payload(
@@ -504,7 +599,8 @@ mod tests {
 
     use super::{
         parse_wire_envelope, validate_wire_envelope, validate_wire_object_payload_behavior,
-        validate_wire_payload, verify_wire_envelope_signature, WireMessageType,
+        validate_wire_payload, verify_wire_envelope_signature, WireMessageType, WirePeerDirectory,
+        WireSession,
     };
 
     fn signing_key() -> SigningKey {
@@ -548,6 +644,7 @@ mod tests {
         let envelope = parse_wire_envelope(&value).expect("wire envelope should parse");
 
         assert_eq!(envelope.message_type(), WireMessageType::Hello);
+        assert_eq!(envelope.from(), "node:alpha");
         assert_eq!(
             envelope.payload().get("node_id").and_then(Value::as_str),
             Some("node:alpha")
@@ -723,6 +820,91 @@ mod tests {
         assert_eq!(
             error,
             "sender public key must use format 'pk:ed25519:<base64>'"
+        );
+    }
+
+    #[test]
+    fn wire_session_verifies_incoming_hello_from_registered_peer() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let mut value = json!({
+            "type": "HELLO",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:hello-signed-001",
+            "timestamp": "2026-03-08T20:00:00+08:00",
+            "from": "node:alpha",
+            "payload": {
+                "node_id": "node:alpha",
+                "capabilities": ["patch-sync"],
+                "nonce": "n:test"
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(&signing_key, &value));
+
+        let envelope = session
+            .verify_incoming(&value)
+            .expect("registered sender should verify");
+
+        assert_eq!(envelope.from(), "node:alpha");
+        assert_eq!(envelope.message_type(), WireMessageType::Hello);
+    }
+
+    #[test]
+    fn wire_session_rejects_unknown_sender() {
+        let signing_key = signing_key();
+        let mut value = json!({
+            "type": "HELLO",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:hello-signed-001",
+            "timestamp": "2026-03-08T20:00:00+08:00",
+            "from": "node:alpha",
+            "payload": {
+                "node_id": "node:alpha",
+                "capabilities": ["patch-sync"],
+                "nonce": "n:test"
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(&signing_key, &value));
+
+        let error = WireSession::default().verify_incoming(&value).unwrap_err();
+
+        assert_eq!(error, "unknown wire sender 'node:alpha'");
+    }
+
+    #[test]
+    fn wire_session_rejects_hello_node_id_mismatch() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::new(WirePeerDirectory::new());
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let mut value = json!({
+            "type": "HELLO",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:hello-signed-001",
+            "timestamp": "2026-03-08T20:00:00+08:00",
+            "from": "node:alpha",
+            "payload": {
+                "node_id": "node:beta",
+                "capabilities": ["patch-sync"],
+                "nonce": "n:test"
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(&signing_key, &value));
+
+        let error = session.verify_incoming(&value).unwrap_err();
+
+        assert_eq!(
+            error,
+            "wire HELLO payload 'node_id' must equal envelope 'from'"
         );
     }
 }
