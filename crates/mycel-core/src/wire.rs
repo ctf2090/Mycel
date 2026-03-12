@@ -5,12 +5,14 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::canonical::wire_envelope_signed_payload_bytes;
 use crate::protocol::{
     ensure_supported_json_values, object_schema, parse_object_envelope, recompute_object_id,
     reject_duplicate_strings, reject_unknown_fields, required_non_empty_string_array,
     required_prefixed_string_map, required_string_field, validate_canonical_object_id,
     validate_prefixed_string, StringFieldError, WIRE_PROTOCOL_VERSION,
 };
+use crate::signature::verify_ed25519_signature;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WireMessageType {
@@ -147,6 +149,27 @@ pub fn parse_wire_envelope(value: &Value) -> Result<ParsedWireEnvelope<'_>, Stri
 pub fn validate_wire_envelope(value: &Value) -> Result<ParsedWireEnvelope<'_>, String> {
     let envelope = parse_wire_envelope(value)?;
     validate_wire_payload(envelope.message_type(), envelope.payload())?;
+    Ok(envelope)
+}
+
+pub fn verify_wire_envelope_signature<'a>(
+    value: &'a Value,
+    sender_public_key: &str,
+) -> Result<ParsedWireEnvelope<'a>, String> {
+    let envelope = validate_wire_envelope(value)?;
+    let signature = value
+        .as_object()
+        .and_then(|object| object.get("sig"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| "wire envelope is missing string field 'sig'".to_string())?;
+    let payload = wire_envelope_signed_payload_bytes(value)?;
+    verify_ed25519_signature(
+        &payload,
+        sender_public_key,
+        signature,
+        "sender public key",
+        "sig field",
+    )?;
     Ok(envelope)
 }
 
@@ -472,14 +495,39 @@ fn validate_wire_head_map(
 
 #[cfg(test)]
 mod tests {
+    use base64::Engine;
+    use ed25519_dalek::{Signer, SigningKey};
     use serde_json::{json, Value};
 
+    use crate::canonical::wire_envelope_signed_payload_bytes;
     use crate::protocol::recompute_object_id;
 
     use super::{
         parse_wire_envelope, validate_wire_envelope, validate_wire_object_payload_behavior,
-        validate_wire_payload, WireMessageType,
+        validate_wire_payload, verify_wire_envelope_signature, WireMessageType,
     };
+
+    fn signing_key() -> SigningKey {
+        SigningKey::from_bytes(&[9u8; 32])
+    }
+
+    fn sender_public_key(signing_key: &SigningKey) -> String {
+        format!(
+            "pk:ed25519:{}",
+            base64::engine::general_purpose::STANDARD
+                .encode(signing_key.verifying_key().as_bytes())
+        )
+    }
+
+    fn sign_wire_value(signing_key: &SigningKey, value: &Value) -> String {
+        let payload =
+            wire_envelope_signed_payload_bytes(value).expect("wire payload should canonicalize");
+        let signature = signing_key.sign(&payload);
+        format!(
+            "sig:ed25519:{}",
+            base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
+        )
+    }
 
     #[test]
     fn parse_wire_envelope_accepts_minimal_hello() {
@@ -602,5 +650,79 @@ mod tests {
         let envelope = validate_wire_envelope(&value).expect("wire envelope should validate");
         validate_wire_object_payload_behavior(envelope.payload())
             .expect("concrete OBJECT payload should match recomputed ID and hash");
+    }
+
+    #[test]
+    fn verify_wire_envelope_signature_accepts_valid_signed_hello() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut value = json!({
+            "type": "HELLO",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:hello-signed-001",
+            "timestamp": "2026-03-08T20:00:00+08:00",
+            "from": "node:alpha",
+            "payload": {
+                "node_id": "node:alpha",
+                "capabilities": ["patch-sync"],
+                "nonce": "n:test"
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(&signing_key, &value));
+
+        let envelope = verify_wire_envelope_signature(&value, &sender_key)
+            .expect("wire signature should verify");
+
+        assert_eq!(envelope.message_type(), WireMessageType::Hello);
+    }
+
+    #[test]
+    fn verify_wire_envelope_signature_rejects_invalid_signature() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let value = json!({
+            "type": "HELLO",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:hello-signed-001",
+            "timestamp": "2026-03-08T20:00:00+08:00",
+            "from": "node:alpha",
+            "payload": {
+                "node_id": "node:alpha",
+                "capabilities": ["patch-sync"],
+                "nonce": "n:test"
+            },
+            "sig": "sig:ed25519:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+        });
+
+        let error = verify_wire_envelope_signature(&value, &sender_key).unwrap_err();
+
+        assert!(error.contains("Ed25519 signature verification failed"));
+    }
+
+    #[test]
+    fn verify_wire_envelope_signature_rejects_malformed_sender_public_key() {
+        let signing_key = signing_key();
+        let mut value = json!({
+            "type": "HELLO",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:hello-signed-001",
+            "timestamp": "2026-03-08T20:00:00+08:00",
+            "from": "node:alpha",
+            "payload": {
+                "node_id": "node:alpha",
+                "capabilities": ["patch-sync"],
+                "nonce": "n:test"
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(&signing_key, &value));
+
+        let error = verify_wire_envelope_signature(&value, "node:alpha").unwrap_err();
+
+        assert_eq!(
+            error,
+            "sender public key must use format 'pk:ed25519:<base64>'"
+        );
     }
 }

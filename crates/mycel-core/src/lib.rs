@@ -8,6 +8,7 @@ pub mod canonical;
 pub mod head;
 pub mod protocol;
 pub mod replay;
+pub mod signature;
 pub mod store;
 pub mod verify;
 pub mod wire;
