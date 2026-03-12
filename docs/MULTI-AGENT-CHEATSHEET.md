@@ -14,7 +14,7 @@ Local registry file:
 
 Local mailbox files:
 
-- `.agent-local/<agent-id>.md`
+- `.agent-local/mailboxes/<agent_uid>.md`
 - fallback: `.agent-local/coding-to-doc.md`
 - fallback: `.agent-local/doc-to-coding.md`
 
@@ -31,60 +31,70 @@ Multiple agents may share the same role. Read `.agent-local/agents.json` first t
 
 No tracked work starts until the agent confirms its own entry in `.agent-local/agents.json`.
 
+## Identity Model
+
+- `agent_uid` is the stable identity for the chat and is never reused
+- `display_id` is the short human-facing id such as `coding-1` and may be recycled
+- write commands should prefer `agent_uid`
+- the transitional CLI still accepts either `agent_uid` or the current `display_id` as `<agent-ref>`
+- once a stale entry releases its `display_id`, only `agent_uid` can address that old entry
+
 Startup command:
 
 - `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
-- `scripts/agent_registry.py start <agent-id>`
-- `scripts/agent_registry.py touch <agent-id>`
-- `scripts/agent_registry.py finish <agent-id>`
-- `scripts/agent_registry.py status [<agent-id>]`
-- `scripts/agent_registry.py resume-check <agent-id>`
-- `scripts/agent_registry.py stop <agent-id> [--status paused|done]`
+- `scripts/agent_registry.py start <agent-ref>`
+- `scripts/agent_registry.py touch <agent-ref>`
+- `scripts/agent_registry.py finish <agent-ref>`
+- `scripts/agent_registry.py status [<agent-ref>]`
+- `scripts/agent_registry.py resume-check <agent-ref>`
+- `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
+- `scripts/agent_registry.py recover <agent-ref> [--scope <scope>]`
+- `scripts/agent_registry.py takeover <stale-agent-ref> [--scope <scope>]`
 - `scripts/agent_registry.py cleanup`
-- `scripts/agent_registry.py recover <stale-agent-id> [--scope <scope>]`
 
 Startup self-label:
 
-- `<agent-id> | <scope-label>`
+- `<display-id> | <scope-label>`
 
 Startup order:
 
 1. `scripts/agent_registry.py claim <role|auto> [--scope <scope>]` if needed
-2. `scripts/agent_registry.py start <agent-id>`
-3. `scripts/agent_registry.py touch <agent-id>` before working the current command
-4. `scripts/agent_registry.py status <agent-id>`
-5. first chat line: `<agent-id> | <scope-label>`
+2. `scripts/agent_registry.py start <agent-ref>`
+3. `scripts/agent_registry.py status <agent-ref>`
+4. `scripts/agent_registry.py touch <agent-ref>` before working the current command
+5. first chat line: `<display-id> | <scope-label>`
 
 Do not run `claim`, `start`, and `status` in parallel.
 
 Per-command activity:
 
-1. `scripts/agent_registry.py touch <agent-id>` before working
-2. `scripts/agent_registry.py finish <agent-id>` after the command completes
-3. inactive entries older than one hour are stale-entry review candidates
+1. `scripts/agent_registry.py touch <agent-ref>` before working
+2. `scripts/agent_registry.py finish <agent-ref>` after the command completes
+3. inactive entries older than one hour become stale and release their `display_id`
 4. stale entries older than 24 hours are cleanup candidates and should be removed from `.agent-local/agents.json`
 
 Interrupted chat recovery:
 
 1. `scripts/agent_registry.py status`
 2. read the stale agent mailbox
-3. either `scripts/agent_registry.py recover <old-agent-id>` or run `scripts/agent_registry.py stop <old-agent-id>` then `scripts/agent_registry.py claim <role>` and `scripts/agent_registry.py start <new-agent-id>`
-4. read the stale mailbox before resuming tracked work
+3. if the original chat itself is returning, run `scripts/agent_registry.py resume-check <agent_uid>` and then `scripts/agent_registry.py recover <agent_uid>` if the display slot was released
+4. if a different chat is taking over, run `scripts/agent_registry.py takeover <stale-agent-ref>`
+5. read the stale mailbox before resuming tracked work
 
 Reopened chat startup:
 
 1. `read AGENTS.md, you are <role>`
 2. `scripts/agent_registry.py status`
-3. `scripts/agent_registry.py recover <old-agent-id>`
-4. read `.agent-local/<old-agent-id>.md`
-5. read `.agent-local/<new-agent-id>.md`
-6. first chat line: `<new-agent-id> | <scope-label>`
+3. `scripts/agent_registry.py resume-check <agent_uid>`
+4. if `must_recover = true`, run `scripts/agent_registry.py recover <agent_uid>`
+5. read `.agent-local/mailboxes/<agent_uid>.md`
+6. first chat line: `<display-id> | <scope-label>`
 
 Role note:
 
 - `coding` usually reports the latest completed CI result after recovery
 - `doc` usually skips CI unless explicitly asked
-- if an old forgotten chat is reopened, run `scripts/agent_registry.py resume-check <agent-id>` before doing any tracked work
+- if an old forgotten chat is reopened, run `scripts/agent_registry.py resume-check <agent_uid>` before doing any tracked work
 
 ## 10-Line Rule Set
 

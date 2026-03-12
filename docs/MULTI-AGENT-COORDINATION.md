@@ -52,22 +52,38 @@ If a task starts as doc-only but requires new implementation decisions, stop and
 
 Use `.agent-local/agents.json` as the local registry file for active agent count and role assignment. The tracked definition for that file lives in [AGENT-REGISTRY.md](./AGENT-REGISTRY.md).
 
+## Identity Model
+
+The active registry model is now:
+
+- `agent_uid`: the stable identity for the chat, never reused
+- `display_id`: the short human-facing id such as `coding-1`, recyclable after stale slot release
+
+Operational consequences:
+
+- write commands should prefer `agent_uid`
+- the transitional CLI still accepts either `agent_uid` or the current `display_id` as `<agent-ref>`
+- once a stale agent has released its `display_id`, reopened chats must use `agent_uid` for `resume-check` and `recover`
+- a different chat taking over the stale work must not reuse the old `agent_uid`
+
 No agent may start tracked work until it has confirmed its own assigned role in `.agent-local/agents.json`.
 
 Recommended startup command:
 
 - `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
-- `scripts/agent_registry.py start <agent-id>`
-- `scripts/agent_registry.py touch <agent-id>`
-- `scripts/agent_registry.py finish <agent-id>`
-- `scripts/agent_registry.py status [<agent-id>]`
-- `scripts/agent_registry.py stop <agent-id> [--status paused|done]`
+- `scripts/agent_registry.py start <agent-ref>`
+- `scripts/agent_registry.py touch <agent-ref>`
+- `scripts/agent_registry.py finish <agent-ref>`
+- `scripts/agent_registry.py status [<agent-ref>]`
+- `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
 - `scripts/agent_registry.py cleanup`
-- `scripts/agent_registry.py recover <stale-agent-id> [--scope <scope>]`
+- `scripts/agent_registry.py resume-check <agent-ref>`
+- `scripts/agent_registry.py recover <agent-ref> [--scope <scope>]`
+- `scripts/agent_registry.py takeover <stale-agent-ref> [--scope <scope>]`
 
 Recommended startup self-label:
 
-- first chat line: `<agent-id> | <scope-label>`
+- first chat line: `<display-id> | <scope-label>`
 
 ## Hybrid Issue Mode
 
@@ -105,16 +121,16 @@ Before an agent starts:
 
 1. read `.agent-local/agents.json`
 2. if the user already declared a role but no entry exists, run `scripts/agent_registry.py claim <role>`
-3. confirm the entry has `role`, `assigned_by`, and `assigned_at`
-4. run `scripts/agent_registry.py start <agent-id>`
+3. confirm the entry has `agent_uid`, `role`, `assigned_by`, `assigned_at`, and `current_display_id`
+4. run `scripts/agent_registry.py start <agent-ref>`
 5. only then decide whether the task is issue-first or chat-first
 6. if it is issue-first, choose one open issue
 7. check whether another agent or human is already working on it
 8. leave a short claim note in the issue or team channel
 9. confirm the likely file set before editing
-10. run `scripts/agent_registry.py touch <agent-id>` before working the current user-command cycle
+10. run `scripts/agent_registry.py touch <agent-ref>` before working the current user-command cycle
 11. update the local registry entry when scope or status changes
-12. run `scripts/agent_registry.py finish <agent-id>` after the command-level work is complete
+12. run `scripts/agent_registry.py finish <agent-ref>` after the command-level work is complete
 
 When the chat itself starts, use one short self-label line first, such as:
 
@@ -267,19 +283,20 @@ Recovery sequence:
 1. inspect `.agent-local/agents.json`
 2. run `scripts/agent_registry.py status`
 3. read the stale agent's mailbox
-4. if the chat is clearly gone, either run `scripts/agent_registry.py recover <agent-id>` or run `scripts/agent_registry.py stop <agent-id>` followed by `scripts/agent_registry.py claim <role>` and `scripts/agent_registry.py start <new-agent-id>`
-5. read the stale mailbox before resuming tracked work
-6. continue work only under the new agent id
+4. if the original chat itself has returned, run `scripts/agent_registry.py resume-check <agent_uid>` and `scripts/agent_registry.py recover <agent_uid>` if needed
+5. if a different chat must continue the work, run `scripts/agent_registry.py takeover <stale-agent-ref>`
+6. continue work only under the currently assigned `display_id`
 
 Inactive lease rule:
 
 1. `touch` before each user-command work cycle
 2. `finish` when that command completes
-3. inactive entries older than one hour become stale and remain resumable during the stale-retention window
-4. once an entry has been stale for 24 hours, `scripts/agent_registry.py` should remove it from `.agent-local/agents.json`
-5. `scripts/agent_registry.py cleanup` can be used to report retained stale entries and any entries removed after that 24-hour stale-retention window
+3. inactive entries older than one hour become stale and release their `display_id`
+4. stale entries remain recoverable by `agent_uid` during the retention window
+5. once a stale entry remains expired for 24 hours, `scripts/agent_registry.py` should remove it from `.agent-local/agents.json`
+6. `scripts/agent_registry.py cleanup` can be used to report both retained stale agents and removed agents
 
-Do not silently reuse the old agent id for a new chat after an interruption.
+Do not silently reuse the old `agent_uid` for a new chat after an interruption.
 
 ## Handoff Rule
 
@@ -305,48 +322,7 @@ When `coding` hands work to `doc`, use a real-time handoff that is structured en
 
 Default repo-local handoff surface:
 
-- use per-agent mailbox files declared in `.agent-local/agents.json`, preferably `.agent-local/<agent-id>.md`
+- use per-agent mailbox files declared in `.agent-local/agents.json`, preferably `.agent-local/mailboxes/<agent_uid>.md`
 - shared directional files such as `.agent-local/coding-to-doc.md` and `.agent-local/doc-to-coding.md` are fallback paths only
 - use [AGENT-HANDOFF.md](./AGENT-HANDOFF.md) only as the tracked protocol and template reference
 - if the work is issue-first, mirror the same summary in the issue comment when useful
-
-Required fields:
-
-- scope or issue label
-- files touched
-- user-visible behavior change
-- protocol, schema, CLI, or fixture impact
-- verify commands that passed
-- docs impacted
-- planning impact: `none`, `design-note`, `progress`, `roadmap`, `checklist`, or a short combination
-- remaining follow-up
-
-Recommended `coding` to `doc` example:
-
-- `Finished #12. Touched verify.rs and object_verify_smoke.rs. Behavior change: reject duplicate revision parents earlier in verification. Protocol/schema impact: none. Verify: cargo test -p mycel-core and cargo test -p mycel-cli. Docs impacted: none. Planning impact: checklist. Remaining follow-up: update IMPLEMENTATION-CHECKLIST after the batch lands.`
-
-Recommended `doc` follow-through:
-
-- update only the docs named in the handoff
-- do not restate implementation details that are not confirmed by code or accepted design notes
-- if planning impact is `none`, avoid widening scope into roadmap or checklist edits
-- mark the local mailbox entry as `resolved`, `blocked`, or `superseded`
-
-## Maintainer View
-
-Maintainers should prefer:
-
-- assigning one issue owner at a time
-- checking file overlap before approving new parallel work
-- moving ambiguous tasks back into spec/design discussion quickly
-- keeping heavy tasks split into reviewable issue slices
-
-## Practical Rule
-
-If there is any doubt:
-
-1. reduce scope
-2. isolate files
-3. verify locally
-4. push in order
-5. hand off clearly
