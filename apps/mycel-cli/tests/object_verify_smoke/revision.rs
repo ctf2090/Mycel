@@ -2230,7 +2230,7 @@ fn object_verify_json_fails_for_revision_with_parent_from_other_document() {
 }
 
 #[test]
-fn object_verify_json_fails_for_revision_with_unparseable_parent_revision() {
+fn object_verify_json_fails_for_revision_with_invalid_parent_revision_dependency() {
     let dir = create_temp_dir("object-verify-revision-unparseable-parent");
     let parent_revision_path = dir.path().join("revision-parent.json");
     let patch_path = dir.path().join("patch.json");
@@ -2303,17 +2303,17 @@ fn object_verify_json_fails_for_revision_with_unparseable_parent_revision() {
             .as_array()
             .is_some_and(|errors| errors.iter().any(|entry| {
                 entry.as_str().is_some_and(|message| {
-                    message.contains("failed to parse parent revision 'rev:bad-parent'")
+                    message.contains("failed to verify parent revision 'rev:bad-parent'")
                         && message.contains("missing string field 'state_hash'")
                 })
             })),
-        "expected parent parse replay error, stdout: {}",
+        "expected parent dependency verification error, stdout: {}",
         stdout_text(&output)
     );
 }
 
 #[test]
-fn object_verify_json_fails_for_revision_with_unparseable_patch_dependency() {
+fn object_verify_json_fails_for_revision_with_invalid_patch_dependency() {
     let dir = create_temp_dir("object-verify-revision-unparseable-patch");
     let patch_path = dir.path().join("patch.json");
     let revision_path = dir.path().join("revision.json");
@@ -2363,11 +2363,151 @@ fn object_verify_json_fails_for_revision_with_unparseable_patch_dependency() {
         json["errors"]
             .as_array()
             .is_some_and(|errors| errors.iter().any(|entry| {
-                entry
-                    .as_str()
-                    .is_some_and(|message| message.contains("failed to parse patch 'patch:bad'"))
+                entry.as_str().is_some_and(|message| {
+                    message.contains("failed to verify patch 'patch:bad'")
+                        && message.contains("missing required top-level 'signature'")
+                })
             })),
-        "expected patch parse replay error, stdout: {}",
+        "expected patch dependency verification error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_patch_dependency_id_mismatch() {
+    let dir = create_temp_dir("object-verify-revision-patch-id-mismatch");
+    let patch_path = dir.path().join("patch.json");
+    let revision_path = dir.path().join("revision.json");
+
+    let mut patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    patch["patch_id"] = Value::String("patch:wrong".to_string());
+    patch["signature"] = Value::String(sign_value(&signing_key(), &patch));
+    fs::write(
+        &patch_path,
+        serde_json::to_string_pretty(&patch).expect("patch JSON should serialize"),
+    )
+    .expect("patch JSON should be written");
+
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": ["patch:wrong"],
+            "state_hash": "hash:placeholder",
+            "timestamp": 1777778889u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &revision_path,
+        serde_json::to_string_pretty(&revision).expect("revision JSON should serialize"),
+    )
+    .expect("revision JSON should be written");
+
+    let output = run_mycel(&["object", "verify", &path_arg(&revision_path), "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "failed");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("failed to verify patch 'patch:wrong'")
+                        && message.contains(
+                            "declared patch_id does not match recomputed canonical object ID",
+                        )
+                })
+            })),
+        "expected patch dependency ID mismatch error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn object_verify_json_fails_for_revision_with_patch_dependency_bad_signature() {
+    let dir = create_temp_dir("object-verify-revision-patch-bad-signature");
+    let patch_path = dir.path().join("patch.json");
+    let revision_path = dir.path().join("revision.json");
+
+    let mut patch = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1777778888u64,
+            "ops": []
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let patch_id = patch["patch_id"]
+        .as_str()
+        .expect("patch id should exist")
+        .to_string();
+    patch["signature"] = Value::String("sig:ed25519:AA==".to_string());
+    fs::write(
+        &patch_path,
+        serde_json::to_string_pretty(&patch).expect("patch JSON should serialize"),
+    )
+    .expect("patch JSON should be written");
+
+    let revision = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": [],
+            "patches": [patch_id.clone()],
+            "state_hash": "hash:placeholder",
+            "timestamp": 1777778889u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    fs::write(
+        &revision_path,
+        serde_json::to_string_pretty(&revision).expect("revision JSON should serialize"),
+    )
+    .expect("revision JSON should be written");
+
+    let output = run_mycel(&["object", "verify", &path_arg(&revision_path), "--json"]);
+
+    assert_exit_code(&output, 1);
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["object_type"], "revision");
+    assert_eq!(json["state_hash_verification"], "failed");
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains(&format!("failed to verify patch '{patch_id}'"))
+                        && message.contains("invalid Ed25519 signature bytes")
+                })
+            })),
+        "expected patch dependency signature error, stdout: {}",
         stdout_text(&output)
     );
 }
