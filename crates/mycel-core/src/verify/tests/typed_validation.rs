@@ -127,6 +127,30 @@ pub(super) fn invalid_signature_is_rejected() {
     let _ = std::fs::remove_file(path);
 }
 
+#[rstest]
+#[case("document", None, "missing string field 'version'")]
+#[case("document", Some(json!("mycel/0.2")), "top-level 'version' must equal 'mycel/0.1'")]
+#[case("patch", None, "missing string field 'version'")]
+#[case("revision", Some(json!("mycel/0.2")), "top-level 'version' must equal 'mycel/0.1'")]
+#[case("view", None, "missing string field 'version'")]
+#[case("snapshot", Some(json!("mycel/0.2")), "top-level 'version' must equal 'mycel/0.1'")]
+pub(super) fn core_protocol_version_must_match_for_typed_objects(
+    #[case] kind: &str,
+    #[case] version_value: Option<Value>,
+    #[case] expected_error: &str,
+) {
+    let summary = verify_core_version_case_summary(kind, version_value);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains(expected_error)),
+        "expected core version strictness error, got {summary:?}"
+    );
+}
+
 #[test]
 pub(super) fn document_missing_logical_id_is_rejected() {
     let path = write_test_file(

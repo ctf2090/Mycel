@@ -279,6 +279,226 @@ pub(super) fn inspect_strict_id_case_summary(
     summary
 }
 
+pub(super) fn verify_core_version_case_summary(
+    kind: &str,
+    version_value: Option<Value>,
+) -> ObjectVerificationSummary {
+    let (signing_key, public_key) = signer_material();
+    let mut value = match kind {
+        "document" => json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "title": "Plain document",
+            "language": "zh-Hant",
+            "content_model": "block-tree",
+            "created_at": 1u64,
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test"
+        }),
+        "patch" => json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 11u64,
+            "ops": []
+        }),
+        "revision" => json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        }),
+        "view" => json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "maintainer": public_key,
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 12u64
+        }),
+        "snapshot" => json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": public_key,
+            "timestamp": 9u64
+        }),
+        _ => panic!("unknown core-version verify case: {kind}"),
+    };
+
+    match version_value {
+        Some(version) => value["version"] = version,
+        None => {
+            value
+                .as_object_mut()
+                .expect("object value")
+                .remove("version");
+        }
+    }
+
+    match kind {
+        "patch" => {
+            let patch_id = recompute_object_id(&value, "patch_id", "patch")
+                .expect("patch ID should recompute");
+            value["patch_id"] = Value::String(patch_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        "revision" => {
+            let revision_id = recompute_object_id(&value, "revision_id", "rev")
+                .expect("revision ID should recompute");
+            value["revision_id"] = Value::String(revision_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        "view" => {
+            let view_id =
+                recompute_object_id(&value, "view_id", "view").expect("view ID should recompute");
+            value["view_id"] = Value::String(view_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        "snapshot" => {
+            let snapshot_id = recompute_object_id(&value, "snapshot_id", "snap")
+                .expect("snapshot ID should recompute");
+            value["snapshot_id"] = Value::String(snapshot_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        _ => {}
+    }
+
+    let path = write_test_file(
+        &format!("{kind}-core-version-strictness"),
+        &serde_json::to_string_pretty(&value).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+    let _ = std::fs::remove_file(path);
+    summary
+}
+
+pub(super) fn inspect_core_version_case_summary(
+    kind: &str,
+    version_value: Option<Value>,
+) -> ObjectInspectionSummary {
+    let (signing_key, public_key) = signer_material();
+    let mut value = match kind {
+        "document" => json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "title": "Plain document",
+            "language": "zh-Hant",
+            "content_model": "block-tree",
+            "created_at": 1u64,
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test"
+        }),
+        "patch" => json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": public_key,
+            "timestamp": 11u64,
+            "ops": []
+        }),
+        "revision" => json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "parents": ["rev:base"],
+            "patches": [],
+            "state_hash": "hash:test",
+            "author": public_key,
+            "timestamp": 11u64
+        }),
+        "view" => json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "maintainer": public_key,
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed"
+            },
+            "timestamp": 12u64
+        }),
+        "snapshot" => json!({
+            "type": "snapshot",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "included_objects": ["rev:test", "patch:test"],
+            "root_hash": "hash:test",
+            "created_by": public_key,
+            "timestamp": 9u64
+        }),
+        _ => panic!("unknown core-version inspect case: {kind}"),
+    };
+
+    match version_value {
+        Some(version) => value["version"] = version,
+        None => {
+            value
+                .as_object_mut()
+                .expect("object value")
+                .remove("version");
+        }
+    }
+
+    match kind {
+        "patch" => {
+            let patch_id = recompute_object_id(&value, "patch_id", "patch")
+                .expect("patch ID should recompute");
+            value["patch_id"] = Value::String(patch_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        "revision" => {
+            let revision_id = recompute_object_id(&value, "revision_id", "rev")
+                .expect("revision ID should recompute");
+            value["revision_id"] = Value::String(revision_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        "view" => {
+            let view_id =
+                recompute_object_id(&value, "view_id", "view").expect("view ID should recompute");
+            value["view_id"] = Value::String(view_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        "snapshot" => {
+            let snapshot_id = recompute_object_id(&value, "snapshot_id", "snap")
+                .expect("snapshot ID should recompute");
+            value["snapshot_id"] = Value::String(snapshot_id);
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+        }
+        _ => {}
+    }
+
+    let path = write_test_file(
+        &format!("{kind}-core-version-inspect"),
+        &serde_json::to_string_pretty(&value).expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+    let _ = std::fs::remove_file(path);
+    summary
+}
+
 pub(super) fn verify_documents_map_prefix_summary(
     kind: &str,
     documents: Value,

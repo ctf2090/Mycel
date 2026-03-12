@@ -47,6 +47,30 @@ fn inspect_warns_when_derived_id_prefix_is_wrong(
     );
 }
 
+#[rstest]
+#[case("document", None, "missing string field 'version'")]
+#[case("document", Some(json!(7)), "top-level 'version' should be a string")]
+#[case("patch", Some(json!("mycel/0.2")), "top-level 'version' must equal 'mycel/0.1'")]
+#[case("revision", None, "missing string field 'version'")]
+#[case("view", Some(json!("mycel/0.2")), "top-level 'version' must equal 'mycel/0.1'")]
+#[case("snapshot", None, "missing string field 'version'")]
+fn inspect_warns_when_core_protocol_version_is_missing_or_wrong(
+    #[case] kind: &str,
+    #[case] version_value: Option<Value>,
+    #[case] expected_note: &str,
+) {
+    let summary = inspect_core_version_case_summary(kind, version_value);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary
+            .notes
+            .iter()
+            .any(|message| message.contains(expected_note)),
+        "expected core version warning, got {summary:?}"
+    );
+}
+
 #[test]
 fn inspect_warns_when_document_logical_id_has_wrong_type() {
     let path = write_test_file(

@@ -480,6 +480,7 @@ pub fn parse_document_object(value: &Value) -> Result<DocumentObject, TypedObjec
             "genesis_revision",
         ],
     )?;
+    required_core_protocol_version(object)?;
     Ok(DocumentObject {
         doc_id: required_prefixed_string(object, "doc_id", "doc:")?,
         title: required_string(object, "title")?,
@@ -515,15 +516,15 @@ fn parse_block_object_with_context(
             "children",
         ],
     )?;
-    let block_type = required_string(object, "block_type")?;
-    validate_block_type(&block_type)?;
+    let block_type = required_string_with_context(object, "block_type", context)?;
+    validate_block_type(&block_type).map_err(|error| maybe_prepend_context(error, context))?;
 
     Ok(BlockObject {
-        block_id: required_prefixed_string(object, "block_id", "blk:")?,
+        block_id: required_prefixed_string_with_context(object, "block_id", "blk:", context)?,
         block_type,
-        content: required_string(object, "content")?,
-        attrs: required_object(object, "attrs")?,
-        children: required_array(object, "children")?
+        content: required_string_with_context(object, "content", context)?,
+        attrs: required_object_with_context(object, "attrs", context)?,
+        children: required_array_with_context(object, "children", context)?
             .iter()
             .enumerate()
             .map(|(index, child)| {
@@ -559,6 +560,7 @@ pub fn parse_patch_object(value: &Value) -> Result<PatchObject, TypedObjectError
             "signature",
         ],
     )?;
+    required_core_protocol_version(object)?;
     Ok(PatchObject {
         patch_id: required_prefixed_string(object, "patch_id", "patch:")?,
         doc_id: required_prefixed_string(object, "doc_id", "doc:")?,
@@ -623,6 +625,7 @@ pub fn parse_revision_object(value: &Value) -> Result<RevisionObject, TypedObjec
             "top-level 'merge_strategy' is required when 'parents' has multiple entries",
         ));
     }
+    required_core_protocol_version(object)?;
 
     Ok(RevisionObject {
         revision_id: required_prefixed_string(object, "revision_id", "rev:")?,
@@ -667,6 +670,7 @@ pub fn parse_view_object(value: &Value) -> Result<ViewObject, TypedObjectError> 
             "top-level 'documents' must not be empty",
         ));
     }
+    required_core_protocol_version(object)?;
 
     Ok(ViewObject {
         view_id: required_prefixed_string(object, "view_id", "view:")?,
@@ -720,6 +724,7 @@ pub fn parse_snapshot_object(value: &Value) -> Result<SnapshotObject, TypedObjec
             )));
         }
     }
+    required_core_protocol_version(object)?;
 
     Ok(SnapshotObject {
         snapshot_id: required_prefixed_string(object, "snapshot_id", "snap:")?,
@@ -1147,6 +1152,14 @@ fn prepend_context(error: TypedObjectError, context: &str) -> TypedObjectError {
     TypedObjectError::new(format!("{context}: {error}"))
 }
 
+fn maybe_prepend_context(error: TypedObjectError, context: &str) -> TypedObjectError {
+    if context == "top-level" {
+        error
+    } else {
+        prepend_context(error, context)
+    }
+}
+
 fn parse_metadata_entries(
     object: &Map<String, Value>,
 ) -> Result<Map<String, Value>, TypedObjectError> {
@@ -1201,6 +1214,44 @@ fn required_prefixed_string(
     let value = required_string(object, field)?;
     validate_prefixed_string(&value, field, prefix)?;
     Ok(value)
+}
+
+fn required_core_protocol_version(object: &Map<String, Value>) -> Result<String, TypedObjectError> {
+    required_exact_string(object, "version", CORE_PROTOCOL_VERSION)
+}
+
+fn required_string_with_context(
+    object: &Map<String, Value>,
+    field: &str,
+    context: &str,
+) -> Result<String, TypedObjectError> {
+    required_string(object, field).map_err(|error| maybe_prepend_context(error, context))
+}
+
+fn required_prefixed_string_with_context(
+    object: &Map<String, Value>,
+    field: &str,
+    prefix: &str,
+    context: &str,
+) -> Result<String, TypedObjectError> {
+    required_prefixed_string(object, field, prefix)
+        .map_err(|error| maybe_prepend_context(error, context))
+}
+
+fn required_array_with_context<'a>(
+    object: &'a Map<String, Value>,
+    field: &str,
+    context: &str,
+) -> Result<&'a Vec<Value>, TypedObjectError> {
+    required_array(object, field).map_err(|error| maybe_prepend_context(error, context))
+}
+
+fn required_object_with_context(
+    object: &Map<String, Value>,
+    field: &str,
+    context: &str,
+) -> Result<Map<String, Value>, TypedObjectError> {
+    required_object(object, field).map_err(|error| maybe_prepend_context(error, context))
 }
 
 fn required_exact_string(
