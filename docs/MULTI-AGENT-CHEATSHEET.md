@@ -22,7 +22,7 @@ Local mailbox files:
 ## Agent Roles
 
 - `coding`: owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push
-- `doc`: owns document sync, design notes, roadmap/checklist refresh, and planning-surface wording; this role does not check CI by default
+- `doc`: owns document sync, design notes, roadmap/checklist refresh, and planning-surface wording; this role does not check CI
 
 Use `coding` when the main output is behavior, tests, fixtures, parser/verifier work, or CLI changes.
 

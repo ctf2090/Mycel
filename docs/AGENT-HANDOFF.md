@@ -17,7 +17,7 @@ Use role-based execution modes:
 - `coding`
   resolves issues, implements features, runs local verification, commits and pushes, and checks CI after each push
 - `doc`
-  syncs design notes, roadmap/checklist surfaces, and explanatory docs; this mode does not check CI by default
+  syncs design notes, roadmap/checklist surfaces, and explanatory docs; this mode does not check CI
 
 Use `coding` when the main output is behavior, tests, fixtures, parser/verifier work, or CLI changes.
 

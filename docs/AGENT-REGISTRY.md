@@ -50,7 +50,7 @@ Role responsibilities:
 - `coding`
   owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push; when work may affect planning surfaces, this role hands the relevant material to `doc` through the registry mailbox and does not run `scripts/check-doc-refresh.sh`
 - `doc`
-  owns design-note sync, roadmap/checklist refresh, explanatory docs, planning-surface wording, and the `scripts/check-doc-refresh.sh` cadence check; this role scans registry mailboxes to collect sync-relevant handoff material and does not check CI by default
+  owns design-note sync, roadmap/checklist refresh, explanatory docs, planning-surface wording, and the `scripts/check-doc-refresh.sh` cadence check; this role scans registry mailboxes to collect sync-relevant handoff material and does not check CI
 
 If the user does not assign any role in a new chat, `claim auto` should choose:
 
@@ -249,7 +249,7 @@ Recommended startup sequence:
 1. read `AGENTS.md`, `AGENTS-LOCAL.md`, and `docs/AGENT-REGISTRY.md`
 2. run `git status -sb`
 3. check `rg` and `gh`
-4. check the latest completed CI status from the previous push
+4. if the role is `coding`, check the latest completed CI status from the previous push
 5. if the user assigned a role, run `scripts/agent_registry.py claim <role> [--scope <scope>]`
 6. otherwise run `scripts/agent_registry.py claim auto [--scope <scope>]`
 7. immediately tell the user which role was claimed for this chat
@@ -262,7 +262,7 @@ Keep startup output narrow:
 
 - do not claim file-specific context before the user gives a concrete task
 - do not run `claim`, `start`, and `status` in parallel
-- keep the CI line about the latest completed workflow, not a possibly in-progress run
+- when the role is `coding`, keep the CI line about the latest completed workflow, not a possibly in-progress run
 - after `claim`, include a short user-facing role announcement before moving on to task work
 
 ## Workflow

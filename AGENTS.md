@@ -11,7 +11,9 @@
 - The `doc` role owns `scripts/check-doc-refresh.sh` and should run it before or after a doc work batch to check the 20-commit planning-sync cadence; `coding` agents must not run it.
 - When `coding` work produces roadmap, checklist, progress-page, or issue-triage material that may affect planning sync, hand that material to `doc` through the registry mailbox instead of running `scripts/check-doc-refresh.sh` directly.
 - If `scripts/check-doc-refresh.sh` reports `due`, use [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single entry point for the next docs sync.
-- Do not check CI immediately after each push, since the workflow may still be running. Before starting the next piece of work, check the latest completed CI status for the previous push and report any failures.
+- Do not check CI immediately after each push, since the workflow may still be running.
+- Only the `coding` role checks the latest completed CI status for the previous push before starting the next piece of work and reports any failures.
+- The `doc` role does not check CI.
 
 ## Git identity (User vs Agent)
 - User commits should keep the user's normal local git identity.
