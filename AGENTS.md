@@ -8,7 +8,9 @@
 - If `git push origin main` is rejected because `origin/main` moved, run `git fetch origin`, `git rebase origin/main`, resolve any conflicts, and retry the push; do not force-push to bypass other chats' commits.
 - During rebase conflicts, preserve user changes first, then already-pushed `origin/main` changes from other chats, and then re-apply this chat's work on top; if the conflict cannot be resolved confidently, stop and ask the user instead of guessing.
 - On every 20 commits to `origin/main`, check [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single planning-sync entry point and follow it to refresh the current planning surfaces.
-- Use `scripts/check-doc-refresh.sh` to check that 20-commit planning-sync cadence before or after a work batch; if it reports `due`, use [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single entry point for the next docs sync.
+- The `doc` role owns `scripts/check-doc-refresh.sh` and should run it before or after a doc work batch to check the 20-commit planning-sync cadence; `coding` agents must not run it.
+- When `coding` work produces roadmap, checklist, progress-page, or issue-triage material that may affect planning sync, hand that material to `doc` through the registry mailbox instead of running `scripts/check-doc-refresh.sh` directly.
+- If `scripts/check-doc-refresh.sh` reports `due`, use [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single entry point for the next docs sync.
 - Do not check CI immediately after each push, since the workflow may still be running. Before starting the next piece of work, check the latest completed CI status for the previous push and report any failures.
 
 ## Git identity (User vs Agent)

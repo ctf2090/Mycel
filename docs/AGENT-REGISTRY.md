@@ -48,9 +48,9 @@ Allowed `role` values:
 Role responsibilities:
 
 - `coding`
-  owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push
+  owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push; when work may affect planning surfaces, this role hands the relevant material to `doc` through the registry mailbox and does not run `scripts/check-doc-refresh.sh`
 - `doc`
-  owns design-note sync, roadmap/checklist refresh, explanatory docs, and planning-surface wording; this role does not check CI by default
+  owns design-note sync, roadmap/checklist refresh, explanatory docs, planning-surface wording, and the `scripts/check-doc-refresh.sh` cadence check; this role scans registry mailboxes to collect sync-relevant handoff material and does not check CI by default
 
 If the user does not assign any role in a new chat, `claim auto` should choose:
 
@@ -195,6 +195,12 @@ Recommended mailbox pattern:
 
 Fallback shared mailboxes such as `.agent-local/coding-to-doc.md` and `.agent-local/doc-to-coding.md` may still be used if the team explicitly wants them, but the registry remains the source of truth for role assignment.
 
+Mailbox usage for doc sync:
+
+- `coding` agents should leave sync-relevant notes in their own registry mailbox when work changes planning-relevant implementation state, checklist closure, roadmap emphasis, public progress wording, or issue-triage inputs
+- `doc` should scan active, paused, and recently inactive agent mailboxes before a docs-sync batch and use those notes as collection input for roadmap/checklist/progress refresh work
+- mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-doc-refresh.sh`
+
 ## Startup Gate
 
 No agent may start tracked work until all of the following are true:
@@ -236,6 +242,12 @@ Keep startup output narrow:
 4. before each user-command work cycle, run `scripts/agent_registry.py touch <agent-ref>`
 5. after that command's work is complete, run `scripts/agent_registry.py finish <agent-ref>`
 6. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
+
+Planning-sync coordination:
+
+- `coding` agents should append mailbox handoff notes when they land or discover planning-relevant changes
+- `doc` owns `scripts/check-doc-refresh.sh` and the decision to start a docs-sync batch
+- before a docs-sync batch, `doc` should scan the declared mailboxes for recent handoff material and fold it into the planning refresh
 
 If two `coding` agents would touch the same primary file or issue, one must narrow scope or pause before proceeding.
 

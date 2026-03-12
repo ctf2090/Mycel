@@ -252,6 +252,12 @@ Use:
 scripts/check-doc-refresh.sh
 ```
 
+Ownership:
+
+- the active `doc` agent owns this check
+- `coding` agents do not run this script
+- instead, `coding` agents hand off sync-relevant implementation and issue-triage material through their registry mailbox so `doc` can collect it before the next docs-sync batch
+
 If it reports `due`, refresh:
 
 - `ROADMAP.md`
@@ -268,23 +274,26 @@ in the next docs-sync batch, even if no single change forced an update.
 For a meaningful implementation batch:
 
 1. land the code and tests
-2. decide whether checklist status changed
-3. decide whether roadmap emphasis changed
-4. update GitHub Issues
-5. update `docs/PROGRESS.md`
-6. update `docs/progress.html`
-7. run the relevant verification and doc-refresh checks
+2. if the work may affect planning surfaces, leave a mailbox handoff note for `doc`
+3. decide whether checklist status changed
+4. decide whether roadmap emphasis changed
+5. update GitHub Issues
+6. update `docs/PROGRESS.md`
+7. update `docs/progress.html`
+8. run the relevant verification checks; the doc-refresh cadence check remains doc-owned
 
 For a docs-only planning refresh:
 
-1. refresh `ROADMAP.md`
-2. refresh `IMPLEMENTATION-CHECKLIST.*`
-3. realign issues
-4. regenerate or manually update `docs/PROGRESS.md`
-5. update `docs/progress.html`
-6. ensure the GitHub Pages planning summary matches the refreshed roadmap/checklist/issues state
-7. refresh curated contributor-entry issue links in `README.*` if the current starter issues changed
-8. refresh curated contributor-entry issue links in `docs/index.html` and `docs/zh-TW/index.html` if the current starter issues changed
+1. scan registry mailboxes for recent coding/doc handoff material relevant to planning sync
+2. run `scripts/check-doc-refresh.sh`
+3. refresh `ROADMAP.md`
+4. refresh `IMPLEMENTATION-CHECKLIST.*`
+5. realign issues
+6. regenerate or manually update `docs/PROGRESS.md`
+7. update `docs/progress.html`
+8. ensure the GitHub Pages planning summary matches the refreshed roadmap/checklist/issues state
+9. refresh curated contributor-entry issue links in `README.*` if the current starter issues changed
+10. refresh curated contributor-entry issue links in `docs/index.html` and `docs/zh-TW/index.html` if the current starter issues changed
 
 ## 9. Anti-Drift Rules
 
