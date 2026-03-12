@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: late partial progress, refreshed after the recent canonical-helper consolidation, broader merge-authoring coverage, and editor-admission head-workflow batch; milestone state unchanged
+Status: late partial progress, refreshed after the recent shared canonical-helper consolidation, top-level core-version strictness closure, path-preserving nested parser errors, replay dependency verification tightening, and sibling ID determinism batch; milestone state unchanged
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -139,7 +139,7 @@ Completion gate:
 
 Current read:
 
-Nearly complete. The shared parsing, canonical helper, broad parser / verify / CLI strictness-surface coverage, broader inspect-surface parity, stronger signature-edge and replay/verification smoke coverage for revision semantics, isolated validate-peer fixtures, and canonical reproducibility coverage now exist; the remaining work is mostly the last malformed-field depth and semantic-edge closure plus a few milestone-close proof points.
+Nearly complete. The shared parsing, canonical helper, top-level core-version equality checks, path-preserving nested parser field errors, broad parser / verify / CLI strictness-surface coverage, broader inspect-surface parity, stronger replay dependency verification and sibling declared-ID determinism, stronger signature-edge and replay/verification smoke coverage for revision semantics, isolated validate-peer fixtures, and canonical reproducibility coverage now exist; the remaining work is mostly the last malformed-field depth and semantic-edge closure plus a few milestone-close proof points.
 
 Already visible in the repo:
 

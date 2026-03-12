@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-狀態：late partial progress，已在最近一批 canonical-helper consolidation、merge-authoring coverage 擴張，以及 editor-admission head workflow 工作後刷新；里程碑狀態未變
+狀態：late partial progress，已在最近一批 shared canonical-helper consolidation、top-level core-version strictness 收口、保留路徑資訊的 nested parser errors、replay dependency verification tightening，以及 sibling ID determinism 工作後刷新；里程碑狀態未變
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的建置順序。
 
@@ -139,7 +139,7 @@
 
 目前判讀：
 
-接近完成。shared parsing、canonical helper、更廣的 parser / verify / CLI strictness-surface coverage、更完整的 inspect-surface parity、對 revision semantics 更強的 signature-edge 與 replay/verification smoke coverage、isolate 過的 validate-peer fixtures，以及 canonical reproducibility coverage 都已存在；剩餘工作大多是最後的 malformed-field depth 與 semantic-edge 收尾，加上一些 milestone-close proof points。
+接近完成。shared parsing、canonical helper、top-level core-version equality checks、保留路徑資訊的 nested parser field errors、更廣的 parser / verify / CLI strictness-surface coverage、更完整的 inspect-surface parity、更嚴格的 replay dependency verification 與 sibling declared-ID determinism、對 revision semantics 更強的 signature-edge 與 replay/verification smoke coverage、isolate 過的 validate-peer fixtures，以及 canonical reproducibility coverage 都已存在；剩餘工作大多是最後的 malformed-field depth 與 semantic-edge 收尾，加上一些 milestone-close proof points。
 
 目前 repo 已可見：
 

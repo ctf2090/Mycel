@@ -433,13 +433,13 @@
               <td data-label="Area">1. Repo and Build Setup</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">只剩 shared canonical JSON utility 尚未收尾。</td>
+              <td data-label="Current read">build/test 基礎已穩定，shared canonical helper ownership 也更集中；完整 utility closure 仍未收尾。</td>
             </tr>
             <tr>
               <td data-label="Area">2. Object Types and IDs</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">所有必要 v0.1 families 都已 typed；剩餘工作是 malformed field-shape depth、semantic-edge closure 與角色建模。</td>
+              <td data-label="Current read">所有必要 v0.1 families 都已 typed，且 top-level core-version 與 nested-path strictness 更完整；剩餘工作是 malformed field-shape depth、剩餘 semantic-edge closure 與角色建模。</td>
             </tr>
             <tr>
               <td data-label="Area">3. Canonical Serialization and Hashing</td>
@@ -457,7 +457,7 @@
               <td data-label="Area">5. Patch and Revision Engine</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay 與 <code>state_hash</code> 已存在；patch-op base 已很穩。</td>
+              <td data-label="Current read">Replay 與 <code>state_hash</code> 已存在；對引用依賴的驗證與 sibling declared-ID determinism 也更嚴格。</td>
             </tr>
             <tr>
               <td data-label="Area">6. Local State and Storage</td>
@@ -499,7 +499,7 @@
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M2</td>
-              <td data-label="Current read">Fixture isolation、reproducibility 與 smoke coverage 已存在，但多條 normative wire 與 replay checks 尚未完成。</td>
+              <td data-label="Current read">Fixture isolation、reproducibility、更嚴格的 parser/replay smoke coverage，以及更廣的 merge-authoring structural matrix 已存在，但多條 normative wire 與 replay checks 尚未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>

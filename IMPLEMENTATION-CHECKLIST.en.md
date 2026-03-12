@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, refreshed after the recent canonical-helper consolidation, broader merge-authoring coverage, and editor-admission head inspect/render batch; implementation state unchanged, with M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, signature-edge and replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core still nearly complete
+Status: late partial progress, refreshed after the recent shared canonical-helper consolidation, top-level core-version strictness closure, path-preserving nested parser errors, replay dependency verification tightening, and sibling ID determinism batch; implementation state unchanged, with M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, replay dependency strictness, signature-edge and replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core still nearly complete
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -44,7 +44,7 @@ Defer if needed:
 - [x] Implement `snapshot` parsing with derived `snapshot_id`.
 - [x] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
 - [x] Reject unknown top-level typed-object fields and invalid required field types in shared parsing and verification.
-- [ ] Finish the remaining malformed field-shape depth and semantic edge-case closure required after the recent strictness-surface expansion and replay/verify smoke expansion.
+- [ ] Finish the remaining malformed field-shape depth, semantic edge-case, and role-model closure still left after the recent strictness-surface expansion, top-level core-version checks, and replay/verify smoke expansion.
 - [ ] Model editor-maintainer and view-maintainer role assignment independently.
 
 ## 3. Canonical Serialization and Hashing

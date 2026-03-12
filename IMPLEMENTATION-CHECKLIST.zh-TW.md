@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，已在最近一批 canonical-helper consolidation、merge-authoring coverage 擴張，以及 editor-admission head inspect/render 工作後刷新；實作狀態未變，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、signature-edge 與 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 仍接近完成
+狀態：late partial progress，已在最近一批 shared canonical-helper consolidation、top-level core-version strictness 收口、保留路徑資訊的 nested parser errors、replay dependency verification tightening，以及 sibling ID determinism 工作後刷新；實作狀態未變，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、replay dependency strictness、signature-edge 與 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 仍接近完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
@@ -44,7 +44,7 @@
 - [x] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
 - [x] 拒絕任何內嵌導出 ID 與重算 canonical ID 不一致的內容定址物件。
 - [x] 在 shared parsing 與 verification 中，拒絕 typed object 的未知頂層欄位與非法必要欄位型別。
-- [ ] 在最近 strictness-surface 與 replay/verify smoke 擴張後，完成剩餘 malformed field-shape depth 與 semantic edge case 的收尾。
+- [ ] 在最近 strictness-surface 擴張、top-level core-version 檢查，以及 replay/verify smoke 擴張後，完成剩餘 malformed field-shape depth、semantic edge case 與角色建模的收尾。
 - [ ] 將 editor-maintainer 與 view-maintainer 的角色指派分開建模。
 
 ## 3. Canonical Serialization 與 Hashing
