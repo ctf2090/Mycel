@@ -201,6 +201,7 @@ impl WirePeerDirectory {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WirePeerSessionState {
     hello_received: bool,
+    advertised_document_heads: BTreeMap<String, BTreeSet<String>>,
     pending_object_ids: BTreeSet<String>,
     closed: bool,
 }
@@ -330,6 +331,15 @@ fn validate_wire_inbound_sequence(
         WireMessageType::Error => {}
     }
 
+    if matches!(envelope.message_type(), WireMessageType::Want)
+        && peer_session.advertised_document_heads.is_empty()
+    {
+        return Err(format!(
+            "wire WANT requires prior MANIFEST or HEADS from '{}'",
+            envelope.from()
+        ));
+    }
+
     if matches!(envelope.message_type(), WireMessageType::Object) {
         let object_id = required_wire_string(envelope.payload(), "object_id", "OBJECT payload")?;
         if !peer_session.pending_object_ids.contains(&object_id) {
@@ -352,6 +362,26 @@ fn advance_wire_inbound_sequence(
         WireMessageType::Hello => {
             peer_session.hello_received = true;
         }
+        WireMessageType::Manifest => {
+            peer_session.advertised_document_heads =
+                wire_head_map_to_sets(validate_wire_head_map(envelope.payload(), "heads")?);
+        }
+        WireMessageType::Heads => {
+            let documents =
+                wire_head_map_to_sets(validate_wire_head_map(envelope.payload(), "documents")?);
+            let replace = required_wire_bool(envelope.payload(), "replace", "wire payload")?;
+            if replace {
+                peer_session.advertised_document_heads = documents;
+            } else {
+                for (doc_id, revisions) in documents {
+                    peer_session
+                        .advertised_document_heads
+                        .entry(doc_id)
+                        .or_default()
+                        .extend(revisions);
+                }
+            }
+        }
         WireMessageType::Want => {
             for object_id in validate_wire_string_array(envelope.payload(), "objects")? {
                 peer_session.pending_object_ids.insert(object_id);
@@ -365,11 +395,8 @@ fn advance_wire_inbound_sequence(
         WireMessageType::Bye => {
             peer_session.closed = true;
         }
-        WireMessageType::Manifest
-        | WireMessageType::Heads
-        | WireMessageType::SnapshotOffer
-        | WireMessageType::ViewAnnounce
-        | WireMessageType::Error => {}
+        WireMessageType::SnapshotOffer | WireMessageType::ViewAnnounce | WireMessageType::Error => {
+        }
     }
 
     Ok(())
@@ -586,6 +613,27 @@ fn required_wire_string(
         })
 }
 
+fn required_wire_bool(
+    object: &Map<String, Value>,
+    field: &str,
+    scope: &str,
+) -> Result<bool, String> {
+    match object.get(field) {
+        Some(Value::Bool(value)) => Ok(*value),
+        Some(_) => Err(format!("{scope} field '{field}' must be a boolean")),
+        None => Err(format!("{scope} is missing boolean field '{field}'")),
+    }
+}
+
+fn wire_head_map_to_sets(
+    heads: BTreeMap<String, Vec<String>>,
+) -> BTreeMap<String, BTreeSet<String>> {
+    heads
+        .into_iter()
+        .map(|(doc_id, revisions)| (doc_id, revisions.into_iter().collect()))
+        .collect()
+}
+
 fn validate_wire_timestamp(timestamp: &str) -> Result<(), String> {
     let (date, time_with_offset) = timestamp
         .split_once('T')
@@ -787,6 +835,28 @@ mod tests {
             "from": sender,
             "payload": {
                 "objects": object_ids
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(signing_key, &value));
+        value
+    }
+
+    fn signed_heads_message(
+        signing_key: &SigningKey,
+        sender: &str,
+        documents: Value,
+        replace: bool,
+    ) -> Value {
+        let mut value = json!({
+            "type": "HEADS",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:heads-signed-001",
+            "timestamp": "2026-03-08T20:00:30+08:00",
+            "from": sender,
+            "payload": {
+                "documents": documents,
+                "replace": replace
             },
             "sig": "sig:placeholder"
         });
@@ -1087,6 +1157,146 @@ mod tests {
     }
 
     #[test]
+    fn wire_session_records_manifest_heads() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+
+        let state = session
+            .peer_session("node:alpha")
+            .expect("peer session should exist");
+        assert_eq!(
+            state
+                .advertised_document_heads
+                .get("doc:test")
+                .map(|revisions| revisions.len()),
+            Some(1)
+        );
+        assert!(state
+            .advertised_document_heads
+            .get("doc:test")
+            .is_some_and(|revisions| revisions.contains("rev:test")));
+    }
+
+    #[test]
+    fn wire_session_merges_incremental_heads_updates() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
+        let heads = signed_heads_message(
+            &signing_key,
+            "node:alpha",
+            json!({
+                "doc:test": ["rev:next"],
+                "doc:extra": ["rev:extra"]
+            }),
+            false,
+        );
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+        session
+            .verify_incoming(&heads)
+            .expect("HEADS should verify");
+
+        let state = session
+            .peer_session("node:alpha")
+            .expect("peer session should exist");
+        assert!(state
+            .advertised_document_heads
+            .get("doc:test")
+            .is_some_and(|revisions| {
+                revisions.contains("rev:test") && revisions.contains("rev:next")
+            }));
+        assert!(state
+            .advertised_document_heads
+            .get("doc:extra")
+            .is_some_and(|revisions| revisions.contains("rev:extra")));
+    }
+
+    #[test]
+    fn wire_session_replaces_heads_when_replace_is_true() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
+        let heads = signed_heads_message(
+            &signing_key,
+            "node:alpha",
+            json!({
+                "doc:replacement": ["rev:replacement"]
+            }),
+            true,
+        );
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+        session
+            .verify_incoming(&heads)
+            .expect("HEADS should verify");
+
+        let state = session
+            .peer_session("node:alpha")
+            .expect("peer session should exist");
+        assert!(!state.advertised_document_heads.contains_key("doc:test"));
+        assert!(state
+            .advertised_document_heads
+            .get("doc:replacement")
+            .is_some_and(|revisions| revisions.contains("rev:replacement")));
+    }
+
+    #[test]
+    fn wire_session_rejects_want_before_head_context() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let want = signed_want_message(&signing_key, "node:alpha", &["patch:test"]);
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        let error = session.verify_incoming(&want).unwrap_err();
+
+        assert_eq!(
+            error,
+            "wire WANT requires prior MANIFEST or HEADS from 'node:alpha'"
+        );
+    }
+
+    #[test]
     fn wire_session_accepts_requested_object_after_want() {
         let signing_key = signing_key();
         let sender_key = sender_public_key(&signing_key);
@@ -1095,6 +1305,7 @@ mod tests {
             .register_known_peer("node:alpha", &sender_key)
             .expect("known peer should register");
         let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
         let object = signed_object_message(&signing_key, "node:alpha");
         let object_id = object["payload"]["object_id"]
             .as_str()
@@ -1105,6 +1316,9 @@ mod tests {
         session
             .verify_incoming(&hello)
             .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
         session.verify_incoming(&want).expect("WANT should verify");
         let envelope = session
             .verify_incoming(&object)
@@ -1128,6 +1342,7 @@ mod tests {
             .register_known_peer("node:alpha", &sender_key)
             .expect("known peer should register");
         let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
         let object = signed_object_message(&signing_key, "node:alpha");
         let object_id = object["payload"]["object_id"]
             .as_str()
@@ -1137,6 +1352,9 @@ mod tests {
         session
             .verify_incoming(&hello)
             .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
         let error = session.verify_incoming(&object).unwrap_err();
 
         assert_eq!(
