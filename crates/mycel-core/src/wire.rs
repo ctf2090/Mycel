@@ -220,6 +220,7 @@ impl WirePeerSessionState {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WireSession {
     known_peers: WirePeerDirectory,
+    known_verified_object_index: BTreeMap<String, Value>,
     peer_sessions: BTreeMap<String, WirePeerSessionState>,
 }
 
@@ -227,6 +228,7 @@ impl WireSession {
     pub fn new(known_peers: WirePeerDirectory) -> Self {
         Self {
             known_peers,
+            known_verified_object_index: BTreeMap::new(),
             peer_sessions: BTreeMap::new(),
         }
     }
@@ -241,6 +243,10 @@ impl WireSession {
 
     pub fn known_peers(&self) -> &WirePeerDirectory {
         &self.known_peers
+    }
+
+    pub fn set_known_verified_object_index(&mut self, object_index: BTreeMap<String, Value>) {
+        self.known_verified_object_index = object_index;
     }
 
     pub fn peer_session(&self, node_id: &str) -> Option<&WirePeerSessionState> {
@@ -261,12 +267,14 @@ impl WireSession {
             .sender_public_key(envelope.from())
             .ok_or_else(|| format!("unknown wire sender '{}'", envelope.from()))?;
         verify_wire_envelope_signature_bytes(value, sender_public_key, "known sender public key")?;
+        let known_verified_object_index = &self.known_verified_object_index;
         let peer_session = self
             .peer_sessions
             .entry(envelope.from().to_owned())
             .or_default();
         validate_wire_inbound_sequence(&envelope, peer_session)?;
         advance_wire_inbound_sequence(&envelope, peer_session)?;
+        expand_reachable_object_ids_from_known_index(peer_session, known_verified_object_index)?;
         Ok(envelope)
     }
 }
@@ -684,49 +692,82 @@ fn extend_reachable_object_ids_from_object(
         return Ok(());
     }
 
-    let object_type = required_wire_string(payload, "object_type", "OBJECT payload")?;
     let body = payload
         .get("body")
         .ok_or_else(|| "missing object field 'body'".to_string())?;
+    peer_session
+        .reachable_object_ids
+        .extend(discover_reachable_object_ids_from_value(body)?);
 
-    match object_type.as_str() {
-        "patch" => {
-            parse_patch_object(body)
-                .map_err(|error| format!("failed to parse reachable patch OBJECT body: {error}"))?;
+    Ok(())
+}
+
+fn expand_reachable_object_ids_from_known_index(
+    peer_session: &mut WirePeerSessionState,
+    object_index: &BTreeMap<String, Value>,
+) -> Result<(), String> {
+    let mut frontier = peer_session
+        .accepted_sync_roots
+        .iter()
+        .chain(peer_session.reachable_object_ids.iter())
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut visited = BTreeSet::new();
+
+    while let Some(object_id) = frontier.pop() {
+        if !visited.insert(object_id.clone()) {
+            continue;
         }
-        "revision" => {
-            let revision = parse_revision_object(body).map_err(|error| {
-                format!("failed to parse reachable revision OBJECT body: {error}")
-            })?;
-            peer_session.reachable_object_ids.extend(revision.parents);
-            peer_session.reachable_object_ids.extend(revision.patches);
-        }
-        "view" => {
-            let view = parse_view_object(body)
-                .map_err(|error| format!("failed to parse reachable view OBJECT body: {error}"))?;
-            peer_session
+        let Some(value) = object_index.get(&object_id) else {
+            continue;
+        };
+        for discovered_id in discover_reachable_object_ids_from_value(value)? {
+            if peer_session
                 .reachable_object_ids
-                .extend(view.documents.into_values());
-        }
-        "snapshot" => {
-            let snapshot = parse_snapshot_object(body).map_err(|error| {
-                format!("failed to parse reachable snapshot OBJECT body: {error}")
-            })?;
-            peer_session
-                .reachable_object_ids
-                .extend(snapshot.documents.into_values());
-            peer_session
-                .reachable_object_ids
-                .extend(snapshot.included_objects);
-        }
-        other => {
-            return Err(format!(
-                "unsupported OBJECT object_type '{other}' for reachable graph expansion"
-            ));
+                .insert(discovered_id.clone())
+            {
+                frontier.push(discovered_id);
+            }
         }
     }
 
     Ok(())
+}
+
+fn discover_reachable_object_ids_from_value(value: &Value) -> Result<BTreeSet<String>, String> {
+    let object_type = parse_object_envelope(value)
+        .map_err(|error| format!("failed to parse reachable object envelope: {error}"))?
+        .object_type()
+        .to_string();
+    let mut reachable = BTreeSet::new();
+
+    match object_type.as_str() {
+        "patch" => {
+            let patch = parse_patch_object(value)
+                .map_err(|error| format!("failed to parse reachable patch object: {error}"))?;
+            reachable.insert(patch.base_revision);
+        }
+        "revision" => {
+            let revision = parse_revision_object(value)
+                .map_err(|error| format!("failed to parse reachable revision object: {error}"))?;
+            reachable.extend(revision.parents);
+            reachable.extend(revision.patches);
+        }
+        "view" => {
+            let view = parse_view_object(value)
+                .map_err(|error| format!("failed to parse reachable view object: {error}"))?;
+            reachable.extend(view.documents.into_values());
+        }
+        "snapshot" => {
+            let snapshot = parse_snapshot_object(value)
+                .map_err(|error| format!("failed to parse reachable snapshot object: {error}"))?;
+            reachable.extend(snapshot.documents.into_values());
+            reachable.extend(snapshot.included_objects);
+        }
+        _ => {}
+    }
+
+    Ok(reachable)
 }
 
 fn validate_wire_timestamp(timestamp: &str) -> Result<(), String> {
@@ -1639,6 +1680,81 @@ mod tests {
         assert!(session
             .peer_session("node:alpha")
             .is_some_and(|state| state.accepted_sync_roots.contains(&revision_id)));
+    }
+
+    #[test]
+    fn wire_session_expands_reachability_from_known_object_index() {
+        let signing_key = signing_key();
+        let sender_key = sender_public_key(&signing_key);
+        let mut session = WireSession::default();
+        session
+            .register_known_peer("node:alpha", &sender_key)
+            .expect("known peer should register");
+        let base_revision_object =
+            signed_revision_object_message(&signing_key, "node:alpha", &[], &[]);
+        let base_revision_id = base_revision_object["payload"]["object_id"]
+            .as_str()
+            .expect("signed base revision OBJECT should include object_id")
+            .to_owned();
+        let patch_object =
+            signed_patch_object_message(&signing_key, "node:alpha", &base_revision_id);
+        let patch_id = patch_object["payload"]["object_id"]
+            .as_str()
+            .expect("signed patch OBJECT should include object_id")
+            .to_owned();
+        let root_revision_object =
+            signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
+        let root_revision_id = root_revision_object["payload"]["object_id"]
+            .as_str()
+            .expect("signed root revision OBJECT should include object_id")
+            .to_owned();
+        session.set_known_verified_object_index(std::collections::BTreeMap::from([
+            (
+                root_revision_id.clone(),
+                root_revision_object["payload"]["body"].clone(),
+            ),
+            (patch_id.clone(), patch_object["payload"]["body"].clone()),
+            (
+                base_revision_id.clone(),
+                base_revision_object["payload"]["body"].clone(),
+            ),
+        ]));
+
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message_with_heads(
+            &signing_key,
+            "node:alpha",
+            "node:alpha",
+            json!({
+                "doc:test": [root_revision_id.clone()]
+            }),
+        );
+        let root_want =
+            signed_want_message(&signing_key, "node:alpha", &[root_revision_id.as_str()]);
+        let follow_on_want = signed_want_message(
+            &signing_key,
+            "node:alpha",
+            &[patch_id.as_str(), base_revision_id.as_str()],
+        );
+
+        session
+            .verify_incoming(&hello)
+            .expect("HELLO should verify");
+        session
+            .verify_incoming(&manifest)
+            .expect("MANIFEST should verify");
+        session
+            .verify_incoming(&root_want)
+            .expect("root WANT should verify");
+
+        assert!(session.peer_session("node:alpha").is_some_and(|state| {
+            state.reachable_object_ids.contains(&patch_id)
+                && state.reachable_object_ids.contains(&base_revision_id)
+        }));
+
+        session
+            .verify_incoming(&follow_on_want)
+            .expect("known-index-expanded WANT should verify");
     }
 
     #[test]
