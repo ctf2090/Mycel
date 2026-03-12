@@ -88,11 +88,11 @@ If you want to contribute from a fresh environment:
 
 ## Start Contributing Here
 
-If you want a narrow first task, start with one of these open issues from the current replay/store hardening lane:
+If you want a narrow first task, start with one of these open issues from the current first-client closure lane:
 
-- [#7 Expand store rebuild failure coverage for duplicate IDs and invalid object graphs](https://github.com/ctf2090/Mycel/issues/7)
-- [#6 Add replay negative coverage for missing revision graph objects](https://github.com/ctf2090/Mycel/issues/6)
-- [#5 Enforce revision parent-shape rules from the v0.1 spec](https://github.com/ctf2090/Mycel/issues/5)
+- [#11 Persist local transport and safety policy outside replicated store indexes](https://github.com/ctf2090/Mycel/issues/11)
+- [#10 Split editor-maintainer and view-maintainer admission for dual-role keys](https://github.com/ctf2090/Mycel/issues/10)
+- [#9 Collapse replay-derived state_hash hashing onto the shared canonical helper](https://github.com/ctf2090/Mycel/issues/9)
 
 These links should be refreshed together with the planning sync process in [`docs/PLANNING-SYNC-PLAN.md`](./docs/PLANNING-SYNC-PLAN.md).
 

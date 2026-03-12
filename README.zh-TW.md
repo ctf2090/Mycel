@@ -88,11 +88,11 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 ## 從這裡開始貢獻
 
-如果你想先接一張範圍窄的任務，可以先從目前 replay/store hardening 這條線上的這幾張 issue 開始：
+如果你想先接一張範圍窄的任務，可以先從目前 first-client 收尾與 reader/governance closure 這條線上的這幾張 issue 開始：
 
-- [#7 擴充 store rebuild 對 duplicate IDs 與無效 object graph 的失敗 coverage](https://github.com/ctf2090/Mycel/issues/7)
-- [#6 補上缺失 revision graph objects 的 replay negative coverage](https://github.com/ctf2090/Mycel/issues/6)
-- [#5 依 v0.1 spec 強制 revision parent-shape 規則](https://github.com/ctf2090/Mycel/issues/5)
+- [#11 將本地 transport 與 safety policy 持久化在 replicated store indexes 之外](https://github.com/ctf2090/Mycel/issues/11)
+- [#10 讓 dual-role keys 的 editor-maintainer 與 view-maintainer admission 分開驗證](https://github.com/ctf2090/Mycel/issues/10)
+- [#9 將 replay 衍生的 state_hash hashing 收斂到 shared canonical helper](https://github.com/ctf2090/Mycel/issues/9)
 
 這些連結應和 [`docs/PLANNING-SYNC-PLAN.zh-TW.md`](./docs/PLANNING-SYNC-PLAN.zh-TW.md) 的規劃同步流程一起刷新。
 
