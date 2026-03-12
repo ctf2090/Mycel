@@ -201,6 +201,35 @@ Mailbox usage for doc sync:
 - `doc` should scan active, paused, and recently inactive agent mailboxes before a docs-sync batch and use those notes as collection input for roadmap/checklist/progress refresh work
 - mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-doc-refresh.sh`
 
+Recommended mailbox handoff template:
+
+```md
+## Planning Sync Handoff
+
+- Date: 2026-03-12 11:30 UTC+8
+- Source agent: coding-2
+- Scope: accepted-head render editor admission
+- Files changed:
+  - apps/mycel-cli/src/head.rs
+  - apps/mycel-cli/tests/head_inspect_smoke.rs
+- Planning impact:
+  - roadmap wording update needed
+  - progress summary update needed
+- Checklist impact:
+  - no checkbox change
+  - narrow status wording should mention editor-admission-aware inspect/render flows
+- Issue impact:
+  - no issue change
+- Verification:
+  - cargo test -p mycel-cli head_inspect
+- Notes:
+  - named-profile and store-backed render paths now apply editor admission consistently
+```
+
+Minimum handoff quality:
+
+- include enough detail for `doc` to identify the affected files, the likely planning surfaces, whether checklist closure changed, and what verification or evidence supports the claim
+
 ## Startup Gate
 
 No agent may start tracked work until all of the following are true:
@@ -248,6 +277,7 @@ Planning-sync coordination:
 - `coding` agents should append mailbox handoff notes when they land or discover planning-relevant changes
 - `doc` owns `scripts/check-doc-refresh.sh` and the decision to start a docs-sync batch
 - before a docs-sync batch, `doc` should scan the declared mailboxes for recent handoff material and fold it into the planning refresh
+- if a mailbox note follows the recommended template, `doc` may treat it as ready-to-triage input instead of re-deriving the whole change from git history first
 
 If two `coding` agents would touch the same primary file or issue, one must narrow scope or pause before proceeding.
 
