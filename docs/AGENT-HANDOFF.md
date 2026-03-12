@@ -62,6 +62,7 @@ Mailbox retention and archive policy:
 - use `scripts/mailbox_gc.py scan` to inspect referenced, missing, orphaned, and archived uid-based mailboxes
 - use `scripts/mailbox_gc.py archive` to move orphaned uid-based mailboxes into the archive tree without deleting contents
 - archived uid-based mailboxes older than 10 days may be deleted with `scripts/mailbox_gc.py prune` only when they do not contain an unresolved planning handoff
+- use `scripts/inactive_coding_handoffs.py` to collect the latest open `Work Continuation Handoff` left by each `inactive` `coding` agent
 - shared fallback mailbox files outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`; retire or archive those only by explicit team decision
 
 ## Workflow
