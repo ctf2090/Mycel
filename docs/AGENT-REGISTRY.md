@@ -2,6 +2,10 @@
 
 Status: active local-registry protocol for multi-agent coordination
 
+Related future redesign draft:
+
+- [docs/design-notes/DESIGN-NOTES.agent-registry-identity-split.zh-TW.md](./design-notes/DESIGN-NOTES.agent-registry-identity-split.zh-TW.md): proposed `agent_uid` + recyclable `display_id` model for converging short ids without identity collisions
+
 Use this file as the tracked specification for the local registry that tells agents how many agents are active, what role each one has, and whether each agent has confirmed that assignment before starting tracked work.
 
 The live registry file is local and gitignored:
