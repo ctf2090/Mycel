@@ -36,6 +36,13 @@ Agents should read `.agent-local/agents.json` at the start of work to discover:
 
 If a new chat receives only a role declaration such as `you are coding` or `you are doc`, the agent should claim a fresh id with `scripts/agent-claim.sh <role>` before running `scripts/agent-start.sh <agent-id>`.
 
+If the user does not assign any role in a new chat, the agent should inspect `.agent-local/agents.json` and choose a default role before claiming an id:
+
+- if there is no active `coding` agent, take `coding` first
+- if an active `coding` agent already exists, take `doc`
+
+This default-role rule is only for chats without a user-assigned role. An explicit user role selection still wins.
+
 After claim/start, the agent should begin the chat with one fixed self-label line using the registry id and current scope, for example:
 
 - `coding-2 | forum-design-note-sync`
@@ -180,11 +187,14 @@ Use this sequence in order. Do not run the registry commands in parallel.
 2. run `git status -sb`
 3. check `rg` and `gh`
 4. check the latest CI status from the previous push
-5. if the user declared only a role, run `scripts/agent-claim.sh <role> [--scope <scope>]`
-6. run `scripts/agent-start.sh <agent-id>`
-7. run `scripts/agent-status.sh <agent-id>`
-8. begin the chat with the startup self-label: `<agent-id> | <scope-label>`
-9. only after that, report repo status and wait for the concrete task
+5. determine the role for this chat:
+   - if the user explicitly assigned a role, use that role
+   - otherwise inspect `.agent-local/agents.json`; if no active `coding` agent exists, choose `coding`, else choose `doc`
+6. run `scripts/agent-claim.sh <role> [--scope <scope>]`
+7. run `scripts/agent-start.sh <agent-id>`
+8. run `scripts/agent-status.sh <agent-id>`
+9. begin the chat with the startup self-label: `<agent-id> | <scope-label>`
+10. only after that, report repo status and wait for the concrete task
 
 Recommended startup output:
 

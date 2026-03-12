@@ -39,6 +39,7 @@
 - Scan the repo layout with `ls` and prefer `rg --files` for fast file discovery.
 - For a fresh local or Codespaces environment, ensure `gh` and `rg` are installed; install them if missing.
 - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use `scripts/agent-claim.sh`, `scripts/agent-start.sh`, `scripts/agent-status.sh`, `scripts/agent-resume-check.sh`, `scripts/agent-stop.sh`, and `scripts/agent-recover.sh` as defined there.
+- If the user did not assign a role for the new chat, inspect `.agent-local/agents.json` before claiming an id: if there is no active `coding` agent, take `coding`; if an active `coding` agent already exists, take `doc`.
 - If a task needs an additional tool or module, the agent should install it directly unless the user explicitly says not to.
 - Reply with a short plan and the current repo status before making changes.
 
