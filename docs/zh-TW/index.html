@@ -338,7 +338,7 @@
           <div class="status-card">
             <strong>今天能做什麼</strong>
             <p>
-              Rust CLI 已可用於儲存庫內部驗證、物件檢視、accepted-head 檢視、
+              Rust CLI 已可用於儲存庫內部驗證、物件檢視、accepted-head 檢視/render、
               報告檢視與決定性的模擬器流程。
             </p>
           </div>
@@ -401,21 +401,21 @@
       <section class="panel section-panel">
         <h2>從這裡開始貢獻</h2>
         <p>
-          如果你想先接一張範圍窄的任務，可以先看這幾張仍開放的 issue。若要看更完整的目前任務入口，請直接瀏覽
+          如果你想先接一張範圍窄的任務，可以先看目前 replay/store hardening 這條線上的這幾張 issue。若要看更完整的目前任務入口，請直接瀏覽
           <a href="https://github.com/ctf2090/Mycel/issues">GitHub issues 清單</a>。
         </p>
         <div class="grid">
           <div class="card">
-            <strong><a href="https://github.com/ctf2090/Mycel/issues/1">Issue #1</a></strong>
-            <p>在共用 object parsing 中拒絕重複 JSON object keys。</p>
+            <strong><a href="https://github.com/ctf2090/Mycel/issues/7">Issue #7</a></strong>
+            <p>擴充 store rebuild 對 duplicate IDs 與無效 object graph 的失敗 coverage。</p>
           </div>
           <div class="card">
-            <strong><a href="https://github.com/ctf2090/Mycel/issues/3">Issue #3</a></strong>
-            <p>補上 document 與 block objects 的 malformed logical-ID coverage。</p>
+            <strong><a href="https://github.com/ctf2090/Mycel/issues/6">Issue #6</a></strong>
+            <p>補上缺失 revision graph objects 的 replay negative coverage。</p>
           </div>
           <div class="card">
-            <strong><a href="https://github.com/ctf2090/Mycel/issues/4">Issue #4</a></strong>
-            <p>補上 snapshot derived-ID verification smoke coverage。</p>
+            <strong><a href="https://github.com/ctf2090/Mycel/issues/5">Issue #5</a></strong>
+            <p>依 v0.1 spec 強制 revision parent-shape 規則。</p>
           </div>
         </div>
       </section>
@@ -424,7 +424,7 @@
         <h2>支持或一起推進 Mycel</h2>
         <p>
           我們希望與正在處理受治理文字系統、評註層或長期參考文本集合的設計夥伴、資助計畫與早期協作者合作。
-          現在的支持會直接幫助我們完成第一個可互通客戶端的核心：驗證、重播、可重建儲存，以及依規則導出的預設閱讀版本。
+          現在的支持會直接幫助我們完成第一個可互通客戶端的核心：驗證、重播、可重建儲存、shared canonicalization 收尾，以及依規則導出的預設閱讀版本與 render。
         </p>
         <div class="actions">
           <a class="button primary" href="/Mycel/zh-TW/support.html">支持 Mycel</a>

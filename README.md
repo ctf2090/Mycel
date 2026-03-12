@@ -66,8 +66,8 @@ What those commands show:
 ## Current Status
 
 - Protocol stage: `v0.1` conceptual specification with growing profile and design-note layers
-- Current implementation focus: first-client scoping, replay/verification hardening, and deterministic simulator workflows
-- Current CLI boundary: suitable for internal validation, object inspection, object verification, accepted-head inspection, report inspection, and simulator runs inside this repository
+- Current implementation focus: first-client scoping, replay/verification hardening, shared canonical-helper convergence, and ancestry-aware accepted-head/render proof coverage
+- Current CLI boundary: suitable for internal validation, object inspection, object verification, accepted-head inspection/render, report inspection, and simulator runs inside this repository
 - Not yet delivered: production node behavior, public-network wire sync, or a finished end-user client
 
 ## Read By Goal
@@ -88,11 +88,11 @@ If you want to contribute from a fresh environment:
 
 ## Start Contributing Here
 
-If you want a narrow first task, start with one of these open issues:
+If you want a narrow first task, start with one of these open issues from the current replay/store hardening lane:
 
-- [#1 Reject duplicate JSON object keys in shared object parsing](https://github.com/ctf2090/Mycel/issues/1)
-- [#3 Add malformed logical-ID coverage for document and block objects](https://github.com/ctf2090/Mycel/issues/3)
-- [#4 Add snapshot derived-ID verification smoke coverage](https://github.com/ctf2090/Mycel/issues/4)
+- [#7 Expand store rebuild failure coverage for duplicate IDs and invalid object graphs](https://github.com/ctf2090/Mycel/issues/7)
+- [#6 Add replay negative coverage for missing revision graph objects](https://github.com/ctf2090/Mycel/issues/6)
+- [#5 Enforce revision parent-shape rules from the v0.1 spec](https://github.com/ctf2090/Mycel/issues/5)
 
 These links should be refreshed together with the planning sync process in [`docs/PLANNING-SYNC-PLAN.md`](./docs/PLANNING-SYNC-PLAN.md).
 
@@ -145,9 +145,9 @@ If you want the design layer behind current decisions:
 
 ## Near-Term Priorities
 
-1. Finish the narrow first-client core around verification, replay, storage, and accepted-head inspection.
+1. Finish the narrow first-client core around verification, replay, storage, accepted-head inspection/render, and the last shared-core canonicalization gaps.
 2. Move mature ideas into explicit profiles, schemas, fixtures, and tests before widening protocol-core scope.
-3. Expand upward one layer at a time: canonical-text reading first, then selective app-layer support.
+3. Expand upward one layer at a time: reader-first text reconstruction first, then selective app-layer support.
 
 ## License
 

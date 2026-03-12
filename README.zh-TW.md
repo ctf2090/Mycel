@@ -66,8 +66,8 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 ## 目前狀態
 
 - 協定階段：`v0.1` 概念規格，並持續擴充 profile 與 design-note 層
-- 目前實作重點：收斂第一個客戶端的範圍、加強重播與驗證、以及穩定決定性的模擬器工作流程
-- 目前 CLI 邊界：適合在本 repo 內做驗證、物件檢視、物件驗證、accepted-head 檢視、報告檢視與模擬器執行
+- 目前實作重點：收斂第一個客戶端的範圍、加強重播與驗證、收斂 shared canonical helper，以及補強具 ancestry 感知的 accepted-head/render proof coverage
+- 目前 CLI 邊界：適合在本 repo 內做驗證、物件檢視、物件驗證、accepted-head 檢視/render、報告檢視與模擬器執行
 - 尚未交付：正式可上線的節點行為、公開網路 wire sync、或完整的終端使用者客戶端
 
 ## 依目的閱讀
@@ -88,11 +88,11 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 ## 從這裡開始貢獻
 
-如果你想先接一張範圍窄的任務，可以從這幾張仍開放的 issue 開始：
+如果你想先接一張範圍窄的任務，可以先從目前 replay/store hardening 這條線上的這幾張 issue 開始：
 
-- [#1 在共用 object parsing 中拒絕重複 JSON object keys](https://github.com/ctf2090/Mycel/issues/1)
-- [#3 補上 document 與 block objects 的 malformed logical-ID coverage](https://github.com/ctf2090/Mycel/issues/3)
-- [#4 補上 snapshot derived-ID verification smoke coverage](https://github.com/ctf2090/Mycel/issues/4)
+- [#7 擴充 store rebuild 對 duplicate IDs 與無效 object graph 的失敗 coverage](https://github.com/ctf2090/Mycel/issues/7)
+- [#6 補上缺失 revision graph objects 的 replay negative coverage](https://github.com/ctf2090/Mycel/issues/6)
+- [#5 依 v0.1 spec 強制 revision parent-shape 規則](https://github.com/ctf2090/Mycel/issues/5)
 
 這些連結應和 [`docs/PLANNING-SYNC-PLAN.zh-TW.md`](./docs/PLANNING-SYNC-PLAN.zh-TW.md) 的規劃同步流程一起刷新。
 
@@ -141,9 +141,9 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 ## 近期優先事項
 
-1. 完成窄版 first-client core，聚焦 verification、replay、storage 與 accepted-head inspection。
+1. 完成窄版 first-client core，聚焦 verification、replay、storage、accepted-head inspection/render，以及最後幾個 shared-core canonicalization 缺口。
 2. 在擴大 protocol-core 範圍之前，先把成熟想法落成明確的 profiles、schemas、fixtures 與 tests。
-3. 採逐層上推的方式擴展：先 canonical-text reading，再逐步加入選擇性的 app-layer 支援。
+3. 採逐層上推的方式擴展：先 reader-first text reconstruction，再逐步加入選擇性的 app-layer 支援。
 
 ## 授權
 
