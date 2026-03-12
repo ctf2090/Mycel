@@ -313,7 +313,9 @@ When an agent stops or finishes, leave a short handoff:
 - what remains open
 - whether another issue is now unblocked
 
-For `coding`, this is not optional. At the end of every completed coding work item, leave one `Work Continuation Handoff` in the coding mailbox and assume the current user task may be the last one assigned before pause, interruption, or takeover.
+For `coding`, this is not optional. At the end of every completed coding work item, leave one open `Work Continuation Handoff` in the coding mailbox and assume the current user task may be the last one assigned before pause, interruption, or takeover.
+
+Before adding that new open continuation entry, close any older open `Work Continuation Handoff` entries in the same mailbox by marking them `superseded`.
 
 Recommended handoff format:
 

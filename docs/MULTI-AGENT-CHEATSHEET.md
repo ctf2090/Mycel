@@ -233,6 +233,8 @@ Every handoff should say:
 
 For `coding`, always leave one open `Work Continuation Handoff` at the end of the work item, even if there is no planning-sync note. Assume the user may stop assigning work after the current task.
 
+Before leaving that new open continuation handoff, close any older open `Work Continuation Handoff` entries in the same mailbox by marking them `superseded`.
+
 That continuation handoff should also say:
 
 - current state
@@ -250,7 +252,7 @@ For `coding` to `doc` handoff, prefer:
 - `Finished #12. Touched verify.rs and object_verify_smoke.rs. Behavior change: reject duplicate revision parents earlier. Protocol/schema impact: none. Verify: cargo test -p mycel-core and cargo test -p mycel-cli. Docs impacted: none. Planning impact: checklist. Remaining follow-up: update IMPLEMENTATION-CHECKLIST after the batch lands.`
 - `Finished file A. Touched path/to/fileA. Behavior change: implemented the missing branch. Protocol/schema impact: CLI behavior changed. Verify: cargo test -p mycel-cli. Docs impacted: ROADMAP.md and IMPLEMENTATION-CHECKLIST.*. Planning impact: roadmap + checklist. Remaining follow-up: planning sync due.`
 - planning-sync handoffs should always include `Status: open`; after `doc` finishes, mark them `resolved` or append a `doc` reply entry with a `Date` line in `UTC+8`
-- work-continuation handoffs should always include `Status: open`; the next coding agent that resumes the scope should resolve or supersede the older continuation note
+- work-continuation handoffs should always include `Status: open`; keep only one open continuation handoff per coding mailbox, and supersede older open continuation notes before adding a newer one
 - before `doc` starts `sync doc` or `sync web`, scan the relevant handoff mailboxes and treat open planning-sync notes as the first collection input
 - use `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md` for open handoffs and `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md` for resolved doc replies
 - use `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md` for coding continuation notes

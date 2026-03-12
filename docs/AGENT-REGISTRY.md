@@ -207,6 +207,7 @@ Mailbox usage for `sync doc` / `sync web` / `sync plan` work:
 
 - `coding` agents should leave sync-relevant notes in their own registry mailbox when work changes planning-relevant implementation state, checklist closure, roadmap emphasis, public progress wording, or issue-triage inputs
 - `coding` agents should also leave one open `Work Continuation Handoff` in their own mailbox at the end of every completed coding work item, even when no planning-sync follow-up is needed
+- before leaving that new open continuation entry, `coding` should mark any older open continuation entry in the same mailbox as `superseded`, so the mailbox ends with only one open continuation handoff
 - `doc` should scan active, paused, and recently inactive agent mailboxes before any `sync doc`, `sync web`, or `sync plan` batch and use those notes as collection input for roadmap/checklist/progress or Pages refresh work
 - scan order should be: active mailbox paths first, paused mailbox paths second, recently inactive mailbox paths third, and fallback shared mailboxes last; archived mailboxes stay out of scope unless a current mailbox explicitly points to an unresolved archived entry
 - mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-plan-refresh.sh`
@@ -249,6 +250,7 @@ Minimum handoff quality:
 - after `doc` completes the related docs work, it should either update that handoff to `Status: resolved` or append a `doc` reply entry with a `Date` line that makes the resolution explicit
 - if an agent wants a ready-made starting point instead of copying the Markdown block manually, use `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md` for the open handoff and `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md` for the resolved reply
 - continuation handoffs should explicitly include `Status: open`, `Current state`, and `Next suggested step`, because they are written under the assumption that the user may not assign another follow-up before pause or takeover
+- a coding mailbox should not accumulate multiple open continuation entries; older ones should be closed as `superseded` before a newer open continuation handoff is added
 - if an agent wants a ready-made starting point for continuation instead of copying the Markdown block manually, use `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
 
 Mailbox retention and archive policy:

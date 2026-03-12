@@ -29,3 +29,4 @@ Do not treat it as a live agent mailbox.
   - none
 - Notes:
   - leave this entry `open` until a later coding agent resumes the same scope or supersedes it with a newer continuation handoff
+  - before adding a newer open continuation entry in the same mailbox, mark this older one `superseded`
