@@ -7,7 +7,8 @@ use serde_json::{Map, Value};
 
 use crate::canonical::wire_envelope_signed_payload_bytes;
 use crate::protocol::{
-    ensure_supported_json_values, object_schema, parse_object_envelope, recompute_object_id,
+    ensure_supported_json_values, object_schema, parse_object_envelope, parse_patch_object,
+    parse_revision_object, parse_snapshot_object, parse_view_object, recompute_object_id,
     reject_duplicate_strings, reject_unknown_fields, required_non_empty_string_array,
     required_prefixed_string_map, required_string_field, validate_canonical_object_id,
     validate_prefixed_string, StringFieldError, WIRE_PROTOCOL_VERSION,
@@ -203,6 +204,7 @@ pub struct WirePeerSessionState {
     hello_received: bool,
     advertised_document_heads: BTreeMap<String, BTreeSet<String>>,
     accepted_sync_roots: BTreeSet<String>,
+    reachable_object_ids: BTreeSet<String>,
     pending_object_ids: BTreeSet<String>,
     closed: bool,
 }
@@ -251,6 +253,9 @@ impl WireSession {
     ) -> Result<ParsedWireEnvelope<'a>, String> {
         let envelope = validate_wire_envelope(value)?;
         validate_wire_sender_identity(&envelope)?;
+        if matches!(envelope.message_type(), WireMessageType::Object) {
+            validate_wire_object_payload_behavior(envelope.payload())?;
+        }
         let sender_public_key = self
             .known_peers
             .sender_public_key(envelope.from())
@@ -349,24 +354,20 @@ fn validate_wire_inbound_sequence(
             ));
         }
 
-        let establishes_sync_root = requested_object_ids.iter().any(|object_id| {
-            object_id.starts_with("rev:") && peer_session.advertises_revision(object_id)
-        });
-        let has_sync_context =
-            !peer_session.accepted_sync_roots.is_empty() || establishes_sync_root;
-
         for object_id in requested_object_ids {
             if object_id.starts_with("rev:") {
-                if !peer_session.advertises_revision(&object_id) {
+                if !peer_session.advertises_revision(&object_id)
+                    && !peer_session.reachable_object_ids.contains(&object_id)
+                {
                     return Err(format!(
-                        "wire WANT revision '{}' was not advertised by '{}'",
+                        "wire WANT revision '{}' is not reachable from accepted sync roots for '{}'",
                         object_id,
                         envelope.from()
                     ));
                 }
-            } else if !has_sync_context {
+            } else if !peer_session.reachable_object_ids.contains(&object_id) {
                 return Err(format!(
-                    "wire WANT object '{}' requires an accepted revision sync root from '{}'",
+                    "wire WANT object '{}' is not reachable from accepted sync roots for '{}'",
                     object_id,
                     envelope.from()
                 ));
@@ -428,6 +429,7 @@ fn advance_wire_inbound_sequence(
             let object_id =
                 required_wire_string(envelope.payload(), "object_id", "OBJECT payload")?;
             peer_session.pending_object_ids.remove(&object_id);
+            extend_reachable_object_ids_from_object(envelope.payload(), peer_session)?;
         }
         WireMessageType::Bye => {
             peer_session.closed = true;
@@ -669,6 +671,62 @@ fn wire_head_map_to_sets(
         .into_iter()
         .map(|(doc_id, revisions)| (doc_id, revisions.into_iter().collect()))
         .collect()
+}
+
+fn extend_reachable_object_ids_from_object(
+    payload: &Map<String, Value>,
+    peer_session: &mut WirePeerSessionState,
+) -> Result<(), String> {
+    let object_id = required_wire_string(payload, "object_id", "OBJECT payload")?;
+    if !peer_session.accepted_sync_roots.contains(&object_id)
+        && !peer_session.reachable_object_ids.contains(&object_id)
+    {
+        return Ok(());
+    }
+
+    let object_type = required_wire_string(payload, "object_type", "OBJECT payload")?;
+    let body = payload
+        .get("body")
+        .ok_or_else(|| "missing object field 'body'".to_string())?;
+
+    match object_type.as_str() {
+        "patch" => {
+            parse_patch_object(body)
+                .map_err(|error| format!("failed to parse reachable patch OBJECT body: {error}"))?;
+        }
+        "revision" => {
+            let revision = parse_revision_object(body).map_err(|error| {
+                format!("failed to parse reachable revision OBJECT body: {error}")
+            })?;
+            peer_session.reachable_object_ids.extend(revision.parents);
+            peer_session.reachable_object_ids.extend(revision.patches);
+        }
+        "view" => {
+            let view = parse_view_object(body)
+                .map_err(|error| format!("failed to parse reachable view OBJECT body: {error}"))?;
+            peer_session
+                .reachable_object_ids
+                .extend(view.documents.into_values());
+        }
+        "snapshot" => {
+            let snapshot = parse_snapshot_object(body).map_err(|error| {
+                format!("failed to parse reachable snapshot OBJECT body: {error}")
+            })?;
+            peer_session
+                .reachable_object_ids
+                .extend(snapshot.documents.into_values());
+            peer_session
+                .reachable_object_ids
+                .extend(snapshot.included_objects);
+        }
+        other => {
+            return Err(format!(
+                "unsupported OBJECT object_type '{other}' for reachable graph expansion"
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn validate_wire_timestamp(timestamp: &str) -> Result<(), String> {
@@ -925,12 +983,20 @@ mod tests {
     }
 
     fn signed_object_message(signing_key: &SigningKey, sender: &str) -> Value {
+        signed_patch_object_message(signing_key, sender, "rev:genesis-null")
+    }
+
+    fn signed_patch_object_message(
+        signing_key: &SigningKey,
+        sender: &str,
+        base_revision: &str,
+    ) -> Value {
         let mut body = json!({
             "type": "patch",
             "version": "mycel/0.1",
             "patch_id": "patch:placeholder",
             "doc_id": "doc:test",
-            "base_revision": "rev:genesis-null",
+            "base_revision": base_revision,
             "author": "pk:ed25519:test",
             "timestamp": 1u64,
             "ops": [],
@@ -953,6 +1019,52 @@ mod tests {
             "payload": {
                 "object_id": object_id,
                 "object_type": "patch",
+                "encoding": "json",
+                "hash_alg": "sha256",
+                "hash": format!("hash:{object_hash}"),
+                "body": body
+            },
+            "sig": "sig:placeholder"
+        });
+        value["sig"] = Value::String(sign_wire_value(signing_key, &value));
+        value
+    }
+
+    fn signed_revision_object_message(
+        signing_key: &SigningKey,
+        sender: &str,
+        parents: &[&str],
+        patches: &[&str],
+    ) -> Value {
+        let mut body = json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "revision_id": "rev:placeholder",
+            "doc_id": "doc:test",
+            "parents": parents,
+            "patches": patches,
+            "state_hash": "hash:test",
+            "author": "pk:ed25519:test",
+            "timestamp": 1u64,
+            "signature": "sig:placeholder"
+        });
+        let object_id = recompute_object_id(&body, "revision_id", "rev")
+            .expect("concrete wire revision ID should recompute");
+        body["revision_id"] = Value::String(object_id.clone());
+        let object_hash = object_id
+            .split_once(':')
+            .map(|(_, hash)| hash.to_string())
+            .expect("wire revision ID should contain hash");
+
+        let mut value = json!({
+            "type": "OBJECT",
+            "version": "mycel-wire/0.1",
+            "msg_id": "msg:revision-object-signed-001",
+            "timestamp": "2026-03-08T20:01:02+08:00",
+            "from": sender,
+            "payload": {
+                "object_id": object_id,
+                "object_type": "revision",
                 "encoding": "json",
                 "hash_alg": "sha256",
                 "hash": format!("hash:{object_hash}"),
@@ -1378,7 +1490,7 @@ mod tests {
 
         assert_eq!(
             error,
-            "wire WANT revision 'rev:missing' was not advertised by 'node:alpha'"
+            "wire WANT revision 'rev:missing' is not reachable from accepted sync roots for 'node:alpha'"
         );
     }
 
@@ -1404,28 +1516,44 @@ mod tests {
 
         assert_eq!(
             error,
-            "wire WANT object 'patch:test' requires an accepted revision sync root from 'node:alpha'"
+            "wire WANT object 'patch:test' is not reachable from accepted sync roots for 'node:alpha'"
         );
     }
 
     #[test]
-    fn wire_session_accepts_mixed_want_when_it_establishes_sync_root() {
+    fn wire_session_rejects_follow_on_object_before_root_object_arrives() {
         let signing_key = signing_key();
         let sender_key = sender_public_key(&signing_key);
         let mut session = WireSession::default();
         session
             .register_known_peer("node:alpha", &sender_key)
             .expect("known peer should register");
+        let patch_object =
+            signed_patch_object_message(&signing_key, "node:alpha", "rev:genesis-null");
+        let patch_id = patch_object["payload"]["object_id"]
+            .as_str()
+            .expect("signed patch OBJECT should include object_id")
+            .to_owned();
+        let revision_object =
+            signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
+        let revision_id = revision_object["payload"]["object_id"]
+            .as_str()
+            .expect("signed revision OBJECT should include object_id")
+            .to_owned();
         let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
         let manifest = signed_manifest_message_with_heads(
             &signing_key,
             "node:alpha",
             "node:alpha",
             json!({
-                "doc:test": ["rev:test", "rev:other"]
+                "doc:test": [revision_id.clone()]
             }),
         );
-        let want = signed_want_message(&signing_key, "node:alpha", &["rev:test", "patch:test"]);
+        let want = signed_want_message(
+            &signing_key,
+            "node:alpha",
+            &[revision_id.as_str(), patch_id.as_str()],
+        );
 
         session
             .verify_incoming(&hello)
@@ -1433,35 +1561,48 @@ mod tests {
         session
             .verify_incoming(&manifest)
             .expect("MANIFEST should verify");
-        session.verify_incoming(&want).expect("WANT should verify");
+        let error = session.verify_incoming(&want).unwrap_err();
 
-        let state = session
-            .peer_session("node:alpha")
-            .expect("peer session should exist");
-        assert!(state.accepted_sync_roots.contains("rev:test"));
-        assert!(state.pending_object_ids.contains("patch:test"));
+        assert_eq!(
+            error,
+            format!(
+                "wire WANT object '{}' is not reachable from accepted sync roots for 'node:alpha'",
+                patch_id
+            )
+        );
     }
 
     #[test]
-    fn wire_session_accepts_requested_object_after_want() {
+    fn wire_session_accepts_follow_on_patch_after_reachable_revision_object() {
         let signing_key = signing_key();
         let sender_key = sender_public_key(&signing_key);
         let mut session = WireSession::default();
         session
             .register_known_peer("node:alpha", &sender_key)
             .expect("known peer should register");
-        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
-        let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
-        let object = signed_object_message(&signing_key, "node:alpha");
-        let object_id = object["payload"]["object_id"]
+        let patch_object =
+            signed_patch_object_message(&signing_key, "node:alpha", "rev:genesis-null");
+        let patch_id = patch_object["payload"]["object_id"]
             .as_str()
-            .expect("signed OBJECT payload should include object_id")
+            .expect("signed patch OBJECT should include object_id")
             .to_owned();
-        let want = signed_want_message(
+        let revision_object =
+            signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
+        let revision_id = revision_object["payload"]["object_id"]
+            .as_str()
+            .expect("signed revision OBJECT should include object_id")
+            .to_owned();
+        let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+        let manifest = signed_manifest_message_with_heads(
             &signing_key,
             "node:alpha",
-            &["rev:test", object_id.as_str()],
+            "node:alpha",
+            json!({
+                "doc:test": [revision_id.clone()]
+            }),
         );
+        let root_want = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
+        let follow_on_want = signed_want_message(&signing_key, "node:alpha", &[patch_id.as_str()]);
 
         session
             .verify_incoming(&hello)
@@ -1469,21 +1610,35 @@ mod tests {
         session
             .verify_incoming(&manifest)
             .expect("MANIFEST should verify");
-        session.verify_incoming(&want).expect("WANT should verify");
+        session
+            .verify_incoming(&root_want)
+            .expect("root WANT should verify");
         let envelope = session
-            .verify_incoming(&object)
-            .expect("requested OBJECT should verify");
+            .verify_incoming(&revision_object)
+            .expect("reachable revision OBJECT should verify");
 
         assert_eq!(envelope.message_type(), WireMessageType::Object);
+        assert!(session
+            .peer_session("node:alpha")
+            .is_some_and(|state| state.reachable_object_ids.contains(&patch_id)));
+
+        session
+            .verify_incoming(&follow_on_want)
+            .expect("follow-on patch WANT should verify");
+        let patch_envelope = session
+            .verify_incoming(&patch_object)
+            .expect("reachable patch OBJECT should verify");
+
+        assert_eq!(patch_envelope.message_type(), WireMessageType::Object);
         assert_eq!(
             session
                 .peer_session("node:alpha")
                 .map(|state| state.pending_object_ids.len()),
-            Some(1)
+            Some(0)
         );
         assert!(session
             .peer_session("node:alpha")
-            .is_some_and(|state| state.accepted_sync_roots.contains("rev:test")));
+            .is_some_and(|state| state.accepted_sync_roots.contains(&revision_id)));
     }
 
     #[test]
