@@ -759,7 +759,9 @@ fn expand_reachable_object_ids_from_known_index(
     Ok(())
 }
 
-fn discover_reachable_object_ids_from_value(value: &Value) -> Result<BTreeSet<String>, String> {
+pub(crate) fn discover_reachable_object_ids_from_value(
+    value: &Value,
+) -> Result<BTreeSet<String>, String> {
     let object_type = parse_object_envelope(value)
         .map_err(|error| format!("failed to parse reachable object envelope: {error}"))?
         .object_type()
