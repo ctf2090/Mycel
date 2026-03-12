@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-狀態：late partial progress，已在最近一批 shared canonical-helper consolidation、top-level core-version strictness 收口、保留路徑資訊的 nested parser errors、replay dependency verification tightening，以及 sibling ID determinism 工作後刷新；里程碑狀態未變
+狀態：late partial progress，已在最近一批 replay-dependency CLI proof 擴張、multi-hop ancestry context 傳遞、shared canonical module 收斂，以及 render/store ancestry context 保留工作後刷新；里程碑狀態未變
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的建置順序。
 
@@ -17,9 +17,9 @@
 - 持續成長中的 v0.1 protocol 與 wire-spec 文件集
 - 適合做內部驗證與決定性模擬器工作流程的 Rust CLI
 - `mycel-core` 對 object schema metadata、object-envelope parsing、replay-based revision verification、local object-store ingest/rebuild、persisted store indexes，以及 accepted-head inspection 的支援
-- 更集中化的 canonical hash 與 signed-payload helpers，已在 verification、replay 與 authoring 路徑之間重用
+- 更集中化的 canonical hash 與 signed-payload helpers，已在 verification、replay、head/render 預先驗證、authoring，以及部分 CLI smoke 路徑之間重用
 - 早期 reader-plus-governance surfaces，涵蓋 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render workflows
-- `document`、`block`、`patch`、`revision`、`view`、`snapshot` 在 parser / verify / CLI 路徑更廣的 strictness-surface coverage、更完整的 `object inspect` warning surface、對 merge 與 cross-document revision edge 更強的 signature-edge 與 replay/verification smoke coverage，以及 isolate 過的 validate-peer fixtures
+- `document`、`block`、`patch`、`revision`、`view`、`snapshot` 在 parser / verify / CLI 路徑更廣的 strictness-surface coverage、更完整的 `object inspect` warning surface、對 merge 與 cross-document revision edge 更強的 signature-edge 與 replay/verification smoke coverage、更清楚的 multi-hop ancestry replay failure context，以及 isolate 過的 validate-peer fixtures
 - 以 `assert_cmd`、`predicates`、`tempfile` 與小範圍 `rstest` 建立的較可維護 CLI test base
 - simulator fixtures、topologies、tests 與 reports，作為 regression coverage
 
@@ -139,7 +139,7 @@
 
 目前判讀：
 
-接近完成。shared parsing、canonical helper、top-level core-version equality checks、保留路徑資訊的 nested parser field errors、更廣的 parser / verify / CLI strictness-surface coverage、更完整的 inspect-surface parity、更嚴格的 replay dependency verification 與 sibling declared-ID determinism、對 revision semantics 更強的 signature-edge 與 replay/verification smoke coverage、isolate 過的 validate-peer fixtures，以及 canonical reproducibility coverage 都已存在；剩餘工作大多是最後的 malformed-field depth 與 semantic-edge 收尾，加上一些 milestone-close proof points。
+接近完成。shared parsing、更收斂的 canonical helper module、top-level core-version equality checks、保留路徑資訊的 nested parser field errors、更廣的 parser / verify / CLI strictness-surface coverage、更完整的 inspect-surface parity、更嚴格的 replay dependency verification 與 sibling declared-ID determinism、直接涵蓋無效 sibling/parent dependency ID 與 signature 的 CLI smoke coverage、更清楚的 multi-hop ancestry failure context、isolate 過的 validate-peer fixtures，以及 canonical reproducibility coverage 都已存在；剩餘工作大多是最後的 malformed-field depth 與 semantic-edge 收尾，加上一些 milestone-close proof points。
 
 目前 repo 已可見：
 
@@ -156,7 +156,7 @@
 
 1. 在廣泛 unknown-field 與 invalid-type rejection 之後，final malformed-field depth 與 semantic-edge strictness closure
 2. 目前 revision / patch、replay 與 view / snapshot batches 之外，其餘 semantic edge cases 的更深 `mycel-core` coverage
-3. 將 shared helper reuse 擴展到未來 wire-validation work
+3. 把剩餘 replay 衍生的 `state_hash` 與未來 wire-validation canonicalization 路徑收斂到 shared helper module 上
 4. 在擴大更多表面前，先釐清 milestone-close criteria
 
 Implementation anchors：
@@ -227,7 +227,7 @@ Implementation anchors：
 
 目前判讀：
 
-已大幅展開，但尚未完成。replay-based verification、store rebuild、persisted indexes、窄版 store write path，以及初始的保守型 merge-authoring workflow 都已存在，但這個 milestone 仍未到可關閉狀態。
+已大幅展開，但尚未完成。replay-based verification、store rebuild、persisted indexes、窄版 store write path、初始的保守型 merge-authoring workflow，以及能保留 ancestry context 的 render/store verification 都已存在，但這個 milestone 仍未到可關閉狀態。
 
 主要剩餘缺口：
 

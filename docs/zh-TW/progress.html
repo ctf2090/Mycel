@@ -365,7 +365,7 @@
             <ul>
               <li>Shared parsing 與 schema layer</li>
               <li>Canonical validation utilities</li>
-              <li>Strictness 與 fixture coverage</li>
+              <li>Strictness、replay proof 與 fixture coverage</li>
             </ul>
           </article>
           <article class="card">
@@ -374,7 +374,7 @@
             <div class="status partial">已大幅展開</div>
             <ul>
               <li>Replay 與 <code>state_hash</code></li>
-              <li>Store rebuild 與 indexes</li>
+              <li>Store rebuild、indexes 與 ancestry context</li>
               <li>Narrow write-path closure</li>
               <li>Conservative merge authoring</li>
             </ul>
@@ -385,7 +385,7 @@
             <div class="status partial">下一步</div>
             <ul>
               <li>Accepted-head reader workflows</li>
-              <li>Bundle 與 store rendering</li>
+              <li>Bundle 與 store rendering，並保留 ancestry context</li>
               <li>具名 fixed-profile reading</li>
               <li>具備 editor-admission 感知的 render flows</li>
               <li>Persisted governance reverse indexes</li>
@@ -433,19 +433,19 @@
               <td data-label="Area">1. Repo and Build Setup</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">build/test 基礎已穩定，shared canonical helper ownership 也更集中；完整 utility closure 仍未收尾。</td>
+              <td data-label="Current read">build/test 基礎已穩定，shared canonical helper ownership 也正收斂到獨立的 core module；完整 utility closure 仍未收尾。</td>
             </tr>
             <tr>
               <td data-label="Area">2. Object Types and IDs</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">所有必要 v0.1 families 都已 typed，且 top-level core-version 與 nested-path strictness 更完整；剩餘工作是 malformed field-shape depth、剩餘 semantic-edge closure 與角色建模。</td>
+              <td data-label="Current read">所有必要 v0.1 families 都已 typed，且 parser / verify / CLI dependency-proof coverage 更完整；剩餘工作是 malformed field-shape depth、剩餘 semantic-edge closure 與角色建模。</td>
             </tr>
             <tr>
               <td data-label="Area">3. Canonical Serialization and Hashing</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">核心規則與 reproducibility coverage 已存在，且 canonical helper reuse 已更集中；`state_hash` 與 wire 仍缺完整 shared utility reuse。</td>
+              <td data-label="Current read">核心規則與 reproducibility coverage 已存在，且 canonical helper ownership 已更集中到 shared core module；replay 衍生的 `state_hash` 與 wire 仍缺最後的共用化收尾。</td>
             </tr>
             <tr>
               <td data-label="Area">4. Signature Verification</td>
@@ -457,13 +457,13 @@
               <td data-label="Area">5. Patch and Revision Engine</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay 與 <code>state_hash</code> 已存在；對引用依賴的驗證與 sibling declared-ID determinism 也更嚴格。</td>
+              <td data-label="Current read">Replay 與 <code>state_hash</code> 已存在；dependency verification、wrong-type 與 multi-hop ancestry proof、sibling declared-ID determinism，以及 render 路徑的 ancestry context 都更完整。</td>
             </tr>
             <tr>
               <td data-label="Area">6. Local State and Storage</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Store ingest、rebuild 與 indexes 已存在；local transport/safety separation 尚未完成。</td>
+              <td data-label="Current read">Store ingest、rebuild 與 indexes 已存在；rebuild smoke 現在也會在摘要回報中保留 nested ancestry context，但 local transport/safety separation 尚未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">7. Wire Protocol</td>
@@ -493,7 +493,7 @@
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3</td>
-              <td data-label="Current read">Verification、authoring、保守型 merge authoring、具備 editor-admission 感知的 reader inspection/render、governance inspect/list/publish，以及 persisted governance index query surfaces 已存在；sync 仍未完成。</td>
+              <td data-label="Current read">Verification、authoring、保守型 merge authoring、具備 editor-admission 感知的 reader inspection/render、governance inspect/list/publish，以及 persisted governance index query surfaces 已存在；accepted-head render 現在會先預先驗證 selected head，並提供更清楚的 ancestry-context 回報，但 sync 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>

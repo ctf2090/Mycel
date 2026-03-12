@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, refreshed after the recent shared canonical-helper consolidation, top-level core-version strictness closure, path-preserving nested parser errors, replay dependency verification tightening, and sibling ID determinism batch; implementation state unchanged, with M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, replay dependency strictness, signature-edge and replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core still nearly complete
+Status: late partial progress, refreshed after the recent replay-dependency CLI proof expansion, multi-hop ancestry-context propagation, shared canonical-module convergence, and render/store ancestry-context preservation batch; implementation state unchanged, with M1 parsing, parser / verify / CLI strictness coverage, broader inspect-surface parity, replay dependency strictness, ancestry-aware render/store proof coverage, signature-edge and replay/verify smoke coverage, fixture isolation, test-foundation cleanup, and canonical reproducibility core still nearly complete
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -31,7 +31,7 @@ Defer if needed:
 - [x] Choose one implementation language and package layout.
 - [x] Fix one canonical hash algorithm for the network profile.
 - [x] Fix one signature algorithm set for the client profile.
-- [ ] Add a canonical JSON utility shared by hash, signature, and wire code.
+- [ ] Finish extending the shared canonical JSON utility across hash, signature, replay-derived `state_hash`, and future wire code.
 - [x] Add fixture loading for protocol examples and regression tests.
 
 ## 2. Object Types and IDs
@@ -44,7 +44,7 @@ Defer if needed:
 - [x] Implement `snapshot` parsing with derived `snapshot_id`.
 - [x] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
 - [x] Reject unknown top-level typed-object fields and invalid required field types in shared parsing and verification.
-- [ ] Finish the remaining malformed field-shape depth, semantic edge-case, and role-model closure still left after the recent strictness-surface expansion, top-level core-version checks, and replay/verify smoke expansion.
+- [ ] Finish the remaining malformed field-shape depth, semantic edge-case, and role-model closure still left after the recent strictness-surface expansion, replay-dependency CLI smoke growth, and ancestry-context proof expansion.
 - [ ] Model editor-maintainer and view-maintainer role assignment independently.
 
 ## 3. Canonical Serialization and Hashing
@@ -55,7 +55,7 @@ Defer if needed:
 - [x] Reject duplicate keys.
 - [x] Reject unsupported value types such as `null` or floating-point numbers.
 - [x] Omit derived ID fields and `signature` when recomputing object IDs.
-- [ ] Reuse the same canonicalization rules for `state_hash` and wire envelope signatures.
+- [ ] Finish reusing the same canonicalization rules for replay-derived `state_hash` paths and future wire envelope signatures.
 
 ## 4. Signature Verification
 

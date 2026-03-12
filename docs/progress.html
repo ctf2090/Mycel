@@ -365,7 +365,7 @@
             <ul>
               <li>Shared parsing and schema layer</li>
               <li>Canonical validation utilities</li>
-              <li>Strictness and fixture coverage</li>
+              <li>Strictness, replay proof, and fixture coverage</li>
             </ul>
           </article>
           <article class="card">
@@ -374,7 +374,7 @@
             <div class="status partial">Substantially underway</div>
             <ul>
               <li>Replay and <code>state_hash</code></li>
-              <li>Store rebuild and indexes</li>
+              <li>Store rebuild, indexes, and ancestry context</li>
               <li>Narrow write-path closure</li>
               <li>Conservative merge authoring</li>
             </ul>
@@ -385,7 +385,7 @@
             <div class="status partial">Early partial</div>
             <ul>
               <li>Accepted-head reader workflows</li>
-              <li>Bundle and store rendering</li>
+              <li>Bundle and store rendering with ancestry context</li>
               <li>Named fixed-profile reading</li>
               <li>Editor-admission-aware render flows</li>
               <li>Filtered governance view listing</li>
@@ -435,19 +435,19 @@
               <td data-label="Area">1. Repo and Build Setup</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">The build/test base is stable, and shared canonical helper ownership is more centralized; full utility closure still remains.</td>
+              <td data-label="Current read">The build/test base is stable, and shared canonical helper ownership is converging on a dedicated core module; final utility closure still remains.</td>
             </tr>
             <tr>
               <td data-label="Area">2. Object Types and IDs</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">All required v0.1 families are typed, and top-level core-version plus nested-path strictness is broader; malformed field-shape depth, remaining semantic-edge closure, and role modeling remain.</td>
+              <td data-label="Current read">All required v0.1 families are typed, and parser / verify / CLI dependency-proof coverage is broader; malformed field-shape depth, remaining semantic-edge closure, and role modeling remain.</td>
             </tr>
             <tr>
               <td data-label="Area">3. Canonical Serialization and Hashing</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1</td>
-              <td data-label="Current read">Core rules and reproducibility coverage exist, and canonical helper reuse is more centralized; full shared utility reuse for <code>state_hash</code> and wire remains open.</td>
+              <td data-label="Current read">Core rules and reproducibility coverage exist, and canonical helper ownership is more centralized in a shared core module; final adoption across replay-derived <code>state_hash</code> and wire remains open.</td>
             </tr>
             <tr>
               <td data-label="Area">4. Signature Verification</td>
@@ -459,13 +459,13 @@
               <td data-label="Area">5. Patch and Revision Engine</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay and <code>state_hash</code> are in place; referenced dependency verification and sibling declared-ID determinism are stricter.</td>
+              <td data-label="Current read">Replay and <code>state_hash</code> are in place; dependency verification, wrong-type and multi-hop ancestry proofs, sibling declared-ID determinism, and render-path ancestry context are stronger.</td>
             </tr>
             <tr>
               <td data-label="Area">6. Local State and Storage</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Store ingest, rebuild, and indexes exist; policy separation still remains.</td>
+              <td data-label="Current read">Store ingest, rebuild, and indexes exist; rebuild smoke now preserves nested ancestry context in summary reporting, but policy separation still remains.</td>
             </tr>
             <tr>
               <td data-label="Area">7. Wire Protocol</td>
@@ -495,7 +495,7 @@
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3</td>
-              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, and persisted governance index query surfaces exist; sync remains open.</td>
+              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, and persisted governance index query surfaces exist; accepted-head render now pre-verifies selected heads with clearer ancestry-context reporting, while sync remains open.</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>

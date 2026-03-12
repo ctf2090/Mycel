@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: late partial progress, refreshed after the recent shared canonical-helper consolidation, top-level core-version strictness closure, path-preserving nested parser errors, replay dependency verification tightening, and sibling ID determinism batch; milestone state unchanged
+Status: late partial progress, refreshed after the recent replay-dependency CLI proof expansion, multi-hop ancestry-context propagation, shared canonical-module convergence, and render/store ancestry-context preservation batch; milestone state unchanged
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -17,9 +17,9 @@ The repository already has:
 - a growing v0.1 protocol and wire-spec document set
 - a Rust CLI suitable for internal validation and deterministic simulator workflows
 - `mycel-core` support for object schema metadata, object-envelope parsing, replay-based revision verification, local object-store ingest/rebuild, persisted store indexes, and accepted-head inspection
-- more centralized canonical hash and signed-payload helpers reused across verification, replay, and authoring paths
+- more centralized canonical hash and signed-payload helpers reused across verification, replay, head/render pre-verification, authoring, and some CLI smoke paths
 - early reader-plus-governance surfaces for accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render workflows
-- broader parser / verify / CLI strictness-surface coverage for `document`, `block`, `patch`, `revision`, `view`, and `snapshot`, a materially wider `object inspect` warning surface, stronger signature-edge and replay/verification smoke coverage for merge and cross-document revision edges, and isolated validate-peer fixtures
+- broader parser / verify / CLI strictness-surface coverage for `document`, `block`, `patch`, `revision`, `view`, and `snapshot`, a materially wider `object inspect` warning surface, stronger signature-edge and replay/verification smoke coverage for merge and cross-document revision edges, clearer multi-hop ancestry context in replay-derived failures, and isolated validate-peer fixtures
 - a more maintainable CLI test base with `assert_cmd`, `predicates`, `tempfile`, and small `rstest` use on high-duplication strictness matrices
 - simulator fixtures, topologies, tests, and reports for regression coverage
 
@@ -139,7 +139,7 @@ Completion gate:
 
 Current read:
 
-Nearly complete. The shared parsing, canonical helper, top-level core-version equality checks, path-preserving nested parser field errors, broad parser / verify / CLI strictness-surface coverage, broader inspect-surface parity, stronger replay dependency verification and sibling declared-ID determinism, stronger signature-edge and replay/verification smoke coverage for revision semantics, isolated validate-peer fixtures, and canonical reproducibility coverage now exist; the remaining work is mostly the last malformed-field depth and semantic-edge closure plus a few milestone-close proof points.
+Nearly complete. The shared parsing, more converged canonical helper module, top-level core-version equality checks, path-preserving nested parser field errors, broad parser / verify / CLI strictness-surface coverage, broader inspect-surface parity, stronger replay dependency verification and sibling declared-ID determinism, direct CLI smoke coverage for invalid sibling/parent dependency IDs and signatures, clearer multi-hop ancestry failure context, isolated validate-peer fixtures, and canonical reproducibility coverage now exist; the remaining work is mostly the last malformed-field depth and semantic-edge closure plus a few milestone-close proof points.
 
 Already visible in the repo:
 
@@ -156,7 +156,7 @@ Main remaining gaps:
 
 1. final malformed-field depth and semantic-edge strictness closure after broad unknown-field and invalid-type rejection
 2. deeper `mycel-core`-level coverage for the remaining semantic edge cases outside the current revision / patch, replay, and view / snapshot batches
-3. shared helper reuse extended into future wire-validation work
+3. finish collapsing the remaining replay-derived `state_hash` and future wire-validation canonicalization paths onto the shared helper module
 4. clearer milestone-close criteria before widening more surfaces
 
 Implementation anchors:
@@ -227,7 +227,7 @@ Completion gate:
 
 Current read:
 
-Substantially underway. Replay-based verification, store rebuild, persisted indexes, a narrow store write path, and an initial conservative merge-authoring workflow now exist, but the milestone is still not closeable.
+Substantially underway. Replay-based verification, store rebuild, persisted indexes, a narrow store write path, an initial conservative merge-authoring workflow, and ancestry-context-preserving render/store verification now exist, but the milestone is still not closeable.
 
 Main remaining gaps:
 

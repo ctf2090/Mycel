@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，已在最近一批 shared canonical-helper consolidation、top-level core-version strictness 收口、保留路徑資訊的 nested parser errors、replay dependency verification tightening，以及 sibling ID determinism 工作後刷新；實作狀態未變，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、replay dependency strictness、signature-edge 與 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 仍接近完成
+狀態：late partial progress，已在最近一批 replay-dependency CLI proof 擴張、multi-hop ancestry context 傳遞、shared canonical module 收斂，以及 render/store ancestry context 保留工作後刷新；實作狀態未變，M1 parsing、parser / verify / CLI strictness coverage、更廣的 inspect-surface parity、replay dependency strictness、具 ancestry 感知的 render/store proof coverage、signature-edge 與 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 與 canonical reproducibility core 仍接近完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
@@ -31,7 +31,7 @@
 - [x] 選定一個實作語言與 package layout。
 - [x] 為 network profile 固定一個 canonical hash algorithm。
 - [x] 為 client profile 固定一組 signature algorithms。
-- [ ] 加入一個可被 hash、signature、wire 共用的 canonical JSON 工具。
+- [ ] 完成 shared canonical JSON 工具，讓它可被 hash、signature、replay 衍生的 `state_hash`，以及未來 wire code 共用。
 - [x] 加入 protocol examples 與 regression tests 的 fixture 載入機制。
 
 ## 2. 物件型別與 ID
@@ -44,7 +44,7 @@
 - [x] 實作帶導出 `snapshot_id` 的 `snapshot` 解析。
 - [x] 拒絕任何內嵌導出 ID 與重算 canonical ID 不一致的內容定址物件。
 - [x] 在 shared parsing 與 verification 中，拒絕 typed object 的未知頂層欄位與非法必要欄位型別。
-- [ ] 在最近 strictness-surface 擴張、top-level core-version 檢查，以及 replay/verify smoke 擴張後，完成剩餘 malformed field-shape depth、semantic edge case 與角色建模的收尾。
+- [ ] 在最近 strictness-surface 擴張、replay-dependency CLI smoke 擴張，以及 ancestry-context proof 擴張後，完成剩餘 malformed field-shape depth、semantic edge case 與角色建模的收尾。
 - [ ] 將 editor-maintainer 與 view-maintainer 的角色指派分開建模。
 
 ## 3. Canonical Serialization 與 Hashing
@@ -55,7 +55,7 @@
 - [x] 拒絕 duplicate keys。
 - [x] 拒絕 `null`、浮點數等不支援的值型別。
 - [x] 重算 object ID 時省略導出 ID 欄位與 `signature`。
-- [ ] 對 `state_hash` 與 wire envelope signature 重用同一套 canonicalization 規則。
+- [ ] 完成讓 replay 衍生的 `state_hash` 路徑與未來 wire envelope signature 重用同一套 canonicalization 規則。
 
 ## 4. Signature 驗證
 
