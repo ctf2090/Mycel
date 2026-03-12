@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Why Mycel</title>
+    <meta
+      name="description"
+      content="Understand why Mycel matters by starting from the pain points people already feel in existing tools."
+    >
+    <meta name="theme-color" content="#0d6b57">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Mycel">
+    <meta property="og:title" content="Why Mycel">
+    <meta
+      property="og:description"
+      content="Understand why Mycel matters by starting from the pain points people already feel in existing tools."
+    >
+    <meta property="og:url" content="https://ctf2090.github.io/Mycel/value.html">
+    <meta property="og:image" content="https://ctf2090.github.io/Mycel/social-preview.png">
+    <link rel="alternate" hreflang="zh-TW" href="https://ctf2090.github.io/Mycel/zh-TW/value.html">
+    <link rel="alternate" hreflang="zh-CN" href="https://ctf2090.github.io/Mycel/zh-CN/value.html">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Why Mycel">
+    <meta
+      name="twitter:description"
+      content="Understand why Mycel matters by starting from the pain points people already feel in existing tools."
+    >
+    <meta name="twitter:image" content="https://ctf2090.github.io/Mycel/social-preview.png">
+    <style>
+      :root {
+        --bg: #f3efe6;
+        --surface: rgba(255, 250, 242, 0.88);
+        --surface-strong: #fffaf1;
+        --text: #1d2a26;
+        --muted: #5a6a62;
+        --accent: #0d6b57;
+        --accent-strong: #084d3f;
+        --line: rgba(29, 42, 38, 0.12);
+        --shadow: 0 24px 80px rgba(20, 32, 27, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(13, 107, 87, 0.14), transparent 34%),
+          radial-gradient(circle at top right, rgba(175, 126, 53, 0.12), transparent 30%),
+          linear-gradient(180deg, #f8f3ea 0%, var(--bg) 54%, #ece5d8 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+
+      .brand {
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .brand a:hover {
+        text-decoration: underline;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .hero-copy {
+        padding: 40px;
+      }
+
+      .hero-card {
+        display: grid;
+        gap: 16px;
+        padding: 24px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(13, 107, 87, 0.08);
+        color: var(--accent-strong);
+        font-size: 0.9rem;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: "IBM Plex Serif", Georgia, serif;
+        line-height: 1.08;
+      }
+
+      h1 {
+        margin-top: 18px;
+        font-size: clamp(1.8rem, 4vw, 3rem);
+        max-width: 10ch;
+      }
+
+      h2 {
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        margin-bottom: 12px;
+      }
+
+      .lead {
+        margin: 18px 0 0;
+        max-width: 58ch;
+        font-size: 1.08rem;
+        line-height: 1.78;
+        color: var(--muted);
+      }
+
+      .hero-note,
+      p,
+      li {
+        line-height: 1.72;
+        color: var(--muted);
+      }
+
+      .hero-note {
+        margin: 16px 0 0;
+      }
+
+      .status-card,
+      .card {
+        padding: 22px;
+        border-radius: 20px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .status-card strong,
+      .card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.92rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 13px 18px;
+        border-radius: 999px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid transparent;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #f7f3ea;
+      }
+
+      .button.secondary {
+        background: transparent;
+        border-color: var(--line);
+        color: var(--text);
+      }
+
+      section {
+        margin-top: 22px;
+      }
+
+      .section-panel {
+        padding: 30px;
+      }
+
+      .grid,
+      .message-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: var(--surface-strong);
+        border-radius: 18px;
+        overflow: hidden;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 16px 14px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .comparison-table th {
+        font-size: 0.88rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+        background: rgba(13, 107, 87, 0.06);
+      }
+
+      .comparison-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      footer {
+        margin-top: 22px;
+        padding: 22px 4px 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .grid,
+        .message-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 880px) {
+        .comparison-table,
+        .comparison-table thead,
+        .comparison-table tbody,
+        .comparison-table th,
+        .comparison-table td,
+        .comparison-table tr {
+          display: block;
+          width: 100%;
+        }
+
+        .comparison-table thead {
+          display: none;
+        }
+
+        .comparison-table tr {
+          border-bottom: 1px solid var(--line);
+          padding: 10px 0;
+        }
+
+        .comparison-table td {
+          border-bottom: 0;
+          padding: 10px 14px;
+        }
+
+        .comparison-table td::before {
+          content: attr(data-label);
+          display: block;
+          margin-bottom: 6px;
+          font-size: 0.8rem;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: var(--accent-strong);
+        }
+
+        .hero-copy,
+        .hero-card,
+        .section-panel {
+          padding: 26px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <div class="brand"><a href="/Mycel/" aria-label="Return to the Mycel homepage">Mycel</a> / Value</div>
+        <div class="nav-links">
+          <a href="/Mycel/zh-TW/value.html">繁體中文</a>
+          <a href="/Mycel/zh-CN/value.html">简体中文</a>
+          <a href="https://github.com/ctf2090/Mycel">GitHub</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/README.md">README</a>
+          <a href="/Mycel/progress.html">Progress</a>
+          <a href="/Mycel/support.html">Support</a>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div class="panel hero-copy">
+          <div class="eyebrow">Start from the friction people already feel</div>
+          <h1>Why Mycel</h1>
+          <p class="lead">
+            Instead of beginning with protocol mechanics, start with the pain points people already
+            recognize: versions are visible but hard to verify, divergence makes reading confusing,
+            and platforms bundle history, governance, and presentation together. The layer Mycel is
+            trying to provide sits between those problems.
+          </p>
+          <p class="hero-note">
+            Mycel is not another general collaboration interface. It makes text history replayable,
+            default reading derivable, and data no longer trapped inside one platform.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.md">Read the Markdown source</a>
+            <a class="button secondary" href="/Mycel/">Back to home</a>
+          </div>
+        </div>
+
+        <div class="panel hero-card">
+          <div class="status-card">
+            <strong>Not Just History</strong>
+            <p>History that can be verified, replayed, and reconstructed.</p>
+          </div>
+          <div class="status-card">
+            <strong>Not Just Multiple Versions</strong>
+            <p>An explainable default reading even when divergence remains.</p>
+          </div>
+          <div class="status-card">
+            <strong>Not Just Platform State</strong>
+            <p>History, governance, and replication can exist in separate layers and still interoperate.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>Existing Tool Pain Points vs. Mycel</h2>
+        <p>
+          This table starts from friction people already recognize, rather than back-solving from
+          protocol features, and maps that friction directly to the value Mycel is meant to provide.
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Existing tool pain point</th>
+              <th>Typical reaction</th>
+              <th>Mycel's corresponding value</th>
+              <th>Useful phrasing</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Existing tool pain point">History exists, but is hard to verify</td>
+              <td data-label="Typical reaction">I can see the revision history, but I still cannot tell how this result was formed.</td>
+              <td data-label="Mycel's corresponding value">Replayable, verifiable text history</td>
+              <td data-label="Useful phrasing">It does not just keep versions. It makes history reconstructable and inspectable.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">The default version is platform state, not an explainable result</td>
+              <td data-label="Typical reaction">I can see this version now, but I do not know why this is the default.</td>
+              <td data-label="Mycel's corresponding value">Default reading derived from fixed rules</td>
+              <td data-label="Useful phrasing">The default version is not a black box and not a manual administrator choice.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Divergence is often forced back into one version</td>
+              <td data-label="Typical reaction">Different interpretations get overwritten until only one official answer remains.</td>
+              <td data-label="Mycel's corresponding value">Multiple valid branches can coexist</td>
+              <td data-label="Useful phrasing">It does not pretend there is only one true version.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Once forks exist, reading becomes confusing</td>
+              <td data-label="Typical reaction">As soon as there are multiple versions, I no longer know what people are supposed to read by default.</td>
+              <td data-label="Mycel's corresponding value">Accepted reading can still be derived while preserving divergence</td>
+              <td data-label="Useful phrasing">It can keep divergence and still provide a default reading.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Platforms bundle editing, governance, and presentation together</td>
+              <td data-label="Typical reaction">Where the data lives, how it is shown, and who decides all get locked into one product.</td>
+              <td data-label="Mycel's corresponding value">History, governance signals, and replication are separated but still interoperable</td>
+              <td data-label="Useful phrasing">Data does not have to equal platform.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Context and rules are hard to preserve outside the original platform</td>
+              <td data-label="Typical reaction">I can export the content, but I cannot export the reasoning behind the result.</td>
+              <td data-label="Mycel's corresponding value">Rules and object relationships can be preserved and reconstructed</td>
+              <td data-label="Useful phrasing">You carry not just the content, but how the result was formed.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Collaboration tools are good at editing, but weak at long-term preservation</td>
+              <td data-label="Typical reaction">Short-term writing is convenient, but it is not suitable for long-lived cultural or knowledge preservation.</td>
+              <td data-label="Mycel's corresponding value">Designed for long-lived texts, commentary systems, and reference corpora</td>
+              <td data-label="Useful phrasing">It is built for long-term verifiable preservation, not just day-to-day collaboration.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Consensus systems are too heavy, while document tools are too light</td>
+              <td data-label="Typical reaction">Blockchains feel too heavy, while document platforms do not feel trustworthy enough.</td>
+              <td data-label="Mycel's corresponding value">Sits between centralized collaboration platforms and global-consensus systems</td>
+              <td data-label="Useful phrasing">It fills the missing layer between those two extremes.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Governance signals are hard to turn into inspectable inputs</td>
+              <td data-label="Typical reaction">Support for a version is scattered across meetings, chat, or platform permissions.</td>
+              <td data-label="Mycel's corresponding value">Governance signals can be treated as verifiable objects</td>
+              <td data-label="Useful phrasing">Governance stops being just backstage action or oral process.</td>
+            </tr>
+            <tr>
+              <td data-label="Existing tool pain point">Tools force one product worldview on the user</td>
+              <td data-label="Typical reaction">However the product defines content, versioning, and permission is what we are forced to accept.</td>
+              <td data-label="Mycel's corresponding value">The protocol core stays neutral, with meaning expressed through profiles and app layers</td>
+              <td data-label="Useful phrasing">One application's logic is not hard-coded into the base layer.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>Three Strongest Messages</h2>
+        <div class="message-grid">
+          <div class="card">
+            <strong>Verifiable History</strong>
+            <p>Not just history, but history that can be replayed, verified, and reconstructed.</p>
+          </div>
+          <div class="card">
+            <strong>Explainable Default Reading</strong>
+            <p>Not just multiple versions, but a predictable and inspectable default reading when divergence remains.</p>
+          </div>
+          <div class="card">
+            <strong>Data Is Not the Platform</strong>
+            <p>Not locking data into a platform, but letting history, governance, and replication exist separately.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>Suggested Outward Narrative Order</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>1. Start with the pain point</strong>
+            <p>Current tools do not lack versions. What they usually lack is verifiable, explainable outcomes.</p>
+          </div>
+          <div class="card">
+            <strong>2. Then explain Mycel</strong>
+            <p>Mycel makes text history replayable, default reading derivable, and data no longer trapped in one platform.</p>
+          </div>
+          <div class="card">
+            <strong>3. End with the use cases</strong>
+            <p>Especially suitable for long-lived texts, commentary systems, governed knowledge bases, and cultural preservation.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section-panel">
+        <h2>Ready-to-Use External Phrasing</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>Version A: pain-point framing</strong>
+            <p>Current tools either hide history inside platform state or tell you only what the current result is, without clearly showing why it became that result.</p>
+          </div>
+          <div class="card">
+            <strong>Version B: governance framing</strong>
+            <p>The hard problem is not editing. It is preserving divergence while still deriving a predictable, explainable default version.</p>
+          </div>
+          <div class="card">
+            <strong>Version C: preservation framing</strong>
+            <p>Long-term texts need more than the current version. They need formation history, governance context, and the ability to reconstruct the result elsewhere.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Markdown source:
+        <a href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.md">docs/MYCEL-VALUE.md</a>
+      </footer>
+    </div>
+  </body>
+</html>
