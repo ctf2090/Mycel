@@ -7,14 +7,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::canonical::wire_envelope_signed_payload_bytes;
-use crate::protocol::{parse_object_envelope, recompute_declared_object_identity};
 use crate::replay::GENESIS_BASE_REVISION;
 use crate::store::{
     load_store_index_manifest, load_store_object_index, write_object_value_to_store,
     StoreIndexManifest, StoreRebuildError, StoredObjectRecord,
 };
 use crate::wire::{
-    discover_reachable_object_ids_from_value, WireMessageType, WirePeerDirectory, WireSession,
+    derive_wire_object_payload_identity, discover_reachable_object_ids_from_value, WireMessageType,
+    WirePeerDirectory, WireSession,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -214,17 +214,9 @@ fn signed_object_message(
     msg_id: String,
     body: &Value,
 ) -> Result<Value, StoreRebuildError> {
-    let object_type = parse_object_envelope(body)
-        .map_err(|error| {
-            StoreRebuildError::new(format!(
-                "failed to parse peer store object envelope: {error}"
-            ))
-        })?
-        .object_type()
-        .to_string();
-    let identity = recompute_declared_object_identity(body).map_err(|error| {
+    let identity = derive_wire_object_payload_identity(body).map_err(|error| {
         StoreRebuildError::new(format!(
-            "failed to recompute peer store object identity: {error}"
+            "failed to derive peer store OBJECT payload identity: {error}"
         ))
     })?;
 
@@ -235,7 +227,7 @@ fn signed_object_message(
         msg_id,
         json!({
             "object_id": identity.object_id,
-            "object_type": object_type,
+            "object_type": identity.object_type,
             "encoding": "json",
             "hash_alg": "sha256",
             "hash": identity.hash,

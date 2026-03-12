@@ -93,6 +93,13 @@ impl<'a> ParsedWireEnvelope<'a> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WireObjectPayloadIdentity {
+    pub object_type: String,
+    pub object_id: String,
+    pub hash: String,
+}
+
 pub fn parse_wire_envelope(value: &Value) -> Result<ParsedWireEnvelope<'_>, String> {
     ensure_supported_json_values(value)?;
     let object = value
@@ -644,17 +651,14 @@ pub fn validate_wire_object_payload_behavior(payload: &Map<String, Value>) -> Re
     let body = payload
         .get("body")
         .ok_or_else(|| "missing object field 'body'".to_string())?;
-    let body_envelope = parse_object_envelope(body).map_err(|error| error.to_string())?;
-    if body_envelope.object_type() != object_type {
+    let expected_identity = derive_wire_object_payload_identity(body)?;
+
+    if expected_identity.object_type != object_type {
         return Err(format!(
             "OBJECT body type '{}' does not match object_type '{}'",
-            body_envelope.object_type(),
-            object_type
+            expected_identity.object_type, object_type
         ));
     }
-
-    let expected_identity = recompute_declared_object_identity(body)
-        .map_err(|error| format!("failed to recompute OBJECT body ID: {error}"))?;
 
     if object_id != expected_identity.object_id {
         return Err(format!(
@@ -670,6 +674,20 @@ pub fn validate_wire_object_payload_behavior(payload: &Map<String, Value>) -> Re
     }
 
     Ok(())
+}
+
+pub(crate) fn derive_wire_object_payload_identity(
+    body: &Value,
+) -> Result<WireObjectPayloadIdentity, String> {
+    let body_envelope = parse_object_envelope(body).map_err(|error| error.to_string())?;
+    let expected_identity = recompute_declared_object_identity(body)
+        .map_err(|error| format!("failed to recompute OBJECT body ID: {error}"))?;
+
+    Ok(WireObjectPayloadIdentity {
+        object_type: body_envelope.object_type().to_string(),
+        object_id: expected_identity.object_id,
+        hash: expected_identity.hash,
+    })
 }
 
 fn required_wire_string(
