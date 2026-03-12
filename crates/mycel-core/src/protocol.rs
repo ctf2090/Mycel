@@ -736,22 +736,22 @@ pub fn recompute_object_id(
     derived_id_field: &str,
     prefix: &str,
 ) -> Result<String, String> {
-    let mut object = value
-        .as_object()
-        .cloned()
-        .ok_or_else(|| "top-level JSON value must be an object".to_string())?;
-    object.remove(derived_id_field);
-    object.remove("signature");
-    prefixed_canonical_hash(&Value::Object(object), prefix)
+    prefixed_canonical_object_hash_excluding_fields(value, prefix, &[derived_id_field, "signature"])
 }
 
 pub fn signed_payload_bytes(value: &Value) -> Result<Vec<u8>, String> {
-    let mut object = value
-        .as_object()
-        .cloned()
-        .ok_or_else(|| "top-level JSON value must be an object".to_string())?;
-    object.remove("signature");
-    let canonical = canonical_json(&Value::Object(object))?;
+    signature_payload_bytes_for_field(value, "signature")
+}
+
+pub fn wire_envelope_signed_payload_bytes(value: &Value) -> Result<Vec<u8>, String> {
+    signature_payload_bytes_for_field(value, "sig")
+}
+
+pub fn signature_payload_bytes_for_field(
+    value: &Value,
+    signature_field: &str,
+) -> Result<Vec<u8>, String> {
+    let canonical = canonical_object_json_excluding_fields(value, &[signature_field])?;
     Ok(canonical.into_bytes())
 }
 
@@ -814,6 +814,14 @@ pub fn canonical_json(value: &Value) -> Result<String, String> {
     Ok(output)
 }
 
+pub fn canonical_object_json_excluding_fields(
+    value: &Value,
+    omitted_fields: &[&str],
+) -> Result<String, String> {
+    let object = object_without_fields(value, omitted_fields)?;
+    canonical_json(&Value::Object(object))
+}
+
 pub fn canonical_sha256_hex(value: &Value) -> Result<String, String> {
     let canonical = canonical_json(value)?;
     let mut hasher = Sha256::new();
@@ -822,8 +830,28 @@ pub fn canonical_sha256_hex(value: &Value) -> Result<String, String> {
     Ok(hex_encode(&digest))
 }
 
+pub fn canonical_object_sha256_hex_excluding_fields(
+    value: &Value,
+    omitted_fields: &[&str],
+) -> Result<String, String> {
+    let canonical = canonical_object_json_excluding_fields(value, omitted_fields)?;
+    let mut hasher = Sha256::new();
+    hasher.update(canonical.as_bytes());
+    let digest = hasher.finalize();
+    Ok(hex_encode(&digest))
+}
+
 pub fn prefixed_canonical_hash(value: &Value, prefix: &str) -> Result<String, String> {
     let digest = canonical_sha256_hex(value)?;
+    Ok(format!("{prefix}:{digest}"))
+}
+
+pub fn prefixed_canonical_object_hash_excluding_fields(
+    value: &Value,
+    prefix: &str,
+    omitted_fields: &[&str],
+) -> Result<String, String> {
+    let digest = canonical_object_sha256_hex_excluding_fields(value, omitted_fields)?;
     Ok(format!("{prefix}:{digest}"))
 }
 
@@ -968,6 +996,20 @@ fn write_canonical_json(value: &Value, output: &mut String) -> Result<(), String
             Ok(())
         }
     }
+}
+
+fn object_without_fields(
+    value: &Value,
+    omitted_fields: &[&str],
+) -> Result<Map<String, Value>, String> {
+    let mut object = value
+        .as_object()
+        .cloned()
+        .ok_or_else(|| "top-level JSON value must be an object".to_string())?;
+    for field in omitted_fields {
+        object.remove(*field);
+    }
+    Ok(object)
 }
 
 pub fn hex_encode(bytes: &[u8]) -> String {
@@ -1434,14 +1476,16 @@ mod tests {
     use serde_json::{json, Map, Value};
 
     use super::{
-        canonical_json, canonical_sha256_hex, ensure_supported_json_values, object_schema,
-        parse_block_object, parse_document_object, parse_json_strict, parse_json_value_strict,
-        parse_object_envelope, parse_patch_object, parse_revision_object, parse_snapshot_object,
-        parse_view_object, prefixed_canonical_hash, recompute_object_id, reject_duplicate_strings,
-        reject_unknown_fields, required_non_empty_string_array, required_object,
-        required_prefixed_string_map, required_string_field, signed_payload_bytes,
-        validate_canonical_object_id, validate_prefixed_string, ObjectKind,
-        ParseObjectEnvelopeError, SignatureRule, StringFieldError, WIRE_PROTOCOL_VERSION,
+        canonical_json, canonical_object_json_excluding_fields, canonical_sha256_hex,
+        ensure_supported_json_values, object_schema, parse_block_object, parse_document_object,
+        parse_json_strict, parse_json_value_strict, parse_object_envelope, parse_patch_object,
+        parse_revision_object, parse_snapshot_object, parse_view_object, prefixed_canonical_hash,
+        prefixed_canonical_object_hash_excluding_fields, recompute_object_id,
+        reject_duplicate_strings, reject_unknown_fields, required_non_empty_string_array,
+        required_object, required_prefixed_string_map, required_string_field, signed_payload_bytes,
+        validate_canonical_object_id, validate_prefixed_string, wire_envelope_signed_payload_bytes,
+        ObjectKind, ParseObjectEnvelopeError, SignatureRule, StringFieldError,
+        WIRE_PROTOCOL_VERSION,
     };
 
     #[path = "fixtures.rs"]
