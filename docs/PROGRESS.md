@@ -10,7 +10,7 @@ The current build lane is:
 
 1. close `M1` parsing and canonicalization debt
 2. finish `M2` replay, rebuild, and merge-authoring closure
-3. expand `M3` reader workflows carefully on top of the now-usable accepted-head inspection, render, and editor-admission-aware profile base
+3. expand `M3` reader workflows carefully on top of the now-usable accepted-head inspection, render, and editor-admission-aware profile base while defining any bounded viewer-in-selector follow-up explicitly instead of leaving it as implicit design debt
 4. keep `M4` narrow while peer-store sync proof grows toward broader interop closure and future production replication behavior
 
 ## Milestone Timeline
@@ -40,7 +40,7 @@ flowchart LR
 |---|---|---|---|
 | `M1` | Mostly complete | shared parsing, canonical helpers, and stricter parser/replay/CLI proof coverage | malformed field-shape depth closure, remaining semantic-edge closure, final wire-path helper convergence, milestone-close proof points |
 | `M2` | Substantially underway | replay, `state_hash`, store rebuild, ancestry-aware render/store verification, narrow write path, and conservative merge authoring with broader structural coverage | stronger replay/store fixtures, broader core reuse, and richer nested/reparenting conflict classification |
-| `M3` | Early partial | accepted-head reader workflows, bundle/store rendering with clearer ancestry context, named fixed-profile reading, editor-admission-aware inspect/render flows, initial filtered/sorted/projected `view` governance inspect/list/publish workflows, and persisted reverse governance indexes | broader governance persistence, richer governance tooling, reader profile ergonomics |
+| `M3` | Early partial | accepted-head reader workflows, bundle/store rendering with clearer ancestry context, named fixed-profile reading, editor-admission-aware inspect/render flows, initial filtered/sorted/projected `view` governance inspect/list/publish workflows, and persisted reverse governance indexes | broader governance persistence, richer governance tooling, reader profile ergonomics, and bounded viewer-in-selector governance follow-up |
 | `M4` | Early partial | wire envelope validation, `OBJECT` body verification, session reachability, store-backed bootstrap, peer-store-driven first-time / incremental sync proofs, and capability-gated optional-message handling | broader peer interop proof and production replication behavior remain |
 | `M5` | Later | selective app-layer growth | depends on stable protocol core and sync |
 
@@ -63,7 +63,7 @@ Legend:
 | 6. Local State and Storage | Mostly done | `M2` | store ingest, rebuild, and indexes exist; rebuild smoke now preserves nested ancestry context in summary reporting, but local transport/safety separation remains |
 | 7. Wire Protocol | Partial | `M4` | canonical wire-envelope parsing, field validation, RFC 3339 checks, minimal-message payload validation, sender checks, session sequencing/head tracking, reachability gating, store-backed bootstrap, `OBJECT` body verification, capability-gated optional-message handling, and a minimal peer-store sync driver now exist in `mycel-core`; broader peer interop remains |
 | 8. Sync Workflow | Partial | `M4` | peer-store-driven first-time and incremental sync now prove shared verify/store flows through `mycel-core`, the CLI, and simulator positive-path coverage, including snapshot-assisted catch-up and announced-view fetching; broader peer interop proof and production replication behavior remain open |
-| 9. Views and Head Selection | Mostly done | `M3` | deterministic selector core, named fixed-profile selection, and editor-admission-aware inspect/render flows exist; dual-role closure remains |
+| 9. Views and Head Selection | Mostly done | `M3` | deterministic selector core, named fixed-profile selection, and editor-admission-aware inspect/render flows exist; dual-role closure remains, and any bounded viewer-in-selector extension is now an explicit follow-up instead of hidden future debt |
 | 10. Merge Generation | Partial | `M2` | replay verification and a conservative local merge-authoring profile exist, including structural move/reorder, new-parent reparenting, simple composed parent-chain coverage, and a broader nested structural matrix, but richer nested/reparenting conflict cases still fall back to manual curation |
 | 11. CLI or API Surface | Partial | `M2` / `M3` / `M4` | verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, persisted governance index query surfaces, transcript-backed `sync pull`, and internal `sync peer-store` all exist, including optional snapshot/view flows; broader replication behavior remains open |
 | 12. Interop Test Minimum | Partial | `M1` / `M2` / `M4` | fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, peer-store first-time / incremental sync proofs, optional-message coverage, and simulator positive-path coverage exist, but broader peer-interop cases remain |

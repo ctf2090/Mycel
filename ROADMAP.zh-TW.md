@@ -285,7 +285,7 @@ Implementation anchors：
 
 ### Current Status
 
-屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render behavior。
+屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render behavior；若未來要把 viewer 受限地接進 `selector_score`，這條 follow-up 現在已被視為 `M3` 內的明確 governance extension lane。
 
 已在進行中或部分完成：
 
@@ -305,6 +305,7 @@ Implementation anchors：
 2. 超出目前初始 filtered / sorted / projected `view` inspection / listing / publication workflow 的專用 governance surfaces
 3. 超出最小具名 fixed-profile surface 的 reader-facing profile ergonomics
 4. 後續可與 wire / sync 對齊的 governance-state tooling
+5. 若 viewer signals 將來要進入 `selector_score`，則 bounded viewer-in-selector 模型、typed signal schema、anti-Sybil-aware weighting 與可追蹤的 decision outputs 仍屬 open gap
 
 Implementation anchors：
 

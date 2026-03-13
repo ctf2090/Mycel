@@ -285,7 +285,7 @@ Goal: add a usable reader-oriented client layer with deterministic accepted-head
 
 ### Current Status
 
-Early partial progress, now with accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render behavior on top of the deterministic selector path.
+Early partial progress, now with accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render behavior on top of the deterministic selector path; bounded viewer-in-selector follow-up is now treated as an explicit governance extension lane inside `M3`.
 
 Already in progress or partially implemented:
 
@@ -305,6 +305,7 @@ Still missing or incomplete:
 2. Reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 3. Richer governance retrieval and publication surfaces beyond the initial filtered/sorted/projected `view` inspection/listing/publication surface
 4. Stronger dedicated governance-state tooling once wire and sync work begin to land
+5. If viewer signals ever enter `selector_score`, a bounded viewer-in-selector model, typed signal schema, anti-Sybil-aware weighting, and traceable decision outputs remain open
 
 ### Milestones in This Phase
 
@@ -326,7 +327,7 @@ Completion gate:
 
 Current read:
 
-Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, plus editor-admission-aware named-profile and store-backed flows.
+Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, plus editor-admission-aware named-profile and store-backed flows; bounded viewer-in-selector follow-up is now an explicit planning lane rather than unstated future design debt.
 
 Already visible in the repo:
 
@@ -346,6 +347,7 @@ Main remaining gaps:
 2. stronger dedicated governance inspection and publication surfaces beyond the initial `view` workflow
 3. reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 4. governance-state tooling that can later align with wire/sync transport
+5. bounded viewer-in-selector governance design if three-role checks expand beyond escalation-only viewers, including signal schema, anti-Sybil gating, and selector trace surfaces
 
 Implementation anchors:
 
