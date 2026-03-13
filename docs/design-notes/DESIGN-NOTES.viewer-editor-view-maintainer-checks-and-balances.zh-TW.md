@@ -307,7 +307,72 @@ viewer 訊號通常不應直接硬選 accepted head。
 
 這些應維持為 profile-level rules，而不是臨時本地 client settings。
 
-## 12. 取捨
+## 12. Viewer 制衡力評估
+
+按照目前這份提案，viewer 的制衡力是非對稱的。
+
+它對 `editor-maintainer` overreach 相對有力，原因是：
+
+- viewers 可以延緩 candidate activation
+- viewers 可以把高爭議 candidate 升級進入 review
+- editors 不能只靠 proposal power 就立即取得 accepted 狀態
+
+但它對 `view-maintainer` 的協同行為則較弱，原因是：
+
+- viewers 仍然不掌握 primary selector weight
+- viewers 不能直接指定 accepted head
+- 一旦 review 壓力被解除，形成協調共識的 view-maintainer 多數通常仍能完成定案
+
+所以目前這版 draft 比較準確的讀法是：
+
+- 對 editors 有較強的程序性制衡
+- 對 view maintainers 有中等的程序性制衡
+- 對公眾直接否決權則維持受限
+
+## 13. 補強方案
+
+如果我們希望 viewer 的制衡更有力、但又不把系統直接改成人氣治理，最相容的補強方式有 3 種：
+
+### 13.1 Mandatory Re-Review
+
+高可信 viewer challenge 可以強制要求 candidate 在生效前多進一輪 view-maintainer review。
+
+取捨：
+
+- viewer check 會明顯變強
+- 爭議案例的採認速度會變慢
+
+### 13.2 High-Threshold Freeze
+
+viewer challenge 可以觸發 `temporary_freeze`，但其門檻必須比一般 review 更高，並搭配更強 anti-Sybil 與 evidence 條件。
+
+取捨：
+
+- civic check 最強
+- 若 anti-Sybil 不夠，濫用風險最高
+
+### 13.3 Corroborated Freeze Release
+
+如果 candidate 已被 freeze，解除 freeze 不應只靠原本那批狹窄 maintainer 聯盟簡單重投。
+
+可行模式：
+
+- 要求更大的 view-maintainer quorum
+- 要求最短 delay window
+- 要求獨立的 challenge resolution 或 moderation review
+
+取捨：
+
+- 可避免自我快速洗白
+- 會增加程序成本
+
+對 Mycel 而言，最平衡的下一步大概會是：
+
+- 仍不讓 viewers 進 primary selector weight
+- 讓 viewer challenge 能強制觸發 mandatory re-review
+- 把 freeze 保留給高信任、高證據門檻的案例
+
+## 14. 取捨
 
 好處：
 
@@ -323,7 +388,7 @@ viewer 訊號通常不應直接硬選 accepted head。
 - challenge spam 與 moderation burden 會變成真問題
 - accepted-head activation 在爭議情況下會較不即時
 
-## 13. 開放問題
+## 15. 開放問題
 
 - viewers 是否應該永遠只有 escalation power，而不直接拿 selector weight？
 - viewer approvals 應只影響 tie-break，還是可提供受限的 score bonus？

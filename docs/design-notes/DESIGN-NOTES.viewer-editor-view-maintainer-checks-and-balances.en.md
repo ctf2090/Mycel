@@ -307,7 +307,72 @@ A future profile could define fields such as:
 
 These should remain profile-level rules, not ad hoc local client settings.
 
-## 12. Tradeoffs
+## 12. Viewer Balancing Strength
+
+Under the current proposal, viewer balancing power is asymmetric.
+
+It is relatively strong against `editor-maintainer` overreach because:
+
+- viewers can slow candidate activation
+- viewers can escalate controversial candidates into review
+- editors cannot rely on proposal power alone to produce immediate accepted status
+
+It is weaker against `view-maintainer` coordination because:
+
+- viewers still do not control primary selector weight
+- viewers cannot directly choose the accepted head
+- a coordinated view-maintainer majority can usually still finalize outcomes once review pressure is cleared
+
+So the current draft should be read as:
+
+- strong procedural checks on editors
+- moderate procedural checks on view maintainers
+- limited direct public veto power
+
+## 13. Reinforcement Options
+
+If stronger viewer balancing is desired without turning the system into raw popularity rule, the most compatible reinforcements are:
+
+### 13.1 Mandatory Re-Review
+
+High-confidence viewer challenge can require an additional round of view-maintainer review before activation.
+
+Tradeoff:
+
+- materially stronger viewer check
+- slower acceptance in contentious cases
+
+### 13.2 High-Threshold Freeze
+
+Viewer challenge can trigger `temporary_freeze`, but only under stricter anti-Sybil and evidence conditions than ordinary review.
+
+Tradeoff:
+
+- strongest civic check
+- highest abuse risk if anti-Sybil is weak
+
+### 13.3 Corroborated Freeze Release
+
+If a freeze occurs, release should require more than the same narrow maintainer coalition that approved the candidate the first time.
+
+Possible patterns:
+
+- a larger view-maintainer quorum
+- a minimum delay window
+- independent challenge resolution or moderation review
+
+Tradeoff:
+
+- prevents trivial self-clearance
+- adds procedural overhead
+
+The most balanced next step for Mycel is likely:
+
+- keep viewers out of primary selector weight
+- let viewer challenge force mandatory re-review
+- reserve freeze for high-trust, high-evidence cases
+
+## 14. Tradeoffs
 
 Benefits:
 
@@ -323,7 +388,7 @@ Costs:
 - challenge spam and moderation burden become real concerns
 - accepted-head activation becomes less immediate in controversial cases
 
-## 13. Open Questions
+## 15. Open Questions
 
 - Should viewers ever receive direct selector weight, or only escalation power?
 - Should viewer approvals affect only tie-breaks, or contribute bounded score bonuses?
