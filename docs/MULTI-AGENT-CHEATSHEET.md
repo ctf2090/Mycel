@@ -95,7 +95,7 @@ Per-command activity:
 1. prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]` before working; it wraps `touch` and prints the canonical before-work timestamp line, and that exact line should appear in user-visible commentary
 2. prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]` after the command completes; it wraps `finish` and prints the canonical after-work timestamp line, and that exact line should appear in user-visible commentary
 3. do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle
-4. use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` only when you need the timestamp line without the registry change, and keep the same single-line `UTC+8` format
+4. use `scripts/agent_timestamp.py before|after --agent <display-id> --agent-uid <agent-uid> --scope <scope-label>` only when you need the timestamp line without the registry change, and paste the emitted line directly instead of hand-writing the format
 5. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
 6. inactive entries older than one hour become stale and release their `display_id`
 7. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
@@ -121,13 +121,13 @@ Background terminal finished with python scripts/agent_registry.py start agt_exa
 Background terminal finished with python scripts/agent_registry.py status agt_example1234
 Background terminal finished with python scripts/agent_work_cycle.py begin agt_example1234 --scope read-agents-md
 
-[2026-03-12 14:50:20 UTC+8] Before work | coding-1 | read-agents-md
+<paste the exact before-work line emitted by `scripts/agent_work_cycle.py begin` here>
 
 ... do the startup/read work for this command cycle ...
 
 Background terminal finished with python scripts/agent_work_cycle.py end agt_example1234 --scope read-agents-md
 
-[2026-03-12 14:51:05 UTC+8] After work | coding-1 | read-agents-md
+<paste the exact after-work line emitted by `scripts/agent_work_cycle.py end` here>
 
 Please read AGENTS.md and treat this chat as the coding role.
 
@@ -163,7 +163,7 @@ Background terminal finished with python scripts/agent_registry.py takeover agt_
 Background terminal finished with python scripts/agent_registry.py status agt_newagent1234
 Background terminal finished with python scripts/agent_work_cycle.py begin agt_newagent1234 --scope m4-snapshot-offer-sync
 
-[2026-03-12 15:20:00 UTC+8] Before work | coding-3 | m4-snapshot-offer-sync
+<paste the exact before-work line emitted by `scripts/agent_work_cycle.py begin` here>
 
 Please take over the existing handoff.
 

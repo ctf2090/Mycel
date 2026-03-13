@@ -134,7 +134,7 @@ Before an agent starts:
 11. update the local registry entry when scope or status changes
 12. prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]` after the command-level work is complete; it wraps `finish` together with the canonical after-work timestamp line, and that exact line should be surfaced in user-visible commentary
 13. do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle
-14. use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` only when you need the timestamp line without the registry transition, and keep the same single-line `UTC+8` format
+14. use `scripts/agent_timestamp.py before|after --agent <display-id> --agent-uid <agent-uid> --scope <scope-label>` only when you need the timestamp line without the registry transition, and paste the emitted line directly instead of restating the format in docs or chat text
 15. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
 
 When the chat itself starts, use one short self-label line first, such as:

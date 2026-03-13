@@ -324,7 +324,7 @@ Keep startup output narrow:
 5. before ending that completed work cycle, append or update one mailbox handoff entry in the agent's declared mailbox so the latest state for the cycle is captured
 6. after that command's work is complete, prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py finish <agent-ref>` together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
 7. do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle; `begin` already performs `touch`, and `end` already performs `finish`
-8. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` and keep the same single-line `UTC+8` format; do not hand-write or replace it with dual-timezone text
+8. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --agent-uid <agent-uid> --scope <scope-label>` and paste the emitted line directly; do not hand-write, reformat, or replace it with dual-timezone text
 9. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
 10. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
 11. when an agent wants a refreshable task list, use `scripts/agent_registry.py work-checklist <agent-ref>`; by default it writes `.agent-local/agents/<agent_uid>/work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
@@ -404,7 +404,7 @@ Background terminal finished with python scripts/agent_registry.py takeover agt_
 Background terminal finished with python scripts/agent_registry.py status agt_newagent1234
 Background terminal finished with python scripts/agent_work_cycle.py begin agt_newagent1234 --scope m4-snapshot-offer-sync
 
-[2026-03-12 15:20:00 UTC+8] Before work | coding-3 | m4-snapshot-offer-sync
+<paste the exact before-work line emitted by `scripts/agent_work_cycle.py begin` here>
 
 Please take over the existing handoff.
 
