@@ -92,7 +92,7 @@
 - [x] 维护 `author -> patches` 索引。
 - [x] 维护 `view_id -> governance signal contents` 索引。
 - [x] 维护 `profile_id -> selected document heads` 索引。
-- [ ] 将本地 transport 和 safety policy 与可复制的协议对象分开持久化。
+- [x] 将本地 transport 和 safety policy 与可复制的协议对象分开持久化。
 - [x] 不让自由裁量的本地 policy 进入 active accepted-head 路径。
 - [x] 支持只依赖 object store 就能重建 indexes。
 

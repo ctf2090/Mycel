@@ -92,7 +92,7 @@ Defer if needed:
 - [x] Maintain an index for `author -> patches`.
 - [x] Maintain an index for `view_id -> governance signal contents`.
 - [x] Maintain an index for `profile_id -> selected document heads`.
-- [ ] Persist local transport and safety policy separately from replicated protocol objects.
+- [x] Persist local transport and safety policy separately from replicated protocol objects.
 - [x] Keep discretionary local policy out of the active accepted-head path.
 - [x] Support rebuilding indexes from the object store alone.
 

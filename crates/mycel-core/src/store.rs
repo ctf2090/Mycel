@@ -27,6 +27,25 @@ pub struct ViewGovernanceRecord {
     pub documents: BTreeMap<String, String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LocalStorePolicy {
+    pub version: String,
+    #[serde(default)]
+    pub transport: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub safety: BTreeMap<String, Value>,
+}
+
+impl Default for LocalStorePolicy {
+    fn default() -> Self {
+        Self {
+            version: "mycel-local-policy/0.1".to_string(),
+            transport: BTreeMap::new(),
+            safety: BTreeMap::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StoreIndexManifest {
     pub version: String,
@@ -90,6 +109,7 @@ pub struct StoreInitSummary {
     pub store_root: PathBuf,
     pub status: String,
     pub index_manifest_path: PathBuf,
+    pub local_policy_path: PathBuf,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
 }
@@ -279,6 +299,7 @@ pub fn ingest_store_from_path(
     let source = normalize_path(source);
     let store_root = normalize_path(store_root);
     ensure_store_root(&store_root)?;
+    ensure_local_store_policy_file(&store_root)?;
 
     let mut summary = StoreIngestSummary::new(&source, &store_root);
     let discovery = discover_store_paths(&source, "ingest source")?;
@@ -369,6 +390,7 @@ pub fn initialize_store_root(store_root: &Path) -> Result<StoreInitSummary, Stor
             indexes_dir.display()
         ))
     })?;
+    let local_policy_path = ensure_local_store_policy_file(&store_root)?;
 
     let manifest = StoreIndexManifest {
         version: "mycel-store-index/0.1".to_string(),
@@ -389,6 +411,7 @@ pub fn initialize_store_root(store_root: &Path) -> Result<StoreInitSummary, Stor
         store_root,
         status: "ok".to_string(),
         index_manifest_path: manifest_path,
+        local_policy_path,
         notes: Vec::new(),
         errors: Vec::new(),
     })
@@ -407,6 +430,7 @@ pub fn write_object_value_to_store(
 ) -> Result<StoreWriteSummary, StoreRebuildError> {
     let store_root = normalize_path(store_root);
     ensure_store_root(&store_root)?;
+    ensure_local_store_policy_file(&store_root)?;
 
     let loaded_object = loaded_object_from_inline_value(value)?;
     let object_index = load_object_index_from_store(&store_root)?;
@@ -502,8 +526,74 @@ fn indexes_root(store_root: &Path) -> PathBuf {
     store_root.join("indexes")
 }
 
+fn local_root(store_root: &Path) -> PathBuf {
+    store_root.join("local")
+}
+
 fn store_index_manifest_path(store_root: &Path) -> PathBuf {
     indexes_root(store_root).join("manifest.json")
+}
+
+pub fn local_store_policy_path(store_root: &Path) -> PathBuf {
+    local_root(store_root).join("policy.json")
+}
+
+pub fn persist_local_store_policy(
+    store_root: &Path,
+    policy: &LocalStorePolicy,
+) -> Result<PathBuf, StoreRebuildError> {
+    let store_root = normalize_path(store_root);
+    ensure_store_root(&store_root)?;
+
+    let local_dir = local_root(&store_root);
+    fs::create_dir_all(&local_dir).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to create local policy directory {}: {error}",
+            local_dir.display()
+        ))
+    })?;
+
+    let policy_path = local_store_policy_path(&store_root);
+    let rendered = serde_json::to_string_pretty(policy).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to serialize local store policy {}: {error}",
+            policy_path.display()
+        ))
+    })?;
+    fs::write(&policy_path, rendered).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to write local store policy {}: {error}",
+            policy_path.display()
+        ))
+    })?;
+
+    Ok(policy_path)
+}
+
+pub fn load_local_store_policy(store_root: &Path) -> Result<LocalStorePolicy, StoreRebuildError> {
+    let store_root = normalize_path(store_root);
+    let policy_path = local_store_policy_path(&store_root);
+    let content = fs::read_to_string(&policy_path).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to read local store policy {}: {error}",
+            policy_path.display()
+        ))
+    })?;
+    parse_json_strict(&content).map_err(|error| {
+        StoreRebuildError::new(format!(
+            "failed to parse local store policy {}: {error}",
+            policy_path.display()
+        ))
+    })
+}
+
+fn ensure_local_store_policy_file(store_root: &Path) -> Result<PathBuf, StoreRebuildError> {
+    let policy_path = local_store_policy_path(store_root);
+    if policy_path.exists() {
+        return Ok(policy_path);
+    }
+
+    persist_local_store_policy(store_root, &LocalStorePolicy::default())
 }
 
 fn write_store_index_manifest(
@@ -682,7 +772,10 @@ fn discover_store_paths(
         });
     }
 
-    let looks_like_store_root = objects_root(target).exists() || indexes_root(target).exists();
+    let looks_like_store_root = objects_root(target).exists()
+        || indexes_root(target).exists()
+        || local_root(target).exists()
+        || local_store_policy_path(target).exists();
     let json_paths = if looks_like_store_root {
         let objects_dir = objects_root(target);
         if objects_dir.exists() {
@@ -1049,6 +1142,7 @@ pub fn load_stored_object_value(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::fs;
     use std::path::PathBuf;
 
@@ -1057,8 +1151,10 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::{
-        ingest_store_from_path, load_store_index_manifest, load_stored_object_value,
-        rebuild_store_from_path,
+        ingest_store_from_path, initialize_store_root, load_local_store_policy,
+        load_store_index_manifest, load_store_object_index, load_stored_object_value,
+        local_store_policy_path, persist_local_store_policy, rebuild_store_from_path,
+        LocalStorePolicy,
     };
     use crate::canonical::{prefixed_canonical_hash, signed_payload_bytes};
     use crate::protocol::recompute_object_id;
@@ -1805,6 +1901,102 @@ mod tests {
         assert_eq!(manifest.stored_object_count, 1);
 
         let _ = fs::remove_dir_all(source_dir);
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn initialize_store_root_persists_local_policy_outside_manifest() {
+        let store_dir = write_temp_dir("init-local-policy-store");
+
+        let summary = initialize_store_root(&store_dir).expect("store init should succeed");
+        assert!(summary.is_ok(), "expected ok init summary, got {summary:?}");
+        assert!(summary.local_policy_path.exists());
+        assert_eq!(
+            summary.local_policy_path,
+            local_store_policy_path(&store_dir)
+        );
+
+        let policy =
+            load_local_store_policy(&store_dir).expect("default local policy should be readable");
+        assert_eq!(policy, LocalStorePolicy::default());
+
+        let manifest =
+            load_store_index_manifest(&store_dir).expect("manifest should be readable after init");
+        let manifest_value =
+            serde_json::to_value(&manifest).expect("manifest should serialize to JSON");
+        assert!(manifest_value.get("transport").is_none());
+        assert!(manifest_value.get("safety").is_none());
+
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn rebuild_store_preserves_existing_local_policy_file() {
+        let source_dir = write_temp_dir("rebuild-local-policy-source");
+        let store_dir = write_temp_dir("rebuild-local-policy-store");
+        let patch = signed_object(
+            json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "doc_id": "doc:local-policy",
+                "base_revision": "rev:genesis-null",
+                "timestamp": 1u64,
+                "ops": []
+            }),
+            "author",
+            "patch_id",
+            "patch",
+        );
+        fs::write(
+            source_dir.join("patch.json"),
+            serde_json::to_string_pretty(&patch).expect("patch should serialize"),
+        )
+        .expect("patch should write");
+
+        initialize_store_root(&store_dir).expect("store init should succeed");
+        let custom_policy = LocalStorePolicy {
+            version: "mycel-local-policy/0.1".to_string(),
+            transport: BTreeMap::from([(
+                "preferred_peer".to_string(),
+                Value::String("node:relay-a".to_string()),
+            )]),
+            safety: BTreeMap::from([("require_manual_review".to_string(), Value::Bool(true))]),
+        };
+        persist_local_store_policy(&store_dir, &custom_policy)
+            .expect("custom local policy should persist");
+        let original_policy_bytes = fs::read(&local_store_policy_path(&store_dir))
+            .expect("local policy should be readable before rebuild");
+
+        ingest_store_from_path(&source_dir, &store_dir).expect("ingest should succeed");
+        rebuild_store_from_path(&store_dir).expect("rebuild should succeed");
+
+        let reloaded_policy =
+            load_local_store_policy(&store_dir).expect("custom local policy should still load");
+        assert_eq!(reloaded_policy, custom_policy);
+        let rebuilt_policy_bytes = fs::read(local_store_policy_path(&store_dir))
+            .expect("local policy should be readable after rebuild");
+        assert_eq!(rebuilt_policy_bytes, original_policy_bytes);
+
+        let manifest = load_store_index_manifest(&store_dir)
+            .expect("manifest should be readable after rebuild");
+        let manifest_value =
+            serde_json::to_value(&manifest).expect("manifest should serialize to JSON");
+        assert!(manifest_value.get("transport").is_none());
+        assert!(manifest_value.get("safety").is_none());
+
+        let _ = fs::remove_dir_all(source_dir);
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn load_store_object_index_ignores_local_policy_before_objects_exist() {
+        let store_dir = write_temp_dir("load-empty-store-index");
+
+        initialize_store_root(&store_dir).expect("store init should succeed");
+        let object_index =
+            load_store_object_index(&store_dir).expect("store object index should load");
+        assert!(object_index.is_empty());
+
         let _ = fs::remove_dir_all(store_dir);
     }
 }

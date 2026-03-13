@@ -179,6 +179,7 @@ fn print_store_init_text(summary: &StoreInitSummary) -> i32 {
     println!("store init: {}", summary.status);
     println!("store root: {}", summary.store_root.display());
     println!("index manifest: {}", summary.index_manifest_path.display());
+    println!("local policy: {}", summary.local_policy_path.display());
     0
 }
 
