@@ -69,6 +69,12 @@
         "type": "object"
       }
     },
+    "viewer_signals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/viewer_signal"
+      }
+    },
     "critical_violations": {
       "type": "array",
       "items": {
@@ -124,6 +130,146 @@
         "weight_cap_per_key": {
           "type": "integer",
           "minimum": 1
+        },
+        "viewer_score": {
+          "$ref": "#/$defs/viewer_score"
+        }
+      }
+    },
+    "viewer_score": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "bounded-bonus-penalty"
+          ]
+        },
+        "bonus_cap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "penalty_cap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signal_weight_cap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "admission_required": {
+          "type": "boolean"
+        },
+        "min_identity_tier": {
+          "type": "string",
+          "enum": [
+            "none",
+            "basic",
+            "strong"
+          ]
+        },
+        "min_reputation_band": {
+          "type": "string",
+          "enum": [
+            "new",
+            "established",
+            "trusted"
+          ]
+        }
+      }
+    },
+    "viewer_signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_id",
+        "viewer_id",
+        "candidate_revision_id",
+        "signal_type",
+        "confidence_level",
+        "created_at",
+        "expires_at"
+      ],
+      "properties": {
+        "signal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "viewer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_revision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signal_type": {
+          "type": "string",
+          "enum": [
+            "approval",
+            "objection",
+            "challenge"
+          ]
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expires_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signal_status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "expired",
+            "withdrawn",
+            "resolved"
+          ]
+        },
+        "viewer_identity_tier": {
+          "type": "string",
+          "enum": [
+            "none",
+            "basic",
+            "strong"
+          ]
+        },
+        "viewer_admission_status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "admitted",
+            "restricted",
+            "revoked"
+          ]
+        },
+        "viewer_reputation_band": {
+          "type": "string",
+          "enum": [
+            "new",
+            "established",
+            "trusted"
+          ]
         }
       }
     },
@@ -174,6 +320,10 @@
           "minimum": 0
         },
         "verified_view_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "viewer_signal_count": {
           "type": "integer",
           "minimum": 0
         }
