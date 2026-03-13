@@ -138,7 +138,7 @@
 - [x] 不提供会改变 active accepted head 的自由裁量本地 policy controls。
 - [ ] 如果支持多个固定 profiles，就必须显式列举，而不是允许 ad hoc local profiles。
 - [x] 确保仅有 editor-maintainer 身份不会自动获得 selector weight。
-- [ ] 如果支持 dual-role keys，必须分别验证 editor-maintainer 和 view-maintainer 的准入。
+- [x] 如果支持 dual-role keys，必须分别验证 editor-maintainer 和 view-maintainer 的准入。
 
 ## 10. Merge Generation
 

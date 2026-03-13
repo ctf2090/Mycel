@@ -142,7 +142,7 @@
 - [ ] 若 viewer signals 可影響 `selector_score`，必須定義具 evidence 與 expiry semantics 的 `approval`、`objection`、`challenge` typed signals。
 - [ ] 若 viewer signals 可影響 `selector_score`，必須以明確的 anti-Sybil、admission 或 reputation 規則來限制 eligibility 與 effective signal weight。
 - [ ] 若 viewer signals 可影響 `selector_score`，必須以穩定 typed arrays 與 traces 呈現 viewer contribution，避免把 maintainer governance 壓扁成 raw public preference。
-- [ ] 若支援 dual-role keys，必須分別驗證 editor-maintainer 與 view-maintainer 準入。
+- [x] 若支援 dual-role keys，必須分別驗證 editor-maintainer 與 view-maintainer 準入。
 
 ## 10. Merge Generation
 

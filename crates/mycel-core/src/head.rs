@@ -63,6 +63,7 @@ pub struct EditorCandidateSummary {
 #[derive(Debug, Clone, Serialize)]
 pub struct EffectiveWeightSummary {
     pub maintainer: String,
+    pub view_admitted: bool,
     pub admitted: bool,
     pub effective_weight: u64,
     pub valid_view_counts: Vec<EpochCountSummary>,
@@ -195,6 +196,8 @@ struct HeadInspectProfile {
     #[serde(default)]
     editor_admission: EditorAdmissionProfile,
     #[serde(default)]
+    view_admission: ViewAdmissionProfile,
+    #[serde(default)]
     viewer_score: ViewerScoreProfile,
 }
 
@@ -213,6 +216,22 @@ enum EditorCandidateMode {
     Open,
     AdmittedOnly,
     Mixed,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ViewAdmissionProfile {
+    #[serde(default)]
+    mode: ViewMaintainerAdmissionMode,
+    #[serde(default)]
+    admitted_keys: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+enum ViewMaintainerAdmissionMode {
+    #[default]
+    Open,
+    AdmittedOnly,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -1623,6 +1642,7 @@ fn compute_effective_weights(
     let mut weights = HashMap::new();
     let mut summaries = Vec::new();
     let mut admitted_maintainers = 0_usize;
+    let mut view_admitted_maintainers = 0_usize;
     let mut penalized_maintainers = 0_usize;
     let mut zero_weight_maintainers = 0_usize;
     let mut max_effective_weight = 0_u64;
@@ -1636,9 +1656,14 @@ fn compute_effective_weights(
             .get(&maintainer)
             .cloned()
             .unwrap_or_default();
+        let view_admitted = is_view_maintainer_admitted(&maintainer, &profile.view_admission);
         let effective_weight =
-            effective_weight_for_epoch(&counts, &violations, selector_epoch, profile);
-        let admitted = is_admitted_in_epoch(&counts, &violations, selector_epoch, profile);
+            effective_weight_for_epoch(&maintainer, &counts, &violations, selector_epoch, profile);
+        let admitted =
+            view_admitted && is_admitted_in_epoch(&counts, &violations, selector_epoch, profile);
+        if view_admitted {
+            view_admitted_maintainers += 1;
+        }
         if admitted {
             admitted_maintainers += 1;
         }
@@ -1652,6 +1677,7 @@ fn compute_effective_weights(
         weights.insert(maintainer.clone(), effective_weight);
         summaries.push(EffectiveWeightSummary {
             maintainer: maintainer.clone(),
+            view_admitted,
             admitted,
             effective_weight,
             valid_view_counts: to_epoch_count_summaries(&counts),
@@ -1659,17 +1685,28 @@ fn compute_effective_weights(
         });
     }
 
-    let trace = vec![DecisionTraceEntry {
-        step: "effective_weight".to_string(),
-        detail: format!(
-            "maintainers={} admitted={} penalized={} zero_weight={} max_effective_weight={}",
-            summaries.len(),
-            admitted_maintainers,
-            penalized_maintainers,
-            zero_weight_maintainers,
-            max_effective_weight
-        ),
-    }];
+    let trace = vec![
+        DecisionTraceEntry {
+            step: "view_admission".to_string(),
+            detail: format!(
+                "mode={} maintainers={} view_admitted={}",
+                view_admission_mode_label(&profile.view_admission.mode),
+                summaries.len(),
+                view_admitted_maintainers
+            ),
+        },
+        DecisionTraceEntry {
+            step: "effective_weight".to_string(),
+            detail: format!(
+                "maintainers={} admitted={} penalized={} zero_weight={} max_effective_weight={}",
+                summaries.len(),
+                admitted_maintainers,
+                penalized_maintainers,
+                zero_weight_maintainers,
+                max_effective_weight
+            ),
+        },
+    ];
 
     (weights, summaries, trace)
 }
@@ -1874,11 +1911,16 @@ fn to_epoch_count_summaries(counts: &BTreeMap<i64, u64>) -> Vec<EpochCountSummar
 }
 
 fn effective_weight_for_epoch(
+    maintainer: &str,
     counts: &BTreeMap<i64, u64>,
     violations: &BTreeMap<i64, u64>,
     epoch: i64,
     profile: &HeadInspectProfile,
 ) -> u64 {
+    if !is_view_maintainer_admitted(maintainer, &profile.view_admission) {
+        return 0;
+    }
+
     if !is_admitted_in_epoch(counts, violations, epoch, profile) {
         return 0;
     }
@@ -1887,7 +1929,8 @@ fn effective_weight_for_epoch(
         return 1;
     }
 
-    let previous_weight = effective_weight_for_epoch(counts, violations, epoch - 1, profile);
+    let previous_weight =
+        effective_weight_for_epoch(maintainer, counts, violations, epoch - 1, profile);
     let previous_valid_views = counts.get(&(epoch - 1)).copied().unwrap_or(0);
     let previous_critical_violations = violations.get(&(epoch - 1)).copied().unwrap_or(0);
     let delta = if previous_critical_violations > 0 {
@@ -1903,6 +1946,23 @@ fn effective_weight_for_epoch(
         0,
         profile.weight_cap_per_key as i64,
     )
+}
+
+fn is_view_maintainer_admitted(maintainer: &str, admission: &ViewAdmissionProfile) -> bool {
+    match admission.mode {
+        ViewMaintainerAdmissionMode::Open => true,
+        ViewMaintainerAdmissionMode::AdmittedOnly => admission
+            .admitted_keys
+            .iter()
+            .any(|candidate| candidate == maintainer),
+    }
+}
+
+fn view_admission_mode_label(mode: &ViewMaintainerAdmissionMode) -> &'static str {
+    match mode {
+        ViewMaintainerAdmissionMode::Open => "open",
+        ViewMaintainerAdmissionMode::AdmittedOnly => "admitted-only",
+    }
 }
 
 fn is_admitted_in_epoch(

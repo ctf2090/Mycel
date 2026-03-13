@@ -130,6 +130,12 @@ The cleanest rule boundary is:
 
 This reduces accidental concentration of power.
 
+Current implementation baseline:
+
+- `head inspect` and `head render` profiles expose separate `editor_admission` and `view_admission` gates
+- selector weight is granted only when the view-maintainer path passes its own admission rules in addition to the existing view-history and penalty checks
+- editor-maintainer status alone remains insufficient to create accepted-head influence
+
 ## 6. Accepted-Head Selection
 
 Accepted-head selection should continue to use:

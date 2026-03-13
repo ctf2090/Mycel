@@ -130,6 +130,12 @@ revision 產出本身不應直接變成 selector weight。
 
 這樣能降低權力意外集中。
 
+目前的實作 baseline：
+
+- `head inspect` 與 `head render` profile 會分開暴露 `editor_admission` 與 `view_admission` 兩條 gate
+- selector weight 只有在 view-maintainer 路徑通過自己的 admission 規則，且同時滿足既有的 view-history 與 penalty 檢查時才會成立
+- editor-maintainer 身分本身仍不足以產生 accepted-head influence
+
 ## 6. Accepted-Head Selection
 
 accepted-head selection 仍應使用：
