@@ -267,9 +267,9 @@ def build_updated_mailbox(existing_content: str, entry_text: str, *, supersede_o
     parts: list[str] = []
     if preamble:
         parts.append(preamble)
-    parts.append(entry_text.strip())
     if body:
         parts.append(body)
+    parts.append(entry_text.strip())
     return "\n\n".join(parts).rstrip() + "\n", superseded_count
 
 

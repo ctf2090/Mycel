@@ -130,7 +130,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertIn("  - new state", mailbox)
         self.assertEqual(1, mailbox.count("- Status: open"))
         self.assertEqual(1, mailbox.count("- Status: superseded"))
-        self.assertLess(mailbox.index("- Scope: new-scope"), mailbox.index("- Scope: older-scope"))
+        self.assertLess(mailbox.index("- Scope: older-scope"), mailbox.index("- Scope: new-scope"))
 
     def test_create_doc_continuation_uses_doc_template(self) -> None:
         self.write_registry(

@@ -8,7 +8,7 @@ For agent discovery and role lookup, read [AGENT-REGISTRY.md](./AGENT-REGISTRY.m
 
 Live mailbox files are local and not committed. Each agent should use the mailbox path declared in `.agent-local/agents.json`.
 
-Use `python3 scripts/mailbox_handoff.py create ...` when you want the tool to render a tracked mailbox template for you. For open current-state entries, the tool prepends the new entry and automatically marks older `Status: open` entries in that mailbox as `superseded`.
+Use `python3 scripts/mailbox_handoff.py create ...` when you want the tool to render a tracked mailbox template for you. For open current-state entries, the tool appends the new entry and automatically marks older `Status: open` entries in that mailbox as `superseded`.
 
 The directory is ignored by git through `.gitignore`, except for tracked template examples such as `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`, `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`, `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`, and `.agent-local/mailboxes/EXAMPLE-doc-continuation-note.md`.
 
@@ -46,7 +46,7 @@ Shared fallback pattern:
 - `.agent-local/doc-to-coding.md`
   clarification requests, ambiguity reports, missing-source warnings, and doc-triggered follow-up requests
 
-Keep the newest entry at the top of each mailbox file.
+Append new entries to the end of each mailbox file so the mailbox reads in chronological order from top to bottom.
 
 If the file does not exist yet, create it locally when the first message is needed.
 
