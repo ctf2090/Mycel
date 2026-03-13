@@ -148,7 +148,35 @@ Context line that should not be copied.
         result = json.loads(self.run_cli("agt_doc", "docs/source.md", "--json").stdout)
         content = (self.root / result["output"]).read_text(encoding="utf-8")
 
+        self.assertIn("- Parent bullet", content)
         self.assertIn("  - [ ] Child item <!-- item-id: nested.child -->", content)
+
+    def test_keeps_parent_group_bullets_for_nested_bootstrap_items(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "AGENTS.md",
+            """# Repo Working Agreements
+
+## New chat bootstrap
+- Scan the repo layout with `rg --files` for fast file discovery. <!-- item-id: bootstrap.repo-layout -->
+- Dev setup:
+  - Before repeating environment checks, read `.agent-local/dev-setup-status.md` if it exists. <!-- item-id: bootstrap.read-dev-setup-status -->
+- Agent startup:
+  - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use `scripts/agent_registry.py` subcommands as defined there. <!-- item-id: bootstrap.read-agent-registry -->
+
+## Work Cycle Workflow
+- Workflow one <!-- item-id: workflow.one -->
+""",
+        )
+
+        result = json.loads(self.run_cli("agt_doc", "AGENTS.md", "--json").stdout)
+        bootstrap_content = (self.root / result["bootstrap_output"]).read_text(encoding="utf-8")
+
+        self.assertIn("- [ ] Scan the repo layout with `rg --files` for fast file discovery. <!-- item-id: bootstrap.repo-layout -->", bootstrap_content)
+        self.assertIn("- Dev setup:", bootstrap_content)
+        self.assertIn("  - [ ] Before repeating environment checks, read `.agent-local/dev-setup-status.md` if it exists. <!-- item-id: bootstrap.read-dev-setup-status -->", bootstrap_content)
+        self.assertIn("- Agent startup:", bootstrap_content)
+        self.assertIn("  - [ ] For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use `scripts/agent_registry.py` subcommands as defined there. <!-- item-id: bootstrap.read-agent-registry -->", bootstrap_content)
 
     def test_agents_checklist_splits_bootstrap_and_workcycle_outputs(self) -> None:
         self.write_registry()

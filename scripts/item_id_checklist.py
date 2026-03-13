@@ -128,6 +128,34 @@ def normalize_item_line(line: str) -> tuple[str, bool]:
     return f"{indent}- [ ] {text} {comment}", True
 
 
+def list_item_indent(line: str) -> int | None:
+    before_comment = ITEM_ID_COMMENT_RE.sub("", line).rstrip()
+    list_match = LIST_PREFIX_RE.match(before_comment)
+    if list_match is None:
+        return None
+    return len(list_match.group("indent"))
+
+
+def include_parent_list_items(lines: list[str], item_index: int, selected_indices: set[int]) -> None:
+    threshold = list_item_indent(lines[item_index])
+    if threshold is None:
+        return
+
+    for parent_index in range(item_index - 1, -1, -1):
+        line = lines[parent_index]
+        if HEADING_RE.match(line):
+            break
+        if not line.strip():
+            break
+
+        parent_indent = list_item_indent(line)
+        if parent_indent is None or parent_indent >= threshold:
+            continue
+
+        selected_indices.add(parent_index)
+        threshold = parent_indent
+
+
 def collect_relevant_lines(lines: list[str]) -> tuple[list[str], int]:
     selected_indices: set[int] = set()
     heading_stack: list[tuple[int, int]] = []
@@ -154,6 +182,7 @@ def collect_relevant_lines(lines: list[str]) -> tuple[list[str], int]:
             selected_indices.add(root_heading_index)
         if heading_stack:
             selected_indices.add(heading_stack[-1][1])
+        include_parent_list_items(lines, index, selected_indices)
 
     rendered_lines: list[str] = []
     previous_was_heading = False
