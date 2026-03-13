@@ -85,6 +85,14 @@ def checklist_rel_for(agent_uid: str, source_path: Path) -> str:
     return f".agent-local/agents/{agent_uid}/checklists/{stem}-checklist.md"
 
 
+def agents_bootstrap_checklist_rel(agent_uid: str) -> str:
+    return f".agent-local/agents/{agent_uid}/checklists/AGENTS-bootstrap-checklist.md"
+
+
+def agents_workcycle_checklist_rel(agent_uid: str, batch_num: int) -> str:
+    return f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-{batch_num}.md"
+
+
 def resolve_checklist_path(path_value: str | None, *, agent_uid: str, source_path: Path) -> Path:
     if path_value:
         candidate = resolve_path(path_value)
@@ -202,54 +210,108 @@ def split_heading_blocks(lines: list[str]) -> tuple[list[str], list[tuple[str, l
     return root_lines, blocks
 
 
-def extract_existing_body_lines(output_path: Path) -> list[str]:
-    if not output_path.exists():
-        return []
-
-    lines = output_path.read_text(encoding="utf-8").splitlines()
-    for index, line in enumerate(lines):
-        heading_match = HEADING_RE.match(line)
-        if heading_match is None:
-            continue
-        if heading_match.group("text").strip() == "Agent Item-ID Checklist Copy":
-            continue
-        return lines[index:]
-    return []
-
-
-def materialize_agents_checklist(
+def render_checklist_document(
     *,
-    source_lines: list[str],
-    output_path: Path,
-) -> list[str]:
-    root_lines, source_blocks = split_heading_blocks(source_lines)
+    agent_uid: str,
+    display_id: str | None,
+    source_path: Path,
+    body_lines: list[str],
+    generated_at: str,
+) -> str:
+    return "\n".join(
+        [
+            "# Agent Item-ID Checklist Copy",
+            "",
+            f"- Agent UID: `{agent_uid}`",
+            f"- Display ID: `{display_id or 'none'}`",
+            f"- Source: `{relative_to_root(source_path)}`",
+            f"- Generated at: `{generated_at}`",
+            "- This is the agent's personal working copy; update checks here instead of the tracked source file.",
+            "- Status meanings: `- [ ]` not checked, `- [X]` checked and completed without problems, `- [!]` checked but problems were found.",
+            "- When an item is marked `- [!]`, add an indented subitem immediately below it explaining the problem.",
+            "",
+            *body_lines,
+            "",
+        ]
+    )
+
+
+def next_agents_workcycle_batch_num(agent_uid: str) -> int:
+    checklists_dir = (AGENT_DIR / agent_uid / "checklists").resolve()
+    if not checklists_dir.exists():
+        return 1
+
+    pattern = re.compile(r"^AGENTS-workcycle-checklist-(?P<batch>\d+)\.md$")
+    max_batch = 0
+    for path in checklists_dir.iterdir():
+        match = pattern.match(path.name)
+        if match is None:
+            continue
+        max_batch = max(max_batch, int(match.group("batch")))
+    return max_batch + 1
+
+
+def materialize_agents_checklists(
+    *,
+    agent_uid: str,
+    display_id: str | None,
+    source_path: Path,
+    normalized_lines: list[str],
+    item_count: int,
+) -> dict[str, Any]:
+    root_lines, source_blocks = split_heading_blocks(normalized_lines)
     source_block_map = {title: lines for title, lines in source_blocks}
-    source_bootstrap = source_block_map.get("New chat bootstrap")
-    source_workflow = source_block_map.get("Work Cycle Workflow")
+    bootstrap_block = source_block_map.get("New chat bootstrap")
+    workcycle_block = source_block_map.get("Work Cycle Workflow")
 
-    if source_bootstrap is None or source_workflow is None:
-        return source_lines
+    if bootstrap_block is None or workcycle_block is None:
+        raise ItemIdChecklistError("AGENTS.md checklist generation requires both bootstrap and workcycle sections")
 
-    existing_body_lines = extract_existing_body_lines(output_path)
-    existing_root_lines, existing_blocks = split_heading_blocks(existing_body_lines)
-    existing_bootstrap_blocks = [lines for title, lines in existing_blocks if title == "New chat bootstrap"]
-    existing_workflow_blocks = [lines for title, lines in existing_blocks if title == "Work Cycle Workflow"]
+    generated_at = utc_now()
+    bootstrap_path = resolve_path(agents_bootstrap_checklist_rel(agent_uid))
+    bootstrap_path.parent.mkdir(parents=True, exist_ok=True)
+    bootstrap_body = [*root_lines]
+    if bootstrap_body and bootstrap_body[-1] != "":
+        bootstrap_body.append("")
+    bootstrap_body.extend(bootstrap_block)
+    bootstrap_path.write_text(
+        render_checklist_document(
+            agent_uid=agent_uid,
+            display_id=display_id,
+            source_path=source_path,
+            body_lines=bootstrap_body,
+            generated_at=generated_at,
+        ),
+        encoding="utf-8",
+    )
 
-    rendered: list[str] = []
-    rendered.extend(existing_root_lines or root_lines)
+    batch_num = next_agents_workcycle_batch_num(agent_uid)
+    workcycle_path = resolve_path(agents_workcycle_checklist_rel(agent_uid, batch_num))
+    workcycle_path.parent.mkdir(parents=True, exist_ok=True)
+    workcycle_body = [*root_lines]
+    if workcycle_body and workcycle_body[-1] != "":
+        workcycle_body.append("")
+    workcycle_body.extend(workcycle_block)
+    workcycle_path.write_text(
+        render_checklist_document(
+            agent_uid=agent_uid,
+            display_id=display_id,
+            source_path=source_path,
+            body_lines=workcycle_body,
+            generated_at=generated_at,
+        ),
+        encoding="utf-8",
+    )
 
-    bootstrap_block = existing_bootstrap_blocks[0] if existing_bootstrap_blocks else source_bootstrap
-    if rendered and rendered[-1] != "":
-        rendered.append("")
-    rendered.extend(bootstrap_block)
-
-    workflow_blocks = existing_workflow_blocks + [source_workflow]
-    for workflow_block in workflow_blocks:
-        if rendered and rendered[-1] != "":
-            rendered.append("")
-        rendered.extend(workflow_block)
-
-    return rendered
+    return {
+        "agent_uid": agent_uid,
+        "display_id": display_id,
+        "source": relative_to_root(source_path),
+        "bootstrap_output": relative_to_root(bootstrap_path),
+        "workcycle_output": relative_to_root(workcycle_path),
+        "batch_num": batch_num,
+        "item_count": item_count,
+    }
 
 
 def materialize_checklist(
@@ -270,27 +332,26 @@ def materialize_checklist(
     if item_count == 0:
         raise ItemIdChecklistError(f"source file has no item-id markers: {relative_to_root(source_path)}")
 
+    if source_path.name == "AGENTS.md":
+        return materialize_agents_checklists(
+            agent_uid=agent_uid,
+            display_id=display_id,
+            source_path=source_path,
+            normalized_lines=normalized_lines,
+            item_count=item_count,
+        )
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    rendered_lines = (
-        materialize_agents_checklist(source_lines=normalized_lines, output_path=output_path)
-        if source_path.name == "AGENTS.md"
-        else normalized_lines
+    output_path.write_text(
+        render_checklist_document(
+            agent_uid=agent_uid,
+            display_id=display_id,
+            source_path=source_path,
+            body_lines=normalized_lines,
+            generated_at=utc_now(),
+        ),
+        encoding="utf-8",
     )
-    rendered = [
-        "# Agent Item-ID Checklist Copy",
-        "",
-        f"- Agent UID: `{agent_uid}`",
-        f"- Display ID: `{display_id or 'none'}`",
-        f"- Source: `{relative_to_root(source_path)}`",
-        f"- Generated at: `{utc_now()}`",
-        "- This is the agent's personal working copy; update checks here instead of the tracked source file.",
-        "- Status meanings: `- [ ]` not checked, `- [X]` checked and completed without problems, `- [!]` checked but problems were found.",
-        "- When an item is marked `- [!]`, add an indented subitem immediately below it explaining the problem.",
-        "",
-        *rendered_lines,
-        "",
-    ]
-    output_path.write_text("\n".join(rendered), encoding="utf-8")
 
     return {
         "agent_uid": agent_uid,
@@ -305,7 +366,12 @@ def print_human(data: dict[str, Any]) -> None:
     print(f"agent_uid: {data['agent_uid']}")
     print(f"display_id: {data['display_id']}")
     print(f"source: {data['source']}")
-    print(f"output: {data['output']}")
+    if "bootstrap_output" in data and "workcycle_output" in data:
+        print(f"bootstrap_output: {data['bootstrap_output']}")
+        print(f"workcycle_output: {data['workcycle_output']}")
+        print(f"batch_num: {data['batch_num']}")
+    else:
+        print(f"output: {data['output']}")
     print(f"item_count: {data['item_count']}")
 
 
@@ -332,6 +398,8 @@ def main() -> int:
         if not isinstance(display_id, str) or not display_id.strip():
             display_id = None
         source_path = resolve_path(args.source_md)
+        if source_path.name == "AGENTS.md" and args.output:
+            raise ItemIdChecklistError("AGENTS.md checklist generation manages its own bootstrap/workcycle filenames; omit --output")
         output_path = resolve_checklist_path(args.output or None, agent_uid=agent_uid, source_path=source_path)
         result = materialize_checklist(
             agent_uid=agent_uid,

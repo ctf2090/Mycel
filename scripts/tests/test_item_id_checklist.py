@@ -131,7 +131,7 @@ Context line that should not be copied.
         self.assertNotIn("Context line that should not be copied.", content)
         self.assertNotIn("## Dropped Section", content)
 
-    def test_agents_checklist_keeps_one_bootstrap_and_appends_workflow_per_run(self) -> None:
+    def test_agents_checklist_splits_bootstrap_and_workcycle_outputs(self) -> None:
         self.write_registry()
         self.write_source(
             "AGENTS.md",
@@ -148,27 +148,44 @@ Context line that should not be copied.
         )
 
         first = json.loads(self.run_cli("agt_doc", "AGENTS.md", "--json").stdout)
-        output_path = self.root / first["output"]
-        first_content = output_path.read_text(encoding="utf-8")
-        self.assertEqual(1, first_content.count("## New chat bootstrap"))
-        self.assertEqual(1, first_content.count("## Work Cycle Workflow"))
+        bootstrap_path = self.root / first["bootstrap_output"]
+        workcycle_path = self.root / first["workcycle_output"]
+        bootstrap_content = bootstrap_path.read_text(encoding="utf-8")
+        workcycle_content = workcycle_path.read_text(encoding="utf-8")
 
-        output_path.write_text(
-            first_content.replace(
-                "- [ ] Workflow one <!-- item-id: workflow.one -->",
-                "- [X] Workflow one <!-- item-id: workflow.one -->",
-                1,
-            ),
-            encoding="utf-8",
+        self.assertEqual(".agent-local/agents/agt_doc/checklists/AGENTS-bootstrap-checklist.md", first["bootstrap_output"])
+        self.assertEqual(".agent-local/agents/agt_doc/checklists/AGENTS-workcycle-checklist-1.md", first["workcycle_output"])
+        self.assertEqual(1, first["batch_num"])
+        self.assertIn("## New chat bootstrap", bootstrap_content)
+        self.assertNotIn("## Work Cycle Workflow", bootstrap_content)
+        self.assertIn("## Work Cycle Workflow", workcycle_content)
+        self.assertNotIn("## New chat bootstrap", workcycle_content)
+
+        second = json.loads(self.run_cli("agt_doc", "AGENTS.md", "--json").stdout)
+        second_workcycle_path = self.root / second["workcycle_output"]
+        self.assertEqual(".agent-local/agents/agt_doc/checklists/AGENTS-workcycle-checklist-2.md", second["workcycle_output"])
+        self.assertEqual(2, second["batch_num"])
+        self.assertTrue(second_workcycle_path.exists())
+        self.assertTrue(bootstrap_path.exists())
+
+    def test_agents_checklist_rejects_explicit_output_override(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "AGENTS.md",
+            """# Repo Working Agreements
+
+## New chat bootstrap
+- Bootstrap one <!-- item-id: bootstrap.one -->
+
+## Work Cycle Workflow
+- Workflow one <!-- item-id: workflow.one -->
+""",
         )
 
-        self.run_cli("agt_doc", "AGENTS.md", "--json")
-        second_content = output_path.read_text(encoding="utf-8")
+        proc = self.run_cli("agt_doc", "AGENTS.md", "--output", ".agent-local/agents/agt_doc/checklists/custom.md", check=False)
 
-        self.assertEqual(1, second_content.count("## New chat bootstrap"))
-        self.assertEqual(2, second_content.count("## Work Cycle Workflow"))
-        self.assertEqual(1, second_content.count("- [X] Workflow one <!-- item-id: workflow.one -->"))
-        self.assertEqual(1, second_content.count("- [ ] Workflow one <!-- item-id: workflow.one -->"))
+        self.assertNotEqual(0, proc.returncode)
+        self.assertIn("AGENTS.md checklist generation manages its own bootstrap/workcycle filenames", proc.stderr)
 
     def test_accepts_display_id_as_agent_ref(self) -> None:
         self.write_registry()
