@@ -32,7 +32,7 @@ Preserve:
 Add:
 
 - meaningful viewer-side checks
-- bounded challenge power
+- bounded viewer selector participation
 - clearer separation between proposal, ratification, and public objection
 
 Avoid:
@@ -57,7 +57,7 @@ Capabilities:
 
 Non-capabilities by default:
 
-- no direct selector weight
+- no unbounded selector weight or selector parity with `view-maintainer`
 - no unilateral accepted-head override
 - no ability to publish maintainer-grade revisions or governance Views by viewer status alone
 
@@ -113,7 +113,7 @@ No role should collapse all three into one path.
 
 ### 3.1 How this principle is implemented once `viewer` enters `selector_score`
 
-If `viewer` ever enters `selector_score` in a bounded way, the line "I want my opponents to exist, otherwise I'll end up pushing myself until I blow past the limit." stops being only an attitude statement and becomes a concrete institutional requirement:
+In this proposal, `viewer` enters `selector_score` in a bounded way, so the line "I want my opponents to exist, otherwise I'll end up pushing myself until I blow past the limit." stops being only an attitude statement and becomes a concrete institutional requirement:
 
 - opponents must be able to leave measurable resistance inside the decision model, not just express sentiment from the outside
 - that resistance must remain bounded, so the system does not collapse into raw popularity voting
@@ -238,18 +238,18 @@ This layer answers:
 This layer answers:
 
 - which candidate has the highest view-maintainer selector support
+- whether the bounded viewer score channel is enough to change ordering or raise the bar for acceptance
 - whether viewer objection or challenge should slow, review, or temporarily pause acceptance
 
 In other words:
 
 - editors create candidates
-- view maintainers ratify among candidates
-- viewers can slow or challenge ratification under bounded rules
+- view maintainers provide primary ratification among candidates
+- viewers influence ratification through a bounded score channel plus escalation rules
 
 ## 7. Delay, Review, and Temporary Freeze
 
-Viewer signals should not usually hard-select the accepted head.
-They should instead control escalation.
+Viewer signals should not unilaterally hard-select the accepted head, but in this proposal they do affect both bounded selector input and escalation.
 
 ### 7.1 Delay
 
@@ -295,7 +295,7 @@ This should be rare and harder to trigger than delay or review.
 
 ## 8. Why Anti-Sybil Is Required
 
-If viewers can trigger delay, review, or freeze, then raw viewer counts become governance-relevant.
+Once viewers contribute bounded selector input and can also trigger delay, review, or freeze, raw viewer counts become an even riskier governance-relevant signal.
 
 Without anti-Sybil protection:
 
@@ -339,14 +339,14 @@ Tradeoff:
 - easier to control abuse
 - more centralized
 
-### Option D: Bounded Civic Signals
+### Option D: Bounded Civic Score Channel
 
-Allow broad viewer participation, but restrict viewers to weak effects such as `delay` or `review_request`, not direct freeze power.
+Allow broad viewer participation and let viewers influence ordering through a bounded score channel, while still reserving higher-impact effects to `delay`, `review_request`, or high-threshold freeze paths.
 
 Tradeoff:
 
-- safest migration path
-- weaker checks
+- stronger than escalation-only viewers
+- higher anti-Sybil and weighting-governance pressure
 
 ### If biometric authentication becomes viable
 
@@ -368,15 +368,15 @@ So even in that future, Mycel should treat biometrics as anti-Sybil substrate, n
 
 ## 10. Recommended Direction
 
-For Mycel, the safest first step is:
+For this proposal, the more stable bounded version is:
 
-- keep view-maintainer selector weight as the primary ratification mechanism
+- keep the view-maintainer score channel as the primary ratification mechanism
 - add viewer `approval`, `objection`, `challenge`, and `flag`
-- let objection trigger `delay`
-- let challenge trigger `review`
+- let `approval` / `objection` enter `selector_score` in a bounded way
+- let `challenge` primarily trigger `review`
 - reserve `temporary_freeze` for high-threshold challenge paths, ideally with stronger anti-Sybil conditions or maintainer corroboration
 
-This preserves the current governance spine while creating real viewer-side checks.
+This lets viewer input enter the selector path without collapsing governance into raw popularity voting.
 
 ## 11. Example Minimal Policy Shape
 
@@ -393,7 +393,7 @@ These should remain profile-level rules, not ad hoc local client settings.
 
 ### 11.1 Example `viewer` signal shape
 
-If `viewer` ever affects `selector_score` directly, the minimal viable design should not be a single `like` counter. It should be a verifiable, bounded, typed signal shape.
+Because this proposal assumes `viewer` affects `selector_score` directly, the minimal viable design should not be a single `like` counter. It should be a verifiable, bounded, typed signal shape.
 
 Suggested minimum fields:
 
@@ -436,21 +436,21 @@ It is relatively strong against `editor-maintainer` overreach because:
 - viewers can escalate controversial candidates into review
 - editors cannot rely on proposal power alone to produce immediate accepted status
 
-It is weaker against `view-maintainer` coordination because:
+It is still weaker against `view-maintainer` coordination than against `editor-maintainer` overreach because:
 
-- viewers still do not control primary selector weight
-- viewers cannot directly choose the accepted head
-- a coordinated view-maintainer majority can usually still finalize outcomes once review pressure is cleared
+- viewers enter `selector_score`, but do not control the primary ratification weight
+- viewers still cannot choose the accepted head by themselves
+- a coordinated view-maintainer majority still retains larger finalization power once review pressure is cleared
 
 So the current draft should be read as:
 
 - strong procedural checks on editors
-- moderate procedural checks on view maintainers
+- moderate but still secondary substantive checks on view maintainers
 - limited direct public veto power
 
 ## 13. Reinforcement Options
 
-If stronger viewer balancing is desired without turning the system into raw popularity rule, the most compatible reinforcements are:
+If stronger viewer balancing is desired on top of the bounded score channel, without turning the system into raw popularity rule, the most compatible reinforcements are:
 
 ### 13.1 Mandatory Re-Review
 
@@ -485,9 +485,9 @@ Tradeoff:
 - prevents trivial self-clearance
 - adds procedural overhead
 
-The most balanced next step for Mycel is likely:
+The most balanced bounded version in this note is likely:
 
-- keep viewers out of primary selector weight
+- keep viewer selector contribution capped and auditable
 - let viewer challenge force mandatory re-review
 - reserve freeze for high-trust, high-evidence cases
 
@@ -522,7 +522,7 @@ Considering all three roles together:
 - keeping `viewer` outside `selector_score` is closer to "editor proposal + maintainer ratification + viewer procedural check"
 - putting `viewer` into `selector_score` is closer to "editor proposal + maintainer-viewer mixed governance"
 
-For Mycel as it exists today, the more stable path is still to keep viewers out of primary selector weight first, while strengthening viewer challenge into mandatory re-review and high-threshold freeze.
+If the goal of this note is bounded viewer entry into `selector_score`, the more stable path is to preserve view-maintainer primacy in ratification while letting viewers participate only through capped score channels and high-threshold challenge paths.
 
 ## 15. Tradeoffs
 
@@ -542,7 +542,7 @@ Costs:
 
 ## 16. Open Questions
 
-- Should viewers ever receive direct selector weight, or only escalation power?
+- How high can the bounded viewer score channel go before it starts to crowd out view-maintainer-led ratification?
 - Should viewer approvals affect only tie-breaks, or contribute bounded score bonuses?
 - Should `temporary_freeze` require both viewer challenge and view-maintainer concurrence?
 - Should viewer challenge identity be profile-local, network-global, or application-specific?

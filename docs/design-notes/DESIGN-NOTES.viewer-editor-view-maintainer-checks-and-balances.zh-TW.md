@@ -32,7 +32,7 @@
 加入：
 
 - 有意義的 viewer-side checks
-- 受限的 challenge power
+- 有界的 viewer selector participation
 - 更清楚的 proposal、ratification 與 public objection 分工
 
 避免：
@@ -57,7 +57,7 @@
 
 預設不具備：
 
-- 不直接擁有 selector weight
+- 不擁有無上限或與 `view-maintainer` 等權的 selector weight
 - 不能單方面 override accepted head
 - 不會只因為 viewer 身分就能發布 maintainer-grade revisions 或 governance Views
 
@@ -113,7 +113,7 @@ accepted head 仍然是依規則選出的當前有效輸出。
 
 ### 3.1 這句原則在 `viewer` 進入 `selector_score` 後怎麼實踐
 
-如果未來讓 `viewer` 有界地進入 `selector_score`，這句「我希望我的反對者存在，不然我一定會自己玩到爆掉。」就不再只是態度聲明，而會落成幾個具體制度要求：
+在這份提案裡，`viewer` 會以有界方式進入 `selector_score`；因此這句「我希望我的反對者存在，不然我一定會自己玩到爆掉。」就不再只是態度聲明，而會落成幾個具體制度要求：
 
 - 反對者必須能留下可計算的阻力，而不是只能在外圍表達情緒
 - 這個阻力必須是有界的，不能把系統直接改成原始人氣計票
@@ -238,18 +238,18 @@ viewer 的影響力不應只被建模成一種模糊的票數。
 這一層回答：
 
 - 哪個 candidate 擁有最高的 view-maintainer selector support
+- viewer 的有界 score channel 是否足以改變排序或提高採認門檻
 - viewer objection 或 challenge 是否足以延緩、審查，或暫停採認
 
 換句話說：
 
 - editors 建立候選
-- view maintainers 在候選中進行 ratification
-- viewers 以受限規則延緩或挑戰 ratification
+- view maintainers 在候選中進行主 ratification
+- viewers 以有界 score channel 與 escalation 規則共同影響 ratification
 
 ## 7. Delay、Review、Temporary Freeze
 
-viewer 訊號通常不應直接硬選 accepted head。
-它更適合用來控制 escalation。
+viewer 訊號不應單獨硬選 accepted head，但在這份提案中，它們會同時影響有界 selector input 與 escalation。
 
 ### 7.1 Delay
 
@@ -295,7 +295,7 @@ viewer 訊號通常不應直接硬選 accepted head。
 
 ## 8. 為什麼一定需要 Anti-Sybil
 
-一旦 viewers 可以觸發 delay、review 或 freeze，raw viewer count 就變成治理相關訊號。
+一旦 viewers 以有界方式進入 `selector_score`，並且還能觸發 delay、review 或 freeze，raw viewer count 就會變成更高風險的治理相關訊號。
 
 如果沒有 anti-Sybil：
 
@@ -339,14 +339,14 @@ viewer 訊號通常不應直接硬選 accepted head。
 - 較容易控制濫用
 - 中心化程度較高
 
-### Option D：Bounded Civic Signals
+### Option D：Bounded Civic Score Channel
 
-允許廣泛 viewer 參與，但只讓 viewers 觸發 `delay` 或 `review_request`，不直接給 freeze power。
+允許廣泛 viewer 參與，並讓 viewers 以有界 score channel 影響排序，同時把高影響動作仍限制在 `delay`、`review_request` 或高門檻 freeze path。
 
 取捨：
 
-- 遷移最安全
-- checks 較弱
+- 比 escalation-only viewers 更有力
+- anti-Sybil 與權重治理壓力更高
 
 ### 未來若有生物特徵認證
 
@@ -368,15 +368,15 @@ viewer 訊號通常不應直接硬選 accepted head。
 
 ## 10. 建議方向
 
-對 Mycel 而言，最安全的第一步是：
+對這份提案而言，較穩的 bounded 版本是：
 
-- 仍以 view-maintainer selector weight 作為主 ratification 機制
+- 仍以 view-maintainer score channel 作為主 ratification 機制
 - 新增 viewer `approval`、`objection`、`challenge`、`flag`
-- 讓 objection 觸發 `delay`
-- 讓 challenge 觸發 `review`
+- 讓 `approval` / `objection` 以有界方式進入 `selector_score`
+- 讓 challenge 主要觸發 `review`
 - 只有在更高門檻、且最好搭配更強 anti-Sybil 條件或 maintainer corroboration 時，才允許 `temporary_freeze`
 
-這樣可以保留目前治理骨架，同時加入真正的 viewer-side checks。
+這樣可以讓 viewer 進入 selector path，同時避免把整個治理壓成原始人氣計票。
 
 ## 11. 最小政策欄位形狀
 
@@ -393,7 +393,7 @@ viewer 訊號通常不應直接硬選 accepted head。
 
 ### 11.1 範例 `viewer` signal 形狀
 
-如果未來要讓 `viewer` 直接影響 `selector_score`，最小可行設計不應只有單一 `like` 計數，而應有一個可驗證、可限權、可分型的 signal 形狀。
+既然這份提案預設 `viewer` 會直接影響 `selector_score`，最小可行設計就不應只有單一 `like` 計數，而應有一個可驗證、可限權、可分型的 signal 形狀。
 
 建議最少欄位：
 
@@ -436,21 +436,21 @@ viewer 訊號通常不應直接硬選 accepted head。
 - viewers 可以把高爭議 candidate 升級進入 review
 - editors 不能只靠 proposal power 就立即取得 accepted 狀態
 
-但它對 `view-maintainer` 的協同行為則較弱，原因是：
+但它對 `view-maintainer` 的協同行為仍然弱於對 `editor-maintainer` 的制衡，原因是：
 
-- viewers 仍然不掌握 primary selector weight
-- viewers 不能直接指定 accepted head
-- 一旦 review 壓力被解除，形成協調共識的 view-maintainer 多數通常仍能完成定案
+- viewers 雖然進入 `selector_score`，但仍不掌握主導性的 ratification 權重
+- viewers 不能單靠自己直接指定 accepted head
+- 一旦 review 壓力被解除，形成協調共識的 view-maintainer 多數通常仍保有較大的定案能力
 
 所以目前這版 draft 比較準確的讀法是：
 
 - 對 editors 有較強的程序性制衡
-- 對 view maintainers 有中等的程序性制衡
+- 對 view maintainers 有中等、但仍屬次級的實質制衡
 - 對公眾直接否決權則維持受限
 
 ## 13. 補強方案
 
-如果我們希望 viewer 的制衡更有力、但又不把系統直接改成人氣治理，最相容的補強方式有 3 種：
+如果我們希望 viewer 的制衡在有界 score channel 之外再更有力、但又不把系統直接改成人氣治理，最相容的補強方式有 3 種：
 
 ### 13.1 Mandatory Re-Review
 
@@ -485,9 +485,9 @@ viewer challenge 可以觸發 `temporary_freeze`，但其門檻必須比一般 r
 - 可避免自我快速洗白
 - 會增加程序成本
 
-對 Mycel 而言，最平衡的下一步大概會是：
+對這份提案而言，最平衡的 bounded 版本大概會是：
 
-- 仍不讓 viewers 進 primary selector weight
+- 讓 viewers 保有有界、可審計的 selector contribution
 - 讓 viewer challenge 能強制觸發 mandatory re-review
 - 把 freeze 保留給高信任、高證據門檻的案例
 
@@ -522,7 +522,7 @@ viewer challenge 可以觸發 `temporary_freeze`，但其門檻必須比一般 r
 - `viewer` 不進 `selector_score`，比較像「editor proposal + maintainer ratification + viewer procedural check」
 - `viewer` 進 `selector_score`，比較像「editor proposal + maintainer-viewer mixed governance」
 
-對目前 Mycel 來說，較穩的路線仍是先不讓 `viewer` 進主 selector weight，再把 viewer challenge 補強為強制複審與高門檻 freeze。
+若本 note 的目標就是讓 `viewer` 有界地進入 `selector_score`，較穩的路線會是：保留 view-maintainer 的主導 ratification 地位，同時只讓 viewer 以 capped score channel 與高門檻 challenge path 參與。
 
 ## 15. 取捨
 
@@ -542,7 +542,7 @@ viewer challenge 可以觸發 `temporary_freeze`，但其門檻必須比一般 r
 
 ## 16. 開放問題
 
-- viewers 是否應該永遠只有 escalation power，而不直接拿 selector weight？
+- viewer 的有界 score channel 上限應該多高，才不會壓過 view-maintainer 的主導 ratification？
 - viewer approvals 應只影響 tie-break，還是可提供受限的 score bonus？
 - `temporary_freeze` 是否應要求 viewer challenge 與 view-maintainer concurrence 同時成立？
 - viewer challenge identity 應該是 profile-local、network-global，還是 application-specific？
