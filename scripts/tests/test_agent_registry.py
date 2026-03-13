@@ -451,6 +451,73 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertIsNotNone(entry["paused_at"])
         self.assertIsNone(entry["current_display_id"])
 
+    def test_work_checklist_writes_markdown_under_agent_local(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        (self.root / "AGENTS.md").write_text("# repo instructions\n", encoding="utf-8")
+        (self.root / "AGENTS-LOCAL.md").write_text("# local overlay\n", encoding="utf-8")
+        (self.root / "docs").mkdir(parents=True, exist_ok=True)
+        (self.root / "docs" / "PLANNING-SYNC-PLAN.md").write_text("# plan\n", encoding="utf-8")
+        (self.root / ".agent-local" / "dev-setup-status.md").write_text(
+            "# Dev Setup Status\n\n- Status: ready\n",
+            encoding="utf-8",
+        )
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [
+                    self.make_v2_entry(
+                        agent_uid="agt_doc",
+                        role="doc",
+                        display_id="doc-1",
+                        assigned_at=self.timestamp(now - timedelta(minutes=10)),
+                        status="active",
+                        scope="docs-sync",
+                        last_touched_at=self.timestamp(now - timedelta(minutes=1)),
+                    )
+                ],
+            }
+        )
+
+        result = json.loads(self.run_cli("work-checklist", "agt_doc", "--json").stdout)
+        output_path = self.root / result["output"]
+        content = output_path.read_text(encoding="utf-8")
+
+        self.assertEqual(".agent-local/agt_doc-work-checklist.md", result["output"])
+        self.assertTrue(output_path.exists())
+        self.assertIn("# Agent Work Checklist for doc-1", content)
+        self.assertIn("- [X] Agent has completed the `start` confirmation step.", content)
+        self.assertIn("- [X] Current work cycle is active for this command.", content)
+        self.assertIn("- [ ] Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items.", content)
+        self.assertIn("- [ ] Re-run `scripts/agent_registry.py work-checklist agt_doc` whenever the agent status or scope changes.", content)
+
+    def test_work_checklist_rejects_output_outside_agent_local(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [
+                    self.make_v2_entry(
+                        agent_uid="agt_coding",
+                        role="coding",
+                        display_id="coding-1",
+                        assigned_at=self.timestamp(now - timedelta(minutes=10)),
+                        status="active",
+                        scope="impl",
+                        last_touched_at=self.timestamp(now - timedelta(minutes=1)),
+                    )
+                ],
+            }
+        )
+
+        proc = self.run_cli("work-checklist", "agt_coding", "--output", "checklist.md", check=False)
+
+        self.assertNotEqual(0, proc.returncode)
+        self.assertIn("checklist output must live under .agent-local/", proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

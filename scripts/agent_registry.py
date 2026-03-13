@@ -14,6 +14,11 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = ROOT_DIR / ".agent-local" / "agents.json"
 MAILBOX_DIR = ROOT_DIR / ".agent-local" / "mailboxes"
+AGENT_LOCAL_DIR = ROOT_DIR / ".agent-local"
+DEV_SETUP_STATUS_PATH = AGENT_LOCAL_DIR / "dev-setup-status.md"
+AGENTS_PATH = ROOT_DIR / "AGENTS.md"
+AGENTS_LOCAL_PATH = ROOT_DIR / "AGENTS-LOCAL.md"
+PLANNING_SYNC_PLAN_PATH = ROOT_DIR / "docs" / "PLANNING-SYNC-PLAN.md"
 ALLOWED_ROLES = {"coding", "doc"}
 ALLOWED_STATUSES = {"active", "inactive", "paused", "blocked", "done"}
 REGISTRY_VERSION = 2
@@ -112,6 +117,29 @@ def relative_to_root(path: Path) -> str:
     return str(path.relative_to(ROOT_DIR))
 
 
+def resolve_agent_local_path(path_value: str | Path) -> Path:
+    candidate = Path(path_value)
+    if not candidate.is_absolute():
+        candidate = ROOT_DIR / candidate
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(AGENT_LOCAL_DIR.resolve())
+    except ValueError as exc:
+        raise RegistryError("checklist output must live under .agent-local/") from exc
+    return resolved
+
+
+def path_exists_and_contains(path: Path, needle: str) -> bool:
+    if not path.exists():
+        return False
+    return needle in path.read_text(encoding="utf-8")
+
+
+def checkbox_line(checked: bool, text: str) -> str:
+    marker = "[X]" if checked else "[ ]"
+    return f"- {marker} {text}"
+
+
 def require_non_empty_str(entry: dict[str, Any], field: str, agent_ref: str) -> str:
     value = entry.get(field)
     if not isinstance(value, str) or not value.strip():
@@ -143,6 +171,10 @@ def mailbox_rel_for_uid(agent_uid: str) -> str:
     return f".agent-local/mailboxes/{agent_uid}.md"
 
 
+def checklist_rel_for_uid(agent_uid: str) -> str:
+    return f".agent-local/{agent_uid}-work-checklist.md"
+
+
 def ensure_mailbox(path: Path, *, title: str, source_path: Path | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -171,6 +203,78 @@ def current_display_id(entry: dict[str, Any]) -> str | None:
     if isinstance(value, str) and value.strip():
         return value
     return None
+
+
+def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
+    agent_uid = require_non_empty_str(entry, "agent_uid", "<agent>")
+    role = require_non_empty_str(entry, "role", agent_uid)
+    scope = require_non_empty_str(entry, "scope", agent_uid)
+    status = require_status(entry, agent_uid)
+    display_id = current_display_id(entry)
+    confirmed = bool(entry.get("confirmed_by_agent")) and isinstance(entry.get("confirmed_at"), str)
+    mailbox_rel = require_non_empty_str(entry, "mailbox", agent_uid)
+    mailbox_path = resolve_mailbox_path(mailbox_rel)
+    dev_setup_ready = path_exists_and_contains(DEV_SETUP_STATUS_PATH, "Status: ready")
+
+    lines = [
+        f"# Agent Work Checklist for {display_id or agent_uid}",
+        "",
+        f"- Agent UID: `{agent_uid}`",
+        f"- Display ID: `{display_id or 'none'}`",
+        f"- Role: `{role}`",
+        f"- Scope: `{scope}`",
+        f"- Status: `{status}`",
+        f"- Mailbox: `{relative_to_root(mailbox_path)}`",
+        f"- Generated at: `{generated_at}`",
+        "",
+        "## Bootstrap State",
+        checkbox_line(True, f"Registry entry exists for `{agent_uid}`."),
+        checkbox_line(bool(display_id), f"Display slot is assigned{f' as `{display_id}`' if display_id else ''}."),
+        checkbox_line(confirmed, "Agent has completed the `start` confirmation step."),
+        checkbox_line(mailbox_path.exists(), f"Mailbox file exists at `{relative_to_root(mailbox_path)}`."),
+        checkbox_line(dev_setup_ready, "Workspace dev setup status is marked `ready`."),
+        checkbox_line(AGENTS_PATH.exists(), "`AGENTS.md` is available for repo-wide instructions."),
+        checkbox_line(AGENTS_LOCAL_PATH.exists(), "`AGENTS-LOCAL.md` overlay is available."),
+        "",
+        "## Current Command Workflow",
+        checkbox_line(status == "active", "Current work cycle is active for this command."),
+        checkbox_line(False, f"Begin the next command with `scripts/agent_work_cycle.py begin {agent_uid} --scope <scope>`."),
+        checkbox_line(False, f"End this command with `scripts/agent_work_cycle.py end {agent_uid} --scope {scope}`."),
+        checkbox_line(False, "Share a short plan and the current repo status before making changes."),
+        checkbox_line(False, "Use mailbox handoffs when work changes planning-relevant state."),
+        checkbox_line(False, "Commit and push serially to `origin/main` if tracked changes land."),
+        "",
+        "## Role-Specific Responsibilities",
+    ]
+
+    if role == "doc":
+        lines.extend(
+            [
+                checkbox_line(False, "Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items."),
+                checkbox_line(False, f"If cadence is due, use `{relative_to_root(PLANNING_SYNC_PLAN_PATH)}` as the planning-sync entry point."),
+                checkbox_line(False, "Scan active, paused, and recently inactive mailboxes before `sync doc`, `sync web`, or `sync plan`."),
+                checkbox_line(False, "Keep roadmap/checklist/progress updates limited to landed evidence or mailbox handoffs."),
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                checkbox_line(False, "Check the latest completed CI result for the previous push before new coding work."),
+                checkbox_line(False, "Leave one open `Work Continuation Handoff` in the coding mailbox at the end of the work item."),
+                checkbox_line(False, "Leave a `Planning Sync Handoff` when coding changes affect roadmap/checklist/progress or issue-triage inputs."),
+                checkbox_line(False, "Do not run `scripts/check-plan-refresh.sh` from a coding task."),
+            ]
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Refresh",
+            checkbox_line(False, f"Re-run `scripts/agent_registry.py work-checklist {agent_uid}` whenever the agent status or scope changes."),
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def entry_summary(entry: dict[str, Any]) -> dict[str, Any]:
@@ -570,6 +674,15 @@ def print_cleanup(data: dict[str, Any]) -> None:
     print(f"stale_agents: {data['stale_count']}")
     for entry in data["stale_agents"]:
         print(f"  - {entry['agent_uid']} ({entry.get('last_display_id')})")
+
+
+def print_work_checklist(data: dict[str, Any]) -> None:
+    print(f"agent_uid: {data['agent_uid']}")
+    print(f"display_id: {data['display_id']}")
+    print(f"role: {data['role']}")
+    print(f"scope: {data['scope']}")
+    print(f"output: {data['output']}")
+    print(f"updated_at: {data['updated_at']}")
 
 
 def cmd_claim(args: argparse.Namespace) -> int:
@@ -1027,6 +1140,31 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_work_checklist(args: argparse.Namespace) -> int:
+    registry, _, _ = load_registry_with_cleanup()
+    entry = resolve_agent_entry(registry, args.agent_ref)
+    agent_uid = require_non_empty_str(entry, "agent_uid", args.agent_ref)
+    output_path = resolve_agent_local_path(args.output or checklist_rel_for_uid(agent_uid))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_at = utc_now()
+    output_path.write_text(render_work_checklist(entry, generated_at=generated_at), encoding="utf-8")
+
+    result = {
+        "status": "ok",
+        "agent_uid": agent_uid,
+        "display_id": current_display_id(entry),
+        "role": entry.get("role"),
+        "scope": entry.get("scope"),
+        "output": relative_to_root(output_path),
+        "updated_at": generated_at,
+    }
+    if args.json:
+        print_json(result)
+    else:
+        print_work_checklist(result)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="scripts/agent_registry.py",
@@ -1098,6 +1236,13 @@ def build_parser() -> argparse.ArgumentParser:
     cleanup.add_argument("--json", action="store_true")
     cleanup.add_argument("-h", "--help", action="help")
     cleanup.set_defaults(func=cmd_cleanup)
+
+    work_checklist = subparsers.add_parser("work-checklist", add_help=False)
+    work_checklist.add_argument("agent_ref")
+    work_checklist.add_argument("--output", default="")
+    work_checklist.add_argument("--json", action="store_true")
+    work_checklist.add_argument("-h", "--help", action="help")
+    work_checklist.set_defaults(func=cmd_work_checklist)
 
     return parser
 

@@ -24,6 +24,7 @@ Recommended startup and lifecycle commands:
 - `scripts/agent_registry.py resume-check <agent-ref>`
 - `scripts/agent_registry.py recover <agent-ref> [--scope <scope>]`
 - `scripts/agent_registry.py takeover <stale-agent-ref> [--scope <scope>]`
+- `scripts/agent_registry.py work-checklist <agent-ref> [--output .agent-local/...md]`
 - `scripts/agent_registry.py cleanup`
 
 Transition note:
@@ -288,10 +289,11 @@ Recommended startup sequence:
 7. immediately tell the user which role was claimed for this chat
 8. run `scripts/agent_registry.py start <agent-ref>`
 9. run `scripts/agent_registry.py status <agent-ref>`
-10. if the role is `coding`, run `npm run handoffs:inactive-coding` and treat handoff scan as the next item before taking a new implementation scope
-11. begin the chat with `<display-id> | <scope-label>`
-12. when the first concrete task arrives, run `scripts/agent_registry.py touch <agent-ref>`
-13. before doing the work, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it runs `touch` and prints the canonical `Asia/Taipei (UTC+8)` timestamp line, and that exact line must be surfaced in user-visible commentary rather than only terminal output
+10. if a personalized task list would help, run `scripts/agent_registry.py work-checklist <agent-ref>`
+11. if the role is `coding`, run `npm run handoffs:inactive-coding` and treat handoff scan as the next item before taking a new implementation scope
+12. begin the chat with `<display-id> | <scope-label>`
+13. when the first concrete task arrives, run `scripts/agent_registry.py touch <agent-ref>`
+14. before doing the work, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it runs `touch` and prints the canonical `Asia/Taipei (UTC+8)` timestamp line, and that exact line must be surfaced in user-visible commentary rather than only terminal output
 
 Keep startup output narrow:
 
@@ -312,7 +314,8 @@ Keep startup output narrow:
 7. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` and keep the same single-line `UTC+8` format; do not hand-write or replace it with dual-timezone text
 8. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
 9. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
-10. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
+10. when an agent wants a refreshable task list, use `scripts/agent_registry.py work-checklist <agent-ref>`; by default it writes `.agent-local/<agent_uid>-work-checklist.md` with Markdown `[X]` / `[ ]` items
+11. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
 Planning-sync coordination:
 
