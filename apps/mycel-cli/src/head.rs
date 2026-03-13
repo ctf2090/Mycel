@@ -109,10 +109,26 @@ fn print_head_inspect_text(summary: &HeadInspectSummary) -> i32 {
     println!("status: {}", summary.status);
 
     for head in &summary.eligible_heads {
-        println!(
-            "eligible head: {} timestamp={} score={} supporters={}",
-            head.revision_id, head.revision_timestamp, head.selector_score, head.supporter_count
-        );
+        if head.viewer_bonus > 0 || head.viewer_penalty > 0 {
+            println!(
+                "eligible head: {} timestamp={} score={} supporters={} maintainer_score={} viewer_bonus={} viewer_penalty={}",
+                head.revision_id,
+                head.revision_timestamp,
+                head.selector_score,
+                head.supporter_count,
+                head.maintainer_score,
+                head.viewer_bonus,
+                head.viewer_penalty
+            );
+        } else {
+            println!(
+                "eligible head: {} timestamp={} score={} supporters={}",
+                head.revision_id,
+                head.revision_timestamp,
+                head.selector_score,
+                head.supporter_count
+            );
+        }
     }
 
     if let Some(selected_head) = &summary.selected_head {

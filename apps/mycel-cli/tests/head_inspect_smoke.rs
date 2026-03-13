@@ -184,6 +184,18 @@ fn head_profile(policy_hash: String, effective_selection_time: u64) -> Value {
     })
 }
 
+fn bounded_viewer_score_profile() -> Value {
+    json!({
+        "mode": "bounded-bonus-penalty",
+        "bonus_cap": 2,
+        "penalty_cap": 2,
+        "signal_weight_cap": 2,
+        "admission_required": true,
+        "min_identity_tier": "basic",
+        "min_reputation_band": "new"
+    })
+}
+
 fn named_profiles(entries: &[(&str, Value)]) -> Value {
     let mut profiles = serde_json::Map::new();
     for (profile_id, profile) in entries {
@@ -223,6 +235,31 @@ fn critical_violation(maintainer: &SigningKey, timestamp: u64, reason: &str) -> 
         "maintainer": signer_id(maintainer),
         "timestamp": timestamp,
         "reason": reason
+    })
+}
+
+fn viewer_signal(
+    signal_id: &str,
+    viewer_seed: u8,
+    revision_id: &Value,
+    signal_type: &str,
+    confidence_level: &str,
+    created_at: u64,
+    expires_at: u64,
+) -> Value {
+    json!({
+        "signal_id": signal_id,
+        "viewer_id": format!("viewer:{viewer_seed}"),
+        "candidate_revision_id": revision_id.as_str().expect("revision id should be string"),
+        "signal_type": signal_type,
+        "reason_code": format!("reason-{signal_id}"),
+        "confidence_level": confidence_level,
+        "created_at": created_at,
+        "expires_at": expires_at,
+        "signal_status": "active",
+        "viewer_identity_tier": "basic",
+        "viewer_admission_status": "admitted",
+        "viewer_reputation_band": "established"
     })
 }
 
@@ -2012,6 +2049,175 @@ fn head_inspect_uses_effective_weight_in_selector_score() {
                     })
             })),
         "expected effective_weight trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn head_inspect_applies_bounded_viewer_score_channels() {
+    let doc_id = "doc:viewer-score";
+    let revision_author = signing_key(91);
+    let maintainer_a = signing_key(92);
+    let maintainer_b = signing_key(93);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 10, "hash:viewer-score-a");
+    let revision_b = signed_revision(&revision_author, doc_id, vec![], 20, "hash:viewer-score-b");
+    let mut profile = head_profile(hash_json(&policy), 250);
+    profile["viewer_score"] = bounded_viewer_score_profile();
+    let mut challenge = viewer_signal(
+        "signal-challenge",
+        104,
+        &revision_b["revision_id"],
+        "challenge",
+        "high",
+        100,
+        400,
+    );
+    challenge["evidence_ref"] = Value::String("evidence:challenge-1".to_string());
+    let bundle = json!({
+        "profile": profile,
+        "revisions": [revision_a.clone(), revision_b.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                100
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_b["revision_id"]),
+                110
+            )
+        ],
+        "viewer_signals": [
+            viewer_signal(
+                "signal-approval-low",
+                101,
+                &revision_a["revision_id"],
+                "approval",
+                "low",
+                100,
+                400
+            ),
+            viewer_signal(
+                "signal-approval-high",
+                102,
+                &revision_a["revision_id"],
+                "approval",
+                "high",
+                100,
+                400
+            ),
+            viewer_signal(
+                "signal-objection-medium",
+                103,
+                &revision_b["revision_id"],
+                "objection",
+                "medium",
+                100,
+                400
+            ),
+            challenge
+        ],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-viewer-score", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], revision_a["revision_id"]);
+    assert_eq!(json["viewer_signal_count"], Value::from(4));
+    let eligible_heads = json["eligible_heads"]
+        .as_array()
+        .expect("eligible_heads should be array");
+    let selected = eligible_heads
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_a["revision_id"])
+        .expect("selected viewer-scored head should exist");
+    let alternative = eligible_heads
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_b["revision_id"])
+        .expect("alternative viewer-scored head should exist");
+    assert_eq!(selected["maintainer_score"], Value::from(1));
+    assert_eq!(selected["weighted_support"], Value::from(1));
+    assert_eq!(selected["viewer_bonus"], Value::from(2));
+    assert_eq!(selected["viewer_penalty"], Value::from(0));
+    assert_eq!(selected["selector_score"], Value::from(3));
+    assert_eq!(alternative["maintainer_score"], Value::from(1));
+    assert_eq!(alternative["viewer_bonus"], Value::from(0));
+    assert_eq!(alternative["viewer_penalty"], Value::from(2));
+    assert_eq!(alternative["selector_score"], Value::from(0));
+
+    let viewer_signals = json["viewer_signals"]
+        .as_array()
+        .expect("viewer_signals should be array");
+    assert_eq!(viewer_signals.len(), 4);
+    let challenge_entry = viewer_signals
+        .iter()
+        .find(|entry| entry["signal_type"] == Value::String("challenge".to_string()))
+        .expect("challenge signal summary should exist");
+    assert_eq!(challenge_entry["selector_eligible"], Value::Bool(true));
+    assert_eq!(challenge_entry["effective_signal_weight"], Value::from(0));
+    assert_eq!(
+        challenge_entry["signal_status"],
+        Value::String("active".to_string())
+    );
+
+    let viewer_score_channels = json["viewer_score_channels"]
+        .as_array()
+        .expect("viewer_score_channels should be array");
+    let selected_channel = viewer_score_channels
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_a["revision_id"])
+        .expect("selected viewer score channel should exist");
+    assert_eq!(selected_channel["maintainer_score"], Value::from(1));
+    assert_eq!(selected_channel["viewer_bonus"], Value::from(2));
+    assert_eq!(selected_channel["viewer_penalty"], Value::from(0));
+    assert_eq!(selected_channel["approval_signal_count"], Value::from(2));
+    assert_eq!(selected_channel["selector_score"], Value::from(3));
+    let alternative_channel = viewer_score_channels
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_b["revision_id"])
+        .expect("alternative viewer score channel should exist");
+    assert_eq!(alternative_channel["viewer_bonus"], Value::from(0));
+    assert_eq!(alternative_channel["viewer_penalty"], Value::from(2));
+    assert_eq!(
+        alternative_channel["objection_signal_count"],
+        Value::from(1)
+    );
+    assert_eq!(alternative_channel["selector_score"], Value::from(0));
+
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("viewer_score_channels")
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("mode=bounded-bonus-penalty")
+                            && detail.contains("signals=4")
+                            && detail.contains("contributing=3")
+                            && detail.contains("bonus_cap=2")
+                            && detail.contains("penalty_cap=2")
+                    })
+            })),
+        "expected viewer_score_channels trace entry, stdout: {}",
         stdout_text(&output)
     );
 }

@@ -25,10 +25,13 @@ pub struct HeadInspectSummary {
     pub eligible_heads: Vec<EligibleHeadSummary>,
     pub verified_revision_count: usize,
     pub verified_view_count: usize,
+    pub viewer_signal_count: usize,
     pub critical_violations: Vec<CriticalViolationSummary>,
     pub editor_candidates: Vec<EditorCandidateSummary>,
     pub effective_weights: Vec<EffectiveWeightSummary>,
     pub maintainer_support: Vec<MaintainerSupportSummary>,
+    pub viewer_signals: Vec<ViewerSignalSummary>,
+    pub viewer_score_channels: Vec<ViewerScoreChannelSummary>,
     pub decision_trace: Vec<DecisionTraceEntry>,
     pub notes: Vec<String>,
     pub errors: Vec<String>,
@@ -86,8 +89,41 @@ pub struct EligibleHeadSummary {
     pub editor_admitted: bool,
     pub formal_candidate: bool,
     pub revision_timestamp: u64,
+    pub maintainer_score: u64,
     pub weighted_support: u64,
     pub supporter_count: u64,
+    pub viewer_bonus: u64,
+    pub viewer_penalty: u64,
+    pub selector_score: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ViewerSignalSummary {
+    pub signal_id: String,
+    pub viewer_id: String,
+    pub candidate_revision_id: String,
+    pub signal_type: ViewerSignalType,
+    pub reason_code: Option<String>,
+    pub confidence_level: ViewerConfidenceLevel,
+    pub evidence_ref: Option<String>,
+    pub created_at: u64,
+    pub expires_at: u64,
+    pub signal_status: ViewerSignalStatus,
+    pub viewer_identity_tier: ViewerIdentityTier,
+    pub viewer_admission_status: ViewerAdmissionStatus,
+    pub viewer_reputation_band: ViewerReputationBand,
+    pub selector_eligible: bool,
+    pub effective_signal_weight: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ViewerScoreChannelSummary {
+    pub revision_id: String,
+    pub maintainer_score: u64,
+    pub viewer_bonus: u64,
+    pub viewer_penalty: u64,
+    pub approval_signal_count: u64,
+    pub objection_signal_count: u64,
     pub selector_score: u64,
 }
 
@@ -129,6 +165,8 @@ struct HeadInspectInput {
     #[serde(default)]
     views: Vec<Value>,
     #[serde(default)]
+    viewer_signals: Vec<HeadInspectViewerSignal>,
+    #[serde(default)]
     critical_violations: Vec<HeadInspectCriticalViolation>,
 }
 
@@ -144,6 +182,8 @@ struct HeadInspectProfile {
     weight_cap_per_key: u64,
     #[serde(default)]
     editor_admission: EditorAdmissionProfile,
+    #[serde(default)]
+    viewer_score: ViewerScoreProfile,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -161,6 +201,111 @@ enum EditorCandidateMode {
     Open,
     AdmittedOnly,
     Mixed,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ViewerScoreProfile {
+    #[serde(default)]
+    mode: ViewerScoreMode,
+    #[serde(default)]
+    bonus_cap: u64,
+    #[serde(default)]
+    penalty_cap: u64,
+    #[serde(default)]
+    signal_weight_cap: u64,
+    #[serde(default = "default_true")]
+    admission_required: bool,
+    #[serde(default)]
+    min_identity_tier: ViewerIdentityTier,
+    #[serde(default)]
+    min_reputation_band: ViewerReputationBand,
+}
+
+#[derive(Debug, Clone, Deserialize, Default, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerScoreMode {
+    #[default]
+    Disabled,
+    BoundedBonusPenalty,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct HeadInspectViewerSignal {
+    signal_id: String,
+    viewer_id: String,
+    candidate_revision_id: String,
+    signal_type: ViewerSignalType,
+    #[serde(default)]
+    reason_code: Option<String>,
+    #[serde(default)]
+    confidence_level: ViewerConfidenceLevel,
+    #[serde(default)]
+    evidence_ref: Option<String>,
+    created_at: u64,
+    expires_at: u64,
+    #[serde(default)]
+    signal_status: ViewerSignalStatus,
+    #[serde(default)]
+    viewer_identity_tier: ViewerIdentityTier,
+    #[serde(default)]
+    viewer_admission_status: ViewerAdmissionStatus,
+    #[serde(default)]
+    viewer_reputation_band: ViewerReputationBand,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerSignalType {
+    Approval,
+    Objection,
+    Challenge,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerConfidenceLevel {
+    #[default]
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerSignalStatus {
+    #[default]
+    Active,
+    Expired,
+    Withdrawn,
+    Resolved,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerIdentityTier {
+    #[default]
+    None,
+    Basic,
+    Strong,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerAdmissionStatus {
+    #[default]
+    Pending,
+    Admitted,
+    Restricted,
+    Revoked,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ViewerReputationBand {
+    #[default]
+    New,
+    Established,
+    Trusted,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -194,6 +339,18 @@ struct MaintainerSupport {
     effective_weight: u64,
 }
 
+#[derive(Debug, Clone, Default)]
+struct ViewerHeadScore {
+    viewer_bonus: u64,
+    viewer_penalty: u64,
+    approval_signal_count: u64,
+    objection_signal_count: u64,
+}
+
+fn default_true() -> bool {
+    true
+}
+
 impl HeadInspectSummary {
     fn new(input_path: &Path, doc_id: &str) -> Self {
         Self {
@@ -208,10 +365,13 @@ impl HeadInspectSummary {
             eligible_heads: Vec::new(),
             verified_revision_count: 0,
             verified_view_count: 0,
+            viewer_signal_count: 0,
             critical_violations: Vec::new(),
             editor_candidates: Vec::new(),
             effective_weights: Vec::new(),
             maintainer_support: Vec::new(),
+            viewer_signals: Vec::new(),
+            viewer_score_channels: Vec::new(),
             decision_trace: Vec::new(),
             notes: Vec::new(),
             errors: Vec::new(),
@@ -519,6 +679,7 @@ fn inspect_heads_from_loaded_input(
         revisions,
         objects: _,
         views,
+        viewer_signals,
         critical_violations,
     } = input;
     let (revision_values, view_values) = match store_root {
@@ -580,11 +741,14 @@ fn inspect_heads_from_loaded_input(
 
     summary.verified_revision_count = verified_revisions.len();
     summary.verified_view_count = verified_views.len();
+    summary.viewer_signal_count = viewer_signals.len();
     summary.push_trace(
         "verified_inputs",
         format!(
-            "verified_revisions={} verified_views={}",
-            summary.verified_revision_count, summary.verified_view_count
+            "verified_revisions={} verified_views={} viewer_signals={}",
+            summary.verified_revision_count,
+            summary.verified_view_count,
+            summary.viewer_signal_count
         ),
     );
     summary.push_trace(
@@ -665,6 +829,19 @@ fn inspect_heads_from_loaded_input(
         summary.push_trace(entry.step, entry.detail);
     }
 
+    let (viewer_head_scores, viewer_signal_summaries, viewer_score_channels, viewer_trace) =
+        compute_viewer_score_channels(
+            &viewer_signals,
+            &eligible_heads,
+            &profile,
+            profile.effective_selection_time,
+        );
+    summary.viewer_signals = viewer_signal_summaries;
+    summary.viewer_score_channels = viewer_score_channels;
+    for entry in viewer_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
+
     let mut eligible_summaries = eligible_heads
         .iter()
         .map(|revision| {
@@ -680,6 +857,13 @@ fn inspect_heads_from_loaded_input(
                 .iter()
                 .map(|candidate| candidate.effective_weight)
                 .sum::<u64>();
+            let viewer_score = viewer_head_scores
+                .get(revision.revision_id.as_str())
+                .cloned()
+                .unwrap_or_default();
+            let selector_score = weighted_support
+                .saturating_add(viewer_score.viewer_bonus)
+                .saturating_sub(viewer_score.viewer_penalty);
 
             EligibleHeadSummary {
                 revision_id: revision.revision_id.clone(),
@@ -697,15 +881,28 @@ fn inspect_heads_from_loaded_input(
                     .map(|candidate| candidate.formal_candidate)
                     .unwrap_or(false),
                 revision_timestamp: revision.timestamp,
+                maintainer_score: weighted_support,
                 weighted_support,
                 supporter_count,
-                selector_score: weighted_support,
+                viewer_bonus: viewer_score.viewer_bonus,
+                viewer_penalty: viewer_score.viewer_penalty,
+                selector_score,
             }
         })
         .collect::<Vec<_>>();
 
     eligible_summaries.sort_by(|left, right| left.revision_id.cmp(&right.revision_id));
     summary.eligible_heads = eligible_summaries;
+    for channel in &mut summary.viewer_score_channels {
+        if let Some(head) = summary
+            .eligible_heads
+            .iter()
+            .find(|entry| entry.revision_id == channel.revision_id)
+        {
+            channel.maintainer_score = head.maintainer_score;
+            channel.selector_score = head.selector_score;
+        }
+    }
     summary.push_trace(
         "selector_scores",
         format!(
@@ -1460,6 +1657,162 @@ fn compute_effective_weights(
     }];
 
     (weights, summaries, trace)
+}
+
+fn compute_viewer_score_channels(
+    signals: &[HeadInspectViewerSignal],
+    eligible_heads: &[VerifiedRevision],
+    profile: &HeadInspectProfile,
+    effective_selection_time: u64,
+) -> (
+    HashMap<String, ViewerHeadScore>,
+    Vec<ViewerSignalSummary>,
+    Vec<ViewerScoreChannelSummary>,
+    Vec<DecisionTraceEntry>,
+) {
+    let eligible_ids = eligible_heads
+        .iter()
+        .map(|revision| revision.revision_id.as_str())
+        .collect::<BTreeSet<_>>();
+    let score_mode_enabled = profile.viewer_score.mode == ViewerScoreMode::BoundedBonusPenalty;
+    let effective_weight_cap = if profile.viewer_score.signal_weight_cap == 0 {
+        u64::MAX
+    } else {
+        profile.viewer_score.signal_weight_cap
+    };
+
+    let mut per_head_scores: HashMap<String, ViewerHeadScore> = HashMap::new();
+    let mut signal_summaries = Vec::new();
+    let mut eligible_signal_count = 0_u64;
+    let mut contributing_signal_count = 0_u64;
+
+    for signal in signals {
+        let selector_eligible = score_mode_enabled
+            && signal.signal_status == ViewerSignalStatus::Active
+            && signal.created_at <= effective_selection_time
+            && signal.expires_at > effective_selection_time
+            && eligible_ids.contains(signal.candidate_revision_id.as_str())
+            && (!profile.viewer_score.admission_required
+                || signal.viewer_admission_status == ViewerAdmissionStatus::Admitted)
+            && signal.viewer_identity_tier >= profile.viewer_score.min_identity_tier
+            && signal.viewer_reputation_band >= profile.viewer_score.min_reputation_band;
+
+        let signal_weight = confidence_weight(&signal.confidence_level).min(effective_weight_cap);
+        let effective_signal_weight = if selector_eligible
+            && matches!(
+                signal.signal_type,
+                ViewerSignalType::Approval | ViewerSignalType::Objection
+            ) {
+            signal_weight
+        } else {
+            0
+        };
+
+        if selector_eligible {
+            eligible_signal_count += 1;
+        }
+        if effective_signal_weight > 0 {
+            contributing_signal_count += 1;
+            let entry = per_head_scores
+                .entry(signal.candidate_revision_id.clone())
+                .or_default();
+            match signal.signal_type {
+                ViewerSignalType::Approval => {
+                    entry.viewer_bonus = entry.viewer_bonus.saturating_add(effective_signal_weight);
+                    entry.approval_signal_count += 1;
+                }
+                ViewerSignalType::Objection => {
+                    entry.viewer_penalty =
+                        entry.viewer_penalty.saturating_add(effective_signal_weight);
+                    entry.objection_signal_count += 1;
+                }
+                ViewerSignalType::Challenge => {}
+            }
+        }
+
+        signal_summaries.push(ViewerSignalSummary {
+            signal_id: signal.signal_id.clone(),
+            viewer_id: signal.viewer_id.clone(),
+            candidate_revision_id: signal.candidate_revision_id.clone(),
+            signal_type: signal.signal_type.clone(),
+            reason_code: signal.reason_code.clone(),
+            confidence_level: signal.confidence_level.clone(),
+            evidence_ref: signal.evidence_ref.clone(),
+            created_at: signal.created_at,
+            expires_at: signal.expires_at,
+            signal_status: signal.signal_status.clone(),
+            viewer_identity_tier: signal.viewer_identity_tier.clone(),
+            viewer_admission_status: signal.viewer_admission_status.clone(),
+            viewer_reputation_band: signal.viewer_reputation_band.clone(),
+            selector_eligible,
+            effective_signal_weight,
+        });
+    }
+
+    for score in per_head_scores.values_mut() {
+        score.viewer_bonus = score.viewer_bonus.min(profile.viewer_score.bonus_cap);
+        score.viewer_penalty = score.viewer_penalty.min(profile.viewer_score.penalty_cap);
+    }
+
+    signal_summaries.sort_by(|left, right| left.signal_id.cmp(&right.signal_id));
+
+    let mut channel_summaries = eligible_heads
+        .iter()
+        .map(|revision| {
+            let score = per_head_scores
+                .get(revision.revision_id.as_str())
+                .cloned()
+                .unwrap_or_default();
+            ViewerScoreChannelSummary {
+                revision_id: revision.revision_id.clone(),
+                maintainer_score: 0,
+                viewer_bonus: score.viewer_bonus,
+                viewer_penalty: score.viewer_penalty,
+                approval_signal_count: score.approval_signal_count,
+                objection_signal_count: score.objection_signal_count,
+                selector_score: 0,
+            }
+        })
+        .collect::<Vec<_>>();
+    channel_summaries.sort_by(|left, right| left.revision_id.cmp(&right.revision_id));
+
+    let trace = if score_mode_enabled || !signals.is_empty() {
+        vec![DecisionTraceEntry {
+            step: "viewer_score_channels".to_string(),
+            detail: format!(
+                "mode={} signals={} eligible={} contributing={} affected_heads={} bonus_cap={} penalty_cap={}",
+                viewer_score_mode_label(&profile.viewer_score.mode),
+                signals.len(),
+                eligible_signal_count,
+                contributing_signal_count,
+                channel_summaries
+                    .iter()
+                    .filter(|entry| entry.viewer_bonus > 0 || entry.viewer_penalty > 0)
+                    .count(),
+                profile.viewer_score.bonus_cap,
+                profile.viewer_score.penalty_cap
+            ),
+        }]
+    } else {
+        Vec::new()
+    };
+
+    (per_head_scores, signal_summaries, channel_summaries, trace)
+}
+
+fn confidence_weight(confidence_level: &ViewerConfidenceLevel) -> u64 {
+    match confidence_level {
+        ViewerConfidenceLevel::Low => 1,
+        ViewerConfidenceLevel::Medium => 2,
+        ViewerConfidenceLevel::High => 3,
+    }
+}
+
+fn viewer_score_mode_label(mode: &ViewerScoreMode) -> &'static str {
+    match mode {
+        ViewerScoreMode::Disabled => "disabled",
+        ViewerScoreMode::BoundedBonusPenalty => "bounded-bonus-penalty",
+    }
 }
 
 fn to_epoch_count_summaries(counts: &BTreeMap<i64, u64>) -> Vec<EpochCountSummary> {
