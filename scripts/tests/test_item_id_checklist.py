@@ -91,8 +91,9 @@ class ItemIdChecklistCliTest(unittest.TestCase):
         self.assertIn("# Agent Item-ID Checklist Copy", content)
         self.assertIn("- [ ] Read the file <!-- item-id: bootstrap.read -->", content)
         self.assertIn("- [ ] Existing checked item <!-- item-id: bootstrap.checked -->", content)
-        self.assertIn("update checks here instead of the tracked source file", content)
-        self.assertIn("`- [-]` not needed for this work cycle", content)
+        self.assertIn("- Agent UID: `agt_doc`", content)
+        self.assertNotIn("update checks here instead of the tracked source file", content)
+        self.assertNotIn("`- [-]` not needed for this work cycle", content)
 
     def test_keeps_only_item_id_sections_and_items(self) -> None:
         self.write_registry()
