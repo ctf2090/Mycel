@@ -41,7 +41,7 @@
 - If the right choice depends on unknown constraints, ask 1–2 short clarifying questions, but still provide a best-effort set of options based on common assumptions.
 
 ## New chat bootstrap
-- Scan the repo layout with `ls` and prefer `rg --files` for fast file discovery. <!-- item-id: bootstrap.repo-layout -->
+- Scan the repo layout with `rg --files` for fast file discovery. <!-- item-id: bootstrap.repo-layout -->
 - Before repeating environment checks, read `.agent-local/dev-setup-status.md` if it exists. <!-- item-id: bootstrap.read-dev-setup-status -->
 - If `.agent-local/dev-setup-status.md` says `Status: ready` and records the required tool/setup checks for this workspace, a new chat does not need to re-check dev setup during bootstrap. <!-- item-id: bootstrap.skip-dev-setup-when-ready -->
 - If `.agent-local/dev-setup-status.md` is missing or does not say `Status: ready`, read [`docs/DEV-SETUP.md`](docs/DEV-SETUP.md), ensure the required setup items are satisfied, and update `.agent-local/dev-setup-status.md` with the detailed tool/setup check results, preferably via `scripts/update-dev-setup-status.py --actor <role-id>`. <!-- item-id: bootstrap.refresh-dev-setup-when-needed -->
