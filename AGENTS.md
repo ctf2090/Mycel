@@ -52,13 +52,13 @@
   - If the user did not assign a role for the new chat, use `scripts/agent_registry.py claim auto`, then tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.claim-auto -->
 
 ## Work Cycle Workflow
+- For each user command work cycle, use `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]` before work and `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]` after work; these commands handle the active/inactive registry transition for the cycle. <!-- item-id: workflow.touch-finish-work-cycle -->
 - Run `git status -sb` to understand the repo state. <!-- item-id: bootstrap.git-status -->
-- For each user command work cycle, touch the active agent entry before working and mark it inactive after the work for that command finishes. <!-- item-id: workflow.touch-finish-work-cycle -->
-- Before ending each completed user command work cycle, append or update one handoff entry in the agent's declared mailbox so the mailbox records the latest state for that cycle. If the new entry replaces an older open current-state handoff in the same mailbox, mark the older one `superseded` first. <!-- item-id: workflow.mailbox-handoff-each-cycle -->
-- For each user command work cycle, post a short human-facing commentary line with a timestamp before work starts and after work ends. The timestamp must be visible in user-facing commentary, not only in terminal output or tool logs. Use the exact line format emitted by `scripts/agent_work_cycle.py begin|end <agent-ref> [--scope <scope-label>]`; do not hand-write, paraphrase, or replace it with dual-timezone text. Outside those canonical before/after lines, normal progress updates should not add hand-written date or time prefixes. `scripts/agent_timestamp.py` remains available only when a standalone timestamp line is needed and should keep the same single-line `UTC+8` format. <!-- item-id: workflow.timestamped-commentary -->
-- When using `scripts/agent_work_cycle.py begin|end`, do not immediately follow it with a manual `scripts/agent_registry.py touch|finish` for the same work cycle; `begin` already performs `touch`, and `end` already performs `finish`. <!-- item-id: workflow.no-double-touch-finish -->
 - If a task needs an additional tool or module, the agent should install it directly unless the user explicitly says not to. <!-- item-id: workflow.install-needed-tools -->
 - Reply with a short plan and the current repo status before making changes. <!-- item-id: workflow.reply-with-plan-and-status -->
+- Use the exact before/after timestamp line emitted by `scripts/agent_work_cycle.py begin|end`; do not hand-write replacements or swap in a different timestamp format. <!-- item-id: workflow.timestamped-commentary -->
+- Do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle. <!-- item-id: workflow.no-double-touch-finish -->
+- Before ending each completed user command work cycle, append or update one handoff entry in the agent's declared mailbox so the mailbox records the latest state for that cycle. If the new entry replaces an older open current-state handoff in the same mailbox, mark the older one `superseded` first. <!-- item-id: workflow.mailbox-handoff-each-cycle -->
 
 ## Item-ID Checklists
 - When an agent reads a Markdown file that carries `item-id` annotations, treat the tracked file as the canonical instruction source; do not use the tracked file itself as the personal work log.
