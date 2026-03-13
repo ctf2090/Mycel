@@ -207,9 +207,11 @@ Fallback shared mailboxes such as `.agent-local/coding-to-doc.md` and `.agent-lo
 
 Mailbox usage for `sync doc` / `sync web` / `sync plan` work:
 
+- every agent should leave one mailbox handoff entry in its own declared mailbox before ending each completed work cycle; this is the per-cycle state record for that agent
 - `coding` agents should leave sync-relevant notes in their own registry mailbox when work changes planning-relevant implementation state, checklist closure, roadmap emphasis, public progress wording, or issue-triage inputs
-- `coding` agents should also leave one open `Work Continuation Handoff` in their own mailbox at the end of every completed coding work item, even when no planning-sync follow-up is needed
-- before leaving that new open continuation entry, `coding` should mark any older open continuation entry in the same mailbox as `superseded`, so the mailbox ends with only one open continuation handoff
+- `coding` agents should satisfy that per-cycle requirement with one open `Work Continuation Handoff` in their own mailbox, even when no planning-sync follow-up is needed
+- `doc` agents should satisfy that per-cycle requirement with one mailbox handoff entry that captures the latest doc state for the cycle; use a planning-sync handoff, resolution reply, blocking note, or doc continuation note as appropriate
+- before leaving a new open current-state handoff in the same mailbox, the agent should mark any older open current-state handoff for that scope as `superseded`, so the mailbox ends with one latest open current-state handoff
 - `doc` should scan active, paused, and recently inactive agent mailboxes before any `sync doc`, `sync web`, or `sync plan` batch and use those notes as collection input for roadmap/checklist/progress or Pages refresh work
 - scan order should be: active mailbox paths first, paused mailbox paths second, recently inactive mailbox paths third, and fallback shared mailboxes last; archived mailboxes stay out of scope unless a current mailbox explicitly points to an unresolved archived entry
 - mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-plan-refresh.sh`
@@ -247,12 +249,13 @@ Recommended mailbox handoff template:
 
 Minimum handoff quality:
 
+- each completed work cycle should leave one new or updated mailbox handoff entry in the agent's declared mailbox
 - planning-sync handoff entries should explicitly include `Status: open` when `coding` creates them
 - include enough detail for `doc` to identify the affected files, the likely planning surfaces, whether checklist closure changed, and what verification or evidence supports the claim
 - after `doc` completes the related docs work, it should either update that handoff to `Status: resolved` or append a `doc` reply entry with a `Date` line that makes the resolution explicit
 - if an agent wants a ready-made starting point instead of copying the Markdown block manually, use `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md` for the open handoff and `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md` for the resolved reply
 - continuation handoffs should explicitly include `Status: open`, `Current state`, and `Next suggested step`, because they are written under the assumption that the user may not assign another follow-up before pause or takeover
-- a coding mailbox should not accumulate multiple open continuation entries; older ones should be closed as `superseded` before a newer open continuation handoff is added
+- a mailbox should not accumulate multiple open current-state handoffs for the same scope; older ones should be closed as `superseded` before a newer open current-state handoff is added
 - if an agent wants a ready-made starting point for continuation instead of copying the Markdown block manually, use `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
 
 Mailbox retention and archive policy:
@@ -310,18 +313,20 @@ Keep startup output narrow:
 2. confirm the current scopes and active peers
 3. use the mailbox declared in the registry for coordination
 4. before each user-command work cycle, prefer `scripts/agent_work_cycle.py begin <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py touch <agent-ref>` together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
-5. after that command's work is complete, prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py finish <agent-ref>` together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
-6. do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle; `begin` already performs `touch`, and `end` already performs `finish`
-7. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` and keep the same single-line `UTC+8` format; do not hand-write or replace it with dual-timezone text
-8. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
-9. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
-10. when an agent wants a refreshable task list, use `scripts/agent_registry.py work-checklist <agent-ref>`; by default it writes `.agent-local/agents/<agent_uid>/work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
-11. to update one checklist line quickly from automation or a terminal command, use `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id>` and optionally `--state checked|unchecked|toggle`
-12. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
+5. before ending that completed work cycle, append or update one mailbox handoff entry in the agent's declared mailbox so the latest state for the cycle is captured
+6. after that command's work is complete, prefer `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`; it wraps `scripts/agent_registry.py finish <agent-ref>` together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
+7. do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle; `begin` already performs `touch`, and `end` already performs `finish`
+8. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` and keep the same single-line `UTC+8` format; do not hand-write or replace it with dual-timezone text
+9. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
+10. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
+11. when an agent wants a refreshable task list, use `scripts/agent_registry.py work-checklist <agent-ref>`; by default it writes `.agent-local/agents/<agent_uid>/work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
+12. to update one checklist line quickly from automation or a terminal command, use `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id>` and optionally `--state checked|unchecked|toggle`
+13. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
 Planning-sync coordination:
 
 - `coding` agents should append mailbox handoff notes when they land or discover planning-relevant changes
+- every role should leave one mailbox handoff entry per completed work cycle so `doc` or a takeover agent can reconstruct the latest state without rereading the full diff first
 - `doc` owns `scripts/check-plan-refresh.sh` and the decision to start a planning-sync batch
 - after each completed doc work item, while preparing next items, `doc` must run `scripts/check-plan-refresh.sh`; if it reports `due`, add the due sync surfaces to the next items and then scan the declared mailboxes for recent handoff material before any `sync doc`, `sync web`, or `sync plan` batch
 - if a mailbox note follows the recommended template, `doc` may treat it as ready-to-triage input instead of re-deriving the whole change from git history first

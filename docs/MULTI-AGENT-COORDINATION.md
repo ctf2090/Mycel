@@ -315,7 +315,11 @@ When an agent stops or finishes, leave a short handoff:
 - what remains open
 - whether another issue is now unblocked
 
-For `coding`, this is not optional. At the end of every completed coding work item, leave one open `Work Continuation Handoff` in the coding mailbox and assume the current user task may be the last one assigned before pause, interruption, or takeover.
+For every completed work cycle, this is not optional. Every agent should leave one mailbox handoff entry in its declared mailbox before ending the cycle so the latest state is visible to `doc`, a takeover agent, or the next resumed chat.
+
+For `coding`, satisfy that rule with one open `Work Continuation Handoff` in the coding mailbox and assume the current user task may be the last one assigned before pause, interruption, or takeover.
+
+For `doc`, satisfy that rule with one mailbox handoff entry that records the latest doc state for the cycle, such as a planning-sync resolution, a blocking note, or a short continuation note for unfinished doc work.
 
 Before adding that new open continuation entry, close any older open `Work Continuation Handoff` entries in the same mailbox by marking them `superseded`.
 

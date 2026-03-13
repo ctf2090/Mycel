@@ -68,16 +68,17 @@ Mailbox retention and archive policy:
 
 ## Workflow
 
-1. `coding` finishes one issue slice or chat-first implementation slice.
-2. before appending a new `Work Continuation Handoff`, `coding` updates any older open continuation entry in the same mailbox to `Status: superseded`.
-3. `coding` appends one new open `Work Continuation Handoff` entry to its own mailbox before ending the work item, even if no doc follow-up is needed. Assume the current user-visible task may be the last assignment before pause, interruption, or takeover.
-4. if the landed work is planning-relevant, `coding` also appends a `Planning Sync Handoff` entry to its own mailbox or the intended peer mailbox named in `.agent-local/agents.json`.
-5. `coding` commits and pushes the tracked code or doc changes.
-6. the next `coding` agent that resumes or takes over the scope reads the newest open `Work Continuation Handoff` entry first.
-7. `doc` reads the newest open planning-sync entry addressed to its scope or mailbox.
-8. `doc` updates only the docs justified by that message.
-9. `doc` appends any follow-up or blocking question to its own mailbox or the relevant peer mailbox.
-10. the agent that absorbs the prior handoff marks the original mailbox entry `resolved`, `blocked`, or `superseded`.
+1. an agent finishes one user-command work cycle.
+2. before appending a new current-state handoff, the agent updates any older open current-state handoff in the same mailbox and same scope to `Status: superseded` when the new entry replaces it.
+3. every agent appends or updates one mailbox handoff entry in its own mailbox before ending the work cycle, so the mailbox records the latest state for that cycle.
+4. `coding` normally satisfies that requirement with one open `Work Continuation Handoff`, even if no doc follow-up is needed.
+5. if the landed work is planning-relevant, `coding` also appends a `Planning Sync Handoff` entry to its own mailbox or the intended peer mailbox named in `.agent-local/agents.json`.
+6. `coding` commits and pushes the tracked code or doc changes.
+7. the next `coding` agent that resumes or takes over the scope reads the newest open `Work Continuation Handoff` entry first.
+8. `doc` reads the newest open planning-sync entry addressed to its scope or mailbox.
+9. `doc` updates only the docs justified by that message.
+10. `doc` still leaves one mailbox handoff entry for that completed work cycle, using a planning-sync resolution, blocking note, or doc continuation note as appropriate.
+11. the agent that absorbs the prior handoff marks the original mailbox entry `resolved`, `blocked`, or `superseded`.
 
 If the work is issue-first, the same summary can also be mirrored into the issue comment, but the local mailbox remains the default agent-to-agent transport.
 
@@ -157,7 +158,7 @@ If `doc` wants a ready-made starting point, copy from `.agent-local/mailboxes/EX
 
 ## Work Continuation Handoff
 
-At the end of every completed `coding` work item, leave one continuation entry in the active coding mailbox. This is mandatory even when there is no planning-sync impact.
+At the end of every completed `coding` work item, leave one continuation entry in the active coding mailbox. This is how `coding` satisfies the per-work-cycle mailbox-handoff requirement, and it remains mandatory even when there is no planning-sync impact.
 
 At any moment, each coding mailbox should have at most one open `Work Continuation Handoff`. Before adding a newer one, close older open continuation entries in that mailbox by marking them `superseded`.
 
