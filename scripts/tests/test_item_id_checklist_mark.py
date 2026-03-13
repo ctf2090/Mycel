@@ -92,6 +92,26 @@ class ItemIdChecklistMarkCliTest(unittest.TestCase):
         self.assertEqual("not-needed", payload["state"])
         self.assertIn("- [-] Do the thing <!-- item-id: workflow.do-thing -->", content)
 
+    def test_marks_indented_subitem_problem_with_matching_indent(self) -> None:
+        checklist = self.write_checklist(
+            ".agent-local/agents/agt_doc/checklists/test.md",
+            "  - [ ] Do the thing <!-- item-id: workflow.do-thing -->\n",
+        )
+
+        proc = self.run_cli(
+            str(checklist.relative_to(self.root)),
+            "workflow.do-thing",
+            "--state",
+            "problem",
+            "--problem",
+            "Latest verification failed",
+        )
+        content = checklist.read_text(encoding="utf-8")
+
+        self.assertIn("state: problem", proc.stdout)
+        self.assertIn("  - [!] Do the thing <!-- item-id: workflow.do-thing -->", content)
+        self.assertIn("    - Problem: Latest verification failed", content)
+
     def test_problem_state_requires_problem_text(self) -> None:
         checklist = self.write_checklist(
             ".agent-local/agents/agt_doc/checklists/test.md",

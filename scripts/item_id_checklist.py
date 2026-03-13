@@ -119,11 +119,13 @@ def normalize_item_line(line: str) -> tuple[str, bool]:
     before_comment = line[: match.start()].rstrip()
     checkbox_match = CHECKBOX_PREFIX_RE.match(before_comment)
     if checkbox_match:
+        indent = checkbox_match.group("indent")
         text = checkbox_match.group("text").strip()
     else:
         list_match = LIST_PREFIX_RE.match(before_comment)
+        indent = list_match.group("indent") if list_match else ""
         text = list_match.group("text").strip() if list_match else before_comment.strip()
-    return f"- [ ] {text} {comment}", True
+    return f"{indent}- [ ] {text} {comment}", True
 
 
 def collect_relevant_lines(lines: list[str]) -> tuple[list[str], int]:

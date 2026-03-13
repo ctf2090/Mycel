@@ -132,6 +132,24 @@ Context line that should not be copied.
         self.assertNotIn("Context line that should not be copied.", content)
         self.assertNotIn("## Dropped Section", content)
 
+    def test_preserves_subitem_indentation(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "docs/source.md",
+            """# Source
+
+## Nested
+
+- Parent bullet
+  - Child item <!-- item-id: nested.child -->
+""",
+        )
+
+        result = json.loads(self.run_cli("agt_doc", "docs/source.md", "--json").stdout)
+        content = (self.root / result["output"]).read_text(encoding="utf-8")
+
+        self.assertIn("  - [ ] Child item <!-- item-id: nested.child -->", content)
+
     def test_agents_checklist_splits_bootstrap_and_workcycle_outputs(self) -> None:
         self.write_registry()
         self.write_source(

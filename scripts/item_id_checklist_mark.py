@@ -14,9 +14,8 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 AGENT_CHECKLIST_DIR = ROOT_DIR / ".agent-local" / "agents"
 LEGACY_CHECKLIST_DIR = ROOT_DIR / ".agent-local" / "checklists"
 ITEM_LINE_RE = re.compile(
-    r"^(?P<prefix>\s*-\s\[(?P<mark>[X!\- ])\]\s.*?)(?P<suffix>\s*<!-- item-id: (?P<item_id>.*?) -->\s*)$"
+    r"^(?P<indent>\s*)-\s\[(?P<mark>[X!\- ])\]\s.*?(?P<suffix>\s*<!-- item-id: (?P<item_id>.*?) -->\s*)$"
 )
-PROBLEM_SUBITEM_RE = re.compile(r"^\s{2,}-\sProblem:\s.*$")
 
 
 class ItemIdChecklistMarkError(Exception):
@@ -57,13 +56,13 @@ def _is_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
-def find_item(lines: list[str], item_id: str) -> tuple[int, str]:
+def find_item(lines: list[str], item_id: str) -> tuple[int, str, str]:
     for index, line in enumerate(lines):
         match = ITEM_LINE_RE.match(line)
         if match is None:
             continue
         if match.group("item_id").strip() == item_id:
-            return index, match.group("mark")
+            return index, match.group("mark"), match.group("indent")
     raise ItemIdChecklistMarkError(f"checklist item not found: {item_id}")
 
 
@@ -77,22 +76,32 @@ def mark_to_state(mark: str) -> str:
     return "unchecked"
 
 
-def remove_problem_subitem(lines: list[str], item_index: int) -> None:
+def problem_subitem_line(item_indent: str, problem: str) -> str:
+    return f"{item_indent}  - Problem: {problem}"
+
+
+def is_problem_subitem(line: str, item_indent: str) -> bool:
+    return line.startswith(f"{item_indent}  - Problem: ")
+
+
+def remove_problem_subitem(lines: list[str], item_index: int, item_indent: str) -> None:
     next_index = item_index + 1
-    if next_index < len(lines) and PROBLEM_SUBITEM_RE.match(lines[next_index]):
+    if next_index < len(lines) and is_problem_subitem(lines[next_index], item_indent):
         del lines[next_index]
 
 
-def set_problem_subitem(lines: list[str], item_index: int, problem: str) -> None:
-    subitem = f"  - Problem: {problem}"
+def set_problem_subitem(lines: list[str], item_index: int, item_indent: str, problem: str) -> None:
+    subitem = problem_subitem_line(item_indent, problem)
     next_index = item_index + 1
-    if next_index < len(lines) and PROBLEM_SUBITEM_RE.match(lines[next_index]):
+    if next_index < len(lines) and is_problem_subitem(lines[next_index], item_indent):
         lines[next_index] = subitem
         return
     lines.insert(next_index, subitem)
 
 
-def apply_state(lines: list[str], item_index: int, current_mark: str, state: str, problem: str) -> str:
+def apply_state(
+    lines: list[str], item_index: int, current_mark: str, item_indent: str, state: str, problem: str
+) -> str:
     if state == "toggle":
         next_mark = " " if current_mark in {"X", "!", "-"} else "X"
     elif state == "checked":
@@ -110,9 +119,9 @@ def apply_state(lines: list[str], item_index: int, current_mark: str, state: str
     if next_mark == "!":
         if not problem.strip():
             raise ItemIdChecklistMarkError("problem state requires --problem with a short explanation")
-        set_problem_subitem(lines, item_index, problem.strip())
+        set_problem_subitem(lines, item_index, item_indent, problem.strip())
     else:
-        remove_problem_subitem(lines, item_index)
+        remove_problem_subitem(lines, item_index, item_indent)
 
     return mark_to_state(next_mark)
 
@@ -142,8 +151,8 @@ def main() -> int:
     try:
         checklist_path = resolve_checklist_path(args.checklist_md)
         lines = checklist_path.read_text(encoding="utf-8").splitlines()
-        item_index, current_mark = find_item(lines, args.item_id)
-        state = apply_state(lines, item_index, current_mark, args.state, args.problem)
+        item_index, current_mark, item_indent = find_item(lines, args.item_id)
+        state = apply_state(lines, item_index, current_mark, item_indent, args.state, args.problem)
         checklist_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         result = {
             "status": "ok",
