@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from item_id_checklist import agents_bootstrap_checklist_path, materialize_checklist
+from item_id_checklist_mark import ItemIdChecklistMarkError, apply_updates
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = ROOT_DIR / ".agent-local" / "agents.json"
@@ -1315,35 +1316,16 @@ def cmd_work_checklist_mark(args: argparse.Namespace) -> int:
     if not checklist_path.exists():
         raise RegistryError(f"checklist file not found: {relative_to_root(checklist_path)}")
 
-    pattern = re.compile(
-        rf"^(?P<prefix>\s*-\s\[(?P<mark>[X ])\]\s.*?)(?P<suffix>\s*<!-- item-id: {re.escape(args.item_id)} -->\s*)$"
-    )
     lines = checklist_path.read_text(encoding="utf-8").splitlines()
-    target_index = None
-    current_mark = None
-    for index, line in enumerate(lines):
-        match = pattern.match(line)
-        if match is None:
-            continue
-        target_index = index
-        current_mark = match.group("mark")
-        break
+    try:
+        updates = apply_updates(lines=lines, updates=[(args.item_id, args.state)], problem_overrides={})
+    except ItemIdChecklistMarkError as exc:
+        raise RegistryError(str(exc)) from exc
 
-    if target_index is None or current_mark is None:
-        raise RegistryError(f"checklist item not found: {args.item_id}")
-
-    if args.state == "toggle":
-        next_mark = " " if current_mark == "X" else "X"
-    elif args.state == "checked":
-        next_mark = "X"
-    else:
-        next_mark = " "
-
-    if next_mark != current_mark:
-        lines[target_index] = lines[target_index].replace(f"[{current_mark}]", f"[{next_mark}]", 1)
+    if updates:
         checklist_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    state = "checked" if next_mark == "X" else "unchecked"
+    state = updates[0]["state"]
     result = {
         "status": "ok",
         "agent_uid": agent_uid,

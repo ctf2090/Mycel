@@ -10,6 +10,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_SCRIPT = REPO_ROOT / "scripts" / "agent_registry.py"
 SOURCE_CHECKLIST = REPO_ROOT / "scripts" / "item_id_checklist.py"
+SOURCE_MARKER = REPO_ROOT / "scripts" / "item_id_checklist_mark.py"
 TAIPEI_TZ = timezone(timedelta(hours=8))
 
 
@@ -21,8 +22,10 @@ class AgentRegistryCliTest(unittest.TestCase):
         (self.root / ".agent-local").mkdir(parents=True, exist_ok=True)
         shutil.copy2(SOURCE_SCRIPT, self.root / "scripts" / "agent_registry.py")
         shutil.copy2(SOURCE_CHECKLIST, self.root / "scripts" / "item_id_checklist.py")
+        shutil.copy2(SOURCE_MARKER, self.root / "scripts" / "item_id_checklist_mark.py")
         (self.root / "scripts" / "agent_registry.py").chmod(0o755)
         (self.root / "scripts" / "item_id_checklist.py").chmod(0o755)
+        (self.root / "scripts" / "item_id_checklist_mark.py").chmod(0o755)
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -640,6 +643,48 @@ class AgentRegistryCliTest(unittest.TestCase):
 
         self.assertNotEqual(0, proc.returncode)
         self.assertIn("checklist item not found: missing.item", proc.stderr)
+
+    def test_work_checklist_mark_toggle_still_works(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [
+                    self.make_v2_entry(
+                        agent_uid="agt_coding",
+                        role="coding",
+                        display_id="coding-1",
+                        assigned_at=self.timestamp(now - timedelta(minutes=10)),
+                        status="active",
+                        scope="impl",
+                        last_touched_at=self.timestamp(now - timedelta(minutes=1)),
+                    )
+                ],
+            }
+        )
+        checklist_path = self.root / ".agent-local" / "agents" / "agt_coding" / "work-checklist.md"
+        checklist_path.parent.mkdir(parents=True, exist_ok=True)
+        checklist_path.write_text(
+            "- [X] Example item <!-- item-id: example.item -->\n",
+            encoding="utf-8",
+        )
+
+        result = json.loads(
+            self.run_cli(
+                "work-checklist-mark",
+                "agt_coding",
+                "example.item",
+                "--state",
+                "toggle",
+                "--json",
+            ).stdout
+        )
+        content = checklist_path.read_text(encoding="utf-8")
+
+        self.assertEqual("unchecked", result["state"])
+        self.assertIn("- [ ] Example item <!-- item-id: example.item -->", content)
 
 
 if __name__ == "__main__":
