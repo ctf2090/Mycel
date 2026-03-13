@@ -44,6 +44,7 @@
   - Use [`.agent-local/DEV-SETUP-STATUS.example.md`](.agent-local/DEV-SETUP-STATUS.example.md) as the template for the local status file. <!-- item-id: bootstrap.dev-setup-template -->
 - Agent startup:
   - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use `scripts/agent_registry.py` subcommands as defined there. <!-- item-id: bootstrap.read-agent-registry -->
+  - Preferred fast path after reading the startup instructions: `scripts/agent_bootstrap.py [role|auto] [--scope <scope>]` to combine `claim`, `start`, `begin`, and `git status -sb`.
   - If the user did not assign a role for the new chat, use `scripts/agent_registry.py claim auto`, then tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.claim-auto -->
   - A new chat should claim a fresh agent for itself, even when the role matches an older inactive agent. Only use `resume-check` or `recover` when the same returning chat is resuming its own existing `agent_uid`. <!-- item-id: bootstrap.claim-fresh-agent-for-new-chat -->
   - `scripts/agent_registry.py start <agent-ref>` generates the agent's bootstrap checklist template at `.agent-local/agents/<agent_uid>/checklists/AGENTS-bootstrap-checklist.md` if it does not exist yet.

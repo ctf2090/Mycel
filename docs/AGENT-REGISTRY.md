@@ -15,6 +15,7 @@ The current protocol uses a split identity model:
 
 Recommended startup and lifecycle commands:
 
+- `scripts/agent_bootstrap.py [role|auto] [--scope <scope>]`
 - `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
 - `scripts/agent_registry.py start <agent-ref>`
 - `scripts/agent_registry.py status [<agent-ref>] [--verbose]`
@@ -37,6 +38,11 @@ Transition note:
 Recommended startup self-label:
 
 - `<display-id> | <scope-label>`
+
+Fast path:
+
+- `scripts/agent_bootstrap.py` is the preferred thin wrapper when a new chat wants a fresh claim plus `start`, `begin`, and `git status -sb` in one call.
+- The wrapper does not replace reading [`AGENTS.md`](../AGENTS.md) or local overlays first; it only reduces command round-trips after those inputs are loaded.
 
 ## Role Model
 
