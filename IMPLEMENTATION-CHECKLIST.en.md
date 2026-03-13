@@ -138,10 +138,10 @@ Defer if needed:
 - [x] Do not expose discretionary local policy controls that alter the active accepted head.
 - [x] If multiple fixed profiles are supported, enumerate them explicitly rather than allowing ad hoc local profiles.
 - [x] Ensure editor-maintainer status alone never grants selector weight.
-- [ ] If viewer signals can influence `selector_score`, model them as bounded, typed score channels with capped viewer bonus / penalty paths rather than raw popularity counts.
-- [ ] If viewer signals can influence `selector_score`, define typed `approval`, `objection`, and `challenge` signals with evidence and expiry semantics.
-- [ ] If viewer signals can influence `selector_score`, gate eligibility and effective signal weight through explicit anti-Sybil, admission, or reputation rules.
-- [ ] If viewer signals can influence `selector_score`, expose viewer contribution in stable typed arrays and traces without collapsing maintainer governance into raw public preference.
+- [x] If viewer signals can influence `selector_score`, model them as bounded, typed score channels with capped viewer bonus / penalty paths rather than raw popularity counts.
+- [x] If viewer signals can influence `selector_score`, define typed `approval`, `objection`, and `challenge` signals with evidence and expiry semantics.
+- [x] If viewer signals can influence `selector_score`, gate eligibility and effective signal weight through explicit anti-Sybil, admission, or reputation rules.
+- [x] If viewer signals can influence `selector_score`, expose viewer contribution in stable typed arrays and traces without collapsing maintainer governance into raw public preference.
 - [x] If dual-role keys are supported, validate editor-maintainer and view-maintainer admission separately.
 
 ## 10. Merge Generation

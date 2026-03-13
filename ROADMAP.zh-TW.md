@@ -285,7 +285,7 @@ Implementation anchors：
 
 ### Current Status
 
-屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection，以及具備 editor-admission 感知的 inspect/render behavior；若未來要把 viewer 受限地接進 `selector_score`，這條 follow-up 現在已被視為 `M3` 內的明確 governance extension lane。
+屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection、具備 editor-admission 感知的 inspect/render behavior，以及 head inspection 裡的 bounded viewer score surfaces；`M3` 仍未完成，主要剩下更廣泛的 governance persistence、reader-facing profile ergonomics，以及最後的 dual-role closure。
 
 已在進行中或部分完成：
 
@@ -298,6 +298,7 @@ Implementation anchors：
 7. 提供獨立於 reader-facing `head` commands 的 `view inspect` / `view list` / `view publish` governance workflows，並具備 listing filter、sort、time window、grouped summary 與 projection modes
 8. persisted governance reverse indexes，支援依 maintainer、profile 與 document 反查 view
 9. simulator 與 validation workflows，涵蓋 peer、topology、test 與 report 範圍
+10. head inspection 中的 bounded viewer score channels，包括 typed signal summaries、anti-Sybil gating、challenge review/freeze pressure，以及 fixture-backed coverage
 
 主要剩餘缺口：
 
@@ -305,7 +306,7 @@ Implementation anchors：
 2. 超出目前初始 filtered / sorted / projected `view` inspection / listing / publication workflow 的專用 governance surfaces
 3. 超出最小具名 fixed-profile surface 的 reader-facing profile ergonomics
 4. 後續可與 wire / sync 對齊的 governance-state tooling
-5. 若 viewer signals 將來要進入 `selector_score`，建議方向應是 bounded viewer bonus / penalty 模型，再搭配 challenge-led escalation，而不是 raw popularity counts；分層 anti-Sybil gating、由 eligibility 推導的 weighting，以及可追蹤的 decision outputs 仍屬 open gap
+5. mixed-role 與 shared-key case 的最終 dual-role admission closure，以及之後若要超出目前 head-inspect-local bundle surface，還需要哪些更廣泛的 governance persistence 決策
 
 Implementation anchors：
 

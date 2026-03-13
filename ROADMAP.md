@@ -285,7 +285,7 @@ Goal: add a usable reader-oriented client layer with deterministic accepted-head
 
 ### Current Status
 
-Early partial progress, now with accepted-head rendering, named fixed-profile selection, and editor-admission-aware inspect/render behavior on top of the deterministic selector path; bounded viewer-in-selector follow-up is now treated as an explicit governance extension lane inside `M3`.
+Early partial progress, now with accepted-head rendering, named fixed-profile selection, editor-admission-aware inspect/render behavior, and bounded viewer score surfaces in head inspection on top of the deterministic selector path; `M3` still remains open for broader governance persistence, reader-facing profile ergonomics, and final dual-role closure.
 
 Already in progress or partially implemented:
 
@@ -298,6 +298,7 @@ Already in progress or partially implemented:
 7. Dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands
 8. Persisted governance reverse indexes for maintainer, profile, and document view lookups
 9. Early simulator workflows around peer and topology validation
+10. Bounded viewer score channels in head inspection, including typed signal summaries, anti-Sybil gating, challenge review/freeze pressure, and fixture-backed coverage
 
 Still missing or incomplete:
 
@@ -305,7 +306,7 @@ Still missing or incomplete:
 2. Reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 3. Richer governance retrieval and publication surfaces beyond the initial filtered/sorted/projected `view` inspection/listing/publication surface
 4. Stronger dedicated governance-state tooling once wire and sync work begin to land
-5. If viewer signals ever enter `selector_score`, the recommended direction is a bounded viewer bonus / penalty model with challenge-led escalation rather than raw popularity counts; tiered anti-Sybil gating, eligibility-derived weighting, and traceable decision outputs remain open
+5. Final dual-role admission closure for mixed-role and shared-key cases, plus any later decision about promoting viewer inputs beyond the current head-inspect-local bundle surface
 
 ### Milestones in This Phase
 
@@ -327,7 +328,7 @@ Completion gate:
 
 Current read:
 
-Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, plus editor-admission-aware named-profile and store-backed flows; bounded viewer-in-selector follow-up is now an explicit planning lane rather than unstated future design debt.
+Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, plus editor-admission-aware named-profile and store-backed flows and bounded viewer score surfaces in head inspection; broader governance persistence, reader-facing profile ergonomics, and final dual-role closure remain.
 
 Already visible in the repo:
 
@@ -340,6 +341,7 @@ Already visible in the repo:
 7. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, grouped summaries, and projection modes
 8. persisted governance reverse indexes for maintainer, profile, and document-oriented view lookups
 9. simulator and validation workflows around peer, topology, test, and report scopes
+10. bounded viewer score channels in head inspection, including typed signal summaries, anti-Sybil gating, challenge review/freeze pressure, and fixture-backed coverage
 
 Main remaining gaps:
 
@@ -347,7 +349,7 @@ Main remaining gaps:
 2. stronger dedicated governance inspection and publication surfaces beyond the initial `view` workflow
 3. reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 4. governance-state tooling that can later align with wire/sync transport
-5. bounded viewer-in-selector governance follow-up if three-role checks expand beyond escalation-only viewers, now narrowed toward bounded viewer bonus / penalty channels plus challenge-led escalation; signal schema, tiered anti-Sybil gating, eligibility-weighting, and selector trace surfaces remain open
+5. final dual-role admission closure for mixed-role and shared-key cases, plus any broader governance persistence we would need before moving beyond the current head-inspect-local viewer signal surface
 
 Implementation anchors:
 

@@ -138,10 +138,10 @@
 - [x] 不提供會改變 active accepted head 的自由裁量本地 policy controls。
 - [x] 若支援多個固定 profiles，必須明確列舉，而不是允許 ad hoc local profiles。
 - [x] 確保僅有 editor-maintainer 身分不會自動取得 selector weight。
-- [ ] 若 viewer signals 可影響 `selector_score`，必須把它們建模為 bounded、typed 的 score channels，並採用受 cap 限制的 viewer bonus / penalty paths，而不是 raw popularity counts。
-- [ ] 若 viewer signals 可影響 `selector_score`，必須定義具 evidence 與 expiry semantics 的 `approval`、`objection`、`challenge` typed signals。
-- [ ] 若 viewer signals 可影響 `selector_score`，必須以明確的 anti-Sybil、admission 或 reputation 規則來限制 eligibility 與 effective signal weight。
-- [ ] 若 viewer signals 可影響 `selector_score`，必須以穩定 typed arrays 與 traces 呈現 viewer contribution，避免把 maintainer governance 壓扁成 raw public preference。
+- [x] 若 viewer signals 可影響 `selector_score`，必須把它們建模為 bounded、typed 的 score channels，並採用受 cap 限制的 viewer bonus / penalty paths，而不是 raw popularity counts。
+- [x] 若 viewer signals 可影響 `selector_score`，必須定義具 evidence 與 expiry semantics 的 `approval`、`objection`、`challenge` typed signals。
+- [x] 若 viewer signals 可影響 `selector_score`，必須以明確的 anti-Sybil、admission 或 reputation 規則來限制 eligibility 與 effective signal weight。
+- [x] 若 viewer signals 可影響 `selector_score`，必須以穩定 typed arrays 與 traces 呈現 viewer contribution，避免把 maintainer governance 壓扁成 raw public preference。
 - [x] 若支援 dual-role keys，必須分別驗證 editor-maintainer 與 view-maintainer 準入。
 
 ## 10. Merge Generation
