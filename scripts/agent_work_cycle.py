@@ -142,6 +142,8 @@ def main() -> int:
             raise WorkCycleError("workcycle checklist generation did not return an output path")
         workcycle_path = ROOT_DIR / workcycle_output
         set_checklist_item_state(workcycle_path, "workflow.touch-work-cycle", "X")
+        if checklist_result.get("batch_num") == 1:
+            set_checklist_item_state(workcycle_path, "workflow.mailbox-handoff-each-cycle", "-")
         print(f"workcycle_output: {workcycle_output}")
         if "batch_num" in checklist_result:
             print(f"batch_num: {checklist_result['batch_num']}")

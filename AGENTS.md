@@ -60,7 +60,7 @@
 - Reply with a short plan and the current repo status before making changes. <!-- item-id: workflow.reply-with-plan-and-status -->
 - Use the exact before/after timestamp line emitted by `scripts/agent_work_cycle.py begin|end`; do not hand-write replacements or swap in a different timestamp format. <!-- item-id: workflow.timestamped-commentary -->
 - Do not immediately follow `scripts/agent_work_cycle.py begin|end` with a manual `scripts/agent_registry.py touch|finish` for the same work cycle. <!-- item-id: workflow.no-double-touch-finish -->
-- Before ending each completed user command work cycle, append or update one handoff entry in the agent's declared mailbox so the mailbox records the latest state for that cycle. If the new entry replaces an older open current-state handoff in the same mailbox, mark the older one `superseded` first. <!-- item-id: workflow.mailbox-handoff-each-cycle -->
+- Before ending each completed user command work cycle after bootstrap batch 1, append or update one handoff entry in the agent's declared mailbox so the mailbox records the latest state for that cycle. If the new entry replaces an older open current-state handoff in the same mailbox, mark the older one `superseded` first. Bootstrap batch 1 should skip mailbox handoff and treat this item as not needed. <!-- item-id: workflow.mailbox-handoff-each-cycle -->
 - After work in each completed user command cycle, use `scripts/agent_work_cycle.py end <agent-ref> [--scope <scope-label>]`; it handles the inactive registry transition for the cycle and checks for unchecked items in the current workcycle checklist. For batch 1 bootstrap work, it also checks the bootstrap checklist before ending cleanly. <!-- item-id: workflow.finish-work-cycle -->
 
 ## Item-ID Checklists

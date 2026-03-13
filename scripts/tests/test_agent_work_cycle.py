@@ -62,6 +62,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 ## Work Cycle Workflow
 - Begin the work cycle <!-- item-id: workflow.touch-work-cycle -->
 - Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->
+- Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->
 - Finish the work cycle <!-- item-id: workflow.finish-work-cycle -->
 """,
             encoding="utf-8",
@@ -79,12 +80,17 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.run_registry("start", agent_uid)
 
         proc = self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
+        checklist = (
+            self.root
+            / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md"
+        ).read_text(encoding="utf-8")
 
         self.assertIn(f"workcycle_output: .agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md", proc.stdout)
         self.assertIn("batch_num: 1", proc.stdout)
         self.assertIn(f"agent_uid: {agent_uid}", proc.stdout)
         self.assertIn("current_status: active", proc.stdout)
         self.assertIn("Before work | doc-1 | timestamp-wrapper", proc.stdout)
+        self.assertIn("- [-] Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->", checklist)
 
     def test_end_finishes_agent_and_prints_after_work_line(self) -> None:
         self.write_agents_md()
