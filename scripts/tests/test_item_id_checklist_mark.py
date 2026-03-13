@@ -40,7 +40,7 @@ class ItemIdChecklistMarkCliTest(unittest.TestCase):
 
     def test_marks_checked(self) -> None:
         checklist = self.write_checklist(
-            ".agent-local/checklists/test.md",
+            ".agent-local/agents/agt_doc/checklists/test.md",
             "- [ ] Do the thing <!-- item-id: workflow.do-thing -->\n",
         )
 
@@ -54,7 +54,7 @@ class ItemIdChecklistMarkCliTest(unittest.TestCase):
 
     def test_marks_problem_and_adds_subitem(self) -> None:
         checklist = self.write_checklist(
-            ".agent-local/checklists/test.md",
+            ".agent-local/agents/agt_doc/checklists/test.md",
             "- [ ] Do the thing <!-- item-id: workflow.do-thing -->\n",
         )
 
@@ -74,7 +74,7 @@ class ItemIdChecklistMarkCliTest(unittest.TestCase):
 
     def test_problem_state_requires_problem_text(self) -> None:
         checklist = self.write_checklist(
-            ".agent-local/checklists/test.md",
+            ".agent-local/agents/agt_doc/checklists/test.md",
             "- [ ] Do the thing <!-- item-id: workflow.do-thing -->\n",
         )
 
@@ -91,7 +91,7 @@ class ItemIdChecklistMarkCliTest(unittest.TestCase):
 
     def test_clears_problem_subitem_when_marked_checked(self) -> None:
         checklist = self.write_checklist(
-            ".agent-local/checklists/test.md",
+            ".agent-local/agents/agt_doc/checklists/test.md",
             "- [!] Do the thing <!-- item-id: workflow.do-thing -->\n  - Problem: Old problem\n",
         )
 
@@ -110,7 +110,10 @@ class ItemIdChecklistMarkCliTest(unittest.TestCase):
         proc = self.run_cli(str(checklist.relative_to(self.root)), "workflow.do-thing", check=False)
 
         self.assertNotEqual(0, proc.returncode)
-        self.assertIn("checklist path must live under .agent-local/checklists/", proc.stderr)
+        self.assertIn(
+            "checklist path must live under .agent-local/agents/ or legacy .agent-local/checklists/",
+            proc.stderr,
+        )
 
 
 if __name__ == "__main__":

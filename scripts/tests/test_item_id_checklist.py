@@ -86,7 +86,7 @@ class ItemIdChecklistCliTest(unittest.TestCase):
         output_path = self.root / result["output"]
         content = output_path.read_text(encoding="utf-8")
 
-        self.assertEqual(".agent-local/checklists/agt_doc-source-checklist.md", result["output"])
+        self.assertEqual(".agent-local/agents/agt_doc/checklists/source-checklist.md", result["output"])
         self.assertTrue(output_path.exists())
         self.assertIn("# Agent Item-ID Checklist Copy", content)
         self.assertIn("- [ ] Read the file <!-- item-id: bootstrap.read -->", content)
@@ -130,7 +130,7 @@ No markers here.
         proc = self.run_cli("agt_doc", "docs/source.md", "--output", ".agent-local/not-here.md", check=False)
 
         self.assertNotEqual(0, proc.returncode)
-        self.assertIn("checklist output must live under .agent-local/checklists/", proc.stderr)
+        self.assertIn("checklist output must live under .agent-local/agents/agt_doc/", proc.stderr)
 
 
 if __name__ == "__main__":

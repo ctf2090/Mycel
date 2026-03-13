@@ -13,7 +13,7 @@ from typing import Any
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = ROOT_DIR / ".agent-local" / "agents.json"
-CHECKLIST_DIR = ROOT_DIR / ".agent-local" / "checklists"
+AGENT_DIR = ROOT_DIR / ".agent-local" / "agents"
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 ITEM_ID_COMMENT_RE = re.compile(r"<!--\s*item-id:\s*(?P<item_id>.*?)\s*-->")
 CHECKBOX_PREFIX_RE = re.compile(r"^(?P<indent>\s*)(?:[-*+]|\d+\.)\s+\[(?:X|!| )\]\s+(?P<text>.*)$")
@@ -81,7 +81,7 @@ def require_non_empty_str(entry: dict[str, Any], field: str, agent_ref: str) -> 
 
 def checklist_rel_for(agent_uid: str, source_path: Path) -> str:
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source_path.stem).strip("-") or "source"
-    return f".agent-local/checklists/{agent_uid}-{stem}-checklist.md"
+    return f".agent-local/agents/{agent_uid}/checklists/{stem}-checklist.md"
 
 
 def resolve_checklist_path(path_value: str | None, *, agent_uid: str, source_path: Path) -> Path:
@@ -91,10 +91,13 @@ def resolve_checklist_path(path_value: str | None, *, agent_uid: str, source_pat
         candidate = ROOT_DIR / checklist_rel_for(agent_uid, source_path)
 
     resolved = candidate.resolve()
+    agent_root = (AGENT_DIR / agent_uid).resolve()
     try:
-        resolved.relative_to(CHECKLIST_DIR.resolve())
+        resolved.relative_to(agent_root)
     except ValueError as exc:
-        raise ItemIdChecklistError("checklist output must live under .agent-local/checklists/") from exc
+        raise ItemIdChecklistError(
+            f"checklist output must live under .agent-local/agents/{agent_uid}/"
+        ) from exc
     return resolved
 
 

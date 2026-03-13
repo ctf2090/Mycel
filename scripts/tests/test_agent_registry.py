@@ -484,7 +484,7 @@ class AgentRegistryCliTest(unittest.TestCase):
         output_path = self.root / result["output"]
         content = output_path.read_text(encoding="utf-8")
 
-        self.assertEqual(".agent-local/checklists/agt_doc-work-checklist.md", result["output"])
+        self.assertEqual(".agent-local/agents/agt_doc/work-checklist.md", result["output"])
         self.assertTrue(output_path.exists())
         self.assertIn("# Agent Work Checklist for doc-1", content)
         self.assertIn("- Mark items with `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id>`.", content)
@@ -594,7 +594,7 @@ class AgentRegistryCliTest(unittest.TestCase):
                 ],
             }
         )
-        checklist_path = self.root / ".agent-local" / "checklists" / "agt_coding-work-checklist.md"
+        checklist_path = self.root / ".agent-local" / "agents" / "agt_coding" / "work-checklist.md"
         checklist_path.parent.mkdir(parents=True, exist_ok=True)
         checklist_path.write_text(
             "- [ ] Example item <!-- item-id: example.item -->\n",

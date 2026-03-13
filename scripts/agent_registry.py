@@ -178,7 +178,27 @@ def mailbox_rel_for_uid(agent_uid: str) -> str:
 
 
 def checklist_rel_for_uid(agent_uid: str) -> str:
+    return f".agent-local/agents/{agent_uid}/work-checklist.md"
+
+
+def legacy_checklist_rel_for_uid(agent_uid: str) -> str:
     return f".agent-local/checklists/{agent_uid}-work-checklist.md"
+
+
+def legacy_root_checklist_rel_for_uid(agent_uid: str) -> str:
+    return f".agent-local/{agent_uid}-work-checklist.md"
+
+
+def resolve_existing_work_checklist_path(agent_uid: str) -> Path:
+    for relative_path in [
+        checklist_rel_for_uid(agent_uid),
+        legacy_checklist_rel_for_uid(agent_uid),
+        legacy_root_checklist_rel_for_uid(agent_uid),
+    ]:
+        candidate = resolve_agent_local_path(relative_path)
+        if candidate.exists():
+            return candidate
+    return resolve_agent_local_path(checklist_rel_for_uid(agent_uid))
 
 
 def ensure_mailbox(path: Path, *, title: str, source_path: Path | None = None) -> None:
@@ -1236,7 +1256,11 @@ def cmd_work_checklist_mark(args: argparse.Namespace) -> int:
     registry, _, _ = load_registry_with_cleanup()
     entry = resolve_agent_entry(registry, args.agent_ref)
     agent_uid = require_non_empty_str(entry, "agent_uid", args.agent_ref)
-    checklist_path = resolve_agent_local_path(args.checklist or checklist_rel_for_uid(agent_uid))
+    checklist_path = (
+        resolve_agent_local_path(args.checklist)
+        if args.checklist
+        else resolve_existing_work_checklist_path(agent_uid)
+    )
     if not checklist_path.exists():
         raise RegistryError(f"checklist file not found: {relative_to_root(checklist_path)}")
 

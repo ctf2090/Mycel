@@ -11,7 +11,8 @@ from typing import Any
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-CHECKLIST_DIR = ROOT_DIR / ".agent-local" / "checklists"
+AGENT_CHECKLIST_DIR = ROOT_DIR / ".agent-local" / "agents"
+LEGACY_CHECKLIST_DIR = ROOT_DIR / ".agent-local" / "checklists"
 ITEM_LINE_RE = re.compile(
     r"^(?P<prefix>\s*-\s\[(?P<mark>[X! ])\]\s.*?)(?P<suffix>\s*<!-- item-id: (?P<item_id>.*?) -->\s*)$"
 )
@@ -34,15 +35,26 @@ def resolve_checklist_path(path_value: str) -> Path:
     if not candidate.is_absolute():
         candidate = ROOT_DIR / candidate
     resolved = candidate.resolve()
-    try:
-        resolved.relative_to(CHECKLIST_DIR.resolve())
-    except ValueError as exc:
-        raise ItemIdChecklistMarkError("checklist path must live under .agent-local/checklists/") from exc
+    allowed_roots = [AGENT_CHECKLIST_DIR.resolve()]
+    if LEGACY_CHECKLIST_DIR.exists():
+        allowed_roots.append(LEGACY_CHECKLIST_DIR.resolve())
+    if not any(_is_relative_to(resolved, root) for root in allowed_roots):
+        raise ItemIdChecklistMarkError(
+            "checklist path must live under .agent-local/agents/ or legacy .agent-local/checklists/"
+        )
     if not resolved.exists():
         raise ItemIdChecklistMarkError(f"checklist file not found: {relative_to_root(resolved)}")
     if not resolved.is_file():
         raise ItemIdChecklistMarkError(f"checklist path is not a file: {relative_to_root(resolved)}")
     return resolved
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def find_item(lines: list[str], item_id: str) -> tuple[int, str]:

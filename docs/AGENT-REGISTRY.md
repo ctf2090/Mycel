@@ -24,7 +24,7 @@ Recommended startup and lifecycle commands:
 - `scripts/agent_registry.py resume-check <agent-ref>`
 - `scripts/agent_registry.py recover <agent-ref> [--scope <scope>]`
 - `scripts/agent_registry.py takeover <stale-agent-ref> [--scope <scope>]`
-- `scripts/agent_registry.py work-checklist <agent-ref> [--output .agent-local/checklists/...md]`
+- `scripts/agent_registry.py work-checklist <agent-ref> [--output .agent-local/agents/<agent_uid>/...md]`
 - `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id> [--state checked|unchecked|toggle]`
 - `scripts/agent_registry.py cleanup`
 
@@ -315,7 +315,7 @@ Keep startup output narrow:
 7. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py before|after --agent <display-id> --scope <scope-label>` and keep the same single-line `UTC+8` format; do not hand-write or replace it with dual-timezone text
 8. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
 9. when longer-lived coordination changes are needed, use `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`
-10. when an agent wants a refreshable task list, use `scripts/agent_registry.py work-checklist <agent-ref>`; by default it writes `.agent-local/checklists/<agent_uid>-work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
+10. when an agent wants a refreshable task list, use `scripts/agent_registry.py work-checklist <agent-ref>`; by default it writes `.agent-local/agents/<agent_uid>/work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
 11. to update one checklist line quickly from automation or a terminal command, use `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id>` and optionally `--state checked|unchecked|toggle`
 12. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
