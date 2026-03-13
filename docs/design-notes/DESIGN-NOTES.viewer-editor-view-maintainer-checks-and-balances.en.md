@@ -185,6 +185,42 @@ These signal types should not have identical governance effects.
 - support moderation or review triage
 - not directly freeze acceptance by itself
 
+### 5.5 Penalties for Editor and View Maintainers
+
+If three-role balancing is meant to hold, viewer challenge should not only delay outcomes. Under higher-threshold, higher-evidence conditions, it should also be able to open a formal penalty path for both `editor-maintainer` and `view-maintainer`.
+
+`editor-maintainer` penalties are appropriate for cases such as:
+
+- repeated submission of low-quality, spam-like, or procedurally abusive candidates
+- repeated use of noisy revisions to exhaust review capacity
+- coordination with fake viewer support or similar manipulation
+
+Possible effects:
+
+- proposal throttling or temporary proposal cooldown
+- stricter candidate admission
+- requiring a higher threshold before formal ratification
+- in severe cases, maintainer suspension or revocation review
+
+`view-maintainer` penalties are appropriate for cases such as:
+
+- repeatedly ignoring high-quality challenge or clear evidence
+- repeatedly absorbing outside dissent through a narrow internal bloc
+- publishing procedurally abusive, misleading, or clearly bad-faith governance signals
+
+Possible effects:
+
+- lower or temporarily zeroed `effective_weight`
+- larger corroboration quorum requirements
+- suspension from solo participation in high-impact ratification
+- in severe cases, maintainer suspension or revocation review
+
+The key distinction is:
+
+- not every viewer objection should directly penalize a maintainer
+- penalties should require stronger evidence, review conclusions, or multi-party corroboration
+- penalties should be treated as role-accountability measures, not just candidate-level intervention like `delay`, `review`, or `temporary_freeze`
+
 ## 6. Two-Layer Acceptance
 
 The cleanest structure is a two-layer acceptance model.

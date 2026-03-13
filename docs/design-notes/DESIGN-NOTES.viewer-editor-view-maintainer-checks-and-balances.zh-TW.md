@@ -185,6 +185,42 @@ viewer 的影響力不應只被建模成一種模糊的票數。
 - 支援 moderation 或 review triage
 - 不應只靠自己就直接凍結採認
 
+### 5.5 Editor 與 View-Maintainer 的 Penalty
+
+若三角色制衡要成立，viewer 的 challenge 不應只有延緩效果，也應在高門檻且高證據條件下，能對 `editor-maintainer` 與 `view-maintainer` 形成正式 penalty path。
+
+`editor-maintainer` 的 penalty 可用於：
+
+- 持續提交低品質、明顯濫發或程序上有問題的 candidate
+- 重複利用噪音 revisions 消耗 review 能量
+- 配合假性 viewer support 或其他操弄行為
+
+可能效果：
+
+- 提案節流或短期 proposal cooldown
+- 更嚴格的 candidate admission
+- 在更高門檻下才允許進入正式 ratification
+- 嚴重時進入 maintainer suspension / revocation review
+
+`view-maintainer` 的 penalty 可用於：
+
+- 重複忽略高品質 challenge 或明確 evidence
+- 持續用狹窄同盟消化外部異議
+- 發布程序上惡意、失實，或明顯濫權的 governance signals
+
+可能效果：
+
+- `effective_weight` 降低或暫時歸零
+- 要求更大的 corroboration quorum
+- 暫停其單獨參與高影響 ratification 的能力
+- 嚴重時進入 maintainer suspension / revocation review
+
+這裡的關鍵是：
+
+- 不是每個 viewer objection 都直接懲罰 maintainer
+- penalty 應要求更高的 evidence、review 結論，或多方 corroboration
+- penalty 應被視為比 `delay` / `review` / `temporary_freeze` 更接近角色責任處分，而不只是 candidate-level intervention
+
 ## 6. 雙層採認
 
 最乾淨的結構，是採用雙層採認模型。
