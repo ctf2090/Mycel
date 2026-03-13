@@ -34,11 +34,6 @@ Default pattern:
 - `.agent-local/mailboxes/<agent_uid>.md`
   one mailbox per agent, with peer-to-peer handoff entries addressed by scope and stable uid
 
-Archive pattern:
-
-- `.agent-local/mailboxes/archive/YYYY-MM/<agent_uid>.md`
-  archive destination for orphaned uid-based mailboxes that are no longer referenced by `.agent-local/agents.json`
-
 Shared fallback pattern:
 
 - `.agent-local/coding-to-doc.md`
@@ -54,17 +49,16 @@ If a chat is interrupted and another agent takes over, add one short takeover li
 
 - `taking over from coding-2 after interrupted chat`
 
-Mailbox retention and archive policy:
+Mailbox retention and cleanup policy:
 
-- registry cleanup does not delete mailbox files automatically
 - active working-set uid-based mailboxes stay in `.agent-local/mailboxes/`
-- `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`, `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`, and `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md` stay in place and are never archived
+- `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`, `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`, and `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md` stay in place and are never deleted by cleanup
 - once an agent entry has been removed from `.agent-local/agents.json`, its uid-based mailbox becomes an orphaned mailbox candidate
-- orphaned uid-based mailboxes should be moved into `.agent-local/mailboxes/archive/YYYY-MM/` instead of being deleted
-- use `scripts/mailbox_gc.py` to inspect, archive, and prune uid-based mailboxes under the repo's mailbox-retention rules
+- orphaned uid-based mailboxes older than 3 days should be deleted; there is no archive step
+- use `scripts/mailbox_gc.py` to inspect mailbox references and delete orphaned uid-based mailboxes after the retention window
 - use `scripts/inactive_coding_handoffs.py` to collect the latest open `Work Continuation Handoff` left by each `inactive` `coding` agent
 - use `npm run handoffs:inactive-coding` as the short startup command for a new `coding` agent that wants to scan those leftover handoffs first
-- shared fallback mailbox files outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`; retire or archive those only by explicit team decision
+- shared fallback mailbox files outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`; remove those only by explicit team decision
 
 ## Workflow
 

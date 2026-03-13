@@ -289,9 +289,9 @@ Inactive lease rule:
 2. `finish` when that command completes
 3. inactive entries older than one hour become stale and release their `display_id`
 4. stale entries remain recoverable by `agent_uid` during the retention window
-5. once an inactive stale entry remains retained for 24 hours, `scripts/agent_registry.py` should remove it from `.agent-local/agents.json`
-6. paused entries older than 24 hours become stale-paused and release their `display_id`
-7. once a paused entry remains older than 3 days, `scripts/agent_registry.py` should remove it from `.agent-local/agents.json`
+5. once an inactive entry remains inactive for 3 days, `scripts/agent_registry.py` should remove it from `.agent-local/agents.json` and delete that agent's local mailbox plus agent directory
+6. paused entries older than one hour become stale-paused and release their `display_id`
+7. once a paused entry remains older than 3 days, `scripts/agent_registry.py` should remove it from `.agent-local/agents.json` and delete that agent's local mailbox plus agent directory
 8. `scripts/agent_registry.py cleanup` can be used to report both retained stale agents and removed agents
 
 Do not silently reuse the old `agent_uid` for a new chat after an interruption.

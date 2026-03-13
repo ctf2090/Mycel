@@ -15,7 +15,6 @@ Local registry file:
 Local mailbox files:
 
 - `.agent-local/mailboxes/<agent_uid>.md`
-- archive: `.agent-local/mailboxes/archive/YYYY-MM/<agent_uid>.md`
 - example template: `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 - resolution template: `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`
 - continuation template: `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
@@ -24,13 +23,10 @@ Local mailbox files:
 
 Mailbox retention:
 
-- registry cleanup does not delete mailbox files automatically
 - active working-set uid-based mailboxes stay in `.agent-local/mailboxes/`
-- orphaned uid-based mailboxes should move into `.agent-local/mailboxes/archive/YYYY-MM/`
+- orphaned uid-based mailboxes older than 3 days should be deleted; there is no archive step
 - use `npm run handoffs:inactive-coding` after a new `coding` agent starts to check leftover open continuation handoffs from inactive coding agents
-- use `scripts/mailbox_gc.py scan` to inspect referenced, missing, orphaned, and archived uid-based mailboxes
-- use `scripts/mailbox_gc.py archive` to move orphaned uid-based mailboxes without deleting contents
-- archived uid-based mailboxes older than 10 days may be deleted with `scripts/mailbox_gc.py prune` when they have no unresolved planning handoff
+- use `scripts/mailbox_gc.py` to inspect mailbox references and delete orphaned uid-based mailboxes after the retention window
 - shared fallback mailboxes outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`
 
 Doc cadence reminder:
@@ -88,9 +84,9 @@ Per-command activity:
 3. use `scripts/agent_timestamp.py` only when you need the timestamp line without the registry change, and paste the emitted line directly instead of hand-writing the format
 5. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
 6. inactive entries older than one hour become stale and release their `display_id`
-7. once an inactive stale entry stays retained for 24 more hours, `cleanup` removes it from `.agent-local/agents.json`
-8. paused entries older than 24 hours become stale-paused and release their `display_id`
-9. paused entries older than 3 days are cleanup candidates and should be removed from `.agent-local/agents.json`
+7. once an inactive entry stays inactive for 3 days, `cleanup` removes it from `.agent-local/agents.json` and deletes the local mailbox plus agent directory
+8. paused entries older than one hour become stale-paused and release their `display_id`
+9. paused entries older than 3 days are cleanup candidates and should be removed from `.agent-local/agents.json` together with their local mailbox plus agent directory
 
 ## Bootstrap Transcript
 

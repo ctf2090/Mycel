@@ -199,7 +199,6 @@ Recommended mailbox pattern:
 - copyable planning-sync resolution example: `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`
 - copyable work-continuation example: `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
 - copyable doc-continuation example: `.agent-local/mailboxes/EXAMPLE-doc-continuation-note.md`
-- mailbox archive root: `.agent-local/mailboxes/archive/YYYY-MM/`
 
 Fallback shared mailboxes such as `.agent-local/coding-to-doc.md` and `.agent-local/doc-to-coding.md` may still be used if the team explicitly wants them, but the registry remains the source of truth for role assignment.
 
@@ -211,7 +210,7 @@ Mailbox usage for `sync doc` / `sync web` / `sync plan` work:
 - `doc` agents should satisfy that per-cycle requirement with one mailbox handoff entry that captures the latest doc state for the cycle; use a planning-sync handoff, resolution reply, blocking note, or doc continuation note as appropriate
 - before leaving a new open current-state handoff in the same mailbox, the agent should mark any older open current-state handoff for that scope as `superseded`, so the mailbox ends with one latest open current-state handoff; `python3 scripts/mailbox_handoff.py create ...` automates that supersede-and-append step
 - `doc` should scan active, paused, and recently inactive agent mailboxes before any `sync doc`, `sync web`, or `sync plan` batch and use those notes as collection input for roadmap/checklist/progress or Pages refresh work
-- scan order should be: active mailbox paths first, paused mailbox paths second, recently inactive mailbox paths third, and fallback shared mailboxes last; archived mailboxes stay out of scope unless a current mailbox explicitly points to an unresolved archived entry
+- scan order should be: active mailbox paths first, paused mailbox paths second, recently inactive mailbox paths third, and fallback shared mailboxes last
 - mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-plan-refresh.sh`
 
 Mailbox usage for resumed or takeover coding work:
@@ -257,17 +256,14 @@ Minimum handoff quality:
 - if an agent wants a ready-made starting point for continuation instead of copying the Markdown block manually, use `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
 - if an agent wants to render the tracked mailbox shapes directly, use `scripts/mailbox_handoff.py`
 
-Mailbox retention and archive policy:
+Mailbox retention and cleanup policy:
 
-- registry cleanup does not delete mailbox files; mailbox history is retained until a mailbox-specific archive step moves it out of the active working set
 - active working-set mailboxes stay in `.agent-local/mailboxes/`
-- the tracked example mailbox stays in place and is never an archive candidate
+- the tracked example mailbox stays in place and is never a cleanup candidate
 - once an agent entry has been removed from `.agent-local/agents.json`, its uid-based mailbox becomes an orphaned mailbox candidate
-- orphaned uid-based mailboxes should be moved into `.agent-local/mailboxes/archive/YYYY-MM/` instead of being deleted
-- use `scripts/mailbox_gc.py scan` to inspect referenced, missing, orphaned, and archived uid-based mailboxes
-- use `scripts/mailbox_gc.py archive` to move orphaned uid-based mailboxes into the archive tree without deleting their contents
-- archived uid-based mailboxes older than 10 days may be deleted with `scripts/mailbox_gc.py prune` only when they do not contain an unresolved planning handoff
-- shared fallback mailbox files outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`; retire or archive those only with an explicit team decision
+- orphaned uid-based mailboxes older than 3 days should be deleted; there is no archive step
+- use `scripts/mailbox_gc.py` to inspect mailbox references and delete orphaned uid-based mailboxes after the retention window
+- shared fallback mailbox files outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`; remove those only with an explicit team decision
 
 ## Startup Gate
 
@@ -343,9 +339,9 @@ Rules:
 3. once an entry stays `inactive` for at least one hour, it becomes stale
 4. when an entry becomes stale, its `display_id` is released and `current_display_id` becomes `null`
 5. while the stale entry is still retained, the old chat must use `resume-check` and then `recover` by `agent_uid`
-6. once an entry has remained stale for at least 1 more hour, `scripts/agent_registry.py` removes it from `.agent-local/agents.json`
+6. once an entry has remained `inactive` for 3 days, `scripts/agent_registry.py` removes it from `.agent-local/agents.json` and deletes that agent's local mailbox and agent directory
 7. once an entry stays `paused` for at least 1 hour, it becomes stale-paused and releases its `display_id`
-8. once an entry has remained `paused` for at least 2 hours total, `scripts/agent_registry.py` removes it from `.agent-local/agents.json`
+8. once an entry has remained `paused` for 3 days, `scripts/agent_registry.py` removes it from `.agent-local/agents.json` and deletes that agent's local mailbox and agent directory
 9. `cleanup` reports both retained stale agents and removed agents
 
 ## Recovery Model

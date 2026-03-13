@@ -80,7 +80,7 @@ class MailboxGcCliTest(unittest.TestCase):
             "superseded_by": None,
         }
 
-    def test_scan_reports_referenced_missing_orphaned_and_archived_mailboxes(self) -> None:
+    def test_scan_reports_referenced_missing_orphaned_and_legacy_archived_mailboxes(self) -> None:
         self.write_registry(
             {
                 "version": 2,
@@ -97,44 +97,40 @@ class MailboxGcCliTest(unittest.TestCase):
         )
         self.write_mailbox(".agent-local/mailboxes/agt_live.md")
         self.write_mailbox(".agent-local/mailboxes/agt_orphan.md")
+        self.set_mtime_days_ago(".agent-local/mailboxes/agt_orphan.md", 4)
         self.write_mailbox(".agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md")
-        self.write_mailbox(".agent-local/mailboxes/archive/2026-03/agt_old.md", "## 2026-03-01 - doc - archived\n\n- Status: resolved\n- Planning impact: none\n")
-        self.set_mtime_days_ago(".agent-local/mailboxes/archive/2026-03/agt_old.md", 12)
+        self.write_mailbox(".agent-local/mailboxes/archive/2026-03/agt_old.md", "# old\n")
+        self.set_mtime_days_ago(".agent-local/mailboxes/archive/2026-03/agt_old.md", 5)
 
         payload = json.loads(self.run_cli("scan", "--json").stdout)
 
         self.assertEqual(1, payload["referenced_count"])
         self.assertEqual(1, payload["missing_referenced_count"])
         self.assertEqual(1, payload["orphaned_count"])
-        self.assertEqual(1, payload["archived_count"])
-        self.assertEqual(1, payload["prune_candidate_count"])
+        self.assertEqual(1, payload["legacy_archived_count"])
+        self.assertEqual(2, payload["delete_candidate_count"])
         self.assertEqual(".agent-local/mailboxes/agt_live.md", payload["referenced"][0]["path"])
         self.assertEqual(".agent-local/mailboxes/agt_missing.md", payload["missing_referenced"][0]["mailbox"])
         self.assertEqual(".agent-local/mailboxes/agt_orphan.md", payload["orphaned"][0]["path"])
-        self.assertEqual(".agent-local/mailboxes/archive/2026-03/agt_old.md", payload["prune_candidates"][0]["path"])
 
-    def test_archive_moves_only_orphaned_uid_mailboxes(self) -> None:
+    def test_prune_deletes_orphaned_live_mailbox_older_than_three_days(self) -> None:
         self.write_registry(
             {
                 "version": 2,
                 "updated_at": "2026-03-12T12:00:00+0800",
-                "agent_count": 1,
-                "agents": [self.registry_entry("agt_live")],
+                "agent_count": 0,
+                "agents": [],
             }
         )
-        self.write_mailbox(".agent-local/mailboxes/agt_live.md", "# live\n")
         self.write_mailbox(".agent-local/mailboxes/agt_orphan.md", "# orphan\n")
-        self.write_mailbox(".agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md", "# example\n")
+        self.set_mtime_days_ago(".agent-local/mailboxes/agt_orphan.md", 4)
 
-        payload = json.loads(self.run_cli("archive", "--json").stdout)
+        payload = json.loads(self.run_cli("prune", "--json").stdout)
 
-        self.assertEqual(1, payload["archived_count"])
-        self.assertTrue((self.root / ".agent-local/mailboxes/agt_live.md").exists())
+        self.assertEqual(1, payload["deleted_count"])
         self.assertFalse((self.root / ".agent-local/mailboxes/agt_orphan.md").exists())
-        self.assertTrue((self.root / payload["archived"][0]["destination"]).exists())
-        self.assertTrue((self.root / ".agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md").exists())
 
-    def test_archive_dry_run_reports_moves_without_changing_files(self) -> None:
+    def test_prune_deletes_legacy_archived_mailbox_older_than_three_days(self) -> None:
         self.write_registry(
             {
                 "version": 2,
@@ -143,35 +139,15 @@ class MailboxGcCliTest(unittest.TestCase):
                 "agents": [],
             }
         )
-        self.write_mailbox(".agent-local/mailboxes/agt_orphan.md", "# orphan\n")
-
-        payload = json.loads(self.run_cli("archive", "--dry-run", "--json").stdout)
-
-        self.assertTrue(payload["dry_run"])
-        self.assertEqual(1, payload["archived_count"])
-        self.assertTrue((self.root / ".agent-local/mailboxes/agt_orphan.md").exists())
-
-    def test_prune_deletes_archived_mailbox_older_than_ten_days_without_open_planning_handoff(self) -> None:
-        self.write_registry(
-            {
-                "version": 2,
-                "updated_at": "2026-03-12T12:00:00+0800",
-                "agent_count": 0,
-                "agents": [],
-            }
-        )
-        self.write_mailbox(
-            ".agent-local/mailboxes/archive/2026-03/agt_old.md",
-            "## 2026-03-01 - doc - archived\n\n- Status: resolved\n- Planning impact: checklist\n",
-        )
-        self.set_mtime_days_ago(".agent-local/mailboxes/archive/2026-03/agt_old.md", 11)
+        self.write_mailbox(".agent-local/mailboxes/archive/2026-03/agt_old.md", "# old\n")
+        self.set_mtime_days_ago(".agent-local/mailboxes/archive/2026-03/agt_old.md", 4)
 
         payload = json.loads(self.run_cli("prune", "--json").stdout)
 
         self.assertEqual(1, payload["deleted_count"])
         self.assertFalse((self.root / ".agent-local/mailboxes/archive/2026-03/agt_old.md").exists())
 
-    def test_prune_keeps_archived_mailbox_with_unresolved_planning_handoff(self) -> None:
+    def test_prune_keeps_orphaned_mailbox_younger_than_three_days(self) -> None:
         self.write_registry(
             {
                 "version": 2,
@@ -180,16 +156,13 @@ class MailboxGcCliTest(unittest.TestCase):
                 "agents": [],
             }
         )
-        self.write_mailbox(
-            ".agent-local/mailboxes/archive/2026-03/agt_old.md",
-            "## Planning Sync Handoff\n\n- Planning impact:\n  - roadmap wording update needed\n",
-        )
-        self.set_mtime_days_ago(".agent-local/mailboxes/archive/2026-03/agt_old.md", 11)
+        self.write_mailbox(".agent-local/mailboxes/agt_orphan.md", "# orphan\n")
+        self.set_mtime_days_ago(".agent-local/mailboxes/agt_orphan.md", 2)
 
         payload = json.loads(self.run_cli("prune", "--json").stdout)
 
         self.assertEqual(0, payload["deleted_count"])
-        self.assertTrue((self.root / ".agent-local/mailboxes/archive/2026-03/agt_old.md").exists())
+        self.assertTrue((self.root / ".agent-local/mailboxes/agt_orphan.md").exists())
 
     def test_prune_dry_run_reports_candidates_without_deleting(self) -> None:
         self.write_registry(
@@ -200,17 +173,14 @@ class MailboxGcCliTest(unittest.TestCase):
                 "agents": [],
             }
         )
-        self.write_mailbox(
-            ".agent-local/mailboxes/archive/2026-03/agt_old.md",
-            "## 2026-03-01 - doc - archived\n\n- Status: resolved\n- Planning impact: none\n",
-        )
-        self.set_mtime_days_ago(".agent-local/mailboxes/archive/2026-03/agt_old.md", 11)
+        self.write_mailbox(".agent-local/mailboxes/agt_orphan.md", "# orphan\n")
+        self.set_mtime_days_ago(".agent-local/mailboxes/agt_orphan.md", 4)
 
         payload = json.loads(self.run_cli("prune", "--dry-run", "--json").stdout)
 
         self.assertTrue(payload["dry_run"])
         self.assertEqual(1, payload["deleted_count"])
-        self.assertTrue((self.root / ".agent-local/mailboxes/archive/2026-03/agt_old.md").exists())
+        self.assertTrue((self.root / ".agent-local/mailboxes/agt_orphan.md").exists())
 
 
 if __name__ == "__main__":

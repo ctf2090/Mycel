@@ -419,23 +419,23 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertEqual("active", new_entry["status"])
         self.assertEqual("paused", old_entry["status"])
 
-    def test_cleanup_removes_entries_stale_for_1_hour(self) -> None:
+    def test_cleanup_removes_entries_after_three_day_retention(self) -> None:
         now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
         old_entry = self.make_v2_entry(
             agent_uid="agt_old",
             role="doc",
             display_id=None,
-            assigned_at=self.timestamp(now - timedelta(hours=4)),
+            assigned_at=self.timestamp(now - timedelta(days=4)),
             status="inactive",
             scope="expired-task",
-            last_touched_at=self.timestamp(now - timedelta(hours=3, minutes=55)),
-            inactive_at=self.timestamp(now - timedelta(hours=2, minutes=5)),
+            last_touched_at=self.timestamp(now - timedelta(days=3, hours=23, minutes=55)),
+            inactive_at=self.timestamp(now - timedelta(days=3, minutes=5)),
         )
         old_entry["display_history"] = [
             {
                 "display_id": "doc-1",
-                "assigned_at": self.timestamp(now - timedelta(hours=4)),
-                "released_at": self.timestamp(now - timedelta(hours=2)),
+                "assigned_at": self.timestamp(now - timedelta(days=4)),
+                "released_at": self.timestamp(now - timedelta(days=2, hours=23)),
                 "released_reason": "stale-recycled",
             }
         ]
@@ -443,17 +443,17 @@ class AgentRegistryCliTest(unittest.TestCase):
             agent_uid="agt_recent",
             role="coding",
             display_id=None,
-            assigned_at=self.timestamp(now - timedelta(hours=3)),
+            assigned_at=self.timestamp(now - timedelta(days=2)),
             status="inactive",
             scope="still-stale",
-            last_touched_at=self.timestamp(now - timedelta(hours=1, minutes=55)),
-            inactive_at=self.timestamp(now - timedelta(hours=1, minutes=10)),
+            last_touched_at=self.timestamp(now - timedelta(days=2, hours=1)),
+            inactive_at=self.timestamp(now - timedelta(days=2, hours=23)),
         )
         retained_entry["display_history"] = [
             {
                 "display_id": "coding-1",
-                "assigned_at": self.timestamp(now - timedelta(hours=3)),
-                "released_at": self.timestamp(now - timedelta(hours=1)),
+                "assigned_at": self.timestamp(now - timedelta(days=2)),
+                "released_at": self.timestamp(now - timedelta(days=1, hours=23)),
                 "released_reason": "stale-recycled",
             }
         ]
@@ -476,27 +476,27 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertEqual(1, status["agent_count"])
         self.assertEqual("agt_recent", status["agents"][0]["agent_uid"])
 
-    def test_cleanup_releases_and_removes_paused_entries_after_paused_retention(self) -> None:
+    def test_cleanup_releases_and_removes_paused_entries_after_three_days(self) -> None:
         now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
         old_entry = self.make_v2_entry(
             agent_uid="agt_paused_old",
             role="coding",
             display_id="coding-1",
-            assigned_at=self.timestamp(now - timedelta(hours=3)),
+            assigned_at=self.timestamp(now - timedelta(days=4)),
             status="paused",
             scope="paused-old",
-            last_touched_at=self.timestamp(now - timedelta(hours=3, minutes=5)),
-            paused_at=self.timestamp(now - timedelta(hours=3)),
+            last_touched_at=self.timestamp(now - timedelta(days=3, hours=23, minutes=5)),
+            paused_at=self.timestamp(now - timedelta(days=3, minutes=5)),
         )
         recent_entry = self.make_v2_entry(
             agent_uid="agt_paused_recent",
             role="coding",
             display_id="coding-2",
-            assigned_at=self.timestamp(now - timedelta(hours=1, minutes=30)),
+            assigned_at=self.timestamp(now - timedelta(days=2)),
             status="paused",
             scope="paused-recent",
-            last_touched_at=self.timestamp(now - timedelta(hours=1, minutes=35)),
-            paused_at=self.timestamp(now - timedelta(hours=1, minutes=30)),
+            last_touched_at=self.timestamp(now - timedelta(days=2, minutes=5)),
+            paused_at=self.timestamp(now - timedelta(days=2, hours=23)),
         )
         self.write_registry(
             {
@@ -518,6 +518,43 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertEqual(1, status["agent_count"])
         self.assertEqual("agt_paused_recent", retained_entry["agent_uid"])
         self.assertIsNone(retained_entry["display_id"])
+
+    def test_cleanup_removes_mailbox_and_agent_artifacts_with_removed_agent(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        entry = self.make_v2_entry(
+            agent_uid="agt_old",
+            role="doc",
+            display_id=None,
+            assigned_at=self.timestamp(now - timedelta(days=4)),
+            status="inactive",
+            scope="expired-task",
+            last_touched_at=self.timestamp(now - timedelta(days=3, hours=23)),
+            inactive_at=self.timestamp(now - timedelta(days=3, minutes=1)),
+        )
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [entry],
+            }
+        )
+        mailbox = self.root / ".agent-local/mailboxes/agt_old.md"
+        mailbox.parent.mkdir(parents=True, exist_ok=True)
+        mailbox.write_text("# mailbox\n", encoding="utf-8")
+        agent_dir = self.root / ".agent-local/agents/agt_old"
+        (agent_dir / "checklists").mkdir(parents=True, exist_ok=True)
+        (agent_dir / "checklists/AGENTS-workcycle-checklist-1.md").write_text("# checklist\n", encoding="utf-8")
+        legacy = self.root / ".agent-local/checklists/agt_old-work-checklist.md"
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        legacy.write_text("# legacy\n", encoding="utf-8")
+
+        cleanup = json.loads(self.run_cli("cleanup", "--json").stdout)
+
+        self.assertEqual(1, cleanup["removed_count"])
+        self.assertFalse(mailbox.exists())
+        self.assertFalse(agent_dir.exists())
+        self.assertFalse(legacy.exists())
 
     def test_cleanup_infers_paused_at_for_legacy_paused_entries(self) -> None:
         now = datetime.now(TAIPEI_TZ).replace(microsecond=0)

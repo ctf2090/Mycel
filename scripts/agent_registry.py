@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 import uuid
 from collections import Counter
@@ -28,9 +29,9 @@ ALLOWED_ROLES = {"coding", "doc"}
 ALLOWED_STATUSES = {"active", "inactive", "paused", "blocked", "done"}
 REGISTRY_VERSION = 2
 STALE_INACTIVE_SECONDS = 3600
-STALE_RETENTION_SECONDS = 3600
+STALE_RETENTION_SECONDS = 3 * 86400
 STALE_PAUSED_SECONDS = 3600
-PAUSED_CLEANUP_SECONDS = 2 * 3600
+PAUSED_CLEANUP_SECONDS = 3 * 86400
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 
 
@@ -219,6 +220,29 @@ def legacy_checklist_rel_for_uid(agent_uid: str) -> str:
 
 def legacy_root_checklist_rel_for_uid(agent_uid: str) -> str:
     return f".agent-local/{agent_uid}-work-checklist.md"
+
+
+def cleanup_removed_agent_artifacts(entries: list[dict[str, Any]]) -> None:
+    for entry in entries:
+        agent_uid = entry.get("agent_uid")
+        if isinstance(agent_uid, str) and agent_uid.strip():
+            agent_dir = agent_dir_for_uid(agent_uid)
+            if agent_dir.exists():
+                shutil.rmtree(agent_dir)
+
+            for relative_path in [
+                legacy_checklist_rel_for_uid(agent_uid),
+                legacy_root_checklist_rel_for_uid(agent_uid),
+            ]:
+                candidate = resolve_agent_local_path(relative_path)
+                if candidate.exists():
+                    candidate.unlink()
+
+        mailbox_value = entry.get("mailbox")
+        if isinstance(mailbox_value, str) and mailbox_value.strip():
+            mailbox_path = resolve_mailbox_path(mailbox_value)
+            if mailbox_path.exists():
+                mailbox_path.unlink()
 
 
 def resolve_existing_work_checklist_path(agent_uid: str) -> Path:
@@ -555,11 +579,12 @@ def next_display_id(registry: dict[str, Any], role: str) -> str:
 
 def apply_agent_lifecycle(
     registry: dict[str, Any], *, now: datetime | None = None
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], bool]:
     current_time = now or datetime.now(timezone.utc)
     release_time = format_timestamp(current_time)
     stale_agents: list[dict[str, Any]] = []
     removed_agents: list[dict[str, Any]] = []
+    removed_entries: list[dict[str, Any]] = []
     kept_agents: list[dict[str, Any]] = []
     changed = False
 
@@ -571,7 +596,7 @@ def apply_agent_lifecycle(
         if status == "inactive":
             lifecycle_field = "inactive_at"
             stale_after_seconds = STALE_INACTIVE_SECONDS
-            cleanup_after_seconds = STALE_INACTIVE_SECONDS + STALE_RETENTION_SECONDS
+            cleanup_after_seconds = STALE_RETENTION_SECONDS
         elif status == "paused":
             lifecycle_field = "paused_at"
             stale_after_seconds = STALE_PAUSED_SECONDS
@@ -587,6 +612,7 @@ def apply_agent_lifecycle(
                 age_seconds = (current_time - lifecycle_since).total_seconds()
                 if age_seconds >= cleanup_after_seconds:
                     removed_agents.append(entry_summary(entry))
+                    removed_entries.append(dict(entry))
                     changed = True
                     continue
                 if age_seconds >= stale_after_seconds:
@@ -604,7 +630,7 @@ def apply_agent_lifecycle(
         registry["agent_count"] = len(registry["agents"])
         registry["updated_at"] = release_time
 
-    return stale_agents, removed_agents, changed
+    return stale_agents, removed_agents, removed_entries, changed
 
 
 def load_registry_with_cleanup(
@@ -612,9 +638,11 @@ def load_registry_with_cleanup(
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
     registry = load_registry(allow_missing=allow_missing)
     registry, migrated = migrate_registry_to_v2(registry)
-    stale_agents, removed_agents, lifecycle_changed = apply_agent_lifecycle(registry)
+    stale_agents, removed_agents, removed_entries, lifecycle_changed = apply_agent_lifecycle(registry)
     if migrated or lifecycle_changed:
         save_registry(registry)
+    if removed_entries:
+        cleanup_removed_agent_artifacts(removed_entries)
     return registry, stale_agents, removed_agents
 
 
