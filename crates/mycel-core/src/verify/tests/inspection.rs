@@ -1323,6 +1323,50 @@ fn inspect_warns_when_revision_merge_strategy_is_empty() {
 }
 
 #[test]
+fn inspect_warns_when_block_grandchild_is_missing_attrs_with_full_path() {
+    let path = write_test_file(
+        "block-grandchild-missing-attrs-inspect",
+        &serde_json::to_string_pretty(&json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": "blk:test",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": [
+                {
+                    "block_id": "blk:child",
+                    "block_type": "paragraph",
+                    "content": "Child",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:grandchild",
+                            "block_type": "paragraph",
+                            "content": "Grandchild",
+                            "children": []
+                        }
+                    ]
+                }
+            ]
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary.notes.iter().any(|message| {
+            message.contains("top-level 'children[0]' 'children[0]': missing object field 'attrs'")
+        }),
+        "expected grandchild path-preserving attrs warning, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 fn inspect_warns_when_view_policy_is_not_object() {
     let path = write_test_file(
         "view-policy-non-object-inspect",
@@ -1385,6 +1429,45 @@ fn inspect_warns_when_view_policy_contains_unknown_field() {
             message.contains("top-level 'policy' contains unexpected field 'threshold'")
         }),
         "expected unknown policy field warning, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn inspect_warns_when_view_policy_accept_keys_contains_empty_entry() {
+    let (signing_key, public_key) = signer_material();
+    let path = write_test_file(
+        "view-policy-empty-accept-key-inspect",
+        &serde_json::to_string_pretty(&{
+            let mut value = json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "view_id": "view:test",
+            "maintainer": public_key,
+            "documents": {
+                "doc:test": "rev:test"
+            },
+            "policy": {
+                "merge_rule": "manual-reviewed",
+                "accept_keys": [""]
+            },
+            "timestamp": 12u64
+            });
+            value["signature"] = Value::String(sign_value(&signing_key, &value));
+            value
+        })
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = inspect_object_path(&path);
+
+    assert_eq!(summary.status, "warning");
+    assert!(
+        summary.notes.iter().any(|message| {
+            message.contains("top-level 'policy.accept_keys[0]' must not be an empty string")
+        }),
+        "expected empty accept_keys warning, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);

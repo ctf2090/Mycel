@@ -192,6 +192,42 @@ pub(super) fn view_policy_nested_float_is_rejected_with_json_path() {
 }
 
 #[test]
+pub(super) fn view_policy_empty_accept_key_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": public_key,
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "policy": {
+            "accept_keys": [""],
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 12u64
+    });
+    view["signature"] = Value::String(sign_value(&signing_key, &view));
+    let path = write_test_file(
+        "view-policy-empty-accept-key",
+        &serde_json::to_string_pretty(&view).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary.errors.iter().any(|message| {
+            message.contains("top-level 'policy.accept_keys[0]' must not be an empty string")
+        }),
+        "expected empty accept_keys semantic-edge error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
 pub(super) fn invalid_signature_is_rejected() {
     let (_signing_key, public_key) = signer_material();
     let mut value = json!({
@@ -1512,6 +1548,50 @@ pub(super) fn block_nested_child_non_array_children_is_rejected() {
             message.contains("top-level 'children[0]': top-level 'children' must be an array")
         }),
         "expected nested child children array-shape error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn block_grandchild_missing_attrs_is_rejected_with_full_path() {
+    let path = write_test_file(
+        "block-grandchild-missing-attrs",
+        &serde_json::to_string_pretty(&json!({
+            "type": "block",
+            "version": "mycel/0.1",
+            "block_id": "blk:001",
+            "block_type": "paragraph",
+            "content": "Hello",
+            "attrs": {},
+            "children": [
+                {
+                    "block_id": "blk:002",
+                    "block_type": "paragraph",
+                    "content": "Child",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:003",
+                            "block_type": "paragraph",
+                            "content": "Grandchild",
+                            "children": []
+                        }
+                    ]
+                }
+            ]
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary.errors.iter().any(|message| {
+            message.contains("top-level 'children[0]' 'children[0]': missing object field 'attrs'")
+        }),
+        "expected grandchild path-preserving attrs error, got {summary:?}"
     );
 
     let _ = std::fs::remove_file(path);

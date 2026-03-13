@@ -945,6 +945,38 @@ fn parse_block_object_rejects_nested_child_non_array_children_with_path() {
 }
 
 #[test]
+fn parse_block_object_rejects_grandchild_missing_attrs_with_path() {
+    let error = parse_block_object(&json!({
+        "block_id": "blk:001",
+        "block_type": "paragraph",
+        "content": "Hello",
+        "attrs": {},
+        "children": [
+            {
+                "block_id": "blk:002",
+                "block_type": "paragraph",
+                "content": "Child",
+                "attrs": {},
+                "children": [
+                    {
+                        "block_id": "blk:003",
+                        "block_type": "paragraph",
+                        "content": "Grandchild",
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'children[0]' 'children[0]': missing object field 'attrs'"
+    );
+}
+
+#[test]
 fn parse_view_object_reads_documents_and_policy() {
     let view = parse_view_object(&json!({
         "type": "view",
@@ -1096,6 +1128,30 @@ fn parse_view_object_rejects_wrong_policy_accept_key_prefix() {
     assert_eq!(
         error.to_string(),
         "top-level 'policy.accept_keys[0]' must use 'pk:' prefix"
+    );
+}
+
+#[test]
+fn parse_view_object_rejects_empty_policy_accept_key() {
+    let error = parse_view_object(&json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": "pk:ed25519:test",
+        "documents": {
+            "doc:test": "rev:test"
+        },
+        "policy": {
+            "accept_keys": [""],
+            "merge_rule": "manual-reviewed"
+        },
+        "timestamp": 7u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'policy.accept_keys[0]' must not be an empty string"
     );
 }
 
