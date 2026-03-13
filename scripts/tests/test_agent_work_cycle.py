@@ -97,7 +97,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("batch_num: 1", proc.stdout)
         self.assertIn(f"agent_uid: {agent_uid}", proc.stdout)
         self.assertIn("current_status: active", proc.stdout)
-        self.assertIn("Before work | doc-1 | timestamp-wrapper", proc.stdout)
+        self.assertIn(f"Before work | doc-1 ({agent_uid}) | timestamp-wrapper", proc.stdout)
         self.assertIn("- [-] Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->", checklist)
 
     def test_end_finishes_agent_and_prints_after_work_line(self) -> None:
@@ -124,7 +124,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertEqual(0, proc.returncode)
         self.assertIn(f"agent_uid: {agent_uid}", proc.stdout)
         self.assertIn("current_status: inactive", proc.stdout)
-        self.assertIn("After work | doc-1 | timestamp-wrapper", proc.stdout)
+        self.assertIn(f"After work | doc-1 ({agent_uid}) | timestamp-wrapper", proc.stdout)
         self.assertIn("bootstrap_batch: true", proc.stdout)
         self.assertIn("checklists_checked: 2", proc.stdout)
         self.assertIn("unchecked_items: 0", proc.stdout)

@@ -78,7 +78,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("bootstrap_output: .agent-local/agents/", proc.stdout)
         self.assertIn("workcycle_output: .agent-local/agents/", proc.stdout)
         self.assertIn("current_status: active", proc.stdout)
-        self.assertIn("Before work | doc-1 | fast-bootstrap", proc.stdout)
+        self.assertRegex(proc.stdout, r"Before work \| doc-1 \(agt_[a-z0-9]+\) \| fast-bootstrap")
         self.assertIn("repo_status:\n  ## No commits yet on main", proc.stdout)
 
     def test_json_output_returns_combined_payload(self) -> None:
@@ -92,7 +92,10 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertTrue(payload["bootstrap_output"].startswith(".agent-local/agents/"))
         self.assertTrue(payload["workcycle_output"].startswith(".agent-local/agents/"))
         self.assertEqual("active", payload["current_status"])
-        self.assertIn("Before work | coding-1 | pending scope", payload["before_work_line"])
+        self.assertRegex(
+            payload["before_work_line"],
+            r"Before work \| coding-1 \(agt_[a-z0-9]+\) \| pending scope",
+        )
         self.assertEqual("## No commits yet on main", payload["repo_status"][0])
         self.assertIn("?? .agent-local/", payload["repo_status"])
         self.assertIn("?? AGENTS.md", payload["repo_status"])

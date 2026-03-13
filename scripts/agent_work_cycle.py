@@ -189,7 +189,7 @@ def main() -> int:
         stage = "after"
         label = display_id or args.agent_ref
         emit_registry_summary(payload)
-        print(build_message(stage, agent=label, scope=args.scope))
+        print(build_message(stage, agent=label, agent_uid=agent_uid, scope=args.scope))
 
         for path in checklist_paths:
             unchecked_by_path[path] = scan_unchecked_items(path)
@@ -207,7 +207,7 @@ def main() -> int:
 
     stage = "before" if args.stage == "begin" else "after"
     label = display_id or args.agent_ref
-    print(build_message(stage, agent=label, scope=args.scope))
+    print(build_message(stage, agent=label, agent_uid=agent_uid, scope=args.scope))
     return 0
 
 
