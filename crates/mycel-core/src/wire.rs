@@ -13,7 +13,7 @@ use crate::protocol::{
     recompute_declared_object_identity, reject_duplicate_strings, reject_unknown_fields,
     required_non_empty_string_array, required_prefixed_string_map, required_string_field,
     validate_canonical_object_id, validate_prefixed_string, StringFieldError,
-    WIRE_PROTOCOL_VERSION,
+    WIRE_OBJECT_HASH_ALGORITHM, WIRE_PROTOCOL_VERSION,
 };
 use crate::signature::verify_ed25519_signature;
 use crate::store::{load_store_object_index, StoreRebuildError};
@@ -623,7 +623,12 @@ pub fn validate_wire_payload(
                 "hash:",
             )
             .map_err(|error| error.to_string())?;
-            required_wire_string(payload, "hash_alg", "OBJECT payload")?;
+            let hash_alg = required_wire_string(payload, "hash_alg", "OBJECT payload")?;
+            if hash_alg != WIRE_OBJECT_HASH_ALGORITHM {
+                return Err(format!(
+                    "OBJECT payload 'hash_alg' must equal '{WIRE_OBJECT_HASH_ALGORITHM}'"
+                ));
+            }
             if !matches!(payload.get("body"), Some(Value::Object(_))) {
                 return Err("top-level 'body' must be an object".to_string());
             }
@@ -1419,7 +1424,7 @@ mod tests {
             "object_id": "patch:test",
             "object_type": "patch",
             "encoding": "json",
-            "hash_alg": "blake3",
+            "hash_alg": "sha256",
             "hash": "hash:test",
             "body": {
                 "type": "revision",
@@ -1445,6 +1450,35 @@ mod tests {
         .unwrap_err();
 
         assert!(error.contains("OBJECT body type 'revision' does not match object_type 'patch'"));
+    }
+
+    #[test]
+    fn validate_wire_payload_rejects_non_sha256_object_hash_algorithm() {
+        let payload = json!({
+            "object_id": "patch:test",
+            "object_type": "patch",
+            "encoding": "json",
+            "hash_alg": "blake3",
+            "hash": "hash:test",
+            "body": {
+                "type": "patch",
+                "version": "mycel/0.1",
+                "patch_id": "patch:test",
+                "doc_id": "doc:test",
+                "base_revision": "rev:genesis-null",
+                "author": "pk:ed25519:test",
+                "timestamp": 1u64,
+                "ops": []
+            }
+        });
+
+        let error = validate_wire_payload(
+            WireMessageType::Object,
+            payload.as_object().expect("payload should be object"),
+        )
+        .unwrap_err();
+
+        assert_eq!(error, "OBJECT payload 'hash_alg' must equal 'sha256'");
     }
 
     #[test]

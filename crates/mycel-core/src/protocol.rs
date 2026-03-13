@@ -24,6 +24,7 @@ pub use crate::canonical::{
 
 pub const CORE_PROTOCOL_VERSION: &str = "mycel/0.1";
 pub const WIRE_PROTOCOL_VERSION: &str = "mycel-wire/0.1";
+pub const WIRE_OBJECT_HASH_ALGORITHM: &str = "sha256";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ProtocolVersion {

@@ -294,7 +294,7 @@ pub(super) fn wire_protocol_object_example() -> Value {
             "object_id": "patch:a12f",
             "object_type": "patch",
             "encoding": "json",
-            "hash_alg": "blake3",
+            "hash_alg": "sha256",
             "hash": "hash:placeholder",
             "body": {
                 "type": "patch",
