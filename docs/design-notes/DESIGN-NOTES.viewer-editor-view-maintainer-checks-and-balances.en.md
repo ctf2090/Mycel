@@ -329,6 +329,41 @@ A future profile could define fields such as:
 
 These should remain profile-level rules, not ad hoc local client settings.
 
+### 11.1 Example `viewer` signal shape
+
+If `viewer` ever affects `selector_score` directly, the minimal viable design should not be a single `like` counter. It should be a verifiable, bounded, typed signal shape.
+
+Suggested minimum fields:
+
+- `signal_id`
+- `viewer_id`
+- `candidate_revision_id`
+- `signal_type`
+- `confidence_level`
+- `evidence_ref`
+- `created_at`
+- `expires_at`
+
+Where:
+
+- `signal_type` should at least distinguish `approval`, `objection`, and `challenge`
+- `confidence_level` distinguishes low-cost expression from higher-commitment signaling
+- `evidence_ref` is mainly for `challenge`, so it does not collapse into a heavier dislike
+- `expires_at` prevents very old signals from sticking to a candidate forever
+
+For safer deployment, signal-adjacent eligibility and weighting fields are also needed:
+
+- `viewer_identity_tier`
+- `viewer_reputation_band`
+- `eligible_for_selector_bonus`
+- `effective_signal_weight`
+
+A safer direction is:
+
+- let `approval` and `objection` enter only a bounded score channel
+- let `challenge` primarily affect `review` / `freeze`, not rewrite the main score directly
+- compute final `effective_signal_weight` from profile rules rather than self-reported viewer input
+
 ## 12. Viewer Balancing Strength
 
 Under the current proposal, viewer balancing power is asymmetric.

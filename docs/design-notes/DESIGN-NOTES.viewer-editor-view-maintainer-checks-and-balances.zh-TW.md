@@ -329,6 +329,41 @@ viewer 訊號通常不應直接硬選 accepted head。
 
 這些應維持為 profile-level rules，而不是臨時本地 client settings。
 
+### 11.1 範例 `viewer` signal 形狀
+
+如果未來要讓 `viewer` 直接影響 `selector_score`，最小可行設計不應只有單一 `like` 計數，而應有一個可驗證、可限權、可分型的 signal 形狀。
+
+建議最少欄位：
+
+- `signal_id`
+- `viewer_id`
+- `candidate_revision_id`
+- `signal_type`
+- `confidence_level`
+- `evidence_ref`
+- `created_at`
+- `expires_at`
+
+其中：
+
+- `signal_type` 至少應區分 `approval`、`objection`、`challenge`
+- `confidence_level` 用來區分低成本表態與高承諾表態
+- `evidence_ref` 主要供 `challenge` 使用，避免它退化成較重的單純 dislike
+- `expires_at` 用來限制過舊 signal 長期黏在 candidate 上
+
+若要安全落地，還需要與 signal 分開但可計算的 eligibility / weighting 欄位：
+
+- `viewer_identity_tier`
+- `viewer_reputation_band`
+- `eligible_for_selector_bonus`
+- `effective_signal_weight`
+
+比較安全的方向是：
+
+- 讓 `approval` 與 `objection` 只進 bounded score channel
+- 讓 `challenge` 主要影響 `review` / `freeze`，而不是直接大幅改寫主分數
+- 讓最終 `effective_signal_weight` 由 profile 規則計算，而不是由 viewer 自報
+
 ## 12. Viewer 制衡力評估
 
 按照目前這份提案，viewer 的制衡力是非對稱的。
