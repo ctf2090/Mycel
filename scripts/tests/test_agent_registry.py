@@ -149,6 +149,69 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertTrue(status["agents"][0]["mailbox"].startswith(".agent-local/mailboxes/"))
         self.assertTrue((self.root / status["agents"][0]["mailbox"]).exists())
 
+    def test_status_text_without_agent_ref_is_summary_only(self) -> None:
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": "2026-03-12T00:00:00+0800",
+                "agent_count": 2,
+                "agents": [
+                    self.make_v2_entry(
+                        agent_uid="agt_coding_a",
+                        role="coding",
+                        display_id="coding-1",
+                        assigned_at="2026-03-12T00:00:00+0800",
+                        status="active",
+                        scope="pending-user-task",
+                        last_touched_at="2026-03-12T00:05:00+0800",
+                    ),
+                    self.make_v2_entry(
+                        agent_uid="agt_doc_a",
+                        role="doc",
+                        display_id="doc-1",
+                        assigned_at="2026-03-12T00:00:10+0800",
+                        status="active",
+                        scope="docs",
+                        last_touched_at="2026-03-12T00:06:00+0800",
+                    ),
+                ],
+            }
+        )
+
+        proc = self.run_cli("status")
+
+        self.assertIn("agents: 2", proc.stdout)
+        self.assertIn("role_counts: coding=1, doc=1", proc.stdout)
+        self.assertIn("status_counts: active=2", proc.stdout)
+        self.assertNotIn("assigned_by:", proc.stdout)
+        self.assertNotIn("agent_uid: agt_coding_a", proc.stdout)
+
+    def test_status_verbose_prints_detailed_entries(self) -> None:
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": "2026-03-12T00:00:00+0800",
+                "agent_count": 1,
+                "agents": [
+                    self.make_v2_entry(
+                        agent_uid="agt_doc_a",
+                        role="doc",
+                        display_id="doc-1",
+                        assigned_at="2026-03-12T00:00:10+0800",
+                        status="active",
+                        scope="docs",
+                        last_touched_at="2026-03-12T00:06:00+0800",
+                    ),
+                ],
+            }
+        )
+
+        proc = self.run_cli("status", "--verbose")
+
+        self.assertIn("agent_uid: agt_doc_a", proc.stdout)
+        self.assertIn("  assigned_by: user", proc.stdout)
+        self.assertIn("  mailbox_exists: True", proc.stdout)
+
     def test_claim_outputs_uid_and_display_id_with_auto_role(self) -> None:
         self.write_registry(
             {

@@ -126,9 +126,12 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("current_status: inactive", proc.stdout)
         self.assertIn("After work | doc-1 | timestamp-wrapper", proc.stdout)
         self.assertIn("bootstrap_batch: true", proc.stdout)
+        self.assertIn("checklists_checked: 2", proc.stdout)
         self.assertIn("unchecked_items: 0", proc.stdout)
         self.assertIn(f"mailbox: .agent-local/mailboxes/{agent_uid}.md", proc.stdout)
         self.assertIn("open_handoffs: 0", proc.stdout)
+        self.assertNotIn("checklist_paths:", proc.stdout)
+        self.assertNotIn("open_handoff_lines:", proc.stdout)
 
     def test_end_returns_pending_when_bootstrap_or_workcycle_items_are_unchecked(self) -> None:
         self.write_agents_md()

@@ -17,7 +17,7 @@ Recommended startup and lifecycle commands:
 
 - `scripts/agent_registry.py claim <role|auto> [--scope <scope>]`
 - `scripts/agent_registry.py start <agent-ref>`
-- `scripts/agent_registry.py status [<agent-ref>]`
+- `scripts/agent_registry.py status [<agent-ref>] [--verbose]`
 - `scripts/agent_registry.py touch <agent-ref>`
 - `scripts/agent_registry.py finish <agent-ref>`
 - `scripts/agent_registry.py stop <agent-ref> [--status paused|done]`

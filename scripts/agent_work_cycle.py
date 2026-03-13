@@ -102,11 +102,14 @@ def emit_checklist_summary(
     bootstrap_batch: bool,
 ) -> None:
     print(f"bootstrap_batch: {str(bootstrap_batch).lower()}")
-    print("checklists_checked:")
-    for path in checklist_paths:
-        print(f"  - {path.relative_to(ROOT_DIR)}")
+    print(f"checklists_checked: {len(checklist_paths)}")
     total_unchecked = sum(len(items) for items in unchecked_by_path.values())
     print(f"unchecked_items: {total_unchecked}")
+    if total_unchecked == 0:
+        return
+    print("checklist_paths:")
+    for path in checklist_paths:
+        print(f"  - {path.relative_to(ROOT_DIR)}")
     for path, items in unchecked_by_path.items():
         if not items:
             continue
@@ -129,7 +132,7 @@ def scan_open_handoffs(mailbox_path: Path) -> list[int]:
 def emit_mailbox_summary(mailbox_path: Path, open_lines: list[int]) -> None:
     print(f"mailbox: {mailbox_path.relative_to(ROOT_DIR)}")
     print(f"open_handoffs: {len(open_lines)}")
-    if open_lines:
+    if len(open_lines) > 1:
         print("open_handoff_lines:")
         for line_no in open_lines:
             print(f"  - {line_no}")

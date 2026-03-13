@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import uuid
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -684,11 +685,45 @@ def print_stop(data: dict[str, Any]) -> None:
     print(f"updated_at: {data['updated_at']}")
 
 
-def print_status(data: dict[str, Any]) -> None:
+def print_status(data: dict[str, Any], *, verbose: bool = False) -> None:
     print(f"registry: {data['registry_path']}")
     print(f"version: {data['version']}")
     print(f"updated_at: {data['updated_at']}")
     print(f"agents: {data['agent_count']}")
+    if not verbose:
+        if data.get("cleanup_removed_agents"):
+            print(f"cleanup_removed_agents: {len(data['cleanup_removed_agents'])}")
+        if data.get("stale_agents"):
+            print(f"stale_agents: {len(data['stale_agents'])}")
+
+        agents = data.get("agents", [])
+        if len(agents) == 1:
+            entry = agents[0]
+            print(f"agent_uid: {entry['agent_uid']}")
+            print(f"display_id: {entry['display_id']}")
+            if entry.get("last_display_id") != entry.get("display_id"):
+                print(f"last_display_id: {entry['last_display_id']}")
+            print(f"role: {entry['role']}")
+            print(f"status: {entry['status']}")
+            print(f"scope: {entry['scope']}")
+            print(f"mailbox: {entry['mailbox']}")
+            print(f"last_touched_at: {entry['last_touched_at']}")
+            return
+
+        role_counts = Counter(entry.get("role") for entry in agents if entry.get("role"))
+        status_counts = Counter(entry.get("status") for entry in agents if entry.get("status"))
+        if role_counts:
+            print(
+                "role_counts: "
+                + ", ".join(f"{role}={count}" for role, count in sorted(role_counts.items()))
+            )
+        if status_counts:
+            print(
+                "status_counts: "
+                + ", ".join(f"{status}={count}" for status, count in sorted(status_counts.items()))
+            )
+        return
+
     if data.get("cleanup_removed_agents"):
         print("cleanup_removed_agents:")
         for entry in data["cleanup_removed_agents"]:
@@ -986,7 +1021,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     if args.json:
         print_json(result)
     else:
-        print_status(result)
+        print_status(result, verbose=args.verbose)
     return 0
 
 
@@ -1371,6 +1406,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = subparsers.add_parser("status", add_help=False)
     status.add_argument("agent_ref", nargs="?")
+    status.add_argument("--verbose", action="store_true")
     status.add_argument("--json", action="store_true")
     status.add_argument("-h", "--help", action="help")
     status.set_defaults(func=cmd_status)
