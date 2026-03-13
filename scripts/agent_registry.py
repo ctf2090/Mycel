@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -140,6 +141,11 @@ def checkbox_line(checked: bool, text: str) -> str:
     return f"- {marker} {text}"
 
 
+def checklist_item_line(item_id: str, checked: bool, text: str) -> str:
+    marker = "[X]" if checked else "[ ]"
+    return f"- {marker} {text} <!-- item-id: {item_id} -->"
+
+
 def require_non_empty_str(entry: dict[str, Any], field: str, agent_ref: str) -> str:
     value = entry.get(field)
     if not isinstance(value, str) or not value.strip():
@@ -226,23 +232,40 @@ def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
         f"- Status: `{status}`",
         f"- Mailbox: `{relative_to_root(mailbox_path)}`",
         f"- Generated at: `{generated_at}`",
+        "- Mark items with `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id>`.",
         "",
         "## Bootstrap State",
-        checkbox_line(True, f"Registry entry exists for `{agent_uid}`."),
-        checkbox_line(bool(display_id), f"Display slot is assigned{f' as `{display_id}`' if display_id else ''}."),
-        checkbox_line(confirmed, "Agent has completed the `start` confirmation step."),
-        checkbox_line(mailbox_path.exists(), f"Mailbox file exists at `{relative_to_root(mailbox_path)}`."),
-        checkbox_line(dev_setup_ready, "Workspace dev setup status is marked `ready`."),
-        checkbox_line(AGENTS_PATH.exists(), "`AGENTS.md` is available for repo-wide instructions."),
-        checkbox_line(AGENTS_LOCAL_PATH.exists(), "`AGENTS-LOCAL.md` overlay is available."),
+        checklist_item_line("bootstrap.registry-entry", True, f"Registry entry exists for `{agent_uid}`."),
+        checklist_item_line(
+            "bootstrap.display-slot",
+            bool(display_id),
+            f"Display slot is assigned{f' as `{display_id}`' if display_id else ''}.",
+        ),
+        checklist_item_line("bootstrap.started", confirmed, "Agent has completed the `start` confirmation step."),
+        checklist_item_line(
+            "bootstrap.mailbox-exists",
+            mailbox_path.exists(),
+            f"Mailbox file exists at `{relative_to_root(mailbox_path)}`.",
+        ),
+        checklist_item_line("bootstrap.dev-setup-ready", dev_setup_ready, "Workspace dev setup status is marked `ready`."),
+        checklist_item_line("bootstrap.agents-md", AGENTS_PATH.exists(), "`AGENTS.md` is available for repo-wide instructions."),
+        checklist_item_line("bootstrap.agents-local-md", AGENTS_LOCAL_PATH.exists(), "`AGENTS-LOCAL.md` overlay is available."),
         "",
         "## Current Command Workflow",
-        checkbox_line(status == "active", "Current work cycle is active for this command."),
-        checkbox_line(False, f"Begin the next command with `scripts/agent_work_cycle.py begin {agent_uid} --scope <scope>`."),
-        checkbox_line(False, f"End this command with `scripts/agent_work_cycle.py end {agent_uid} --scope {scope}`."),
-        checkbox_line(False, "Share a short plan and the current repo status before making changes."),
-        checkbox_line(False, "Use mailbox handoffs when work changes planning-relevant state."),
-        checkbox_line(False, "Commit and push serially to `origin/main` if tracked changes land."),
+        checklist_item_line("workflow.work-cycle-active", status == "active", "Current work cycle is active for this command."),
+        checklist_item_line(
+            "workflow.begin-next-command",
+            False,
+            f"Begin the next command with `scripts/agent_work_cycle.py begin {agent_uid} --scope <scope>`.",
+        ),
+        checklist_item_line(
+            "workflow.end-this-command",
+            False,
+            f"End this command with `scripts/agent_work_cycle.py end {agent_uid} --scope {scope}`.",
+        ),
+        checklist_item_line("workflow.share-plan", False, "Share a short plan and the current repo status before making changes."),
+        checklist_item_line("workflow.mailbox-handoffs", False, "Use mailbox handoffs when work changes planning-relevant state."),
+        checklist_item_line("workflow.commit-push", False, "Commit and push serially to `origin/main` if tracked changes land."),
         "",
         "## Role-Specific Responsibilities",
     ]
@@ -250,19 +273,51 @@ def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
     if role == "doc":
         lines.extend(
             [
-                checkbox_line(False, "Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items."),
-                checkbox_line(False, f"If cadence is due, use `{relative_to_root(PLANNING_SYNC_PLAN_PATH)}` as the planning-sync entry point."),
-                checkbox_line(False, "Scan active, paused, and recently inactive mailboxes before `sync doc`, `sync web`, or `sync plan`."),
-                checkbox_line(False, "Keep roadmap/checklist/progress updates limited to landed evidence or mailbox handoffs."),
+                checklist_item_line(
+                    "role.doc.check-plan-refresh",
+                    False,
+                    "Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items.",
+                ),
+                checklist_item_line(
+                    "role.doc.use-planning-sync-plan",
+                    False,
+                    f"If cadence is due, use `{relative_to_root(PLANNING_SYNC_PLAN_PATH)}` as the planning-sync entry point.",
+                ),
+                checklist_item_line(
+                    "role.doc.scan-mailboxes",
+                    False,
+                    "Scan active, paused, and recently inactive mailboxes before `sync doc`, `sync web`, or `sync plan`.",
+                ),
+                checklist_item_line(
+                    "role.doc.limit-to-evidence",
+                    False,
+                    "Keep roadmap/checklist/progress updates limited to landed evidence or mailbox handoffs.",
+                ),
             ]
         )
     else:
         lines.extend(
             [
-                checkbox_line(False, "Check the latest completed CI result for the previous push before new coding work."),
-                checkbox_line(False, "Leave one open `Work Continuation Handoff` in the coding mailbox at the end of the work item."),
-                checkbox_line(False, "Leave a `Planning Sync Handoff` when coding changes affect roadmap/checklist/progress or issue-triage inputs."),
-                checkbox_line(False, "Do not run `scripts/check-plan-refresh.sh` from a coding task."),
+                checklist_item_line(
+                    "role.coding.check-latest-ci",
+                    False,
+                    "Check the latest completed CI result for the previous push before new coding work.",
+                ),
+                checklist_item_line(
+                    "role.coding.leave-continuation-handoff",
+                    False,
+                    "Leave one open `Work Continuation Handoff` in the coding mailbox at the end of the work item.",
+                ),
+                checklist_item_line(
+                    "role.coding.leave-planning-handoff",
+                    False,
+                    "Leave a `Planning Sync Handoff` when coding changes affect roadmap/checklist/progress or issue-triage inputs.",
+                ),
+                checklist_item_line(
+                    "role.coding.skip-plan-refresh",
+                    False,
+                    "Do not run `scripts/check-plan-refresh.sh` from a coding task.",
+                ),
             ]
         )
 
@@ -270,7 +325,11 @@ def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
         [
             "",
             "## Refresh",
-            checkbox_line(False, f"Re-run `scripts/agent_registry.py work-checklist {agent_uid}` whenever the agent status or scope changes."),
+            checklist_item_line(
+                "refresh.regenerate",
+                False,
+                f"Re-run `scripts/agent_registry.py work-checklist {agent_uid}` whenever the agent status or scope changes.",
+            ),
             "",
         ]
     )
@@ -681,6 +740,14 @@ def print_work_checklist(data: dict[str, Any]) -> None:
     print(f"display_id: {data['display_id']}")
     print(f"role: {data['role']}")
     print(f"scope: {data['scope']}")
+    print(f"output: {data['output']}")
+    print(f"updated_at: {data['updated_at']}")
+
+
+def print_work_checklist_mark(data: dict[str, Any]) -> None:
+    print(f"agent_uid: {data['agent_uid']}")
+    print(f"item_id: {data['item_id']}")
+    print(f"state: {data['state']}")
     print(f"output: {data['output']}")
     print(f"updated_at: {data['updated_at']}")
 
@@ -1165,6 +1232,58 @@ def cmd_work_checklist(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_work_checklist_mark(args: argparse.Namespace) -> int:
+    registry, _, _ = load_registry_with_cleanup()
+    entry = resolve_agent_entry(registry, args.agent_ref)
+    agent_uid = require_non_empty_str(entry, "agent_uid", args.agent_ref)
+    checklist_path = resolve_agent_local_path(args.checklist or checklist_rel_for_uid(agent_uid))
+    if not checklist_path.exists():
+        raise RegistryError(f"checklist file not found: {relative_to_root(checklist_path)}")
+
+    pattern = re.compile(
+        rf"^(?P<prefix>\s*-\s\[(?P<mark>[X ])\]\s.*?)(?P<suffix>\s*<!-- item-id: {re.escape(args.item_id)} -->\s*)$"
+    )
+    lines = checklist_path.read_text(encoding="utf-8").splitlines()
+    target_index = None
+    current_mark = None
+    for index, line in enumerate(lines):
+        match = pattern.match(line)
+        if match is None:
+            continue
+        target_index = index
+        current_mark = match.group("mark")
+        break
+
+    if target_index is None or current_mark is None:
+        raise RegistryError(f"checklist item not found: {args.item_id}")
+
+    if args.state == "toggle":
+        next_mark = " " if current_mark == "X" else "X"
+    elif args.state == "checked":
+        next_mark = "X"
+    else:
+        next_mark = " "
+
+    if next_mark != current_mark:
+        lines[target_index] = lines[target_index].replace(f"[{current_mark}]", f"[{next_mark}]", 1)
+        checklist_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    state = "checked" if next_mark == "X" else "unchecked"
+    result = {
+        "status": "ok",
+        "agent_uid": agent_uid,
+        "item_id": args.item_id,
+        "state": state,
+        "output": relative_to_root(checklist_path),
+        "updated_at": utc_now(),
+    }
+    if args.json:
+        print_json(result)
+    else:
+        print_work_checklist_mark(result)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="scripts/agent_registry.py",
@@ -1243,6 +1362,15 @@ def build_parser() -> argparse.ArgumentParser:
     work_checklist.add_argument("--json", action="store_true")
     work_checklist.add_argument("-h", "--help", action="help")
     work_checklist.set_defaults(func=cmd_work_checklist)
+
+    work_checklist_mark = subparsers.add_parser("work-checklist-mark", add_help=False)
+    work_checklist_mark.add_argument("agent_ref")
+    work_checklist_mark.add_argument("item_id")
+    work_checklist_mark.add_argument("--state", choices=["checked", "unchecked", "toggle"], default="checked")
+    work_checklist_mark.add_argument("--checklist", default="")
+    work_checklist_mark.add_argument("--json", action="store_true")
+    work_checklist_mark.add_argument("-h", "--help", action="help")
+    work_checklist_mark.set_defaults(func=cmd_work_checklist_mark)
 
     return parser
 

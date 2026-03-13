@@ -81,6 +81,7 @@ Recommended startup command:
 - `scripts/agent_registry.py recover <agent-ref> [--scope <scope>]`
 - `scripts/agent_registry.py takeover <stale-agent-ref> [--scope <scope>]`
 - `scripts/agent_registry.py work-checklist <agent-ref> [--output .agent-local/checklists/...md]`
+- `scripts/agent_registry.py work-checklist-mark <agent-ref> <item-id> [--state checked|unchecked|toggle]`
 
 Recommended startup self-label:
 
