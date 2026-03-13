@@ -1,4 +1,6 @@
 use super::*;
+use base64::Engine;
+use ed25519_dalek::{Signer, SigningKey};
 
 pub(super) fn strict_id_case_value(kind: &str) -> Value {
     match kind {
@@ -378,13 +380,18 @@ pub(super) fn wire_protocol_error_example() -> Value {
 }
 
 pub(super) fn concrete_wire_object_example() -> Value {
+    let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+    let public_key = format!(
+        "pk:ed25519:{}",
+        base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().as_bytes())
+    );
     let mut body = json!({
         "type": "patch",
         "version": "mycel/0.1",
         "patch_id": "patch:placeholder",
         "doc_id": "doc:test",
         "base_revision": "rev:genesis-null",
-        "author": "pk:ed25519:test",
+        "author": public_key,
         "timestamp": 1u64,
         "ops": [],
         "signature": "sig:placeholder"
@@ -392,6 +399,12 @@ pub(super) fn concrete_wire_object_example() -> Value {
     let object_id = recompute_object_id(&body, "patch_id", "patch")
         .expect("concrete wire object ID should recompute");
     body["patch_id"] = Value::String(object_id.clone());
+    let payload = signed_payload_bytes(&body).expect("concrete wire body should canonicalize");
+    let signature = signing_key.sign(&payload);
+    body["signature"] = Value::String(format!(
+        "sig:ed25519:{}",
+        base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
+    ));
     let object_hash = object_id
         .split_once(':')
         .map(|(_, hash)| hash)

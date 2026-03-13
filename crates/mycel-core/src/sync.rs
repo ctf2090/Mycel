@@ -2038,6 +2038,94 @@ mod tests {
     }
 
     #[test]
+    fn sync_pull_from_transcript_fails_before_counting_semantically_invalid_object_body() {
+        let signing_key = signing_key();
+        let sender = "node:alpha";
+        let invalid_view_body = sign_object_value(
+            &signing_key,
+            json!({
+                "type": "view",
+                "version": "mycel/0.1",
+                "view_id": "view:placeholder",
+                "maintainer": "pk:ed25519:placeholder",
+                "documents": {
+                    "doc:test": "rev:test"
+                },
+                "policy": {
+                    "accept_keys": [""],
+                    "merge_rule": "manual-reviewed"
+                },
+                "timestamp": 4u64,
+                "signature": "sig:placeholder"
+            }),
+            "maintainer",
+            "view_id",
+            "view",
+        );
+        let invalid_object = super::signed_object_message(
+            &signing_key,
+            sender,
+            "msg:object-sync-invalid-view-001".to_string(),
+            &invalid_view_body,
+        )
+        .expect("invalid view OBJECT should still serialize");
+        let transcript = SyncPullTranscript {
+            peer: SyncPeer {
+                node_id: sender.to_string(),
+                public_key: sender_public_key(&signing_key),
+            },
+            messages: vec![
+                signed_hello_message_with_capabilities(
+                    &signing_key,
+                    sender,
+                    json!(["patch-sync", "view-sync"]),
+                ),
+                signed_manifest_message_with_capabilities(
+                    &signing_key,
+                    sender,
+                    "rev:test",
+                    json!(["patch-sync", "view-sync"]),
+                ),
+                signed_view_announce_message(
+                    &signing_key,
+                    sender,
+                    invalid_view_body["view_id"]
+                        .as_str()
+                        .expect("view id should exist"),
+                ),
+                signed_want_message(
+                    &signing_key,
+                    sender,
+                    &[invalid_view_body["view_id"]
+                        .as_str()
+                        .expect("view id should exist")],
+                ),
+                invalid_object,
+            ],
+        };
+        let store_root = temp_dir("pull-invalid-view-body");
+
+        let summary =
+            sync_pull_from_transcript(&transcript, &store_root).expect("sync pull should run");
+
+        assert!(!summary.is_ok(), "expected failed summary, got {summary:?}");
+        assert_eq!(summary.verified_message_count, 4);
+        assert_eq!(summary.object_message_count, 0);
+        assert_eq!(summary.verified_object_count, 0);
+        assert_eq!(summary.written_object_count, 0);
+        assert!(
+            summary.errors.iter().any(|error| error.contains(
+                "OBJECT body failed shared verification: top-level 'policy.accept_keys[0]' must not be an empty string"
+            )),
+            "expected shared semantic-edge verification failure, got {summary:?}"
+        );
+        assert!(
+            load_store_index_manifest(&store_root).is_err(),
+            "unexpected manifest for failed pull"
+        );
+    }
+
+    #[test]
     fn sync_pull_from_transcript_fails_for_unrequested_object_message() {
         let signing_key = signing_key();
         let sender = "node:alpha";

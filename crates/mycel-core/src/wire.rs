@@ -17,6 +17,7 @@ use crate::protocol::{
 };
 use crate::signature::verify_ed25519_signature;
 use crate::store::{load_store_object_index, StoreRebuildError};
+use crate::verify::verify_object_value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WireMessageType {
@@ -775,6 +776,8 @@ pub fn validate_wire_object_payload_behavior(payload: &Map<String, Value>) -> Re
         ));
     }
 
+    validate_wire_object_body_with_shared_verifier(body)?;
+
     if object_id != expected_identity.object_id {
         return Err(format!(
             "OBJECT payload object_id '{object_id}' does not match recomputed '{}'",
@@ -789,6 +792,22 @@ pub fn validate_wire_object_payload_behavior(payload: &Map<String, Value>) -> Re
     }
 
     Ok(())
+}
+
+fn validate_wire_object_body_with_shared_verifier(body: &Value) -> Result<(), String> {
+    let summary = verify_object_value(body);
+    if summary.is_ok() {
+        return Ok(());
+    }
+
+    let first_error = summary
+        .errors
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| "shared object verification failed".to_string());
+    Err(format!(
+        "OBJECT body failed shared verification: {first_error}"
+    ))
 }
 
 pub(crate) fn derive_wire_object_payload_identity(
@@ -1759,21 +1778,113 @@ mod tests {
     }
 
     #[test]
-    fn validate_wire_envelope_accepts_concrete_object_payload() {
-        let mut body = json!({
+    fn validate_wire_object_payload_behavior_rejects_missing_required_body_signature() {
+        let body = json!({
             "type": "patch",
             "version": "mycel/0.1",
-            "patch_id": "patch:placeholder",
+            "patch_id": "patch:8d13c0b560f101a83ed57f4ab84f5a39a214ba53cc4bfe4f4f6de643eb447c0a",
             "doc_id": "doc:test",
             "base_revision": "rev:genesis-null",
             "author": "pk:ed25519:test",
             "timestamp": 1u64,
-            "ops": [],
-            "signature": "sig:placeholder"
+            "ops": []
         });
+        let payload = json!({
+            "object_id": body["patch_id"],
+            "object_type": "patch",
+            "encoding": "json",
+            "hash_alg": "sha256",
+            "hash": "hash:8d13c0b560f101a83ed57f4ab84f5a39a214ba53cc4bfe4f4f6de643eb447c0a",
+            "body": body
+        });
+
+        let error = validate_wire_object_payload_behavior(
+            payload.as_object().expect("payload should be object"),
+        )
+        .unwrap_err();
+
+        assert!(
+            error.contains("OBJECT body failed shared verification"),
+            "expected shared verification prefix, got {error}"
+        );
+        assert!(
+            error.contains("patch object is missing required top-level 'signature'"),
+            "expected missing signature error, got {error}"
+        );
+    }
+
+    #[test]
+    fn validate_wire_object_payload_behavior_rejects_shared_semantic_edge_failure() {
+        let signing_key = signing_key();
+        let body = sign_object_value(
+            &signing_key,
+            json!({
+                "type": "view",
+                "version": "mycel/0.1",
+                "view_id": "view:placeholder",
+                "maintainer": "pk:ed25519:placeholder",
+                "documents": {
+                    "doc:test": "rev:test"
+                },
+                "policy": {
+                    "accept_keys": [""],
+                    "merge_rule": "manual-reviewed"
+                },
+                "timestamp": 12u64,
+                "signature": "sig:placeholder"
+            }),
+            "maintainer",
+            "view_id",
+            "view",
+        );
+        let identity = derive_wire_object_payload_identity(&body)
+            .expect("wire object payload identity should derive");
+        let payload = json!({
+            "object_id": identity.object_id,
+            "object_type": identity.object_type,
+            "encoding": "json",
+            "hash_alg": "sha256",
+            "hash": identity.hash,
+            "body": body
+        });
+
+        let error = validate_wire_object_payload_behavior(
+            payload.as_object().expect("payload should be object"),
+        )
+        .unwrap_err();
+
+        assert!(
+            error.contains("OBJECT body failed shared verification"),
+            "expected shared verification prefix, got {error}"
+        );
+        assert!(
+            error.contains("top-level 'policy.accept_keys[0]' must not be an empty string"),
+            "expected view semantic-edge error, got {error}"
+        );
+    }
+
+    #[test]
+    fn validate_wire_envelope_accepts_concrete_object_payload() {
+        let signing_key = signing_key();
+        let body = sign_object_value(
+            &signing_key,
+            json!({
+                "type": "patch",
+                "version": "mycel/0.1",
+                "patch_id": "patch:placeholder",
+                "doc_id": "doc:test",
+                "base_revision": "rev:genesis-null",
+                "author": "pk:ed25519:placeholder",
+                "timestamp": 1u64,
+                "ops": [],
+                "signature": "sig:placeholder"
+            }),
+            "author",
+            "patch_id",
+            "patch",
+        );
         let identity = recompute_declared_object_identity(&body)
             .expect("concrete wire object identity should recompute");
-        body["patch_id"] = Value::String(identity.object_id.clone());
 
         let value = json!({
             "type": "OBJECT",
