@@ -1,6 +1,6 @@
 # Mycel v0.1 實作檢查清單
 
-狀態：late partial progress，已在最近一批 canonical-helper convergence、peer-store sync driver、CLI peer-sync 與 simulator integration 後刷新；實作狀態現在已包含 replay `state_hash` helper convergence 與早期 `M4` peer-driven sync coverage，但 optional wire flows 與更廣的 replication behavior 仍未完成
+狀態：late partial progress，已在最近一批 canonical-helper convergence、peer-store sync driver、CLI peer-sync、simulator integration，以及 optional-flow sync coverage 後刷新；實作狀態現在已包含 replay `state_hash` helper convergence、早期 `M4` peer-driven sync coverage，以及 capability-gated optional-message handling，但更廣的 peer interop 與 production replication behavior 仍未完成
 
 這份清單把 v0.1 規格轉成偏實作導向的建置計畫，目標是一個最小但可互通的客戶端。
 
@@ -108,21 +108,21 @@
 - [x] 實作 `OBJECT`。
 - [x] 實作 `BYE`。
 - [x] 實作 `ERROR`。
-- [ ] 只有在宣告 `snapshot-sync` 時才實作 `SNAPSHOT_OFFER`。
-- [ ] 只有在宣告 `view-sync` 時才實作 `VIEW_ANNOUNCE`。
+- [x] 只有在宣告 `snapshot-sync` 時才實作 `SNAPSHOT_OFFER`。
+- [x] 只有在宣告 `view-sync` 時才實作 `VIEW_ANNOUNCE`。
 - [x] 對每個 `OBJECT` 重算 `hash(body)`。
 - [x] 依 `object_type` 與 `hash` 重建預期的 `object_id`。
 - [x] 拒絕任何內嵌導出 ID 與 envelope `object_id` 不一致的 `OBJECT`。
 
 ## 8. 同步流程
 
-- [ ] 支援 peers 之間的首次同步：`HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`。
-- [ ] 支援 peers 之間從更新後 `HEADS` 進行增量同步。
-- [ ] 只以 canonical object ID 抓取缺失物件。
-- [ ] 先驗證物件，再建立索引或提供給 reader。
-- [ ] 若對方宣告 snapshot，可支援 snapshot-assisted catch-up。
-- [ ] 若啟用 `view-sync`，可支援抓取已公告的 views。
-- [ ] 將抓回的 View objects 視為 governance signals，而不是使用者偏好狀態。
+- [x] 支援 peers 之間的首次同步：`HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`。
+- [x] 支援 peers 之間從更新後 `HEADS` 進行增量同步。
+- [x] 只以 canonical object ID 抓取缺失物件。
+- [x] 先驗證物件，再建立索引或提供給 reader。
+- [x] 若對方宣告 snapshot，可支援 snapshot-assisted catch-up。
+- [x] 若啟用 `view-sync`，可支援抓取已公告的 views。
+- [x] 將抓回的 View objects 視為 governance signals，而不是使用者偏好狀態。
 
 ## 9. Views 與 Head Selection
 

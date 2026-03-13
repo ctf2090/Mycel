@@ -46,14 +46,15 @@
         <h1>Roadmap order and implementation status in one view.</h1>
         <p class="lead">
           Mycel is still in the narrow first-client lane. The immediate goal is to finish the last
-          shared-core closure work while keeping <code>M4</code> narrow around transcript-backed
-          sync pull, verified wire-session reachability, and minimal peer-sync closure.
+          shared-core closure work while keeping <code>M4</code> narrow around verified wire-session
+          reachability, minimal peer-sync closure, and broader interop proof beyond the now-landed
+          optional sync flows.
         </p>
         <ol class="lane-list">
           <li>Close <code>M1</code> malformed-field depth and canonicalization debt.</li>
           <li>Finish <code>M2</code> replay, rebuild, and merge-authoring closure.</li>
           <li>Expand <code>M3</code> reader workflows carefully on top of the accepted-head inspection, render, and editor-admission-aware profile base.</li>
-          <li>Keep <code>M4</code> narrow while transcript-backed first-time and incremental sync pull grows toward minimal peer-driven sync.</li>
+          <li>Keep <code>M4</code> narrow while peer-store sync proof grows toward broader interop closure and future production replication behavior.</li>
         </ol>
       </header>
 
@@ -105,7 +106,8 @@
             <ul>
               <li>Wire validation and <code>OBJECT</code> body checks</li>
               <li>Session reachability and store-backed bootstrap</li>
-              <li>Transcript-backed first-time and incremental sync pull</li>
+              <li>Peer-store first-time and incremental sync proof</li>
+              <li>Capability-gated <code>SNAPSHOT_OFFER</code> / <code>VIEW_ANNOUNCE</code></li>
             </ul>
           </article>
           <article class="card">
@@ -159,7 +161,7 @@
               <td data-label="Area">4. Signature Verification</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M4</td>
-              <td data-label="Current read">Object signature rules are in place, generic wire-envelope signature verification exists, and <code>OBJECT</code> body hash / <code>object_id</code> recomputation now runs in wire validation; broader shared-helper convergence and peer-driven sync plumbing remain.</td>
+              <td data-label="Current read">Object signature rules are in place, generic wire-envelope signature verification exists, <code>OBJECT</code> body hash / <code>object_id</code> recomputation now runs in wire validation, and capability-gated optional messages are enforced; broader shared-helper convergence and wider peer interop proof remain.</td>
             </tr>
             <tr>
               <td data-label="Area">5. Patch and Revision Engine</td>
@@ -177,13 +179,13 @@
               <td data-label="Area">7. Wire Protocol</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Canonical wire-envelope parsing, field validation, sender checks, session sequencing/head tracking, reachability gating, store-backed bootstrap, and <code>OBJECT</code> body verification now exist in <code>mycel-core</code>; capability-gated optional messages and broader peer interop remain.</td>
+              <td data-label="Current read">Canonical wire-envelope parsing, field validation, sender checks, session sequencing/head tracking, reachability gating, store-backed bootstrap, <code>OBJECT</code> body verification, and capability-gated optional messages now exist in <code>mycel-core</code>; broader peer interop remains.</td>
             </tr>
             <tr>
               <td data-label="Area">8. Sync Workflow</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Transcript-backed first-time and incremental <code>sync pull</code> flows now verify/store requested objects, and <code>WireSession</code> can bootstrap from known verified store state; minimal peer-driven sync and optional flows remain open.</td>
+              <td data-label="Current read">Peer-store-driven first-time and incremental <code>sync pull</code> flows now verify/store requested objects, including snapshot-assisted catch-up and announced-view fetching, and <code>WireSession</code> can bootstrap from known verified store state; broader peer interop remains open.</td>
             </tr>
             <tr>
               <td data-label="Area">9. Views and Head Selection</td>
@@ -201,19 +203,19 @@
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3 / M4</td>
-              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, persisted governance index query surfaces, and transcript-backed <code>sync pull</code> all exist; peer-driven sync remains open.</td>
+              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, persisted governance index query surfaces, transcript-backed <code>sync pull</code>, and internal peer-store sync all exist, including optional snapshot/view flows; broader replication behavior remains open.</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M2 / M4</td>
-              <td data-label="Current read">Fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, and transcript-backed first-time / incremental sync-pull smokes exist, but peer-driven sync and optional-message cases remain.</td>
+              <td data-label="Current read">Fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, peer-store first-time / incremental sync proofs, optional-message coverage, and simulator positive-path smokes exist, but broader peer-interop cases remain.</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">Whole plan</td>
-              <td data-label="Current read">Replay, head selection, rebuild, conservative merge authoring, and transcript-backed sync-pull proofs are green; parse closure and peer-driven wire sync are not.</td>
+              <td data-label="Current read">Replay, head selection, rebuild, conservative merge authoring, and peer-store sync proofs are green; parse closure, broader peer interop, and production replication behavior are not.</td>
             </tr>
           </tbody>
         </table>

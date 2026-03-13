@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: late partial progress, refreshed after the recent canonical-helper convergence, peer-store sync-driver, CLI peer-sync, and simulator integration batch; implementation state now includes replay `state_hash` helper convergence plus early `M4` peer-driven sync coverage while optional wire flows and broader replication behavior remain open
+Status: late partial progress, refreshed after the recent canonical-helper convergence, peer-store sync-driver, CLI peer-sync, simulator integration, and optional-flow sync coverage batch; implementation state now includes replay `state_hash` helper convergence plus early `M4` peer-driven sync coverage and capability-gated optional-message handling, while broader peer interop and production replication behavior remain open
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -108,21 +108,21 @@ Defer if needed:
 - [x] Implement `OBJECT`.
 - [x] Implement `BYE`.
 - [x] Implement `ERROR`.
-- [ ] Implement `SNAPSHOT_OFFER` only if `snapshot-sync` is advertised.
-- [ ] Implement `VIEW_ANNOUNCE` only if `view-sync` is advertised.
+- [x] Implement `SNAPSHOT_OFFER` only if `snapshot-sync` is advertised.
+- [x] Implement `VIEW_ANNOUNCE` only if `view-sync` is advertised.
 - [x] Recompute `hash(body)` for every `OBJECT`.
 - [x] Reconstruct expected `object_id` from `object_type` and `hash`.
 - [x] Reject any `OBJECT` whose embedded derived ID disagrees with the envelope `object_id`.
 
 ## 8. Sync Workflow
 
-- [ ] Support first-time sync end-to-end between peers: `HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`.
-- [ ] Support incremental sync from updated `HEADS` between peers.
-- [ ] Fetch missing objects only by canonical object ID.
-- [ ] Verify objects before indexing or exposing them to readers.
-- [ ] Support snapshot-assisted catch-up if snapshots are advertised.
-- [ ] Support fetching announced views if `view-sync` is enabled.
-- [ ] Treat fetched View objects as governance signals rather than user preference state.
+- [x] Support first-time sync end-to-end between peers: `HELLO` -> `MANIFEST` / `HEADS` -> `WANT` -> `OBJECT`.
+- [x] Support incremental sync from updated `HEADS` between peers.
+- [x] Fetch missing objects only by canonical object ID.
+- [x] Verify objects before indexing or exposing them to readers.
+- [x] Support snapshot-assisted catch-up if snapshots are advertised.
+- [x] Support fetching announced views if `view-sync` is enabled.
+- [x] Treat fetched View objects as governance signals rather than user preference state.
 
 ## 9. Views and Head Selection
 
