@@ -49,8 +49,7 @@
   - Use [`.agent-local/DEV-SETUP-STATUS.example.md`](.agent-local/DEV-SETUP-STATUS.example.md) as the template for the local status file. <!-- item-id: bootstrap.dev-setup-template -->
 - Agent startup:
   - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use `scripts/agent_registry.py` subcommands as defined there. <!-- item-id: bootstrap.read-agent-registry -->
-  - If the user did not assign a role for the new chat, use `scripts/agent_registry.py claim auto`. <!-- item-id: bootstrap.claim-auto -->
-  - After claiming a role for the chat, tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.announce-claimed-role -->
+  - If the user did not assign a role for the new chat, use `scripts/agent_registry.py claim auto`, then tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.claim-auto -->
 
 ## Work Cycle Workflow
 - Run `git status -sb` to understand the repo state. <!-- item-id: bootstrap.git-status -->
