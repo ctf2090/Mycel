@@ -305,7 +305,7 @@ Implementation anchors：
 2. 超出目前初始 filtered / sorted / projected `view` inspection / listing / publication workflow 的專用 governance surfaces
 3. 超出最小具名 fixed-profile surface 的 reader-facing profile ergonomics
 4. 後續可與 wire / sync 對齊的 governance-state tooling
-5. 若 viewer signals 將來要進入 `selector_score`，建議方向應是 bounded viewer bonus / penalty 模型，再搭配 challenge-led escalation，而不是 raw popularity counts；typed signal schema、anti-Sybil-aware weighting 與可追蹤的 decision outputs 仍屬 open gap
+5. 若 viewer signals 將來要進入 `selector_score`，建議方向應是 bounded viewer bonus / penalty 模型，再搭配 challenge-led escalation，而不是 raw popularity counts；分層 anti-Sybil gating、由 eligibility 推導的 weighting，以及可追蹤的 decision outputs 仍屬 open gap
 
 Implementation anchors：
 

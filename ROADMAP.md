@@ -305,7 +305,7 @@ Still missing or incomplete:
 2. Reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 3. Richer governance retrieval and publication surfaces beyond the initial filtered/sorted/projected `view` inspection/listing/publication surface
 4. Stronger dedicated governance-state tooling once wire and sync work begin to land
-5. If viewer signals ever enter `selector_score`, the recommended direction is a bounded viewer bonus / penalty model with challenge-led escalation rather than raw popularity counts; typed signal schema, anti-Sybil-aware weighting, and traceable decision outputs remain open
+5. If viewer signals ever enter `selector_score`, the recommended direction is a bounded viewer bonus / penalty model with challenge-led escalation rather than raw popularity counts; tiered anti-Sybil gating, eligibility-derived weighting, and traceable decision outputs remain open
 
 ### Milestones in This Phase
 
@@ -347,7 +347,7 @@ Main remaining gaps:
 2. stronger dedicated governance inspection and publication surfaces beyond the initial `view` workflow
 3. reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 4. governance-state tooling that can later align with wire/sync transport
-5. bounded viewer-in-selector governance follow-up if three-role checks expand beyond escalation-only viewers, now narrowed toward bounded viewer bonus / penalty channels plus challenge-led escalation; signal schema, anti-Sybil gating, and selector trace surfaces remain open
+5. bounded viewer-in-selector governance follow-up if three-role checks expand beyond escalation-only viewers, now narrowed toward bounded viewer bonus / penalty channels plus challenge-led escalation; signal schema, tiered anti-Sybil gating, eligibility-weighting, and selector trace surfaces remain open
 
 Implementation anchors:
 

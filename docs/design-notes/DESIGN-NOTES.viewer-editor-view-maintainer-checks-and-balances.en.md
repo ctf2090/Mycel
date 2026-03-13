@@ -389,6 +389,117 @@ But it still would not solve everything:
 
 So even in that future, Mycel should treat biometrics as anti-Sybil substrate, not as governance legitimacy by itself.
 
+## 9.1 Minimum gating model before viewer score can affect selector outcomes
+
+Before any viewer-derived score can enter `selector_score`, the profile should define a minimum gating model with three separate inputs:
+
+- `viewer_identity_tier`
+- `viewer_admission_status`
+- `viewer_reputation_band`
+
+These inputs do different jobs:
+
+- `viewer_identity_tier` answers how costly or credible the anti-Sybil substrate is for this viewer
+- `viewer_admission_status` answers whether the viewer is currently allowed to use selector-relevant powers in this profile
+- `viewer_reputation_band` answers how much durable trust the viewer has accumulated through prior non-abusive participation
+
+The minimal recommended shape is:
+
+- `viewer_identity_tier`
+  - `none`
+  - `basic`
+  - `strong`
+- `viewer_admission_status`
+  - `pending`
+  - `admitted`
+  - `restricted`
+  - `revoked`
+- `viewer_reputation_band`
+  - `new`
+  - `established`
+  - `trusted`
+
+Suggested interpretation:
+
+- `none`
+  - no credible anti-Sybil substrate
+  - viewer may read and leave non-selector feedback only
+- `basic`
+  - some bounded anti-Sybil friction exists
+  - viewer may contribute only low-impact bounded selector signals if the profile allows it
+- `strong`
+  - stronger anti-Sybil substrate exists, potentially including costly identity, mature reputation, or privacy-preserving biometric proof
+  - viewer may access higher-impact bounded participation if separately admitted
+
+## 9.2 How eligibility and weight should be derived
+
+The profile should derive `effective_signal_weight` from gating state rather than from raw viewer counts or self-declared claims.
+
+A safe direction is:
+
+`effective_signal_weight = f(viewer_identity_tier, viewer_admission_status, viewer_reputation_band, signal_type, confidence_level)`
+
+With these baseline rules:
+
+- if `viewer_admission_status != admitted`, then selector-relevant weight should be `0`
+- if `viewer_identity_tier = none`, then selector-relevant weight should be `0`
+- if `viewer_reputation_band = new`, then any allowed selector contribution should stay below the profile's lowest bounded cap
+- `approval` and `objection` may receive bounded non-zero weight only after identity and admission gates pass
+- `challenge` should use gating primarily to unlock escalation eligibility, not to override the primary maintainer score
+
+Recommended profile behavior by tier:
+
+- `none`
+  - `bounded_viewer_bonus = 0`
+  - `bounded_viewer_penalty = 0`
+  - no `challenge`-grade escalation
+- `basic`
+  - small capped `bounded_viewer_bonus`
+  - small capped `bounded_viewer_penalty`
+  - `challenge` may open review only if evidence is present
+- `strong`
+  - higher but still capped `bounded_viewer_bonus`
+  - higher but still capped `bounded_viewer_penalty`
+  - `challenge` may open stronger review or freeze paths if the profile also requires corroboration or stronger evidence
+
+Recommended role of reputation:
+
+- `new`
+  - can participate only at the smallest allowed bounded weight
+- `established`
+  - can access the normal bounded score channel for the active profile
+- `trusted`
+  - can access the profile's highest allowed bounded participation, but still never parity with `view-maintainer`
+
+## 9.3 Viewer powers that should remain unavailable under weak anti-Sybil conditions
+
+If the profile has weak or absent anti-Sybil protection, the following viewer powers should remain unavailable:
+
+- any uncapped positive or negative selector contribution
+- any direct override of accepted-head ordering
+- any unilateral `temporary_freeze`
+- any challenge path that does not require evidence
+- any challenge path that treats one low-cost identity as sufficient for final rejection
+
+Under weak anti-Sybil conditions, the safest available viewer powers are:
+
+- non-selector feedback
+- low-weight advisory `approval`
+- low-weight advisory `objection`
+- evidence-bearing challenge requests that can only trigger review, not finality
+
+## 9.4 Recommended anti-Sybil baseline for the current bounded model
+
+For the current bounded viewer-in-selector proposal, the recommended minimum baseline is:
+
+- require at least `basic` `viewer_identity_tier`
+- require `admitted` status before any selector-relevant viewer weight becomes non-zero
+- keep `new` reputation viewers on the lowest bounded caps
+- require evidence-bearing `challenge` for review eligibility
+- require stronger corroboration or stronger anti-Sybil conditions before `temporary_freeze` becomes available
+
+This baseline keeps viewer participation real enough to matter, but still clearly secondary to view-maintainer ratification.
+
 ## 10. Recommended Direction
 
 For this proposal, the more stable bounded version is:
@@ -408,6 +519,7 @@ More concretely, the recommended bounded direction is:
 - `challenge` should not directly add or subtract from the primary selector score
 - `flag` should remain outside score calculation and support only low-severity triage
 - if the profile cannot support anti-Sybil or admission gating, viewer selector participation should default to `disabled`
+- effective viewer weight should be derived from identity tier, admission status, and reputation band rather than raw counts
 
 ## 11. Example Minimal Policy Shape
 
@@ -419,6 +531,8 @@ A future profile could define fields such as:
 - `viewer_selector_participation_enabled`
 - `viewer_eligibility_mode`
 - `viewer_min_identity_tier`
+- `viewer_min_reputation_band`
+- `viewer_admission_required`
 - `viewer_objection_delay_threshold`
 - `viewer_challenge_review_threshold`
 - `viewer_freeze_threshold`
@@ -436,6 +550,8 @@ Suggested meaning:
 - `viewer_selector_participation_enabled`: explicit profile switch for enabling or disabling viewer score participation
 - `viewer_eligibility_mode`: whether viewer participation is open, admitted, reputation-gated, or otherwise constrained
 - `viewer_min_identity_tier`: minimum identity tier required before viewer signals can affect selector score
+- `viewer_min_reputation_band`: minimum reputation band required before the profile allows non-zero selector weight
+- `viewer_admission_required`: whether selector-relevant viewer signals require explicit admission
 - `viewer_signal_weight_cap`: maximum per-viewer or aggregate bounded contribution under the active profile
 - `viewer_challenge_requires_evidence`: whether higher-impact escalation requires evidence-bearing challenge signals
 
