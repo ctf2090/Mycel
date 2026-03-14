@@ -9,11 +9,11 @@ Suggested per-agent copy path:
 
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-doc-checklist.md`
 
-## Startup
+## New chat bootstrap
 
 - Confirm the registry state and active peers before taking documentation or planning scope. <!-- item-id: doc.startup.registry-state -->
 
-## Work Cycle
+## Work Cycle Workflow
 
 - Run `git status -sb` and avoid unrelated user changes already in the worktree. <!-- item-id: doc.cycle.git-status -->
 - Treat `ROADMAP.*` and `IMPLEMENTATION-CHECKLIST.*` as the higher planning authority when surfaces disagree. <!-- item-id: doc.cycle.source-of-truth-order -->

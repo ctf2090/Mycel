@@ -35,6 +35,13 @@ Fast path:
 - `scripts/agent_bootstrap.py` is the preferred thin wrapper when a new chat wants the repo-standard claim/start/work-cycle bootstrap in one call.
 - The wrapper does not replace reading [`AGENTS.md`](../AGENTS.md) or local overlays first; it only reduces command round-trips after those inputs are loaded.
 
+Role checklist sources:
+
+- before starting role-specific checklist work, read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md)
+- canonical role checklist sources live in [`docs/ROLE-CHECKLISTS/coding.md`](./ROLE-CHECKLISTS/coding.md) and [`docs/ROLE-CHECKLISTS/doc.md`](./ROLE-CHECKLISTS/doc.md)
+- per-agent checklist copies should live under `.agent-local/agents/<agent_uid>/checklists/`
+- current role checklist section names should align with `New chat bootstrap` and `Work Cycle Workflow`
+
 ## Role Model
 
 The system supports multiple concurrent agents, not just one `coding` and one `doc`.

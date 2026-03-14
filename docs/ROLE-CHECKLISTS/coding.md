@@ -9,12 +9,12 @@ Suggested per-agent copy path:
 
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-coding-checklist.md`
 
-## Startup
+## New chat bootstrap
 
 - Confirm the registry state and active peers before taking implementation scope. <!-- item-id: coding.startup.registry-state -->
 - Check the latest completed CI result for the previous push before starting the next coding slice. <!-- item-id: coding.startup.check-latest-ci -->
 
-## Work Cycle
+## Work Cycle Workflow
 
 - Run `git status -sb` and avoid unrelated user changes already in the worktree. <!-- item-id: coding.cycle.git-status -->
 

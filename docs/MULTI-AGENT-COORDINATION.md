@@ -11,6 +11,7 @@ For the short maintainer version, see [MULTI-AGENT-CHEATSHEET.md](./MULTI-AGENT-
 Use it together with:
 
 - [AGENT-REGISTRY.md](./AGENT-REGISTRY.md)
+- [ROLE-CHECKLISTS/README.md](./ROLE-CHECKLISTS/README.md)
 - [AI-CO-WORKING-MODEL.md](./AI-CO-WORKING-MODEL.md)
 - [AGENT-HANDOFF.md](./AGENT-HANDOFF.md)
 - [BOT-CONTRIBUTING.md](../BOT-CONTRIBUTING.md)
@@ -73,6 +74,13 @@ Recommended startup tools:
 - `scripts/agent_registry.py` for role claim, startup confirmation, lifecycle state, recovery, takeover, cleanup, and checklist management
 - `scripts/agent_work_cycle.py` for starting and ending a tracked user-command work cycle
 - `scripts/agent_timestamp.py` for canonical timestamp lines without a registry transition
+
+Role checklist sources:
+
+- read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md) before role-specific checklist work starts
+- canonical sources live in [`docs/ROLE-CHECKLISTS/coding.md`](./ROLE-CHECKLISTS/coding.md) and [`docs/ROLE-CHECKLISTS/doc.md`](./ROLE-CHECKLISTS/doc.md)
+- per-agent copies should live under `.agent-local/agents/<agent_uid>/checklists/`
+- keep role checklist section names aligned with `New chat bootstrap` and `Work Cycle Workflow`
 
 Recommended startup self-label:
 

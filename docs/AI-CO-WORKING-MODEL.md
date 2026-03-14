@@ -9,6 +9,7 @@ It is not a replacement for:
 - [AGENTS.md](../AGENTS.md)
 - [BOT-CONTRIBUTING.md](../BOT-CONTRIBUTING.md)
 - [MULTI-AGENT-COORDINATION.md](./MULTI-AGENT-COORDINATION.md)
+- [ROLE-CHECKLISTS/README.md](./ROLE-CHECKLISTS/README.md)
 - [PLANNING-SYNC-PLAN.md](./PLANNING-SYNC-PLAN.md)
 
 Instead, it gives the higher-level model that connects them.
@@ -87,6 +88,7 @@ Primary surfaces:
 - local chats or agent sessions
 - isolated worktrees where useful
 - direct code and test edits
+- role checklist sources in [`docs/ROLE-CHECKLISTS/`](./ROLE-CHECKLISTS/README.md) plus per-agent copies under `.agent-local/agents/<agent_uid>/checklists/`
 
 Execution should follow:
 

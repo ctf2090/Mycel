@@ -6,6 +6,8 @@ Use this file as the tracked specification for how agents communicate through lo
 
 For agent discovery and role lookup, read [AGENT-REGISTRY.md](./AGENT-REGISTRY.md) and the local `.agent-local/agents.json` file first. Do not use mailbox traffic as a substitute for registry assignment confirmation.
 
+For role-specific checklist sources and per-agent checklist copy locations, read [ROLE-CHECKLISTS/README.md](./ROLE-CHECKLISTS/README.md).
+
 Live mailbox files are local and not committed. Each agent should use the mailbox path declared in `.agent-local/agents.json`.
 
 Use `scripts/mailbox_handoff.py` when you want the tool to render a tracked mailbox template for you. For open current-state entries, the tool appends the new entry and automatically marks older `Status: open` entries in the same handoff slot as `superseded`.

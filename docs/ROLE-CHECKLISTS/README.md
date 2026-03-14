@@ -23,6 +23,12 @@ Recommended workflow:
 2. Create a per-agent copy with `scripts/item_id_checklist.py`.
 3. Update only the per-agent copy while working.
 
+Current section naming:
+
+- role checklist sources should use `New chat bootstrap` for startup items
+- role checklist sources should use `Work Cycle Workflow` for per-command cycle items
+- this keeps the role-specific checklist structure aligned with the main `AGENTS.md` flow
+
 The standard `AGENTS.md` bootstrap and work-cycle checklists are still generated
 automatically by the registry and work-cycle tools. These role checklists are an
 additional role-focused layer, not a replacement for the generated `AGENTS.md`

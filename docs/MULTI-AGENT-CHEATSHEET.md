@@ -31,6 +31,11 @@ Per-agent checklist copies:
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-coding-checklist.md`
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-doc-checklist.md`
 
+Role checklist section names:
+
+- `New chat bootstrap`
+- `Work Cycle Workflow`
+
 Mailbox retention:
 
 - active working-set uid-based mailboxes stay in `.agent-local/mailboxes/`
