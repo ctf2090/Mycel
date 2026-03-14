@@ -2,8 +2,7 @@
 
 ## Git workflow
 - Current repo convention: the shared integration branch is `origin/main`.
-- Push to `origin main` after every code change. <!-- item-id: git.push-after-own-change -->
-- Multiple chats may work on the same project at the same time; each chat agent should just push its own commits to `origin/main`. <!-- item-id: git.push-own-commits-only -->
+- Push each chat agent's own commits to `origin/main` after every code change, even when multiple chats are working in parallel. <!-- item-id: git.push-after-own-change --> <!-- item-id: git.push-own-commits-only -->
 - Commit and push must run serially; only push after the commit has completed successfully, and do not run commit/push in parallel.
 - If `git push origin main` is rejected because `origin/main` moved, run `git fetch origin`, `git rebase origin/main`, resolve any conflicts, and retry the push; do not force-push to bypass other chats' commits.
 - During rebase conflicts, preserve user changes first, then already-pushed `origin/main` changes from other chats, and then re-apply this chat's work on top; if the conflict cannot be resolved confidently, stop and ask the user instead of guessing.
