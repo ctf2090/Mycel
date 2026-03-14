@@ -40,7 +40,7 @@ Mailbox retention:
 
 - active working-set uid-based mailboxes stay in `.agent-local/mailboxes/`
 - orphaned uid-based mailboxes older than 3 days should be deleted; there is no archive step
-- use `npm run handoffs:inactive-coding` after a new `coding` agent starts to check leftover open continuation handoffs from inactive coding agents
+- use `npm run handoffs:inactive-coding` when a `coding` chat is resuming, taking over, or otherwise needs to inspect overlapping inactive coding handoffs
 - use `scripts/mailbox_gc.py` to inspect mailbox references and delete orphaned uid-based mailboxes after the retention window
 - each shared fallback mailbox is limited to `1024` bytes
 - shared fallback mailboxes outside `.agent-local/mailboxes/` are not touched by `scripts/mailbox_gc.py`
@@ -83,12 +83,26 @@ Startup self-label:
 
 - `<display-id> | <scope-label>`
 
+Fresh-chat fast path:
+
+1. `ls`
+2. read `AGENTS-LOCAL.md` if present, then `.agent-local/dev-setup-status.md`
+3. read `docs/ROLE-CHECKLISTS/README.md`, `docs/AGENT-REGISTRY.md`, and `.agent-local/agents.json`
+4. run `python3 scripts/agent_bootstrap.py <role>` or `python3 scripts/agent_bootstrap.py auto`
+5. if `coding`, check the latest completed CI result before new implementation work
+
+Defer until task work starts:
+
+- `ROADMAP.md` and other broad planning reads
+- full mailbox scans unless resuming, taking over, or doing planning-sync work
+- full registry dumps beyond active-peer confirmation
+
 Startup order:
 
-1. use the registry tool to confirm or claim the agent identity if needed
-2. use the registry tool to confirm the startup state
-3. if the new agent is `coding`, run `npm run handoffs:inactive-coding` to see leftover inactive-coding continuation handoffs before taking new implementation scope
-4. use the work-cycle tool before working the current command
+1. use the bootstrap wrapper or registry tool to confirm or claim the agent identity
+2. keep bootstrap narrow; defer roadmap, mailbox, and broad markdown reads until task work starts
+3. use the work-cycle tool before working the current command
+4. if the new implementation scope overlaps prior coding work, run `npm run handoffs:inactive-coding` before continuing
 5. first chat line: `<display-id> | <scope-label>`
 
 Do not run `claim`, `start`, and `status` in parallel.

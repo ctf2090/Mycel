@@ -34,6 +34,15 @@ Fast path:
 
 - `scripts/agent_bootstrap.py` is the preferred thin wrapper when a new chat wants the repo-standard claim/start/work-cycle bootstrap in one call.
 - The wrapper does not replace reading [`AGENTS.md`](../AGENTS.md) or local overlays first; it only reduces command round-trips after those inputs are loaded.
+- Use this default 5-step startup sequence for a fresh chat unless recovery, takeover, or a direct user request needs more upfront context:
+  1. scan the repo root with `ls`
+  2. read `AGENTS-LOCAL.md` if it exists, then read `.agent-local/dev-setup-status.md`
+  3. read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md), then inspect [`docs/AGENT-REGISTRY.md`](./AGENT-REGISTRY.md) and `.agent-local/agents.json`
+  4. run `scripts/agent_bootstrap.py <role>` or `scripts/agent_bootstrap.py auto`
+  5. if the claimed role is `coding`, check the latest completed CI result for the previous push before starting implementation
+- Defer broader reading until task work begins:
+  - `coding`: postpone `ROADMAP.md`, wide mailbox scans, and broad repo markdown sweeps until the actual implementation slice needs them
+  - `doc`: postpone planning-sync mailbox scans, `scripts/check-plan-refresh.sh`, and broad roadmap/checklist refresh reading until the doc work item actually starts
 
 Role checklist sources:
 
@@ -287,27 +296,23 @@ No agent may start tracked work until all of the following are true:
 
 Recommended startup sequence:
 
-1. read `AGENTS.md`, `AGENTS-LOCAL.md` if it exists locally, and `docs/AGENT-REGISTRY.md`
-2. run `git status -sb`
-3. check `rg` and `gh`
-4. if the role is `coding`, check the latest completed CI status from the previous push
-5. if the user assigned a role, use the registry tool to claim that role
-6. otherwise use the registry tool to auto-claim a role
-7. immediately tell the user which role was claimed for this chat
-8. use the registry tool to confirm startup
-9. use the registry tool to inspect the current agent state
-10. if a personalized task list would help, use the registry tool to materialize one
-11. if the role is `coding`, run `npm run handoffs:inactive-coding` and treat handoff scan as the next item before taking a new implementation scope
-12. begin the chat with `<display-id> | <scope-label>`
-13. when the first concrete task arrives, use the work-cycle tool to begin tracked work
-14. before doing the work, prefer `scripts/agent_work_cycle.py`; it advances the work cycle and prints the canonical `Asia/Taipei (UTC+8)` timestamp line, and that exact line must be surfaced in user-visible commentary rather than only terminal output
+1. read `AGENTS.md`, `AGENTS-LOCAL.md` if it exists locally, and `.agent-local/dev-setup-status.md`
+2. scan the repo root with `ls`
+3. read `docs/ROLE-CHECKLISTS/README.md`, then read `docs/AGENT-REGISTRY.md` and `.agent-local/agents.json`
+4. if the user assigned a role, prefer `scripts/agent_bootstrap.py <role>`; otherwise prefer `scripts/agent_bootstrap.py auto`
+5. immediately tell the user which role was claimed for this chat
+6. begin the chat with `<display-id> | <scope-label>`
+7. when the first concrete task arrives, use the work-cycle tool to begin tracked work
+8. before implementation work, if the role is `coding`, check the latest completed CI status from the previous push
+9. only when the scope overlaps existing coding work, recovery, or takeover, run `npm run handoffs:inactive-coding` and inspect the relevant mailbox before continuing
+10. if a personalized task list would help, use the registry tool to materialize one after the bootstrap flow is complete
 
 Keep startup output narrow:
 
 - do not claim file-specific context before the user gives a concrete task
 - do not run `claim`, `start`, and `status` in parallel
 - when the role is `coding`, keep the CI line about the latest completed workflow, not a possibly in-progress run
-- when the role is `coding`, treat `check handoffs` as the default next item after startup rather than an optional follow-up
+- when the role is `coding`, treat `check handoffs` as task-start context for overlapping or resumed work, not a default bootstrap-time read
 - after `claim`, include a short user-facing role announcement before moving on to task work
 
 ## Workflow

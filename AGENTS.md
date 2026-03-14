@@ -37,6 +37,18 @@
 - When suggesting a mature module, library, or framework, explain why now is the right time, what problem it solves, and the main tradeoff of adopting it.
 
 ## New chat bootstrap
+- Bootstrap fast path for a fresh chat:
+  1. scan the repo root with `ls`
+  2. read `AGENTS-LOCAL.md` if it exists, then read `.agent-local/dev-setup-status.md`
+  3. read [`docs/ROLE-CHECKLISTS/README.md`](docs/ROLE-CHECKLISTS/README.md), then read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) and `.agent-local/agents.json`
+  4. run `scripts/agent_bootstrap.py <role>` or `scripts/agent_bootstrap.py auto`
+  5. if the role is `coding`, check the latest completed CI result for the previous push before starting implementation
+- The fast path is the default startup flow. Defer broad context gathering until task work begins unless recovery, takeover, or an explicit user request requires it sooner.
+- Default deferred reads after bootstrap:
+  - `ROADMAP.md` and other broad planning docs
+  - full mailbox scans unless the chat is resuming, taking over, or doing `doc` planning-sync work
+  - full registry dumps beyond confirming active peers and the claimed agent state
+  - broad `.md` sweeps outside the task area
 - Scan the repo root with `ls` for a quick top-level layout before using narrower file discovery commands when needed. <!-- item-id: bootstrap.repo-layout -->
 - Dev setup:
   - Before repeating environment checks, read `.agent-local/dev-setup-status.md` if it exists. <!-- item-id: bootstrap.read-dev-setup-status -->
@@ -46,7 +58,7 @@
 - Agent startup:
   - Before starting role-specific checklist work, read [`docs/ROLE-CHECKLISTS/README.md`](docs/ROLE-CHECKLISTS/README.md) as the entry point for canonical role checklist sources and per-agent checklist copy locations. <!-- item-id: bootstrap.read-role-checklists -->
   - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use the registry tool for role assignment and startup state. <!-- item-id: bootstrap.read-agent-registry -->
-  - Preferred fast path after reading the startup instructions: `scripts/agent_bootstrap.py` to perform the repo-standard bootstrap flow.
+  - Preferred fast path after reading the startup instructions: `scripts/agent_bootstrap.py` to perform the repo-standard bootstrap flow without front-loading broader task research.
   - If the user did not assign a role for the new chat, use the registry tool to auto-claim a role, then tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.claim-auto -->
   - A new chat should claim a fresh agent for itself, even when the role matches an older inactive agent. Only use `resume-check` or `recover` when the same returning chat is resuming its own existing `agent_uid`. <!-- item-id: bootstrap.claim-fresh-agent-for-new-chat -->
   - The registry tool generates the agent's bootstrap checklist template at `.agent-local/agents/<agent_uid>/checklists/AGENTS-bootstrap-checklist.md` if it does not exist yet.
