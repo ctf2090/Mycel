@@ -43,7 +43,7 @@ Avoid:
 
 ## 0.1 Decision Summary for the bounded viewer-in-selector lane
 
-For the current `M3` follow-up, this note recommends one specific bounded model rather than leaving the lane fully open-ended:
+For the current `M3` follow-up, bounded viewer entry into `selector_score` is the project direction for this lane. This note defines one specific bounded model rather than leaving the lane open-ended:
 
 - keep `view-maintainer` support as the primary ratification score
 - allow `viewer` participation only through two bounded score channels:
@@ -490,7 +490,7 @@ Under weak anti-Sybil conditions, the safest available viewer powers are:
 
 ## 9.4 Recommended anti-Sybil baseline for the current bounded model
 
-For the current bounded viewer-in-selector proposal, the recommended minimum baseline is:
+For the current bounded viewer-in-selector direction, the recommended minimum baseline is:
 
 - require at least `basic` `viewer_identity_tier`
 - require `admitted` status before any selector-relevant viewer weight becomes non-zero
@@ -502,7 +502,7 @@ This baseline keeps viewer participation real enough to matter, but still clearl
 
 ## 10. Recommended Direction
 
-For this proposal, the more stable bounded version is:
+Within this project direction, the more stable bounded version is:
 
 - keep the view-maintainer score channel as the primary ratification mechanism
 - add viewer `approval`, `objection`, `challenge`, and `flag`
@@ -557,7 +557,7 @@ Suggested meaning:
 
 ### 11.1 Example `viewer` signal shape
 
-Because this proposal assumes `viewer` affects `selector_score` directly, the minimal viable design should not be a single `like` counter. It should be a verifiable, bounded, typed signal shape.
+Because this lane assumes `viewer` affects `selector_score` directly, the minimal viable design should not be a single `like` counter. It should be a verifiable, bounded, typed signal shape.
 
 Suggested minimum fields:
 
@@ -666,7 +666,7 @@ This bounded viewer-in-selector work should not be read as:
 
 ## 12. Viewer Balancing Strength
 
-Under the current proposal, viewer balancing power is asymmetric.
+Under the current bounded direction, viewer balancing power is asymmetric.
 
 It is relatively strong against `editor-maintainer` overreach because:
 
@@ -680,7 +680,7 @@ It is still weaker against `view-maintainer` coordination than against `editor-m
 - viewers still cannot choose the accepted head by themselves
 - a coordinated view-maintainer majority still retains larger finalization power once review pressure is cleared
 
-So the current draft should be read as:
+So the current adopted lane should be read as:
 
 - strong procedural checks on editors
 - moderate but still secondary substantive checks on view maintainers
@@ -760,7 +760,7 @@ Considering all three roles together:
 - keeping `viewer` outside `selector_score` is closer to "editor proposal + maintainer ratification + viewer procedural check"
 - putting `viewer` into `selector_score` is closer to "editor proposal + maintainer-viewer mixed governance"
 
-If the goal of this note is bounded viewer entry into `selector_score`, the more stable path is to preserve view-maintainer primacy in ratification while letting viewers participate only through capped score channels and high-threshold challenge paths.
+Because bounded viewer entry into `selector_score` is the project goal for this lane, the more stable path is to preserve view-maintainer primacy in ratification while letting viewers participate only through capped score channels and high-threshold challenge paths.
 
 ## 15. Tradeoffs
 
@@ -778,7 +778,9 @@ Costs:
 - challenge spam and moderation burden become real concerns
 - accepted-head activation becomes less immediate in controversial cases
 
-## 16. Open Questions
+## 16. Open Design Questions Within This Direction
+
+These questions are about the shape and limits of bounded viewer participation inside `selector_score`, not about whether this lane belongs in the project at all.
 
 - How high can the bounded viewer score channel go before it starts to crowd out view-maintainer-led ratification?
 - Should viewer approvals affect only tie-breaks, or contribute bounded score bonuses?

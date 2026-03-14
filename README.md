@@ -123,6 +123,7 @@ If you want the design layer behind current decisions:
 - [docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md](./docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md): what the first client should do now, and what it should defer
 - [docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.en.md](./docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.en.md): protocol-governed reader model
 - [docs/design-notes/DESIGN-NOTES.two-maintainer-role.en.md](./docs/design-notes/DESIGN-NOTES.two-maintainer-role.en.md): split between editor and view maintainer authority
+- [docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.en.md](./docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.en.md): bounded viewer participation inside selector scoring with maintainer primacy and anti-Sybil guardrails
 - [docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md](./docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md): layered map of the current document set
 - [docs/design-notes/DESIGN-NOTES.peer-simulator-v0.en.md](./docs/design-notes/DESIGN-NOTES.peer-simulator-v0.en.md): early simulator and harness direction
 - [docs/design-notes/DESIGN-NOTES.forum-app-layer.en.md](./docs/design-notes/DESIGN-NOTES.forum-app-layer.en.md): forum-style app-layer sketch using board, thread, post, and moderation objects

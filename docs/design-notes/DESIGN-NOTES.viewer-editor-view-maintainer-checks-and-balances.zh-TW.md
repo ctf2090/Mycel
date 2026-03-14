@@ -43,7 +43,7 @@
 
 ## 0.1 bounded viewer-in-selector lane 的決策摘要
 
-對目前這條 `M3` follow-up 來說，這份筆記建議採用一個明確版本，而不是讓整條 lane 維持完全開放：
+對目前這條 `M3` follow-up 來說，讓 `viewer` 以有界方式進入 `selector_score` 已是這條 lane 的專案方向；這份筆記要做的是定義一個明確版本，而不是讓整條 lane 維持開放待定：
 
 - 仍由 `view-maintainer` support 擔任主 ratification score
 - `viewer` 只能透過兩條有界 score channels 參與：
@@ -490,7 +490,7 @@ profile 應從 gating state 推導 `effective_signal_weight`，而不是依賴 r
 
 ## 9.4 目前這個 bounded model 的建議 anti-Sybil baseline
 
-對目前這版 bounded viewer-in-selector proposal，比較合適的最低 baseline 是：
+對目前這條 bounded viewer-in-selector 方向，比較合適的最低 baseline 是：
 
 - 至少要求 `basic` 的 `viewer_identity_tier`
 - 任何 selector-relevant viewer weight 要變成非零之前，必須先取得 `admitted` status
@@ -502,7 +502,7 @@ profile 應從 gating state 推導 `effective_signal_weight`，而不是依賴 r
 
 ## 10. 建議方向
 
-對這份提案而言，較穩的 bounded 版本是：
+在這個專案方向裡，較穩的 bounded 版本是：
 
 - 仍以 view-maintainer score channel 作為主 ratification 機制
 - 新增 viewer `approval`、`objection`、`challenge`、`flag`
@@ -557,7 +557,7 @@ profile 應從 gating state 推導 `effective_signal_weight`，而不是依賴 r
 
 ### 11.1 範例 `viewer` signal 形狀
 
-既然這份提案預設 `viewer` 會直接影響 `selector_score`，最小可行設計就不應只有單一 `like` 計數，而應有一個可驗證、可限權、可分型的 signal 形狀。
+既然這條 lane 預設 `viewer` 會直接影響 `selector_score`，最小可行設計就不應只有單一 `like` 計數，而應有一個可驗證、可限權、可分型的 signal 形狀。
 
 建議最少欄位：
 
@@ -666,7 +666,7 @@ profile 應從 gating state 推導 `effective_signal_weight`，而不是依賴 r
 
 ## 12. Viewer 制衡力評估
 
-按照目前這份提案，viewer 的制衡力是非對稱的。
+按照目前這條有界方向，viewer 的制衡力是非對稱的。
 
 它對 `editor-maintainer` overreach 相對有力，原因是：
 
@@ -680,7 +680,7 @@ profile 應從 gating state 推導 `effective_signal_weight`，而不是依賴 r
 - viewers 不能單靠自己直接指定 accepted head
 - 一旦 review 壓力被解除，形成協調共識的 view-maintainer 多數通常仍保有較大的定案能力
 
-所以目前這版 draft 比較準確的讀法是：
+所以目前這條已採納 lane，比較準確的讀法是：
 
 - 對 editors 有較強的程序性制衡
 - 對 view maintainers 有中等、但仍屬次級的實質制衡
@@ -760,7 +760,7 @@ viewer challenge 可以觸發 `temporary_freeze`，但其門檻必須比一般 r
 - `viewer` 不進 `selector_score`，比較像「editor proposal + maintainer ratification + viewer procedural check」
 - `viewer` 進 `selector_score`，比較像「editor proposal + maintainer-viewer mixed governance」
 
-若本 note 的目標就是讓 `viewer` 有界地進入 `selector_score`，較穩的路線會是：保留 view-maintainer 的主導 ratification 地位，同時只讓 viewer 以 capped score channel 與高門檻 challenge path 參與。
+既然讓 `viewer` 有界地進入 `selector_score` 就是這條 lane 的專案目標，較穩的路線會是：保留 view-maintainer 的主導 ratification 地位，同時只讓 viewer 以 capped score channel 與高門檻 challenge path 參與。
 
 ## 15. 取捨
 
@@ -778,7 +778,9 @@ viewer challenge 可以觸發 `temporary_freeze`，但其門檻必須比一般 r
 - challenge spam 與 moderation burden 會變成真問題
 - accepted-head activation 在爭議情況下會較不即時
 
-## 16. 開放問題
+## 16. 這個方向內部仍待收斂的設計問題
+
+這些問題討論的是 `viewer` 進入 `selector_score` 後，bounded participation 應該長成什麼樣子，而不是在重談這條 lane 是否屬於專案方向。
 
 - viewer 的有界 score channel 上限應該多高，才不會壓過 view-maintainer 的主導 ratification？
 - viewer approvals 應只影響 tie-break，還是可提供受限的 score bonus？

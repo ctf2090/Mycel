@@ -122,6 +122,7 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 - [docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md](./docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md)：第一個客戶端現階段該做什麼、刻意延後什麼
 - [docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md](./docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md)：受 protocol 約束的 reader model
 - [docs/design-notes/DESIGN-NOTES.two-maintainer-role.zh-TW.md](./docs/design-notes/DESIGN-NOTES.two-maintainer-role.zh-TW.md)：editor 與 view maintainer 權責拆分
+- [docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.zh-TW.md](./docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.zh-TW.md)：在維持 maintainer 主導與 anti-Sybil guardrails 下，讓 viewer 以有界方式參與 selector scoring
 - [docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.zh-TW.md](./docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.zh-TW.md)：目前文件集的分層地圖
 - [docs/design-notes/DESIGN-NOTES.peer-simulator-v0.zh-TW.md](./docs/design-notes/DESIGN-NOTES.peer-simulator-v0.zh-TW.md)：早期 simulator 與 harness 方向
 - [docs/design-notes/DESIGN-NOTES.forum-app-layer.zh-TW.md](./docs/design-notes/DESIGN-NOTES.forum-app-layer.zh-TW.md)：用 board、thread、post 與 moderation objects 建模 forum-style app layer 的草稿
