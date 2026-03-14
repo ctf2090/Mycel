@@ -937,12 +937,28 @@ fn inspect_heads_from_loaded_input(
             channel.selector_score = head.selector_score;
         }
     }
+    let review_delayed_revision_ids = summary
+        .viewer_score_channels
+        .iter()
+        .filter(|channel| channel.viewer_review_state == ViewerReviewState::ReviewPressure)
+        .map(|channel| channel.revision_id.clone())
+        .collect::<BTreeSet<_>>();
     let frozen_revision_ids = summary
         .viewer_score_channels
         .iter()
         .filter(|channel| channel.viewer_review_state == ViewerReviewState::FreezePressure)
         .map(|channel| channel.revision_id.clone())
         .collect::<BTreeSet<_>>();
+    if !review_delayed_revision_ids.is_empty() {
+        let delayed_list = review_delayed_revision_ids
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ");
+        summary.notes.push(format!(
+            "review pressure delays candidate activation for: {delayed_list}"
+        ));
+    }
     if !frozen_revision_ids.is_empty() {
         let frozen_list = frozen_revision_ids
             .iter()
@@ -971,11 +987,37 @@ fn inspect_heads_from_loaded_input(
                 .count()
         ),
     );
+    if !review_delayed_revision_ids.is_empty() {
+        let active_candidate_count = summary
+            .eligible_heads
+            .iter()
+            .filter(|head| {
+                !review_delayed_revision_ids.contains(head.revision_id.as_str())
+                    && !frozen_revision_ids.contains(head.revision_id.as_str())
+            })
+            .count();
+        summary.push_trace(
+            "viewer_review",
+            format!(
+                "delayed_candidates={} active_candidates={} delayed_revision_ids={}",
+                review_delayed_revision_ids.len(),
+                active_candidate_count,
+                review_delayed_revision_ids
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        );
+    }
     if !frozen_revision_ids.is_empty() {
         let active_candidate_count = summary
             .eligible_heads
             .iter()
-            .filter(|head| !frozen_revision_ids.contains(head.revision_id.as_str()))
+            .filter(|head| {
+                !review_delayed_revision_ids.contains(head.revision_id.as_str())
+                    && !frozen_revision_ids.contains(head.revision_id.as_str())
+            })
             .count();
         summary.push_trace(
             "viewer_freeze",
@@ -995,7 +1037,10 @@ fn inspect_heads_from_loaded_input(
     let selectable_heads = summary
         .eligible_heads
         .iter()
-        .filter(|head| !frozen_revision_ids.contains(head.revision_id.as_str()))
+        .filter(|head| {
+            !review_delayed_revision_ids.contains(head.revision_id.as_str())
+                && !frozen_revision_ids.contains(head.revision_id.as_str())
+        })
         .collect::<Vec<_>>();
     let Some(selected) = selectable_heads.into_iter().max_by(|left, right| {
         left.selector_score
@@ -1003,7 +1048,7 @@ fn inspect_heads_from_loaded_input(
             .then(left.revision_timestamp.cmp(&right.revision_timestamp))
             .then_with(|| right.revision_id.cmp(&left.revision_id))
     }) else {
-        summary.push_error("NO_ACTIVE_HEAD_AFTER_VIEWER_FREEZE");
+        summary.push_error("NO_ACTIVE_HEAD_AFTER_VIEWER_REVIEW_OR_FREEZE");
         return summary;
     };
 

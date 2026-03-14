@@ -2976,6 +2976,185 @@ fn head_inspect_text_reports_viewer_channels_without_overloading_trace() {
 }
 
 #[test]
+fn head_inspect_skips_candidate_delayed_by_viewer_review_pressure() {
+    let doc_id = "doc:viewer-review-skip";
+    let revision_author = signing_key(116);
+    let maintainer_a = signing_key(117);
+    let maintainer_b = signing_key(118);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 10, "hash:viewer-review-a");
+    let revision_b = signed_revision(&revision_author, doc_id, vec![], 20, "hash:viewer-review-b");
+    let mut profile = head_profile(hash_json(&policy), 250);
+    profile["viewer_score"] = bounded_viewer_score_profile();
+    let mut challenge = viewer_signal(
+        "signal-review-selected",
+        119,
+        &revision_a["revision_id"],
+        "challenge",
+        "medium",
+        100,
+        400,
+    );
+    challenge["evidence_ref"] = Value::String("evidence:review-selected".to_string());
+    let bundle = json!({
+        "profile": profile,
+        "revisions": [revision_a.clone(), revision_b.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                100
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                110
+            )
+        ],
+        "viewer_signals": [challenge],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-viewer-review-skip", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("review pressure delays candidate activation")
+                        && message.contains(
+                            revision_a["revision_id"]
+                                .as_str()
+                                .expect("revision id should exist"),
+                        )
+                })
+            })),
+        "expected review delay note, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("viewer_review")
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("delayed_candidates=1")
+                            && detail.contains("active_candidates=1")
+                            && detail.contains(
+                                revision_a["revision_id"]
+                                    .as_str()
+                                    .expect("revision id should exist"),
+                            )
+                    })
+            })),
+        "expected viewer_review trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+    let viewer_score_channels = json["viewer_score_channels"]
+        .as_array()
+        .expect("viewer_score_channels should be array");
+    let delayed_channel = viewer_score_channels
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_a["revision_id"])
+        .expect("delayed candidate channel should exist");
+    assert_eq!(
+        delayed_channel["viewer_review_state"],
+        Value::String("review-pressure".to_string())
+    );
+}
+
+#[test]
+fn head_inspect_fails_when_all_candidates_are_delayed_by_viewer_review_pressure() {
+    let doc_id = "doc:viewer-review-fail";
+    let revision_author = signing_key(125);
+    let maintainer_a = signing_key(126);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer_a)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(
+        &revision_author,
+        doc_id,
+        vec![],
+        10,
+        "hash:viewer-review-fail-a",
+    );
+    let mut profile = head_profile(hash_json(&policy), 250);
+    profile["viewer_score"] = bounded_viewer_score_profile();
+    let mut challenge = viewer_signal(
+        "signal-review-only",
+        127,
+        &revision_a["revision_id"],
+        "challenge",
+        "medium",
+        100,
+        400,
+    );
+    challenge["evidence_ref"] = Value::String("evidence:review-only".to_string());
+    let bundle = json!({
+        "profile": profile,
+        "revisions": [revision_a.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                100
+            )
+        ],
+        "viewer_signals": [challenge],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-viewer-review-fail", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "failed");
+    assert_eq!(json["selected_head"], Value::Null);
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("NO_ACTIVE_HEAD_AFTER_VIEWER_REVIEW_OR_FREEZE")
+                })
+            })),
+        "expected viewer review/freeze failure error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn head_inspect_skips_candidate_blocked_by_viewer_freeze_pressure() {
     let doc_id = "doc:viewer-freeze-skip";
     let revision_author = signing_key(121);
@@ -3145,9 +3324,9 @@ fn head_inspect_fails_when_all_candidates_are_blocked_by_viewer_freeze_pressure(
         json["errors"]
             .as_array()
             .is_some_and(|errors| errors.iter().any(|entry| {
-                entry
-                    .as_str()
-                    .is_some_and(|message| message.contains("NO_ACTIVE_HEAD_AFTER_VIEWER_FREEZE"))
+                entry.as_str().is_some_and(|message| {
+                    message.contains("NO_ACTIVE_HEAD_AFTER_VIEWER_REVIEW_OR_FREEZE")
+                })
             })),
         "expected viewer freeze failure error, stdout: {}",
         stdout_text(&output)
