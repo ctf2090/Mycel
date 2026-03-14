@@ -95,6 +95,24 @@ class ItemIdChecklistCliTest(unittest.TestCase):
         self.assertNotIn("update checks here instead of the tracked source file", content)
         self.assertNotIn("`- [-]` not needed for this work cycle", content)
 
+    def test_role_checklist_sources_use_role_prefixed_output_names(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "docs/ROLE-CHECKLISTS/doc.md",
+            """# Doc Role Checklist
+
+- Review mailbox state <!-- item-id: doc.review-mailbox -->
+""",
+        )
+
+        result = json.loads(self.run_cli("agt_doc", "docs/ROLE-CHECKLISTS/doc.md", "--json").stdout)
+
+        self.assertEqual(
+            ".agent-local/agents/agt_doc/checklists/ROLE-doc-checklist.md",
+            result["output"],
+        )
+        self.assertTrue((self.root / result["output"]).exists())
+
     def test_keeps_only_item_id_sections_and_items(self) -> None:
         self.write_registry()
         self.write_source(

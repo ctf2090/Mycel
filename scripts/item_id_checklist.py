@@ -84,6 +84,9 @@ def require_non_empty_str(entry: dict[str, Any], field: str, agent_ref: str) -> 
 
 def checklist_rel_for(agent_uid: str, source_path: Path) -> str:
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source_path.stem).strip("-") or "source"
+    source_rel = relative_to_root(source_path)
+    if source_rel.startswith("docs/ROLE-CHECKLISTS/") and not stem.startswith("ROLE-"):
+        stem = f"ROLE-{stem}"
     return f".agent-local/agents/{agent_uid}/checklists/{stem}-checklist.md"
 
 
