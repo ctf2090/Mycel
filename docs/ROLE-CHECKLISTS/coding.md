@@ -17,6 +17,7 @@ Suggested per-agent copy path:
 ## Work Cycle Workflow
 
 - Run `git status -sb` and avoid unrelated user changes already in the worktree. <!-- item-id: coding.cycle.git-status -->
+- Review the roadmap and identify a high-value next coding item when the user asks for prioritization or open-ended next work. <!-- item-id: coding.cycle.review-roadmap-priority -->
 
 ## Verification
 
