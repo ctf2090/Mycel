@@ -12,7 +12,7 @@ Live mailbox files are local and not committed. Each agent should use the mailbo
 
 Use `scripts/mailbox_handoff.py` when you want the tool to render a tracked mailbox template for you. For open current-state entries, the tool appends the new entry and automatically marks older `Status: open` entries in the same handoff slot as `superseded`.
 
-The directory is ignored by git through `.gitignore`, except for tracked template examples such as `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`, `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`, `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`, and `.agent-local/mailboxes/EXAMPLE-doc-continuation-note.md`.
+The directory is ignored by git through `.gitignore`, except for tracked template examples such as `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`, `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`, `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`, `.agent-local/mailboxes/EXAMPLE-delivery-continuation-note.md`, and `.agent-local/mailboxes/EXAMPLE-doc-continuation-note.md`.
 
 ## Modes
 
@@ -20,10 +20,14 @@ Use role-based execution modes:
 
 - `coding`
   resolves issues, implements features, runs local verification, commits and pushes, and checks CI after each push
+- `delivery`
+  triages CI health, maintains workflow/process tooling, coordinates merge or release readiness, and routes non-process fixes back to `coding`
 - `doc`
   syncs design notes, roadmap/checklist surfaces, and explanatory docs; this mode does not check CI
 
 Use `coding` when the main output is behavior, tests, fixtures, parser/verifier work, or CLI changes.
+
+Use `delivery` when the main output is CI triage, workflow/process updates, flaky-test follow-up, or release-readiness coordination.
 
 Use `doc` when the main output is `sync doc` or `sync plan` work after implementation or accepted design direction already exists.
 
@@ -69,15 +73,16 @@ Mailbox retention and cleanup policy:
 2. before appending a new current-state handoff, the agent updates any older open current-state handoff in the same mailbox and same scope to `Status: superseded` when the new entry replaces it; `scripts/mailbox_handoff.py` automates that step for new open entries.
 3. every agent appends or updates one same-role mailbox handoff entry in its own mailbox before ending the work cycle, so the mailbox records the latest state for that cycle.
 4. `coding` satisfies that requirement with one open `Work Continuation Handoff`, even if no doc follow-up is needed.
-5. `doc` satisfies that requirement with one open `Doc Continuation Note` when it needs to leave current-state context for later doc work.
-6. if the landed work is planning-relevant or another role needs follow-up, the agent may also append one open cross-role handoff such as a `Planning Sync Handoff`.
-7. at `scripts/agent_work_cycle.py end`, each mailbox may have at most one open same-role handoff and at most one open cross-role handoff; after bootstrap batch 1, one open same-role handoff is required.
-8. `coding` commits and pushes the tracked code or doc changes.
-9. the next `coding` agent that resumes or takes over the scope reads the newest open `Work Continuation Handoff` entry first.
-10. `doc` reads the newest open planning-sync entry addressed to its scope or mailbox.
-11. `doc` updates only the docs justified by that message.
-12. `doc` still leaves one same-role mailbox handoff entry for that completed work cycle, using a doc continuation note or another doc-owned current-state entry as appropriate.
-13. the agent that absorbs the prior handoff marks the original mailbox entry `resolved`, `blocked`, or `superseded`.
+5. `delivery` satisfies that requirement with one open `Delivery Continuation Note` when it needs to leave CI/process context for later delivery work.
+6. `doc` satisfies that requirement with one open `Doc Continuation Note` when it needs to leave current-state context for later doc work.
+7. if the landed work is planning-relevant or another role needs follow-up, the agent may also append one open cross-role handoff such as a `Planning Sync Handoff`.
+8. at `scripts/agent_work_cycle.py end`, each mailbox may have at most one open same-role handoff and at most one open cross-role handoff; after bootstrap batch 1, one open same-role handoff is required.
+9. `coding` commits and pushes the tracked code or doc changes.
+10. the next `coding` agent that resumes or takes over the scope reads the newest open `Work Continuation Handoff` entry first.
+11. `doc` reads the newest open planning-sync entry addressed to its scope or mailbox.
+12. `doc` updates only the docs justified by that message.
+13. `doc` still leaves one same-role mailbox handoff entry for that completed work cycle, using a doc continuation note or another doc-owned current-state entry as appropriate.
+14. the agent that absorbs the prior handoff marks the original mailbox entry `resolved`, `blocked`, or `superseded`.
 
 If the work is issue-first, the same summary can also be mirrored into the issue comment, but the local mailbox remains the default agent-to-agent transport.
 
@@ -178,6 +183,31 @@ Copyable doc continuation template:
 
 If `doc` wants a ready-made starting point, copy from `.agent-local/mailboxes/EXAMPLE-doc-continuation-note.md`, or use `scripts/mailbox_handoff.py`.
 
+## Delivery Continuation Note
+
+When `delivery` needs to leave the latest CI/process state for an unfinished triage, workflow follow-up, or completed read-only cycle, use a `Delivery Continuation Note`.
+
+Copyable delivery continuation template:
+
+```md
+## Delivery Continuation Note
+
+- Status: open
+- Date: 2026-03-14 14:00 UTC+8
+- Source agent: delivery-1
+- Scope: <scope>
+- Current state:
+  - <what CI/process state was confirmed in this cycle>
+- Evidence:
+  - <command, workflow, or run log consulted>
+- Next suggested step:
+  - <best next delivery action>
+- Blockers:
+  - `none` or <one short blocker sentence>
+```
+
+If `delivery` wants a ready-made starting point, copy from `.agent-local/mailboxes/EXAMPLE-delivery-continuation-note.md`, or use `scripts/mailbox_handoff.py`.
+
 ## Work Continuation Handoff
 
 At the end of every completed `coding` work item, leave one continuation entry in the active coding mailbox. This is how `coding` satisfies the per-work-cycle same-role mailbox-handoff requirement, and it remains mandatory even when there is no planning-sync impact.
@@ -235,6 +265,7 @@ Mailbox validation uses two open handoff slots:
 
 - same-role slot
   - `coding`: `Work Continuation Handoff`
+  - `delivery`: `Delivery Continuation Note`
   - `doc`: `Doc Continuation Note`
 - cross-role slot
   - optional follow-up for the other role, such as `Planning Sync Handoff`

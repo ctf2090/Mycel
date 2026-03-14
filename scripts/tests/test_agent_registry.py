@@ -243,10 +243,45 @@ class AgentRegistryCliTest(unittest.TestCase):
 
         claim = json.loads(self.run_cli("claim", "auto", "--scope", "lease-test", "--json").stdout)
 
-        self.assertEqual("coding", claim["role"])
-        self.assertEqual("coding-2", claim["display_id"])
+        self.assertEqual("delivery", claim["role"])
+        self.assertEqual("delivery-1", claim["display_id"])
         self.assertTrue(claim["agent_uid"].startswith("agt_"))
         self.assertTrue(claim["mailbox"].startswith(".agent-local/mailboxes/"))
+
+    def test_work_checklist_for_delivery_includes_delivery_items(self) -> None:
+        now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
+        (self.root / "AGENTS.md").write_text("# repo instructions\n", encoding="utf-8")
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": self.timestamp(now),
+                "agent_count": 1,
+                "agents": [
+                    self.make_v2_entry(
+                        agent_uid="agt_delivery",
+                        role="delivery",
+                        display_id="delivery-1",
+                        assigned_at=self.timestamp(now - timedelta(minutes=10)),
+                        status="active",
+                        scope="ci-triage",
+                        last_touched_at=self.timestamp(now - timedelta(minutes=1)),
+                    )
+                ],
+            }
+        )
+
+        result = json.loads(self.run_cli("work-checklist", "agt_delivery", "--json").stdout)
+        content = (self.root / result["output"]).read_text(encoding="utf-8")
+
+        self.assertIn("# Agent Work Checklist for delivery-1", content)
+        self.assertIn(
+            "- [ ] Check the latest completed CI result for the previous push before new delivery work. <!-- item-id: role.delivery.check-latest-ci -->",
+            content,
+        )
+        self.assertIn(
+            "- [ ] Leave one open `Delivery Continuation Note` in the delivery mailbox at the end of the work item. <!-- item-id: role.delivery.leave-continuation-handoff -->",
+            content,
+        )
 
     def test_touch_and_finish_accept_agent_uid(self) -> None:
         self.write_agents_md()

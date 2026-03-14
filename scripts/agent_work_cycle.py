@@ -28,6 +28,7 @@ SHARED_FALLBACK_MAILBOX_PATHS = [
 ]
 ROLE_OPEN_HANDOFF_HEADINGS = {
     "coding": "Work Continuation Handoff",
+    "delivery": "Delivery Continuation Note",
     "doc": "Doc Continuation Note",
 }
 

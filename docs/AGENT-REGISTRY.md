@@ -39,31 +39,35 @@ Fast path:
   2. read `AGENTS-LOCAL.md` if it exists, then read `.agent-local/dev-setup-status.md`
   3. read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md), then inspect [`docs/AGENT-REGISTRY.md`](./AGENT-REGISTRY.md) and `.agent-local/agents.json`
   4. run `scripts/agent_bootstrap.py <role>` or `scripts/agent_bootstrap.py auto`
-  5. if the claimed role is `coding`, check the latest completed CI result for the previous push before starting implementation
+  5. if the claimed role is `coding` or `delivery`, check the latest completed CI result for the previous push before starting implementation or delivery follow-up
 - Defer broader reading until task work begins:
   - `coding`: postpone `ROADMAP.md`, wide mailbox scans, and broad repo markdown sweeps until the actual implementation slice needs them
+  - `delivery`: postpone broad roadmap/checklist sweeps and mailbox scans unrelated to the active CI/process scope until the delivery task actually starts
   - `doc`: postpone planning-sync mailbox scans, `scripts/check-plan-refresh.sh`, and broad roadmap/checklist refresh reading until the doc work item actually starts
 
 Role checklist sources:
 
 - before starting role-specific checklist work, read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md)
-- canonical role checklist sources live in [`docs/ROLE-CHECKLISTS/coding.md`](./ROLE-CHECKLISTS/coding.md) and [`docs/ROLE-CHECKLISTS/doc.md`](./ROLE-CHECKLISTS/doc.md)
+- canonical role checklist sources live in [`docs/ROLE-CHECKLISTS/coding.md`](./ROLE-CHECKLISTS/coding.md), [`docs/ROLE-CHECKLISTS/delivery.md`](./ROLE-CHECKLISTS/delivery.md), and [`docs/ROLE-CHECKLISTS/doc.md`](./ROLE-CHECKLISTS/doc.md)
 - per-agent checklist copies should live under `.agent-local/agents/<agent_uid>/checklists/`
 - current role checklist section names should align with `New chat bootstrap` and `Work Cycle Workflow`
 
 ## Role Model
 
-The system supports multiple concurrent agents, not just one `coding` and one `doc`.
+The system supports multiple concurrent agents, not just one `coding`, one `delivery`, and one `doc`.
 
 Allowed `role` values:
 
 - `coding`
+- `delivery`
 - `doc`
 
 Role responsibilities:
 
 - `coding`
   owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push; when work may affect planning surfaces, this role hands the relevant material to `doc` through the registry mailbox and does not run `scripts/check-plan-refresh.sh`
+- `delivery`
+  owns CI health triage, workflow/process tooling, flaky-test follow-up, merge or release readiness coordination, and the latest completed CI check before delivery-focused work; when delivery work affects planning surfaces or user-facing status, this role hands the relevant material to `doc` through the registry mailbox and routes product-code fixes back to `coding`
 - `doc`
   owns design-note sync, roadmap/checklist refresh, explanatory docs, planning-surface wording, and the `scripts/check-plan-refresh.sh` cadence check; this role must run that script after each completed doc work item while preparing next items, scans registry mailboxes to collect sync-relevant handoff material, and does not check CI
 
@@ -71,7 +75,8 @@ If the user does not assign any role in a new chat, `claim auto` should choose:
 
 - `coding` if there is no active `coding`
 - `doc` if active `coding >= 1` and active `doc == 0`
-- `coding` if active `coding >= 1` and active `doc >= 1`
+- `delivery` if active `coding >= 1`, active `doc >= 1`, and active `delivery == 0`
+- `coding` if active `coding >= 1`, active `doc >= 1`, and active `delivery >= 1`
 
 ## Registry Shape
 
@@ -211,6 +216,7 @@ The registry tells agents who exists. Mailboxes carry the actual messages.
 Recommended mailbox pattern:
 
 - `.agent-local/mailboxes/<agent_uid>.md`
+- copyable delivery-continuation example: `.agent-local/mailboxes/EXAMPLE-delivery-continuation-note.md`
 - copyable planning-sync example: `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 - copyable planning-sync resolution example: `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`
 - copyable work-continuation example: `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
@@ -223,6 +229,7 @@ Mailbox usage for `sync doc` / `sync web` / `sync plan` work:
 - every agent should leave one mailbox handoff entry in its own declared mailbox before ending each completed work cycle; this is the per-cycle state record for that agent
 - `coding` agents should leave sync-relevant notes in their own registry mailbox when work changes planning-relevant implementation state, checklist closure, roadmap emphasis, public progress wording, or issue-triage inputs
 - `coding` agents should satisfy that per-cycle requirement with one open `Work Continuation Handoff` in their own mailbox, even when no planning-sync follow-up is needed
+- `delivery` agents should satisfy that per-cycle requirement with one open `Delivery Continuation Note` in their own mailbox, and should add a `Planning Sync Handoff` when CI/process changes affect planning-visible workflow or status wording
 - `doc` agents should satisfy that per-cycle requirement with one mailbox handoff entry that captures the latest doc state for the cycle; use a planning-sync handoff, resolution reply, blocking note, or doc continuation note as appropriate
 - before leaving a new open current-state handoff in the same mailbox, the agent should mark any older open current-state handoff for that scope as `superseded`, so the mailbox ends with one latest open current-state handoff; `python3 scripts/mailbox_handoff.py create ...` automates that supersede-and-append step
 - `doc` should scan active, paused, and recently inactive agent mailboxes before any `sync doc`, `sync web`, or `sync plan` batch and use those notes as collection input for roadmap/checklist/progress or Pages refresh work
@@ -303,7 +310,7 @@ Recommended startup sequence:
 5. immediately tell the user which role was claimed for this chat
 6. begin the chat with `<display-id> | <scope-label>`
 7. when the first concrete task arrives, use the work-cycle tool to begin tracked work
-8. before implementation work, if the role is `coding`, check the latest completed CI status from the previous push
+8. before implementation or delivery follow-up work, if the role is `coding` or `delivery`, check the latest completed CI status from the previous push
 9. only when the scope overlaps existing coding work, recovery, or takeover, run `npm run handoffs:inactive-coding` and inspect the relevant mailbox before continuing
 10. if a personalized task list would help, use the registry tool to materialize one after the bootstrap flow is complete
 
@@ -311,7 +318,7 @@ Keep startup output narrow:
 
 - do not claim file-specific context before the user gives a concrete task
 - do not run `claim`, `start`, and `status` in parallel
-- when the role is `coding`, keep the CI line about the latest completed workflow, not a possibly in-progress run
+- when the role is `coding` or `delivery`, keep the CI line about the latest completed workflow, not a possibly in-progress run
 - when the role is `coding`, treat `check handoffs` as task-start context for overlapping or resumed work, not a default bootstrap-time read
 - after `claim`, include a short user-facing role announcement before moving on to task work
 
@@ -334,6 +341,7 @@ Keep startup output narrow:
 Planning-sync coordination:
 
 - `coding` agents should append mailbox handoff notes when they land or discover planning-relevant changes
+- `delivery` agents should append mailbox handoff notes when CI/process work changes release readiness, workflow behavior, or planning-visible team status
 - every role should leave one mailbox handoff entry per completed work cycle so `doc` or a takeover agent can reconstruct the latest state without rereading the full diff first
 - `doc` owns `scripts/check-plan-refresh.sh` and the decision to start a planning-sync batch
 - after each completed doc work item, while preparing next items, `doc` must run `scripts/check-plan-refresh.sh`; if it reports `due`, add the due sync surfaces to the next items and then scan the declared mailboxes for recent handoff material before any `sync doc`, `sync web`, or `sync plan` batch

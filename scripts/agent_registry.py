@@ -25,7 +25,7 @@ DEV_SETUP_STATUS_PATH = AGENT_LOCAL_DIR / "dev-setup-status.md"
 AGENTS_PATH = ROOT_DIR / "AGENTS.md"
 AGENTS_LOCAL_PATH = ROOT_DIR / "AGENTS-LOCAL.md"
 PLANNING_SYNC_PLAN_PATH = ROOT_DIR / "docs" / "PLANNING-SYNC-PLAN.md"
-ALLOWED_ROLES = {"coding", "doc"}
+ALLOWED_ROLES = {"coding", "delivery", "doc"}
 ALLOWED_STATUSES = {"active", "inactive", "paused", "blocked", "done"}
 REGISTRY_VERSION = 2
 STALE_INACTIVE_SECONDS = 3600
@@ -371,6 +371,31 @@ def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
                 ),
             ]
         )
+    elif role == "delivery":
+        lines.extend(
+            [
+                checklist_item_line(
+                    "role.delivery.check-latest-ci",
+                    False,
+                    "Check the latest completed CI result for the previous push before new delivery work.",
+                ),
+                checklist_item_line(
+                    "role.delivery.leave-continuation-handoff",
+                    False,
+                    "Leave one open `Delivery Continuation Note` in the delivery mailbox at the end of the work item.",
+                ),
+                checklist_item_line(
+                    "role.delivery.route-cross-role-follow-up",
+                    False,
+                    "Route product-code fixes to `coding` and planning-surface wording to `doc` through mailbox handoffs.",
+                ),
+                checklist_item_line(
+                    "role.delivery.keep-scope",
+                    False,
+                    "Keep the delivery scope focused on CI health, workflow/process tooling, release readiness, or blocker triage.",
+                ),
+            ]
+        )
     else:
         lines.extend(
             [
@@ -556,6 +581,8 @@ def choose_auto_role(registry: dict[str, Any]) -> str:
         return "coding"
     if active_counts["doc"] == 0:
         return "doc"
+    if active_counts["delivery"] == 0:
+        return "delivery"
     return "coding"
 
 

@@ -18,17 +18,20 @@ Local mailbox files:
 - example template: `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`
 - resolution template: `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`
 - continuation template: `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md`
+- delivery continuation template: `.agent-local/mailboxes/EXAMPLE-delivery-continuation-note.md`
 - fallback: `.agent-local/coding-to-doc.md`
 - fallback: `.agent-local/doc-to-coding.md`
 
 Role checklist sources:
 
 - `docs/ROLE-CHECKLISTS/coding.md`
+- `docs/ROLE-CHECKLISTS/delivery.md`
 - `docs/ROLE-CHECKLISTS/doc.md`
 
 Per-agent checklist copies:
 
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-coding-checklist.md`
+- `.agent-local/agents/<agent_uid>/checklists/ROLE-delivery-checklist.md`
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-doc-checklist.md`
 
 Role checklist section names:
@@ -54,9 +57,12 @@ Doc cadence reminder:
 ## Agent Roles
 
 - `coding`: owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push
+- `delivery`: owns CI triage, workflow/process tooling, flaky-test follow-up, and merge or release readiness coordination
 - `doc`: owns `sync doc` / `sync plan` work, design notes, roadmap/checklist refresh, and planning-surface wording; this role does not check CI
 
 Use `coding` when the main output is behavior, tests, fixtures, parser/verifier work, or CLI changes.
+
+Use `delivery` when the main output is CI/process coordination rather than product behavior.
 
 Use `doc` when the main output is syncing planning or explanatory docs after behavior is already settled.
 
@@ -89,7 +95,7 @@ Fresh-chat fast path:
 2. read `AGENTS-LOCAL.md` if present, then `.agent-local/dev-setup-status.md`
 3. read `docs/ROLE-CHECKLISTS/README.md`, `docs/AGENT-REGISTRY.md`, and `.agent-local/agents.json`
 4. run `python3 scripts/agent_bootstrap.py <role>` or `python3 scripts/agent_bootstrap.py auto`
-5. if `coding`, check the latest completed CI result before new implementation work
+5. if `coding` or `delivery`, check the latest completed CI result before new implementation or delivery work
 
 Defer until task work starts:
 

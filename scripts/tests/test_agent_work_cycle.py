@@ -261,6 +261,28 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("other_role_open_handoffs: 1", proc.stdout)
         self.assertIn("oversized_shared_fallback_mailboxes: 0", proc.stdout)
 
+    def test_end_allows_delivery_same_role_handoff_and_one_open_other_role_handoff(self) -> None:
+        agent_uid = self.prepare_second_batch(role="delivery")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_delivery
+
+## Delivery Continuation Note
+
+- Status: open
+
+## Planning Sync Handoff
+
+- Status: open
+""",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("same_role_open_handoffs: 1", proc.stdout)
+        self.assertIn("other_role_open_handoffs: 1", proc.stdout)
+
     def test_end_returns_pending_when_shared_fallback_mailbox_exceeds_limit(self) -> None:
         agent_uid = self.prepare_second_batch(role="coding")
         self.write_mailbox(

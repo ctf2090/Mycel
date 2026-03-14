@@ -56,6 +56,12 @@ TEMPLATES: dict[str, TemplateSpec] = {
         status="open",
         open_slot="doc",
     ),
+    "delivery-continuation": TemplateSpec(
+        kind="delivery-continuation",
+        heading="Delivery Continuation Note",
+        status="open",
+        open_slot="delivery",
+    ),
     "planning-resolution": TemplateSpec(
         kind="planning-resolution",
         heading="Planning Sync Resolution",
@@ -65,6 +71,7 @@ TEMPLATES: dict[str, TemplateSpec] = {
 
 OPEN_HANDOFF_HEADING_SLOTS = {
     "Work Continuation Handoff": "coding",
+    "Delivery Continuation Note": "delivery",
     "Planning Sync Handoff": "cross-role",
     "Doc Continuation Note": "doc",
 }
@@ -204,6 +211,32 @@ def render_doc_continuation(*, date_text: str, source_agent: str, args: argparse
     return "\n".join(lines)
 
 
+def render_delivery_continuation(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+    current_state = normalize_items(args.current_state)
+    next_step = normalize_items(args.next_step)
+    if not current_state:
+        raise MailboxHandoffError("delivery-continuation requires at least one --current-state")
+    if not next_step:
+        raise MailboxHandoffError("delivery-continuation requires at least one --next-step")
+
+    lines = [
+        "## Delivery Continuation Note",
+        "",
+        "- Status: open",
+        f"- Date: {date_text}",
+        f"- Source agent: {source_agent}",
+        f"- Scope: {args.scope}",
+        *list_block("Current state", current_state, default=None),
+        *list_block("Evidence", args.evidence),
+        *list_block("Next suggested step", next_step, default=None),
+        *list_block("Blockers", args.blockers),
+    ]
+    notes = normalize_items(args.notes, default=None)
+    if notes:
+        lines.extend(list_block("Notes", notes, default=None))
+    return "\n".join(lines)
+
+
 def render_planning_resolution(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
     source_handoffs = normalize_items(args.source_handoff)
     if not source_handoffs:
@@ -237,6 +270,8 @@ def render_entry(template: str, *, date_text: str, source_agent: str, args: argp
         return render_planning_sync(date_text=date_text, source_agent=source_agent, args=args)
     if template == "doc-continuation":
         return render_doc_continuation(date_text=date_text, source_agent=source_agent, args=args)
+    if template == "delivery-continuation":
+        return render_delivery_continuation(date_text=date_text, source_agent=source_agent, args=args)
     if template == "planning-resolution":
         return render_planning_resolution(date_text=date_text, source_agent=source_agent, args=args)
     raise MailboxHandoffError(f"unsupported template: {template}")

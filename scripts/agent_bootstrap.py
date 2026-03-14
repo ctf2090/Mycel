@@ -28,6 +28,9 @@ DEFERRED_READS_BY_ROLE = {
     "coding": [
         "full mailbox scans unless the chat is resuming, taking over, or working an overlapping coding scope",
     ],
+    "delivery": [
+        "broad roadmap/checklist sweeps and mailbox scans unrelated to the active CI/process scope",
+    ],
     "doc": [
         "planning-sync mailbox scans and scripts/check-plan-refresh.sh until the doc work item actually starts",
     ],
@@ -47,7 +50,7 @@ def parse_args() -> argparse.Namespace:
         "role",
         nargs="?",
         default="auto",
-        choices=["auto", "coding", "doc"],
+        choices=["auto", "coding", "delivery", "doc"],
         help="agent role to claim; defaults to auto",
     )
     parser.add_argument("--scope", default="pending scope", help="scope label for the new agent")
@@ -103,8 +106,10 @@ def find_timestamp_line(output: str) -> str | None:
 
 def fast_path_steps_for_role(role: str) -> list[str]:
     steps = list(FAST_PATH_STEPS)
-    if role == "coding":
-        steps.append("check the latest completed CI result for the previous push before implementation work")
+    if role in {"coding", "delivery"}:
+        steps.append(
+            "check the latest completed CI result for the previous push before implementation or delivery work"
+        )
     return steps
 
 
@@ -117,6 +122,11 @@ def next_actions_for_role(role: str) -> list[str]:
         return [
             "check the latest completed CI result for the previous push before implementation work",
             "defer mailbox scans unless the scope overlaps existing coding work, recovery, or takeover",
+        ]
+    if role == "delivery":
+        return [
+            "check the latest completed CI result for the previous push before triaging delivery work",
+            "defer broad roadmap/checklist reading unless the active delivery scope needs doc follow-up",
         ]
     if role == "doc":
         return [

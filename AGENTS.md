@@ -8,12 +8,12 @@
 - If `git push origin main` is rejected because `origin/main` moved, run `git fetch origin`, `git rebase origin/main`, resolve any conflicts, and retry the push; do not force-push to bypass other chats' commits.
 - During rebase conflicts, preserve user changes first, then already-pushed `origin/main` changes from other chats, and then re-apply this chat's work on top; if the conflict cannot be resolved confidently, stop and ask the user instead of guessing.
 - Use `scripts/check-plan-refresh.sh` to manage planning cadence: `sync doc` is due after 10 commits, `sync issue` is due after 10 commits, and `sync web` is due after 20 commits.
-- The `doc` role owns `scripts/check-plan-refresh.sh` and must run it after each completed work item while preparing next items; if it reports `due`, include the due planning surfaces in the next items. `coding` agents must not run it.
-- When `coding` work produces roadmap, checklist, progress-page, or issue-triage material that may affect planning sync, hand that material to `doc` through the registry mailbox instead of running `scripts/check-plan-refresh.sh` directly.
+- The `doc` role owns `scripts/check-plan-refresh.sh` and must run it after each completed work item while preparing next items; if it reports `due`, include the due planning surfaces in the next items. `coding` and `delivery` agents must not run it.
+- When `coding` or `delivery` work produces roadmap, checklist, progress-page, issue-triage, or process-status material that may affect planning sync, hand that material to `doc` through the registry mailbox instead of running `scripts/check-plan-refresh.sh` directly.
 - Before starting `sync doc` or `sync web`, `doc` must scan the relevant handoff mailboxes for recent open or unresolved planning notes and use them as collection input for the sync batch.
 - If the planning-refresh cadence checker reports `due`, use [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single entry point for the next planning-sync batch.
 - Do not check CI immediately after each push, since the workflow may still be running.
-- Only the `coding` role checks the latest completed CI status for the previous push before starting the next piece of work and reports any failures.
+- Only the `coding` and `delivery` roles check the latest completed CI status for the previous push before starting the next piece of work and report any failures.
 - The `doc` role does not check CI.
 
 ## Git identity (User vs Agent)
@@ -42,7 +42,7 @@
   2. read `AGENTS-LOCAL.md` if it exists, then read `.agent-local/dev-setup-status.md`
   3. read [`docs/ROLE-CHECKLISTS/README.md`](docs/ROLE-CHECKLISTS/README.md), then read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) and `.agent-local/agents.json`
   4. run `scripts/agent_bootstrap.py <role>` or `scripts/agent_bootstrap.py auto`
-  5. if the role is `coding`, check the latest completed CI result for the previous push before starting implementation
+  5. if the role is `coding` or `delivery`, check the latest completed CI result for the previous push before starting implementation or delivery follow-up
 - The fast path is the default startup flow. Defer broad context gathering until task work begins unless recovery, takeover, or an explicit user request requires it sooner.
 - Default deferred reads after bootstrap:
   - `ROADMAP.md` and other broad planning docs

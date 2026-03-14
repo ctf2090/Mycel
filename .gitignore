@@ -5,6 +5,7 @@ AGENTS-LOCAL.md
 !.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md
 !.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md
 !.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md
+!.agent-local/mailboxes/EXAMPLE-delivery-continuation-note.md
 !.agent-local/mailboxes/EXAMPLE-doc-continuation-note.md
 !.agent-local/DEV-SETUP-STATUS.example.md
 target/

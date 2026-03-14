@@ -7,6 +7,7 @@ This directory holds the tracked checklist sources for each agent role.
 Use these files as the canonical source only:
 
 - `coding.md`
+- `delivery.md`
 - `doc.md`
 
 Do not mark progress in these tracked files directly.
@@ -15,6 +16,7 @@ Instead, each agent should materialize its own checklist copy under its own
 agent-local checklist directory, for example:
 
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-coding-checklist.md`
+- `.agent-local/agents/<agent_uid>/checklists/ROLE-delivery-checklist.md`
 - `.agent-local/agents/<agent_uid>/checklists/ROLE-doc-checklist.md`
 
 Recommended workflow:

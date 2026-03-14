@@ -170,6 +170,43 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertIn("  - refresh is due for doc, issue, and web", mailbox)
         self.assertIn("  - scripts/check-plan-refresh.sh", mailbox)
 
+    def test_create_delivery_continuation_uses_delivery_template(self) -> None:
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": "2026-03-13T10:00:00+0800",
+                "agent_count": 1,
+                "agents": [self.registry_entry(agent_uid="agt_delivery", role="delivery", display_id="delivery-2")],
+            }
+        )
+
+        payload = json.loads(
+            self.run_cli(
+                "create",
+                "agt_delivery",
+                "delivery-continuation",
+                "--scope",
+                "ci-flake-triage",
+                "--current-state",
+                "latest completed CI is failing in pages lint",
+                "--next-step",
+                "reproduce the failing job locally",
+                "--evidence",
+                "gh run view 123 --log-failed",
+                "--blockers",
+                "awaiting log retention confirmation",
+                "--json",
+            ).stdout
+        )
+
+        mailbox = (self.root / payload["mailbox"]).read_text(encoding="utf-8")
+        self.assertEqual("Delivery Continuation Note", payload["entry_heading"])
+        self.assertEqual("open", payload["status"])
+        self.assertIn("## Delivery Continuation Note", mailbox)
+        self.assertIn("- Source agent: delivery-2", mailbox)
+        self.assertIn("  - latest completed CI is failing in pages lint", mailbox)
+        self.assertIn("  - awaiting log retention confirmation", mailbox)
+
     def test_create_planning_sync_keeps_open_same_role_handoff(self) -> None:
         self.write_registry(
             {
