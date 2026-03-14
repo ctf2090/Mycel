@@ -682,7 +682,7 @@ fn head_inspect_requires_profile_id_for_multi_profile_bundle() {
     assert_stdout_contains(&output, "head inspection: failed");
     assert_stderr_contains(
         &output,
-        "multiple named profiles; pass --profile-id (preview, stable)",
+        "head input declares multiple named profiles; pass --profile-id (preview, stable)",
     );
 }
 
@@ -2089,6 +2089,83 @@ fn head_render_json_uses_requested_named_profile_from_bundle() {
     assert_eq!(json["profile_id"], "preview");
     assert_eq!(json["selected_head"], revision_b["revision_id"]);
     assert_eq!(json["rendered_text"], "Preview line");
+}
+
+#[test]
+fn head_render_requires_profile_id_for_multi_profile_bundle() {
+    let doc_id = "doc:render-multi-profile";
+    let revision_author = signing_key(86);
+    let maintainer = signing_key(97);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let genesis_hash = empty_document_state_hash(doc_id);
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 1000, &genesis_hash);
+    let revision_b = signed_revision(&revision_author, doc_id, vec![], 1020, &genesis_hash);
+    let bundle = json!({
+        "profiles": named_profiles(&[
+            ("stable", head_profile(hash_json(&policy), 1005)),
+            ("preview", head_profile(hash_json(&policy), 1200))
+        ]),
+        "revisions": [revision_a, revision_b],
+        "objects": [],
+        "views": [],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-render-multi-profile", "input.json", bundle);
+    let output = run_mycel(&["head", "render", doc_id, "--input", &path_arg(&input.path)]);
+
+    assert_exit_code(&output, 1);
+    assert_stdout_contains(&output, "available profiles: preview, stable");
+    assert_stdout_contains(&output, "head render: failed");
+    assert_stderr_contains(
+        &output,
+        "head input declares multiple named profiles; pass --profile-id (preview, stable)",
+    );
+}
+
+#[test]
+fn head_render_reports_unknown_profile_id_for_multi_profile_bundle() {
+    let doc_id = "doc:render-unknown-profile";
+    let revision_author = signing_key(87);
+    let maintainer = signing_key(98);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let genesis_hash = empty_document_state_hash(doc_id);
+    let revision = signed_revision(&revision_author, doc_id, vec![], 1000, &genesis_hash);
+    let bundle = json!({
+        "profiles": named_profiles(&[
+            ("stable", head_profile(hash_json(&policy), 1005)),
+            ("preview", head_profile(hash_json(&policy), 1200))
+        ]),
+        "revisions": [revision],
+        "objects": [],
+        "views": [],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-render-unknown-profile", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "render",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--profile-id",
+        "missing",
+    ]);
+
+    assert_exit_code(&output, 1);
+    assert_stdout_contains(&output, "available profiles: preview, stable");
+    assert_stdout_contains(&output, "head render: failed");
+    assert_stderr_contains(
+        &output,
+        "unknown --profile-id 'missing' for head input; available profiles: preview, stable",
+    );
 }
 
 #[test]

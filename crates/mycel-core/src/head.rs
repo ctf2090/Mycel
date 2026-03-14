@@ -1123,7 +1123,7 @@ fn resolve_head_inspect_profile(
     requested_profile_id: Option<&str>,
 ) -> Result<(String, HeadInspectProfile), String> {
     if input.profile.is_some() && !input.profiles.is_empty() {
-        return Err("head-inspect input cannot declare both 'profile' and 'profiles'".to_string());
+        return Err("head input cannot declare both 'profile' and 'profiles'".to_string());
     }
 
     if let Some(requested_profile_id) = requested_profile_id {
@@ -1133,19 +1133,17 @@ fn resolve_head_inspect_profile(
 
         if input.profile.is_some() {
             return Err(format!(
-                "head-inspect input does not declare named profiles; remove --profile-id '{}'",
+                "head input does not declare named profiles; remove --profile-id '{}'",
                 requested_profile_id
             ));
         }
 
         if input.profiles.is_empty() {
-            return Err(
-                "head-inspect input must declare either 'profile' or 'profiles'".to_string(),
-            );
+            return Err("head input must declare either 'profile' or 'profiles'".to_string());
         }
 
         return Err(format!(
-            "unknown --profile-id '{}' for head-inspect input; available profiles: {}",
+            "unknown --profile-id '{}' for head input; available profiles: {}",
             requested_profile_id,
             available_profile_ids(&input.profiles)
         ));
@@ -1156,7 +1154,7 @@ fn resolve_head_inspect_profile(
     }
 
     match input.profiles.len() {
-        0 => Err("head-inspect input must declare either 'profile' or 'profiles'".to_string()),
+        0 => Err("head input must declare either 'profile' or 'profiles'".to_string()),
         1 => {
             let (profile_id, profile) = input
                 .profiles
@@ -1166,7 +1164,7 @@ fn resolve_head_inspect_profile(
             Ok((profile_id.clone(), profile.clone()))
         }
         _ => Err(format!(
-            "head-inspect input declares multiple named profiles; pass --profile-id ({})",
+            "head input declares multiple named profiles; pass --profile-id ({})",
             available_profile_ids(&input.profiles)
         )),
     }
