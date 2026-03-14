@@ -78,8 +78,14 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("bootstrap_output: .agent-local/agents/", proc.stdout)
         self.assertIn("workcycle_output: .agent-local/agents/", proc.stdout)
         self.assertIn("current_status: active", proc.stdout)
+        self.assertIn("startup_mode: fresh-chat-fast-path", proc.stdout)
         self.assertRegex(proc.stdout, r"Before work \| doc-1 \(agt_[a-z0-9]+\) \| fast-bootstrap")
         self.assertIn("repo_status:\n  ## No commits yet on main", proc.stdout)
+        self.assertIn("fast_path_steps:", proc.stdout)
+        self.assertIn("next_actions:", proc.stdout)
+        self.assertIn("deferred_reads:", proc.stdout)
+        self.assertIn("wait for the concrete doc task", proc.stdout)
+        self.assertNotIn("latest completed CI result", proc.stdout)
 
     def test_json_output_returns_combined_payload(self) -> None:
         proc = self.run_cli("--json")
@@ -92,6 +98,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertTrue(payload["bootstrap_output"].startswith(".agent-local/agents/"))
         self.assertTrue(payload["workcycle_output"].startswith(".agent-local/agents/"))
         self.assertEqual("active", payload["current_status"])
+        self.assertEqual("fresh-chat-fast-path", payload["startup_mode"])
         self.assertRegex(
             payload["before_work_line"],
             r"Before work \| coding-1 \(agt_[a-z0-9]+\) \| pending scope",
@@ -100,6 +107,24 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("?? .agent-local/", payload["repo_status"])
         self.assertIn("?? AGENTS.md", payload["repo_status"])
         self.assertIn("?? scripts/", payload["repo_status"])
+        self.assertEqual(
+            [
+                "scan the repo root with ls",
+                "read AGENTS-LOCAL.md if it exists, then read .agent-local/dev-setup-status.md",
+                "read docs/ROLE-CHECKLISTS/README.md, docs/AGENT-REGISTRY.md, and .agent-local/agents.json",
+                "run scripts/agent_bootstrap.py <role> or scripts/agent_bootstrap.py auto",
+                "check the latest completed CI result for the previous push before implementation work",
+            ],
+            payload["fast_path_steps"],
+        )
+        self.assertIn(
+            "check the latest completed CI result for the previous push before implementation work",
+            payload["next_actions"],
+        )
+        self.assertIn(
+            "full mailbox scans unless the chat is resuming, taking over, or working an overlapping coding scope",
+            payload["deferred_reads"],
+        )
 
 
 if __name__ == "__main__":

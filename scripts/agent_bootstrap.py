@@ -13,6 +13,25 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_SCRIPT = ROOT_DIR / "scripts" / "agent_registry.py"
 WORK_CYCLE_SCRIPT = ROOT_DIR / "scripts" / "agent_work_cycle.py"
+FAST_PATH_STEPS = [
+    "scan the repo root with ls",
+    "read AGENTS-LOCAL.md if it exists, then read .agent-local/dev-setup-status.md",
+    "read docs/ROLE-CHECKLISTS/README.md, docs/AGENT-REGISTRY.md, and .agent-local/agents.json",
+    "run scripts/agent_bootstrap.py <role> or scripts/agent_bootstrap.py auto",
+]
+DEFERRED_READS_COMMON = [
+    "ROADMAP.md and other broad planning docs",
+    "full registry dumps beyond confirming active peers and the claimed agent state",
+    "broad markdown sweeps outside the task area",
+]
+DEFERRED_READS_BY_ROLE = {
+    "coding": [
+        "full mailbox scans unless the chat is resuming, taking over, or working an overlapping coding scope",
+    ],
+    "doc": [
+        "planning-sync mailbox scans and scripts/check-plan-refresh.sh until the doc work item actually starts",
+    ],
+}
 
 
 class BootstrapError(Exception):
@@ -82,6 +101,30 @@ def find_timestamp_line(output: str) -> str | None:
     return None
 
 
+def fast_path_steps_for_role(role: str) -> list[str]:
+    steps = list(FAST_PATH_STEPS)
+    if role == "coding":
+        steps.append("check the latest completed CI result for the previous push before implementation work")
+    return steps
+
+
+def deferred_reads_for_role(role: str) -> list[str]:
+    return DEFERRED_READS_COMMON + DEFERRED_READS_BY_ROLE.get(role, [])
+
+
+def next_actions_for_role(role: str) -> list[str]:
+    if role == "coding":
+        return [
+            "check the latest completed CI result for the previous push before implementation work",
+            "defer mailbox scans unless the scope overlaps existing coding work, recovery, or takeover",
+        ]
+    if role == "doc":
+        return [
+            "wait for the concrete doc task before running planning-sync mailbox scans or scripts/check-plan-refresh.sh",
+        ]
+    return []
+
+
 def build_result(args: argparse.Namespace) -> dict[str, Any]:
     claim_payload = run_registry_json("claim", args.role, "--scope", args.scope, "--assigned-by", args.assigned_by)
     agent_uid = claim_payload.get("agent_uid")
@@ -95,11 +138,14 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
     begin_fields = parse_key_value_lines(begin_output)
     before_work_line = find_timestamp_line(begin_output)
     repo_status = run_command(["git", "status", "-sb"]).splitlines()
+    role = claim_payload.get("role")
+    if not isinstance(role, str) or not role.strip():
+        raise BootstrapError("claim did not return role")
 
     result: dict[str, Any] = {
         "agent_uid": agent_uid,
         "display_id": claim_payload.get("display_id"),
-        "role": claim_payload.get("role"),
+        "role": role,
         "scope": claim_payload.get("scope"),
         "assigned_by": claim_payload.get("assigned_by"),
         "assigned_at": claim_payload.get("assigned_at"),
@@ -116,6 +162,10 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "before_work_line": before_work_line,
         "repo_status": repo_status,
         "begin_output": begin_output.strip().splitlines(),
+        "startup_mode": "fresh-chat-fast-path",
+        "fast_path_steps": fast_path_steps_for_role(role),
+        "deferred_reads": deferred_reads_for_role(role),
+        "next_actions": next_actions_for_role(role),
     }
     return result
 
@@ -138,6 +188,7 @@ def print_text_result(result: dict[str, Any]) -> None:
         "previous_status",
         "current_status",
         "last_touched_at",
+        "startup_mode",
     ]
     for key in ordered_keys:
         value = result.get(key)
@@ -152,6 +203,24 @@ def print_text_result(result: dict[str, Any]) -> None:
     print("repo_status:")
     for line in result.get("repo_status", []):
         print(f"  {line}")
+
+    fast_path_steps = result.get("fast_path_steps", [])
+    if fast_path_steps:
+        print("fast_path_steps:")
+        for index, step in enumerate(fast_path_steps, start=1):
+            print(f"  {index}. {step}")
+
+    next_actions = result.get("next_actions", [])
+    if next_actions:
+        print("next_actions:")
+        for action in next_actions:
+            print(f"  - {action}")
+
+    deferred_reads = result.get("deferred_reads", [])
+    if deferred_reads:
+        print("deferred_reads:")
+        for item in deferred_reads:
+            print(f"  - {item}")
 
 
 def main() -> int:
