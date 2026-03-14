@@ -2890,6 +2890,185 @@ fn head_inspect_text_reports_viewer_channels_without_overloading_trace() {
 }
 
 #[test]
+fn head_inspect_skips_candidate_blocked_by_viewer_freeze_pressure() {
+    let doc_id = "doc:viewer-freeze-skip";
+    let revision_author = signing_key(121);
+    let maintainer_a = signing_key(122);
+    let maintainer_b = signing_key(123);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 10, "hash:viewer-freeze-a");
+    let revision_b = signed_revision(&revision_author, doc_id, vec![], 20, "hash:viewer-freeze-b");
+    let mut profile = head_profile(hash_json(&policy), 250);
+    profile["viewer_score"] = bounded_viewer_score_profile();
+    let mut challenge = viewer_signal(
+        "signal-freeze-selected",
+        124,
+        &revision_a["revision_id"],
+        "challenge",
+        "high",
+        100,
+        400,
+    );
+    challenge["evidence_ref"] = Value::String("evidence:freeze-selected".to_string());
+    let bundle = json!({
+        "profile": profile,
+        "revisions": [revision_a.clone(), revision_b.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                100
+            ),
+            signed_view(
+                &maintainer_b,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                110
+            )
+        ],
+        "viewer_signals": [challenge],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-viewer-freeze-skip", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    assert!(
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains("temporary freeze blocks candidate activation")
+                        && message.contains(
+                            revision_a["revision_id"]
+                                .as_str()
+                                .expect("revision id should exist"),
+                        )
+                })
+            })),
+        "expected temporary freeze note, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        json["decision_trace"]
+            .as_array()
+            .is_some_and(|trace| trace.iter().any(|entry| {
+                entry["step"].as_str() == Some("viewer_freeze")
+                    && entry["detail"].as_str().is_some_and(|detail| {
+                        detail.contains("blocked_candidates=1")
+                            && detail.contains("active_candidates=1")
+                            && detail.contains(
+                                revision_a["revision_id"]
+                                    .as_str()
+                                    .expect("revision id should exist"),
+                            )
+                    })
+            })),
+        "expected viewer_freeze trace entry, stdout: {}",
+        stdout_text(&output)
+    );
+    let viewer_score_channels = json["viewer_score_channels"]
+        .as_array()
+        .expect("viewer_score_channels should be array");
+    let blocked_channel = viewer_score_channels
+        .iter()
+        .find(|entry| entry["revision_id"] == revision_a["revision_id"])
+        .expect("blocked candidate channel should exist");
+    assert_eq!(
+        blocked_channel["viewer_review_state"],
+        Value::String("freeze-pressure".to_string())
+    );
+}
+
+#[test]
+fn head_inspect_fails_when_all_candidates_are_blocked_by_viewer_freeze_pressure() {
+    let doc_id = "doc:viewer-freeze-fail";
+    let revision_author = signing_key(131);
+    let maintainer_a = signing_key(132);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer_a)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let revision_a = signed_revision(
+        &revision_author,
+        doc_id,
+        vec![],
+        10,
+        "hash:viewer-freeze-fail-a",
+    );
+    let mut profile = head_profile(hash_json(&policy), 250);
+    profile["viewer_score"] = bounded_viewer_score_profile();
+    let mut challenge = viewer_signal(
+        "signal-freeze-only",
+        133,
+        &revision_a["revision_id"],
+        "challenge",
+        "high",
+        100,
+        400,
+    );
+    challenge["evidence_ref"] = Value::String("evidence:freeze-only".to_string());
+    let bundle = json!({
+        "profile": profile,
+        "revisions": [revision_a.clone()],
+        "views": [
+            signed_view(
+                &maintainer_a,
+                &policy,
+                documents_value(doc_id, &revision_a["revision_id"]),
+                100
+            )
+        ],
+        "viewer_signals": [challenge],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-viewer-freeze-fail", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--json",
+    ]);
+
+    assert_exit_code(&output, 1);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["status"], "failed");
+    assert_eq!(json["selected_head"], Value::Null);
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry
+                    .as_str()
+                    .is_some_and(|message| message.contains("NO_ACTIVE_HEAD_AFTER_VIEWER_FREEZE"))
+            })),
+        "expected viewer freeze failure error, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
 fn head_inspect_penalizes_critical_violations() {
     let doc_id = "doc:penalty";
     let revision_author = signing_key(41);
