@@ -17,7 +17,7 @@ The current build lane is:
 ```mermaid
 flowchart LR
   subgraph Minimal
-    M1["M1<br/>Core Object and Validation Base<br/>Mostly complete"]
+    M1["M1<br/>Core Object and Validation Base<br/>Closed gate"]
     M2["M2<br/>Replay, Storage, and Rebuild<br/>Substantially underway"]
   end
 
