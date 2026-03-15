@@ -28,7 +28,8 @@
     "missing-objects-requested",
     "recovery-success",
     "matching-object-sets",
-    "matching-replay-results"
+    "matching-replay-results",
+    "matching-accepted-heads"
   ],
   "notes": [
     "Use this topology to prove that mixed local reader states still converge through the shared peer-store sync path."

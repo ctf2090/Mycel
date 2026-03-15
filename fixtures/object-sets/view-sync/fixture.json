@@ -1,0 +1,26 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "view-sync",
+    "description": "Seed publishes a governance view alongside revision objects; reader receives view via VIEW_ANNOUNCE during first-time sync",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:view-sync-test"
+        }
+    ],
+    "expected_outcomes": [
+        "view-sync-success",
+        "governance-view-received"
+    ],
+    "metadata": {
+        "publish_seed_view": true
+    },
+    "notes": [
+        "Seed advertises view-sync capability because its store contains a governance view object.",
+        "Reader receives the view via VIEW_ANNOUNCE message during sync.",
+        "Proves that governance view distribution works end-to-end through the peer-store sync driver."
+    ]
+}

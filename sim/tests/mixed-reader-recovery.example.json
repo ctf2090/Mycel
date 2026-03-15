@@ -11,7 +11,8 @@
     "missing-objects-requested",
     "recovery-success",
     "matching-object-sets",
-    "matching-replay-results"
+    "matching-replay-results",
+    "matching-accepted-heads"
   ],
   "assertions": [
     {

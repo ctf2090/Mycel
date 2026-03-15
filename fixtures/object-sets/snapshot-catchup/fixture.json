@@ -1,0 +1,26 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "snapshot-catchup",
+    "description": "Seed publishes a snapshot alongside revision objects; reader receives snapshot via SNAPSHOT_OFFER during first-time sync",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:snapshot-test"
+        }
+    ],
+    "expected_outcomes": [
+        "snapshot-assisted-sync-success",
+        "snapshot-received"
+    ],
+    "metadata": {
+        "publish_seed_snapshot": true
+    },
+    "notes": [
+        "Seed advertises snapshot-sync capability because its store contains a snapshot object.",
+        "Reader receives the snapshot via SNAPSHOT_OFFER message during sync.",
+        "Proves that snapshot-assisted catch-up works end-to-end through the peer-store sync driver."
+    ]
+}

@@ -107,6 +107,8 @@ pub struct ReportPeer {
     pub verified_object_ids: Vec<String>,
     #[serde(default)]
     pub rejected_object_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub head_revision_ids: Vec<String>,
     #[serde(default)]
     pub notes: Vec<String>,
 }

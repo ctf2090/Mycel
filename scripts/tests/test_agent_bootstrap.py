@@ -112,7 +112,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
                 "scan the repo root with ls",
                 "read AGENTS-LOCAL.md if it exists, then read .agent-local/dev-setup-status.md",
                 "read docs/ROLE-CHECKLISTS/README.md, docs/AGENT-REGISTRY.md, and .agent-local/agents.json",
-                "run scripts/agent_bootstrap.py <role> or scripts/agent_bootstrap.py auto",
+                "run scripts/agent_bootstrap.py <role> --model-id <model_id> or scripts/agent_bootstrap.py auto --model-id <model_id>",
                 "check the latest completed CI result for the previous push before implementation or delivery work",
             ],
             payload["fast_path_steps"],

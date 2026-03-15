@@ -303,6 +303,7 @@ fn simulate_peer_store_sync_report(
     let mut peers = Vec::with_capacity(topology.peers.len());
     let mut reader_object_sets = BTreeMap::new();
     let mut reader_replay_hashes = BTreeMap::new();
+    let mut reader_head_ids: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
 
     push_event(
         &mut events,
@@ -343,6 +344,7 @@ fn simulate_peer_store_sync_report(
             status: "ok".to_owned(),
             verified_object_ids: Vec::new(),
             rejected_object_ids: Vec::new(),
+            head_revision_ids: Vec::new(),
             notes: Vec::new(),
         };
         let is_seed = peer.node_id == seed_node_id || peer.role == "seed";
@@ -412,6 +414,7 @@ fn simulate_peer_store_sync_report(
             .map(|record| record.object_id.clone())
             .collect::<Vec<_>>();
         let replay_hashes = store_head_replay_hashes(&peer_store_root)?;
+        let leaf_ids = store_leaf_revision_ids(&peer_store_root)?;
         let action = if starts_with_partial_store && uses_incremental {
             "incremental-accept"
         } else if starts_with_partial_store {
@@ -471,8 +474,14 @@ fn simulate_peer_store_sync_report(
             )),
         );
 
+        report_peer.head_revision_ids = leaf_ids
+            .values()
+            .flat_map(|ids| ids.iter().cloned())
+            .collect();
+        report_peer.head_revision_ids.sort();
         reader_object_sets.insert(peer.node_id.clone(), verified_object_ids);
         reader_replay_hashes.insert(peer.node_id.clone(), replay_hashes);
+        reader_head_ids.insert(peer.node_id.clone(), leaf_ids);
         peers.push(report_peer);
     }
 
@@ -510,6 +519,30 @@ fn simulate_peer_store_sync_report(
         seed_verified_object_ids.clone(),
         Some(
             "Reader-visible replay results were derived from the synchronized peer stores."
+                .to_owned(),
+        ),
+    );
+    let heads_outcome = if readers_match_heads(&reader_head_ids) {
+        "ok"
+    } else {
+        failures.push(ReportFailure {
+            failure_id: "accepted-head-mismatch".to_owned(),
+            node_id: None,
+            description: "Reader-visible accepted head revisions diverged after peer-store sync."
+                .to_owned(),
+            severity: Some("error".to_owned()),
+        });
+        "failed"
+    };
+    push_event(
+        &mut events,
+        "replay",
+        "compare-accepted-heads",
+        heads_outcome,
+        None,
+        seed_verified_object_ids.clone(),
+        Some(
+            "Reader-visible accepted head revisions were compared across synchronized peers."
                 .to_owned(),
         ),
     );
@@ -642,6 +675,7 @@ fn simulate_fault_report(
             status: "ok".to_owned(),
             verified_object_ids: Vec::new(),
             rejected_object_ids: Vec::new(),
+            head_revision_ids: Vec::new(),
             notes: Vec::new(),
         };
 
@@ -1249,6 +1283,31 @@ fn manifest_object_ids(manifest: &StoreIndexManifest) -> Vec<String> {
     object_ids
 }
 
+fn store_leaf_revision_ids(store_root: &Path) -> Result<BTreeMap<String, Vec<String>>, String> {
+    let manifest = load_store_index_manifest(store_root).map_err(|err| {
+        format!(
+            "failed to load store manifest {}: {err}",
+            store_root.display()
+        )
+    })?;
+    let parent_revision_ids = manifest
+        .revision_parents
+        .values()
+        .flat_map(|parents| parents.iter().cloned())
+        .collect::<HashSet<_>>();
+    let mut result: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (doc_id, revision_ids) in &manifest.doc_revisions {
+        let mut leaves: Vec<String> = revision_ids
+            .iter()
+            .filter(|rev_id| !parent_revision_ids.contains(*rev_id))
+            .cloned()
+            .collect();
+        leaves.sort();
+        result.insert(doc_id.clone(), leaves);
+    }
+    Ok(result)
+}
+
 fn store_head_replay_hashes(store_root: &Path) -> Result<BTreeMap<String, Vec<String>>, String> {
     let manifest = load_store_index_manifest(store_root).map_err(|err| {
         format!(
@@ -1297,6 +1356,14 @@ fn store_head_replay_hashes(store_root: &Path) -> Result<BTreeMap<String, Vec<St
 
 fn readers_match_replay(replay_hashes: &BTreeMap<String, BTreeMap<String, Vec<String>>>) -> bool {
     let mut entries = replay_hashes.values();
+    let Some(first) = entries.next() else {
+        return true;
+    };
+    entries.all(|entry| entry == first)
+}
+
+fn readers_match_heads(head_ids: &BTreeMap<String, BTreeMap<String, Vec<String>>>) -> bool {
+    let mut entries = head_ids.values();
     let Some(first) = entries.next() else {
         return true;
     };

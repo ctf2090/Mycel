@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "view-sync",
+    "description": "A reader should receive governance view objects via VIEW_ANNOUNCE during first-time sync when the seed advertises view-sync capability.",
+    "category": "sync",
+    "topology": "sim/topologies/view-sync.example.json",
+    "fixture_set": "fixtures/object-sets/view-sync",
+    "execution_mode": "single-process",
+    "expected_result": "pass",
+    "expected_outcomes": [
+        "view-sync-success",
+        "governance-view-received"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "view-sync-success",
+            "description": "Reader successfully completed sync and received governance view objects from a view-capable seed.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "governance-view-received",
+            "description": "Reader's post-sync store contains the governance view object published by the seed.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Proves governance view distribution end-to-end: seed populates view, advertises view-sync, reader receives view via VIEW_ANNOUNCE.",
+        "Governance views are stored as protocol objects and treated as governance signals, not local policy state."
+    ]
+}

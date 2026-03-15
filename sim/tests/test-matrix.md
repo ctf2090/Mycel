@@ -22,8 +22,13 @@
 - `mixed-reader-recovery`: mixed reader set converges after WANT-based recovery
   Reference JSON: `sim/tests/mixed-reader-recovery.example.json`
 
+## Capability-Gated
+
+- `snapshot-catchup`: reader receives snapshot objects via SNAPSHOT_OFFER from a snapshot-capable seed
+  Reference JSON: `sim/tests/snapshot-catchup.example.json`
+- `view-sync`: reader receives governance view objects via VIEW_ANNOUNCE from a view-capable seed
+  Reference JSON: `sim/tests/view-sync.example.json`
+
 ## Deferred
 
-- snapshot-assisted catch-up
 - localhost multi-process runs
-- accepted-head comparison reports

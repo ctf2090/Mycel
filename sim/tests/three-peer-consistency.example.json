@@ -10,7 +10,8 @@
   "expected_outcomes": [
     "sync-success",
     "matching-object-sets",
-    "matching-replay-results"
+    "matching-replay-results",
+    "matching-accepted-heads"
   ],
   "assertions": [
     {
@@ -21,6 +22,11 @@
     {
       "assertion_id": "matching-replay-results",
       "description": "Reader peers compute the same replay result for the synced document set.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "matching-accepted-heads",
+      "description": "Reader peers agree on the same set of accepted head revision IDs for each document.",
       "severity": "error"
     }
   ],

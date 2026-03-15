@@ -27,7 +27,8 @@
   "expected_outcomes": [
     "sync-success",
     "matching-object-sets",
-    "matching-replay-results"
+    "matching-replay-results",
+    "matching-accepted-heads"
   ],
   "notes": [
     "This is the baseline topology for deterministic comparison across readers."

@@ -17,7 +17,7 @@ FAST_PATH_STEPS = [
     "scan the repo root with ls",
     "read AGENTS-LOCAL.md if it exists, then read .agent-local/dev-setup-status.md",
     "read docs/ROLE-CHECKLISTS/README.md, docs/AGENT-REGISTRY.md, and .agent-local/agents.json",
-    "run scripts/agent_bootstrap.py <role> or scripts/agent_bootstrap.py auto",
+    "run scripts/agent_bootstrap.py <role> --model-id <model_id> or scripts/agent_bootstrap.py auto --model-id <model_id>",
 ]
 DEFERRED_READS_COMMON = [
     "ROADMAP.md and other broad planning docs",
