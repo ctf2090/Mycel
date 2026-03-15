@@ -44,8 +44,8 @@ Defer if needed:
 - [x] Implement `snapshot` parsing with derived `snapshot_id`.
 - [x] Reject any content-addressed object whose embedded derived ID does not match the recomputed canonical ID.
 - [x] Reject unknown top-level typed-object fields and invalid required field types in shared parsing and verification.
-- [ ] Finish the remaining malformed field-shape depth, semantic edge-case, and role-model closure still left after the recent strictness-surface expansion, replay-dependency CLI smoke growth, and ancestry-context proof expansion.
-- [ ] Model editor-maintainer and view-maintainer role assignment independently for mixed-role and shared-key cases.
+- [x] Finish the remaining malformed field-shape depth, semantic edge-case, and role-model closure still left after the recent strictness-surface expansion, replay-dependency CLI smoke growth, and ancestry-context proof expansion.
+- [x] Model editor-maintainer and view-maintainer role assignment independently for mixed-role and shared-key cases.
 
 ## 3. Canonical Serialization and Hashing
 
@@ -182,7 +182,7 @@ Defer if needed:
 
 Treat the client as ready for a first interoperable build when all of the following are true:
 
-- [ ] all required object types parse and validate
+- [x] all required object types parse and validate
 - [x] canonical IDs and signatures are reproducible
 - [x] revision replay and `state_hash` verification pass
 - [ ] minimal wire sync succeeds end-to-end

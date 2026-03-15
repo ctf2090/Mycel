@@ -1990,3 +1990,44 @@ fn parse_snapshot_object_rejects_non_integer_timestamp() {
         "top-level 'timestamp' must be a non-negative integer"
     );
 }
+
+#[test]
+fn parse_view_object_accepts_dual_role_key_as_maintainer_and_accept_key() {
+    // The same public key may serve both as the view-maintainer (maintainer field)
+    // and as an admitted editor (accept_keys). The two roles are validated
+    // independently; no constraint prevents a key from holding both.
+    let view = parse_view_object(&json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": "pk:ed25519:test",
+        "documents": {"doc:test": "rev:test"},
+        "policy": {
+            "accept_keys": ["pk:ed25519:test"]
+        },
+        "timestamp": 7u64
+    }))
+    .expect("dual-role key should be accepted without error");
+
+    assert_eq!(view.maintainer, "pk:ed25519:test");
+}
+
+#[test]
+fn parse_view_object_accepts_maintainer_not_in_accept_keys() {
+    // A view-maintainer key need not appear in accept_keys at all.
+    // Editor admission and view-maintainer admission are independent.
+    let view = parse_view_object(&json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": "pk:ed25519:maintainer-key",
+        "documents": {"doc:test": "rev:test"},
+        "policy": {
+            "accept_keys": ["pk:ed25519:editor-key"]
+        },
+        "timestamp": 7u64
+    }))
+    .expect("maintainer absent from accept_keys should be accepted");
+
+    assert_eq!(view.maintainer, "pk:ed25519:maintainer-key");
+}

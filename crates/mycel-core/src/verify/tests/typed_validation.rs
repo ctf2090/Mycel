@@ -2924,3 +2924,37 @@ pub(super) fn patch_replace_block_non_string_new_content_is_rejected() {
 
     let _ = std::fs::remove_file(path);
 }
+
+#[test]
+pub(super) fn view_dual_role_key_verifies_successfully() {
+    // A view where the maintainer key also appears in accept_keys passes full
+    // verification.  The view-maintainer role (maintainer field) and the
+    // editor-maintainer role (accept_keys) are assigned and validated
+    // independently; holding both roles with a single key is explicitly allowed.
+    let (signing_key, public_key) = signer_material();
+    let mut view = json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "maintainer": public_key,
+        "documents": {"doc:test": "rev:test"},
+        "policy": {
+            "accept_keys": [public_key]
+        },
+        "timestamp": 12u64
+    });
+    let view_id = recompute_object_id(&view, "view_id", "view").expect("view ID should recompute");
+    view["view_id"] = Value::String(view_id.clone());
+    view["signature"] = Value::String(sign_value(&signing_key, &view));
+    let path = write_test_file(
+        "view-dual-role-key",
+        &serde_json::to_string_pretty(&view).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(summary.is_ok(), "expected success, got {summary:?}");
+    assert_eq!(summary.signature_verification.as_deref(), Some("verified"));
+    assert_eq!(summary.recomputed_id.as_deref(), Some(view_id.as_str()));
+
+    let _ = std::fs::remove_file(path);
+}
