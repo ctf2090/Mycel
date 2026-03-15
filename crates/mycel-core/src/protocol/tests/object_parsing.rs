@@ -1711,3 +1711,282 @@ fn parse_snapshot_object_rejects_unknown_top_level_field() {
         "top-level contains unexpected field 'unexpected'"
     );
 }
+
+#[test]
+fn parse_patch_object_rejects_non_array_ops() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": "not-an-array"
+    }))
+    .unwrap_err();
+
+    assert_eq!(error.to_string(), "top-level 'ops' must be an array");
+}
+
+#[test]
+fn parse_patch_object_rejects_non_object_op() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": ["not-an-object"]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': patch op must be a JSON object"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_non_integer_timestamp() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": "not-an-integer",
+        "ops": []
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'timestamp' must be a non-negative integer"
+    );
+}
+
+#[test]
+fn parse_revision_object_rejects_non_array_patches() {
+    let error = parse_revision_object(&json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "revision_id": "rev:test",
+        "doc_id": "doc:test",
+        "parents": ["rev:base"],
+        "patches": "not-an-array",
+        "state_hash": "hash:test",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64
+    }))
+    .unwrap_err();
+
+    assert_eq!(error.to_string(), "top-level 'patches' must be an array");
+}
+
+#[test]
+fn parse_revision_object_rejects_non_integer_timestamp() {
+    let error = parse_revision_object(&json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "revision_id": "rev:test",
+        "doc_id": "doc:test",
+        "parents": ["rev:base"],
+        "patches": [],
+        "state_hash": "hash:test",
+        "author": "pk:ed25519:test",
+        "timestamp": "not-an-integer"
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'timestamp' must be a non-negative integer"
+    );
+}
+
+#[test]
+fn parse_document_object_rejects_non_integer_created_at() {
+    let error = parse_document_object(&json!({
+        "type": "document",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "title": "Test",
+        "language": "en",
+        "content_model": "block-tree",
+        "created_at": "not-an-integer",
+        "created_by": "pk:ed25519:test",
+        "genesis_revision": "rev:test"
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'created_at' must be a non-negative integer"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_missing_new_block_in_insert_block() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [{"op": "insert_block"}]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': missing object field 'new_block'"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_invalid_block_type_in_nested_new_block() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:001",
+                    "block_type": "unknown-type",
+                    "content": "Hello",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]
+    }))
+    .unwrap_err();
+
+    assert!(
+        error
+            .to_string()
+            .contains("top-level 'ops[0]': top-level 'new_block'"),
+        "expected nested context in error, got: {error}"
+    );
+    assert!(
+        error.to_string().contains("block_type"),
+        "expected block_type error, got: {error}"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_missing_new_block_in_insert_block_after() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [{"op": "insert_block_after", "after_block_id": "blk:001"}]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': missing object field 'new_block'"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_missing_annotation_in_annotate_block() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [{"op": "annotate_block", "block_id": "blk:001"}]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': missing object field 'annotation'"
+    );
+}
+
+#[test]
+fn parse_patch_object_rejects_replace_block_non_string_new_content() {
+    let error = parse_patch_object(&json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:test",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": "pk:ed25519:test",
+        "timestamp": 1u64,
+        "ops": [
+            {
+                "op": "replace_block",
+                "block_id": "blk:001",
+                "new_content": 42
+            }
+        ]
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'ops[0]': top-level 'new_content' must be a string"
+    );
+}
+
+#[test]
+fn parse_view_object_rejects_non_integer_timestamp() {
+    let error = parse_view_object(&json!({
+        "type": "view",
+        "version": "mycel/0.1",
+        "view_id": "view:test",
+        "maintainer": "pk:ed25519:test",
+        "documents": {"doc:test": "rev:test"},
+        "policy": {},
+        "timestamp": "not-an-integer"
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'timestamp' must be a non-negative integer"
+    );
+}
+
+#[test]
+fn parse_snapshot_object_rejects_non_integer_timestamp() {
+    let error = parse_snapshot_object(&json!({
+        "type": "snapshot",
+        "version": "mycel/0.1",
+        "snapshot_id": "snap:test",
+        "documents": {"doc:test": "rev:test"},
+        "included_objects": ["rev:test"],
+        "root_hash": "hash:test",
+        "created_by": "pk:ed25519:test",
+        "timestamp": "not-an-integer"
+    }))
+    .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "top-level 'timestamp' must be a non-negative integer"
+    );
+}

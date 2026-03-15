@@ -2611,3 +2611,317 @@ pub(super) fn view_unknown_top_level_field_is_rejected_by_typed_validation() {
 
     let _ = std::fs::remove_file(path);
 }
+
+#[test]
+pub(super) fn patch_non_array_ops_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": "not-an-array"
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-non-array-ops",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'ops' must be an array")),
+        "expected ops array type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn patch_non_object_op_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": ["not-an-object"]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-non-object-op",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("patch op must be a JSON object")),
+        "expected op object type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn patch_non_integer_timestamp_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": "not-an-integer",
+        "ops": []
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-non-integer-timestamp",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'timestamp' must be a non-negative integer")),
+        "expected timestamp integer type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn revision_non_array_patches_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut revision = json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "parents": ["rev:genesis-null"],
+        "patches": "not-an-array",
+        "state_hash": "hash:test",
+        "author": public_key,
+        "timestamp": 11u64
+    });
+    let revision_id =
+        recompute_object_id(&revision, "revision_id", "rev").expect("revision ID should recompute");
+    revision["revision_id"] = Value::String(revision_id);
+    revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+    let path = write_test_file(
+        "revision-non-array-patches",
+        &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'patches' must be an array")),
+        "expected patches array type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn revision_non_integer_timestamp_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut revision = json!({
+        "type": "revision",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "parents": ["rev:genesis-null"],
+        "patches": [],
+        "state_hash": "hash:test",
+        "author": public_key,
+        "timestamp": "not-an-integer"
+    });
+    let revision_id =
+        recompute_object_id(&revision, "revision_id", "rev").expect("revision ID should recompute");
+    revision["revision_id"] = Value::String(revision_id);
+    revision["signature"] = Value::String(sign_value(&signing_key, &revision));
+    let path = write_test_file(
+        "revision-non-integer-timestamp",
+        &serde_json::to_string_pretty(&revision).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'timestamp' must be a non-negative integer")),
+        "expected timestamp integer type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn document_non_integer_created_at_is_rejected() {
+    let path = write_test_file(
+        "document-non-integer-created-at",
+        &serde_json::to_string_pretty(&json!({
+            "type": "document",
+            "version": "mycel/0.1",
+            "doc_id": "doc:test",
+            "title": "Plain document",
+            "language": "zh-Hant",
+            "content_model": "block-tree",
+            "created_at": "not-an-integer",
+            "created_by": "pk:ed25519:test",
+            "genesis_revision": "rev:test"
+        }))
+        .expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'created_at' must be a non-negative integer")),
+        "expected created_at integer type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn patch_insert_block_missing_new_block_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [{"op": "insert_block"}]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-insert-block-missing-new-block",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("missing object field 'new_block'")),
+        "expected missing new_block error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn patch_annotate_block_missing_annotation_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [{"op": "annotate_block", "block_id": "blk:001"}]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-annotate-block-missing-annotation",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("missing object field 'annotation'")),
+        "expected missing annotation error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+pub(super) fn patch_replace_block_non_string_new_content_is_rejected() {
+    let (signing_key, public_key) = signer_material();
+    let mut patch = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "doc_id": "doc:test",
+        "base_revision": "rev:genesis-null",
+        "author": public_key,
+        "timestamp": 11u64,
+        "ops": [{"op": "replace_block", "block_id": "blk:001", "new_content": 42}]
+    });
+    let patch_id =
+        recompute_object_id(&patch, "patch_id", "patch").expect("patch ID should recompute");
+    patch["patch_id"] = Value::String(patch_id);
+    patch["signature"] = Value::String(sign_value(&signing_key, &patch));
+    let path = write_test_file(
+        "patch-replace-block-non-string-new-content",
+        &serde_json::to_string_pretty(&patch).expect("test JSON should serialize"),
+    );
+
+    let summary = verify_object_path(&path);
+
+    assert!(!summary.is_ok(), "expected failure, got {summary:?}");
+    assert!(
+        summary
+            .errors
+            .iter()
+            .any(|message| message.contains("top-level 'new_content' must be a string")),
+        "expected new_content string type error, got {summary:?}"
+    );
+
+    let _ = std::fs::remove_file(path);
+}
