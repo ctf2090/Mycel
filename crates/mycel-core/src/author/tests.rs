@@ -1442,6 +1442,157 @@ fn merge_authoring_supports_nested_reparenting_into_a_later_sibling_branch() {
 }
 
 #[test]
+fn merge_authoring_supports_composed_parent_inserted_at_a_later_sibling_position() {
+    let store_root = temp_dir("merge-composed-later-sibling-position");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-composed-later-sibling-position".to_string(),
+            title: "Merge Composed Later Sibling Position".to_string(),
+            language: "en".to_string(),
+            timestamp: 60,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-composed-later-sibling-position",
+        &document.genesis_revision_id,
+        61,
+        62,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:cmp-a",
+                    "block_type": "paragraph",
+                    "content": "A",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-leaf",
+                            "block_type": "paragraph",
+                            "content": "Leaf",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            },
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:cmp-b",
+                    "block_type": "paragraph",
+                    "content": "B",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let inserted_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-composed-later-sibling-position",
+        &base_revision_id,
+        63,
+        64,
+        json!([
+            {
+                "op": "insert_block_after",
+                "after_block_id": "blk:cmp-b",
+                "new_block": {
+                    "block_id": "blk:cmp-wrapper",
+                    "block_type": "paragraph",
+                    "content": "Wrapper",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-section",
+                            "block_type": "paragraph",
+                            "content": "Section",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let moved_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-composed-later-sibling-position",
+        &base_revision_id,
+        65,
+        66,
+        json!([
+            {
+                "op": "move_block",
+                "block_id": "blk:cmp-leaf",
+                "after_block_id": "blk:cmp-b"
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-composed-later-sibling-position".to_string(),
+            parents: vec![base_revision_id, inserted_revision_id, moved_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-composed-later-sibling-position".to_string(),
+                blocks: vec![
+                    paragraph_block_with_children("blk:cmp-a", "A", vec![]),
+                    paragraph_block("blk:cmp-b", "B"),
+                    paragraph_block_with_children(
+                        "blk:cmp-wrapper",
+                        "Wrapper",
+                        vec![paragraph_block_with_children(
+                            "blk:cmp-section",
+                            "Section",
+                            vec![paragraph_block("blk:cmp-leaf", "Leaf")],
+                        )],
+                    ),
+                ],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 67,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::AutoMerged);
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::InsertBlockAfter { after_block_id, new_block }
+        if after_block_id == "blk:cmp-b"
+            && new_block.block_id == "blk:cmp-wrapper"
+            && new_block.children.len() == 1
+            && new_block.children[0].block_id == "blk:cmp-section"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+        if block_id == "blk:cmp-leaf" && parent_block_id == "blk:cmp-section"
+    )));
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
 fn merge_authoring_marks_non_primary_structural_parent_choice_as_multi_variant() {
     let store_root = temp_dir("merge-parent-choice");
     let signing_key = signing_key();

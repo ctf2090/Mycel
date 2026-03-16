@@ -213,7 +213,10 @@ fn assess_merge_resolution(
             .filter(|variant| variant != &primary_parent_variant)
             .collect::<BTreeSet<_>>();
 
-        let resolved_parent_is_novel_composed = alternative_parent_variants.is_empty()
+        let resolved_parent_is_novel_composed = (alternative_parent_variants.is_empty()
+            || alternative_parent_variants
+                .iter()
+                .all(|variant| variant == "<root>"))
             && resolved_parent_variant != primary_parent_variant
             && !alternative_parent_variants.contains(&resolved_parent_variant)
             && resolved_parent_is_composed_in_resolved(
