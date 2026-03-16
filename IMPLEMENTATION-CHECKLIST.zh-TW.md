@@ -222,7 +222,10 @@
 
 - [x] 把 peer-interop proof 擴展到目前 peer-store-driven first-time 與 incremental sync coverage 之外。
 - [x] 補上 localhost multi-process 或等價 transport proof，避免目前 sync path 只在窄版 transcript 或 simulator-controlled paths 下被驗證。
-- [ ] 定義並測試目前 minimal sync proof 之外仍未完成的 production replication behavior。
+- [ ] 定義並測試目前 minimal sync proof 之外仍未完成的 production replication behavior。範圍：下列三個子項目。
+  - [ ] Re-sync 冪等性：reader 已是最新狀態時，再次執行 sync 應產生零次新寫入、無錯誤、accepted heads 不變。
+  - [ ] Depth-N 增量追趕：位於 revision depth 1 的 reader 透過一次 HEADS/WANT 追上 depth ≥ 3 的 seed，且只抓取差異部分。
+  - [ ] 部分文件選擇性 sync：reader 只請求 seed 部分文件，最終 store 穩定在所請求的子集，且 accepted heads 僅針對請求文件正確計算（PROTOCOL §8 明訂支援 partial replication）。
 - [ ] 擴大 session、capability 與 error-path interop coverage，超出目前 positive-path 與 optional-message proof set。
 
 ## 17. Cross-Surface Closure Rules

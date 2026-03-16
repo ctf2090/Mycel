@@ -397,7 +397,7 @@ Still missing or incomplete:
 1. Wiring `OBJECT` body-derived hash and object-ID recomputation into the main incoming verification path
 2. Object fetch and sync state machine
 3. Snapshot-assisted catch-up and capability-gated optional message handling
-4. Production replication behavior
+4. Production replication behavior: re-sync idempotency, depth-N incremental catchup, and partial-doc selective sync (PROTOCOL §8 states partial replication is supported)
 5. App-layer runtime support
 
 ### Milestones in This Phase
@@ -430,7 +430,7 @@ Substantially underway. All M4 completion-gate items are now satisfied at the si
 6. Capability-gated `VIEW_ANNOUNCE` delivery for governance views (`view-sync`)
 7. Per-peer accepted-head comparison surfaced in report (`matching-accepted-heads` outcome)
 
-What is still missing is localhost multi-process transport (real TCP/socket inter-process sync) and production replication behavior.
+What is still missing is production replication behavior: re-sync idempotency (running sync twice when already current produces zero new writes), depth-N incremental catchup (reader at revision depth 1 catches up to a depth-3 seed in one pass), and partial-doc selective sync (reader requests only a subset of the seed's documents, per PROTOCOL §8).
 
 Implementation anchors:
 
