@@ -1325,6 +1325,123 @@ fn merge_authoring_supports_reparenting_into_a_later_sibling_parent() {
 }
 
 #[test]
+fn merge_authoring_supports_nested_reparenting_into_a_later_sibling_branch() {
+    let store_root = temp_dir("merge-nested-later-sibling-branch");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-nested-later-sibling-branch".to_string(),
+            title: "Merge Nested Later Sibling Branch".to_string(),
+            language: "en".to_string(),
+            timestamp: 54,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-later-sibling-branch",
+        &document.genesis_revision_id,
+        55,
+        56,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:branch-root",
+                    "block_type": "paragraph",
+                    "content": "Root",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:branch-a",
+                            "block_type": "paragraph",
+                            "content": "Branch A",
+                            "attrs": {},
+                            "children": [
+                                {
+                                    "block_id": "blk:branch-leaf",
+                                    "block_type": "paragraph",
+                                    "content": "Leaf",
+                                    "attrs": {},
+                                    "children": []
+                                }
+                            ]
+                        },
+                        {
+                            "block_id": "blk:branch-b",
+                            "block_type": "paragraph",
+                            "content": "Branch B",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let moved_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-later-sibling-branch",
+        &base_revision_id,
+        57,
+        58,
+        json!([
+            {
+                "op": "move_block",
+                "block_id": "blk:branch-leaf",
+                "parent_block_id": "blk:branch-b"
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-nested-later-sibling-branch".to_string(),
+            parents: vec![base_revision_id, moved_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-nested-later-sibling-branch".to_string(),
+                blocks: vec![paragraph_block_with_children(
+                    "blk:branch-root",
+                    "Root",
+                    vec![
+                        paragraph_block_with_children("blk:branch-a", "Branch A", vec![]),
+                        paragraph_block_with_children(
+                            "blk:branch-b",
+                            "Branch B",
+                            vec![paragraph_block("blk:branch-leaf", "Leaf")],
+                        ),
+                    ],
+                )],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 59,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+        if block_id == "blk:branch-leaf" && parent_block_id == "blk:branch-b"
+    )));
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
 fn merge_authoring_marks_non_primary_structural_parent_choice_as_multi_variant() {
     let store_root = temp_dir("merge-parent-choice");
     let signing_key = signing_key();
