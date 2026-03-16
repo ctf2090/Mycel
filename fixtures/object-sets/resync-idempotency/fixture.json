@@ -1,0 +1,27 @@
+{
+  "$schema": "../fixture.schema.json",
+  "fixture_id": "resync-idempotency",
+  "description": "Reader syncs from seed, then syncs again; the second pass must write zero new objects and produce no errors",
+  "seed_peer": "peer-seed",
+  "reader_peers": ["peer-reader-a"],
+  "documents": [
+    {
+      "doc_id": "doc:idempotency-test",
+      "notes": "Document used to verify that re-sync produces no side effects"
+    }
+  ],
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results",
+    "matching-accepted-heads",
+    "resync-idempotent"
+  ],
+  "metadata": {
+    "resync_check": true
+  },
+  "notes": [
+    "The resync_check flag instructs the simulator to run a second sync pass for each reader after the first sync completes.",
+    "A passing result requires written_object_count == 0 on the second pass."
+  ]
+}

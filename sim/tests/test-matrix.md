@@ -38,3 +38,8 @@
 
 - `four-reader-multi-doc`: four readers each start empty and converge on a two-document verified object set from a single seed
   Reference JSON: `sim/tests/four-reader-multi-doc.example.json`
+
+## Production Replication
+
+- `resync-idempotency`: reader syncs once to get current, then syncs again; the second pass must write zero new objects and produce no errors
+  Reference JSON: `sim/tests/resync-idempotency.example.json`

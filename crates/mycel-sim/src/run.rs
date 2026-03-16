@@ -488,6 +488,63 @@ fn simulate_peer_store_sync_report(
             .flat_map(|ids| ids.iter().cloned())
             .collect();
         report_peer.head_revision_ids.sort();
+
+        if fixture_requests_resync_check(fixture) {
+            let resync_summary = sync_pull_from_peer_store(
+                &seed_peer,
+                &signing_key,
+                &seed_store_root,
+                &peer_store_root,
+            )
+            .map_err(|err| {
+                format!("re-sync check failed for '{}': {err}", peer.node_id)
+            })?;
+            let resync_ok =
+                resync_summary.is_ok() && resync_summary.written_object_count == 0;
+            let resync_outcome = if resync_ok { "ok" } else { "failed" };
+            if !resync_ok {
+                if resync_summary.written_object_count > 0 {
+                    failures.push(ReportFailure {
+                        failure_id: format!("resync-not-idempotent:{}", peer.node_id),
+                        node_id: Some(peer.node_id.clone()),
+                        description: format!(
+                            "Re-sync for '{}' wrote {} unexpected new objects; expected 0.",
+                            peer.node_id, resync_summary.written_object_count
+                        ),
+                        severity: Some("error".to_owned()),
+                    });
+                }
+                if !resync_summary.is_ok() {
+                    failures.push(ReportFailure {
+                        failure_id: format!("resync-error:{}", peer.node_id),
+                        node_id: Some(peer.node_id.clone()),
+                        description: format!(
+                            "Re-sync for '{}' failed: {}",
+                            peer.node_id,
+                            resync_summary.errors.join("; ")
+                        ),
+                        severity: Some("error".to_owned()),
+                    });
+                }
+            }
+            report_peer.notes.push(format!(
+                "Re-sync check: {} messages exchanged, {} objects written (expected 0).",
+                resync_summary.message_count, resync_summary.written_object_count
+            ));
+            push_event(
+                &mut events,
+                "sync",
+                "resync-check",
+                resync_outcome,
+                Some(peer.node_id.clone()),
+                verified_object_ids.clone(),
+                Some(format!(
+                    "Re-sync check exchanged {} messages and wrote {} objects (expected 0).",
+                    resync_summary.message_count, resync_summary.written_object_count
+                )),
+            );
+        }
+
         reader_object_sets.insert(peer.node_id.clone(), verified_object_ids);
         reader_replay_hashes.insert(peer.node_id.clone(), replay_hashes);
         reader_head_ids.insert(peer.node_id.clone(), leaf_ids);
@@ -1485,6 +1542,15 @@ fn fixture_documents(fixture: &Fixture) -> Vec<crate::model::FixtureDocumentRef>
         }];
     }
     fixture.documents.clone()
+}
+
+fn fixture_requests_resync_check(fixture: &Fixture) -> bool {
+    fixture
+        .metadata
+        .as_ref()
+        .and_then(|value| value.get("resync_check"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
 }
 
 fn fixture_requests_seed_view_sync(fixture: &Fixture) -> bool {

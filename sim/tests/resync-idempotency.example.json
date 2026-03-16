@@ -1,0 +1,44 @@
+{
+  "$schema": "./test-case.schema.json",
+  "test_id": "resync-idempotency",
+  "description": "A reader that is already fully synced should produce zero new writes and no errors when sync runs a second time.",
+  "category": "production-replication",
+  "topology": "sim/topologies/resync-idempotency.example.json",
+  "fixture_set": "fixtures/object-sets/resync-idempotency",
+  "execution_mode": "single-process",
+  "expected_result": "pass",
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results",
+    "matching-accepted-heads",
+    "resync-idempotent"
+  ],
+  "assertions": [
+    {
+      "assertion_id": "matching-object-sets",
+      "description": "Reader ends with the same verified object set as the seed after first sync.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "matching-replay-results",
+      "description": "Reader replay hash matches the seed after first sync.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "matching-accepted-heads",
+      "description": "Reader accepted heads match the seed after first sync.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "resync-idempotent",
+      "description": "Second sync pass writes zero new objects and completes without errors.",
+      "severity": "error"
+    }
+  ],
+  "notes": [
+    "First production-replication category test.",
+    "Proves that sync pull is safe to run repeatedly without side effects.",
+    "Verifies the re-sync idempotency sub-item of the M4 production replication behavior scope."
+  ]
+}
