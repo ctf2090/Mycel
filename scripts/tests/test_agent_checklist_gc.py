@@ -74,21 +74,22 @@ class AgentChecklistGcCliTest(unittest.TestCase):
             }
         )
         self.write_checklist(".agent-local/agents/agt_live/checklists/AGENTS-bootstrap-checklist.md")
-        for batch in range(1, 8):
+        for batch in range(1, 24):
             self.write_checklist(
                 f".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-{batch}.md"
             )
 
         payload = json.loads(
-            self.run_cli("scan", "--keep-workcycle-batches", "5", "--json").stdout
+            self.run_cli("scan", "--keep-workcycle-batches", "20", "--json").stdout
         )
 
         self.assertEqual(1, payload["referenced_agent_count"])
-        self.assertEqual(2, payload["prune_candidate_count"])
+        self.assertEqual(3, payload["prune_candidate_count"])
         self.assertEqual(
             [
                 ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-1.md",
                 ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-2.md",
+                ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-3.md",
             ],
             [record["path"] for record in payload["prune_candidates"]],
         )
@@ -103,27 +104,30 @@ class AgentChecklistGcCliTest(unittest.TestCase):
             }
         )
         self.write_checklist(".agent-local/agents/agt_live/checklists/AGENTS-bootstrap-checklist.md")
-        for batch in range(1, 8):
+        for batch in range(1, 24):
             self.write_checklist(
                 f".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-{batch}.md"
             )
 
         payload = json.loads(
-            self.run_cli("prune", "--keep-workcycle-batches", "5", "--json").stdout
+            self.run_cli("prune", "--keep-workcycle-batches", "20", "--json").stdout
         )
 
-        self.assertEqual(2, payload["deleted_count"])
+        self.assertEqual(3, payload["deleted_count"])
         self.assertFalse(
             (self.root / ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-1.md").exists()
         )
         self.assertFalse(
             (self.root / ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-2.md").exists()
         )
+        self.assertFalse(
+            (self.root / ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-3.md").exists()
+        )
         self.assertTrue(
             (self.root / ".agent-local/agents/agt_live/checklists/AGENTS-bootstrap-checklist.md").exists()
         )
         self.assertTrue(
-            (self.root / ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-7.md").exists()
+            (self.root / ".agent-local/agents/agt_live/checklists/AGENTS-workcycle-checklist-23.md").exists()
         )
 
 

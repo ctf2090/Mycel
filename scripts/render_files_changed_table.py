@@ -63,6 +63,22 @@ def diff_output_dir(git_ref: str) -> Path:
     return ROOT_DIR / ".agent-local" / "rendered-diffs" / digest
 
 
+def clear_other_diff_output_dirs(git_ref: str) -> None:
+    rendered_diffs_root = ROOT_DIR / ".agent-local" / "rendered-diffs"
+    current_output_dir = diff_output_dir(git_ref)
+    if not rendered_diffs_root.exists():
+        return
+    for path in rendered_diffs_root.iterdir():
+        if path == current_output_dir or not path.is_dir():
+            continue
+        for nested in sorted(path.rglob("*"), reverse=True):
+            if nested.is_file() or nested.is_symlink():
+                nested.unlink()
+            elif nested.is_dir():
+                nested.rmdir()
+        path.rmdir()
+
+
 def clear_diff_output_dir(git_ref: str) -> Path:
     output_dir = diff_output_dir(git_ref)
     if output_dir.exists():
@@ -182,6 +198,7 @@ def render_table(rows: list[tuple[str, str, str]], note_overrides: dict[str, str
         "|---|---:|---|",
     ]
     if git_ref is not None:
+        clear_other_diff_output_dirs(git_ref)
         clear_diff_output_dir(git_ref)
     for path, added, removed in rows:
         delta = f"{render_count(added, '+')} / {render_count(removed, '-')}"

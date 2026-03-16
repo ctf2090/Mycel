@@ -12,7 +12,7 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = ROOT_DIR / ".agent-local" / "agents.json"
 AGENTS_DIR = ROOT_DIR / ".agent-local" / "agents"
-DEFAULT_KEEP_WORKCYCLE_BATCHES = 5
+DEFAULT_KEEP_WORKCYCLE_BATCHES = 20
 
 
 class AgentChecklistGcError(Exception):
@@ -67,7 +67,7 @@ def workcycle_checklists_for(agent_dir: Path) -> list[tuple[int, Path]]:
         if not batch_str.isdigit():
             continue
         results.append((int(batch_str), path))
-    return results
+    return sorted(results, key=lambda item: item[0])
 
 
 def scan_agent_checklists(*, keep_workcycle_batches: int = DEFAULT_KEEP_WORKCYCLE_BATCHES) -> dict[str, Any]:

@@ -92,6 +92,26 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertEqual(1, len(generated))
         self.assertIn("+print('hi')", generated[0].read_text(encoding="utf-8"))
 
+    def test_clears_old_git_ref_buckets_when_rendering_new_bucket(self) -> None:
+        tracked = self.root / "AGENTS.md"
+        tracked.write_text("before\n", encoding="utf-8")
+        subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=self.root, check=True, capture_output=True, text=True)
+
+        tracked.write_text("before\nafter\n", encoding="utf-8")
+        subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "update"], cwd=self.root, check=True, capture_output=True, text=True)
+        self.run_cli("HEAD")
+
+        self.run_cli("HEAD~1")
+
+        diff_root = self.root / ".agent-local" / "rendered-diffs"
+        buckets = [path.name for path in diff_root.iterdir() if path.is_dir()]
+        self.assertEqual(1, len(buckets))
+        generated = list(diff_root.rglob("AGENTS.md.diff"))
+        self.assertEqual(1, len(generated))
+        self.assertIn("before", generated[0].read_text(encoding="utf-8"))
+
     def test_supports_note_overrides(self) -> None:
         proc = self.run_cli(
             "--stdin",

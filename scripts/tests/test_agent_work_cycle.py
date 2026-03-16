@@ -453,7 +453,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         )
         template = self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md"
         template_text = template.read_text(encoding="utf-8")
-        for batch in range(3, 8):
+        for batch in range(3, 23):
             path = self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-{batch}.md"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(template_text, encoding="utf-8")
@@ -462,7 +462,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(0, proc.returncode)
         self.assertIn("agent_checklist_gc_status: ok", proc.stdout)
-        self.assertIn("agent_checklist_gc_keep_workcycle_batches: 5", proc.stdout)
+        self.assertIn("agent_checklist_gc_keep_workcycle_batches: 20", proc.stdout)
         self.assertIn("agent_checklist_gc_deleted: 2", proc.stdout)
         self.assertFalse(
             (self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md").exists()
@@ -471,7 +471,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             (self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md").exists()
         )
         self.assertTrue(
-            (self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-7.md").exists()
+            (self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-22.md").exists()
         )
 
 
