@@ -418,6 +418,24 @@ fn signed_bye_message(signing_key: &SigningKey, sender: &str) -> Value {
     value
 }
 
+fn signed_error_message(signing_key: &SigningKey, sender: &str, in_reply_to: &str) -> Value {
+    let mut value = json!({
+        "type": "ERROR",
+        "version": "mycel-wire/0.1",
+        "msg_id": "msg:error-cli-sync-001",
+        "timestamp": "2026-03-08T20:02:10+08:00",
+        "from": sender,
+        "payload": {
+            "in_reply_to": in_reply_to,
+            "code": "ERR_UNKNOWN",
+            "detail": "simulated error"
+        },
+        "sig": "sig:placeholder"
+    });
+    value["sig"] = Value::String(sign_wire_value(signing_key, &value));
+    value
+}
+
 fn write_transcript(path: &PathBuf, transcript: &Value) {
     fs::write(
         path,
@@ -1117,6 +1135,139 @@ fn sync_pull_json_reports_object_id_mismatch_without_storing_objects() {
                 .as_str()
                 .is_some_and(|message| message.contains("OBJECT payload object_id")))),
         "expected object-id mismatch error, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(!store_root
+        .path()
+        .join("indexes")
+        .join("manifest.json")
+        .exists());
+}
+
+#[test]
+fn sync_pull_json_rejects_messages_after_bye() {
+    let signing_key = signing_key();
+    let sender = "node:alpha";
+    let transcript_dir = create_temp_dir("sync-pull-after-bye");
+    let transcript_path = transcript_dir.path().join("after-bye-transcript.json");
+    let store_root = create_temp_dir("sync-pull-after-bye-store");
+    write_transcript(
+        &transcript_path,
+        &json!({
+            "peer": {
+                "node_id": sender,
+                "public_key": sender_public_key(&signing_key)
+            },
+            "messages": [
+                signed_hello_message(&signing_key, sender),
+                signed_bye_message(&signing_key, sender),
+                signed_want_message(&signing_key, sender, &["patch:test"])
+            ]
+        }),
+    );
+
+    let output = run_mycel(&[
+        "sync",
+        "pull",
+        &path_arg(&transcript_path),
+        "--into",
+        &path_arg(&store_root.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert!(
+        !output.status.success(),
+        "expected failure, stdout: {}, stderr: {}",
+        stdout_text(&output),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["verified_message_count"], 2);
+    assert_eq!(json["object_message_count"], 0);
+    assert_eq!(json["written_object_count"], 0);
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|error| {
+                error.as_str().is_some_and(|message| {
+                    message.contains("wire session for 'node:alpha' is already closed")
+                })
+            })),
+        "expected already-closed error, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(!store_root
+        .path()
+        .join("indexes")
+        .join("manifest.json")
+        .exists());
+}
+
+#[test]
+fn sync_pull_json_allows_error_before_hello_but_still_requires_sync_messages() {
+    let signing_key = signing_key();
+    let sender = "node:alpha";
+    let transcript_dir = create_temp_dir("sync-pull-error-before-hello-then-hello");
+    let transcript_path = transcript_dir
+        .path()
+        .join("error-before-hello-then-hello-transcript.json");
+    let store_root = create_temp_dir("sync-pull-error-before-hello-then-hello-store");
+    write_transcript(
+        &transcript_path,
+        &json!({
+            "peer": {
+                "node_id": sender,
+                "public_key": sender_public_key(&signing_key)
+            },
+            "messages": [
+                signed_error_message(&signing_key, sender, "msg:missing-hello"),
+                signed_hello_message(&signing_key, sender),
+                signed_bye_message(&signing_key, sender)
+            ]
+        }),
+    );
+
+    let output = run_mycel(&[
+        "sync",
+        "pull",
+        &path_arg(&transcript_path),
+        "--into",
+        &path_arg(&store_root.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert!(
+        !output.status.success(),
+        "expected failure, stdout: {}, stderr: {}",
+        stdout_text(&output),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["peer_node_id"], sender);
+    assert_eq!(json["message_count"], 3);
+    assert_eq!(json["verified_message_count"], 3);
+    assert_eq!(json["object_message_count"], 0);
+    assert_eq!(json["written_object_count"], 0);
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|error| {
+                error
+                    .as_str()
+                    .is_some_and(|message| message.contains("did not include MANIFEST or HEADS"))
+            })),
+        "expected missing MANIFEST/HEADS error, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|error| {
+                error
+                    .as_str()
+                    .is_some_and(|message| message.contains("did not include any OBJECT messages"))
+            })),
+        "expected missing OBJECT error, stdout: {}",
         stdout_text(&output)
     );
     assert!(!store_root
