@@ -1106,11 +1106,21 @@ fn load_store_backed_selector_objects(
             load_stored_object_value(store_root, revision_id).map_err(|error| error.to_string())
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let view_ids = manifest
+    let mut view_ids = manifest
         .profile_views
         .get(policy_hash)
         .cloned()
         .unwrap_or_default();
+    if view_ids.is_empty() {
+        view_ids = manifest
+            .view_governance
+            .iter()
+            .filter(|record| record.profile_id == policy_hash)
+            .map(|record| record.view_id.clone())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+    }
     let views = view_ids
         .iter()
         .map(|view_id| {

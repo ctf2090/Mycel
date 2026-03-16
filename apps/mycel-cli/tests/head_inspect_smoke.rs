@@ -790,6 +790,89 @@ fn head_inspect_json_can_source_objects_from_store_index() {
 }
 
 #[test]
+fn head_inspect_store_backed_falls_back_to_view_governance_when_profile_views_missing() {
+    let doc_id = "doc:legacy-store-index";
+    let revision_author = signing_key(161);
+    let maintainer_a = signing_key(171);
+    let maintainer_b = signing_key(172);
+    let policy = json!({
+        "accept_keys": [
+            signer_id(&maintainer_a),
+            signer_id(&maintainer_b)
+        ],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let state_hash = empty_document_state_hash(doc_id);
+    let revision_a = signed_revision(&revision_author, doc_id, vec![], 1000, &state_hash);
+    let revision_b = signed_revision(
+        &revision_author,
+        doc_id,
+        vec![revision_a["revision_id"]
+            .as_str()
+            .expect("revision id should exist")
+            .to_string()],
+        1010,
+        &state_hash,
+    );
+    let view_a = signed_view(
+        &maintainer_a,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1100,
+    );
+    let view_b = signed_view(
+        &maintainer_b,
+        &policy,
+        documents_value(doc_id, &revision_b["revision_id"]),
+        1110,
+    );
+    let store_dir =
+        build_store_from_objects(&[revision_a.clone(), revision_b.clone(), view_a, view_b]);
+    let manifest_path = store_dir.path().join("indexes").join("manifest.json");
+    let mut manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(&manifest_path).expect("manifest should be readable"),
+    )
+    .expect("manifest should parse");
+    manifest
+        .as_object_mut()
+        .expect("manifest should be object")
+        .remove("profile_views");
+    fs::write(
+        &manifest_path,
+        serde_json::to_string_pretty(&manifest).expect("manifest should serialize"),
+    )
+    .expect("manifest should write");
+
+    let input = write_input_file(
+        "head-inspect-legacy-store-index",
+        "input.json",
+        json!({
+            "profile": head_profile(hash_json(&policy), 1200),
+            "revisions": [],
+            "views": [],
+            "critical_violations": []
+        }),
+    );
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--store-root",
+        &path_arg(&store_dir.path().to_path_buf()),
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = parse_json_stdout(&output);
+    assert_eq!(json["selected_head"], revision_b["revision_id"]);
+    assert_eq!(json["verified_revision_count"], 2);
+    assert_eq!(json["verified_view_count"], 2);
+}
+
+#[test]
 fn head_inspect_store_backed_applies_editor_admission_from_profile() {
     let doc_id = "doc:store-backed-editor-admission";
     let admitted_author = signing_key(64);
