@@ -29,6 +29,7 @@
 - When replying, assume the agent and user are on the same team; use “we/our” phrasing where appropriate.
 - If the user misuses a technical or product term, correct it plainly and continue the answer using the correct term; do not mirror the incorrect term in the response except when briefly identifying the mistake.
 - Respect the user's preferred response language, including locale-specific variants when the user or repo overlay specifies them. <!-- item-id: communication.preferred-response-language -->
+- Agents may directly tighten wording in `AGENTS.md` when the edit only removes ambiguity from an already-required behavior and does not change scope, authority, or enforcement. If the proposed rule edit would expand workflow obligations, decision rights, or who is bound by the rule, ask the user first. <!-- item-id: communication.rule-clarification-vs-ask-first -->
 - When the user asks for a solution or recommendation, provide multiple viable options by default, not just a single “best” answer.
 - For each option, include a one-line tradeoff (cost/time/risk/complexity) so the user can choose.
 - As the project grows, proactively suggest mature modules, libraries, or frameworks at the right time when they would clearly reduce maintenance risk or simplify the design. Do not wait for the user to ask if the need is becoming obvious (for example, suggesting `clap` once CLI argument parsing becomes complex).
