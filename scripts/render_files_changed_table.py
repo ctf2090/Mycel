@@ -147,40 +147,7 @@ def write_diff_file(git_ref: str, path: str) -> Path:
     return diff_path
 
 
-def semantic_note_from_path(path: str) -> str | None:
-    path_obj = Path(path)
-    name = path_obj.name
-    parts = path_obj.parts
-
-    if name.startswith("ROADMAP."):
-        return "Refresh roadmap status and milestone wording."
-    if name.startswith("IMPLEMENTATION-CHECKLIST."):
-        return "Update checklist closure state and follow-up tracking."
-    if path == "docs/PROGRESS.md" or name == "progress.html":
-        return "Sync public progress summary with current planning state."
-    if name == "index.html" and "pages" in parts:
-        return "Refresh landing-page contributor entry and planning summary copy."
-    if path == "AGENTS.md" or name == "AGENTS.md":
-        return "Clarify agent workflow instructions."
-    if "scripts" in parts and path_obj.suffix in {".py", ".sh"}:
-        return "Adjust repo tooling behavior and command output."
-    if "tests" in parts or name.startswith("test_") or name.endswith("_test.rs"):
-        return "Expand regression coverage for this area."
-    if path_obj.suffix == ".rs":
-        return f"Update {path_obj.stem} implementation behavior."
-    if path_obj.suffix == ".md":
-        return f"Refresh {name} documentation wording."
-    if path_obj.suffix == ".html":
-        return f"Update {name} page content."
-    if path_obj.suffix == ".css":
-        return f"Adjust {name} styling."
-    return None
-
-
 def default_note(path: str, added: str, removed: str) -> str:
-    semantic_note = semantic_note_from_path(path)
-    if semantic_note is not None:
-        return semantic_note
     if added == "-" or removed == "-":
         return "Binary or non-line diff in this commit."
     added_n = int(added)

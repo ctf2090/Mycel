@@ -49,8 +49,8 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertIn("| File | +/- | One-line note |", proc.stdout)
         self.assertIn(f"| [AGENTS.md]({agents.resolve()}) | +12 / -3 |", proc.stdout)
         self.assertIn(f"| [scripts/tool.py]({tool.resolve()}) | +7 / -0 |", proc.stdout)
-        self.assertIn("Clarify agent workflow instructions.", proc.stdout)
-        self.assertIn("Adjust repo tooling behavior and command output.", proc.stdout)
+        self.assertIn("Updated content in this commit.", proc.stdout)
+        self.assertIn("Added content in this commit.", proc.stdout)
 
     def test_renders_clickable_delta_links_and_generates_diff_files(self) -> None:
         tracked = self.root / "AGENTS.md"
@@ -122,7 +122,7 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
 
         self.assertIn("Generated Markdown table helper.", proc.stdout)
 
-    def test_uses_semantic_default_notes_for_known_planning_surfaces(self) -> None:
+    def test_uses_manual_note_overrides_instead_of_path_heuristics(self) -> None:
         roadmap = self.root / "ROADMAP.zh-TW.md"
         roadmap.write_text("roadmap\n", encoding="utf-8")
         progress = self.root / "pages" / "progress.html"
@@ -131,6 +131,10 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
 
         proc = self.run_cli(
             "--stdin",
+            "--note",
+            "ROADMAP.zh-TW.md=Refresh roadmap status and milestone wording.",
+            "--note",
+            "pages/progress.html=Sync public progress summary with current planning state.",
             stdin_text="8\t2\tROADMAP.zh-TW.md\n5\t4\tpages/progress.html\n",
         )
 
