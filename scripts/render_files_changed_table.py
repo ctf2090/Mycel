@@ -97,6 +97,13 @@ def render_count(value: str, prefix: str) -> str:
     return f"{prefix}{value}"
 
 
+def render_file_cell(path: str) -> str:
+    resolved = (ROOT_DIR / path).resolve()
+    if resolved.exists():
+        return f"[{path}]({resolved})"
+    return path
+
+
 def write_diff_file(git_ref: str, path: str) -> Path:
     output_dir = diff_output_dir(git_ref)
     diff_path = output_dir / f"{path}.diff"
@@ -139,7 +146,7 @@ def render_table(rows: list[tuple[str, str, str]], note_overrides: dict[str, str
             diff_path = write_diff_file(git_ref, path)
             delta = f"[{delta}]({diff_path})"
         note = note_overrides.get(path, default_note(path, added, removed))
-        lines.append(f"| {path} | {delta} | {note} |")
+        lines.append(f"| {render_file_cell(path)} | {delta} | {note} |")
     return "\n".join(lines)
 
 

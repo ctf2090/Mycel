@@ -36,14 +36,19 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         return proc
 
     def test_renders_markdown_table_with_plain_deltas_from_stdin(self) -> None:
+        agents = self.root / "AGENTS.md"
+        agents.write_text("rules\n", encoding="utf-8")
+        tool = self.root / "scripts" / "tool.py"
+        tool.write_text("print('hi')\n", encoding="utf-8")
+
         proc = self.run_cli(
             "--stdin",
             stdin_text="12\t3\tAGENTS.md\n7\t0\tscripts/tool.py\n",
         )
 
         self.assertIn("| File | +/- | One-line note |", proc.stdout)
-        self.assertIn("| AGENTS.md | +12 / -3 |", proc.stdout)
-        self.assertIn("| scripts/tool.py | +7 / -0 |", proc.stdout)
+        self.assertIn(f"| [AGENTS.md]({agents.resolve()}) | +12 / -3 |", proc.stdout)
+        self.assertIn(f"| [scripts/tool.py]({tool.resolve()}) | +7 / -0 |", proc.stdout)
         self.assertIn("Updated content in this commit.", proc.stdout)
         self.assertIn("Added content in this commit.", proc.stdout)
 
@@ -58,7 +63,7 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
 
         proc = self.run_cli("HEAD")
 
-        self.assertIn("| AGENTS.md | [+1 / -0](", proc.stdout)
+        self.assertIn(f"| [AGENTS.md]({tracked.resolve()}) | [+1 / -0](", proc.stdout)
         diff_path = self.root / ".agent-local" / "rendered-diffs"
         generated = list(diff_path.rglob("AGENTS.md.diff"))
         self.assertEqual(1, len(generated))
@@ -88,6 +93,14 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
 
         self.assertEqual(1, proc.returncode)
         self.assertIn("invalid --note value", proc.stderr)
+
+    def test_leaves_missing_file_paths_as_plain_text(self) -> None:
+        proc = self.run_cli(
+            "--stdin",
+            stdin_text="1\t0\tmissing/file.txt\n",
+        )
+
+        self.assertIn("| missing/file.txt | +1 / -0 |", proc.stdout)
 
 
 if __name__ == "__main__":
