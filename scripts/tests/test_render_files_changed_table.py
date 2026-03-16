@@ -56,6 +56,31 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertIn("Clarify agent workflow instructions.", proc.stdout)
         self.assertIn("Adjust repo tooling behavior and command output.", proc.stdout)
 
+    def test_renders_clickable_delta_links_in_stdin_mode_with_diff_key(self) -> None:
+        mailbox = self.root / ".agent-local" / "mailboxes" / "agt_test.md"
+        mailbox.parent.mkdir(parents=True, exist_ok=True)
+        mailbox.write_text("# mailbox\n\n- note\n", encoding="utf-8")
+
+        proc = self.run_cli(
+            "--stdin",
+            "--diff-key",
+            "agent-local-mailbox",
+            "--note",
+            ".agent-local/mailboxes/agt_test.md=Mailbox state for the current agent.",
+            stdin_text="3\t0\t.agent-local/mailboxes/agt_test.md\n",
+        )
+
+        self.assertIn(
+            f"| [.agent-local/mailboxes/agt_test.md]({mailbox.resolve()}) | [+3 / -0](",
+            proc.stdout,
+        )
+        diff_root = self.root / ".agent-local" / "rendered-diffs"
+        generated = list(diff_root.rglob("agt_test.md.diff"))
+        self.assertEqual(1, len(generated))
+        diff_text = generated[0].read_text(encoding="utf-8")
+        self.assertIn("+++ b/.agent-local/mailboxes/agt_test.md", diff_text)
+        self.assertIn("+# mailbox", diff_text)
+
     def test_renders_clickable_delta_links_and_generates_diff_files(self) -> None:
         tracked = self.root / "AGENTS.md"
         tracked.write_text("before\n", encoding="utf-8")
@@ -125,6 +150,20 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         )
 
         self.assertIn("Generated Markdown table helper.", proc.stdout)
+
+    def test_stdin_diff_key_requires_existing_file(self) -> None:
+        proc = self.run_cli(
+            "--stdin",
+            "--diff-key",
+            "missing-path",
+            "--note",
+            "missing/file.txt=Document a missing path placeholder.",
+            stdin_text="1\t0\tmissing/file.txt\n",
+            check=False,
+        )
+
+        self.assertEqual(1, proc.returncode)
+        self.assertIn("stdin diff path does not exist: missing/file.txt", proc.stderr)
 
     def test_uses_manual_note_overrides_instead_of_path_heuristics(self) -> None:
         roadmap = self.root / "ROADMAP.zh-TW.md"

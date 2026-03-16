@@ -39,6 +39,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="read numstat content from stdin instead of invoking git",
     )
+    parser.add_argument(
+        "--diff-key",
+        help=(
+            "stable diff bucket key for rendering clickable delta links in --stdin "
+            "mode"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -160,18 +167,53 @@ def write_diff_file(git_ref: str, path: str) -> Path:
     return diff_path
 
 
-def render_table(rows: list[tuple[str, str, str]], note_overrides: dict[str, str], *, git_ref: str | None = None) -> str:
+def write_stdin_diff_file(diff_key: str, path: str) -> Path:
+    output_dir = diff_output_dir(diff_key)
+    diff_path = output_dir / f"{path}.diff"
+    diff_path.parent.mkdir(parents=True, exist_ok=True)
+
+    target = ROOT_DIR / path
+    if not target.exists():
+        raise FilesChangedError(f"stdin diff path does not exist: {path}")
+
+    proc = subprocess.run(
+        ["git", "diff", "--no-ext-diff", "--binary", "--no-index", "--", "/dev/null", path],
+        cwd=ROOT_DIR,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode not in (0, 1):
+        raise FilesChangedError(
+            proc.stderr.strip() or f"git diff --no-index failed for {path}"
+        )
+
+    diff_path.write_text(proc.stdout, encoding="utf-8")
+    return diff_path
+
+
+def render_table(
+    rows: list[tuple[str, str, str]],
+    note_overrides: dict[str, str],
+    *,
+    git_ref: str | None = None,
+    stdin_diff_key: str | None = None,
+) -> str:
     lines = [
         "| File | +/- | One-line note |",
         "|---|---:|---|",
     ]
-    if git_ref is not None:
-        clear_other_diff_output_dirs(git_ref)
-        clear_diff_output_dir(git_ref)
+    diff_bucket_key = git_ref if git_ref is not None else stdin_diff_key
+    if diff_bucket_key is not None:
+        clear_other_diff_output_dirs(diff_bucket_key)
+        clear_diff_output_dir(diff_bucket_key)
     for path, added, removed in rows:
         delta = f"{render_count(added, '+')} / {render_count(removed, '-')}"
         if git_ref is not None:
             diff_path = write_diff_file(git_ref, path)
+            delta = f"[{delta}]({diff_path})"
+        elif stdin_diff_key is not None:
+            diff_path = write_stdin_diff_file(stdin_diff_key, path)
             delta = f"[{delta}]({diff_path})"
         note = note_overrides[path]
         lines.append(f"| {render_file_cell(path)} | {delta} | {note} |")
@@ -192,7 +234,14 @@ def main() -> int:
         print("No file changes found.", file=sys.stderr)
         return 1
 
-    print(render_table(rows, note_overrides, git_ref=None if args.stdin else args.git_ref))
+    print(
+        render_table(
+            rows,
+            note_overrides,
+            git_ref=None if args.stdin else args.git_ref,
+            stdin_diff_key=args.diff_key if args.stdin else None,
+        )
+    )
     return 0
 
 
