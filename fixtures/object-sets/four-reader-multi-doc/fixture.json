@@ -1,0 +1,32 @@
+{
+  "$schema": "../fixture.schema.json",
+  "fixture_id": "four-reader-multi-doc",
+  "description": "One seed with two documents, four readers that each start empty and must converge on the full multi-document set",
+  "seed_peer": "peer-seed",
+  "reader_peers": [
+    "peer-reader-a",
+    "peer-reader-b",
+    "peer-reader-c",
+    "peer-reader-d"
+  ],
+  "documents": [
+    {
+      "doc_id": "doc:alpha",
+      "notes": "First document in the multi-document fixture"
+    },
+    {
+      "doc_id": "doc:beta",
+      "notes": "Second document in the multi-document fixture"
+    }
+  ],
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results",
+    "matching-accepted-heads"
+  ],
+  "notes": [
+    "Use this fixture to verify that N=4 readers each converge on the same multi-document verified object set.",
+    "Two documents exercise the multi-document seed-population and replay paths across all four readers."
+  ]
+}

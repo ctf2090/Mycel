@@ -1,0 +1,49 @@
+{
+  "$schema": "./topology.schema.json",
+  "topology_id": "four-reader-multi-doc",
+  "description": "One seed peer and four reader peers converge on a two-document verified object set",
+  "fixture_set": "fixtures/object-sets/four-reader-multi-doc",
+  "execution_mode": "single-process",
+  "peers": [
+    {
+      "node_id": "node:peer-seed",
+      "role": "seed",
+      "bootstrap_peers": [],
+      "endpoint": "local:peer-seed"
+    },
+    {
+      "node_id": "node:peer-reader-a",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-seed"],
+      "endpoint": "local:peer-reader-a"
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-seed"],
+      "endpoint": "local:peer-reader-b"
+    },
+    {
+      "node_id": "node:peer-reader-c",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-seed"],
+      "endpoint": "local:peer-reader-c"
+    },
+    {
+      "node_id": "node:peer-reader-d",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-seed"],
+      "endpoint": "local:peer-reader-d"
+    }
+  ],
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results",
+    "matching-accepted-heads"
+  ],
+  "notes": [
+    "This topology extends the three-peer pattern to N=4 readers with a two-document seed.",
+    "It proves that the scheduler and convergence checks scale beyond the three-peer baseline."
+  ]
+}

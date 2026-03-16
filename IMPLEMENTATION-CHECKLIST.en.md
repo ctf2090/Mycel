@@ -220,7 +220,7 @@ Use this section as the active implementation checklist for the still-open post-
 
 ## 16. `M4` Wire Sync and Peer Interop Follow-Up
 
-- [ ] Broaden peer-interop proof beyond the current peer-store-driven first-time and incremental sync coverage.
+- [x] Broaden peer-interop proof beyond the current peer-store-driven first-time and incremental sync coverage.
 - [x] Add localhost multi-process or equivalent transport proof so the current sync path is not validated only through narrow transcript or simulator-controlled paths.
 - [ ] Define and test the missing production replication behavior that still sits outside the current minimal sync proof.
 - [ ] Expand session, capability, and error-path interop coverage past the current positive-path and optional-message proof set.

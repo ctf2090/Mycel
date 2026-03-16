@@ -33,3 +33,8 @@
 
 - `localhost-multi-process`: two OS processes exchange wire messages via stdin/stdout pipe (mycel sync stream | mycel sync pull)
   Reference JSON: `sim/tests/localhost-multi-process.example.json`
+
+## Scalability
+
+- `four-reader-multi-doc`: four readers each start empty and converge on a two-document verified object set from a single seed
+  Reference JSON: `sim/tests/four-reader-multi-doc.example.json`

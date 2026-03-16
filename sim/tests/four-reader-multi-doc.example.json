@@ -1,0 +1,37 @@
+{
+  "$schema": "./test-case.schema.json",
+  "test_id": "four-reader-multi-doc",
+  "description": "Four reader peers should each converge on the same two-document verified object set after syncing from a single seed.",
+  "category": "deterministic-comparison",
+  "topology": "sim/topologies/four-reader-multi-doc.example.json",
+  "fixture_set": "fixtures/object-sets/four-reader-multi-doc",
+  "execution_mode": "single-process",
+  "expected_result": "pass",
+  "expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results",
+    "matching-accepted-heads"
+  ],
+  "assertions": [
+    {
+      "assertion_id": "matching-object-sets",
+      "description": "All four reader peers store the same verified canonical object IDs for both documents.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "matching-replay-results",
+      "description": "All four reader peers compute the same replay result for the two-document set.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "matching-accepted-heads",
+      "description": "All four reader peers agree on the same accepted head revision IDs for each document.",
+      "severity": "error"
+    }
+  ],
+  "notes": [
+    "Extends three-peer-consistency to N=4 readers and 2 documents.",
+    "Proves that convergence checks and scheduler ordering hold for larger peer groups and multi-document seeds."
+  ]
+}

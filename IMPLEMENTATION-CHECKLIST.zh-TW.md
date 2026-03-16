@@ -220,7 +220,7 @@
 
 ## 16. `M4` Wire Sync 與 Peer Interop Follow-Up
 
-- [ ] 把 peer-interop proof 擴展到目前 peer-store-driven first-time 與 incremental sync coverage 之外。
+- [x] 把 peer-interop proof 擴展到目前 peer-store-driven first-time 與 incremental sync coverage 之外。
 - [x] 補上 localhost multi-process 或等價 transport proof，避免目前 sync path 只在窄版 transcript 或 simulator-controlled paths 下被驗證。
 - [ ] 定義並測試目前 minimal sync proof 之外仍未完成的 production replication behavior。
 - [ ] 擴大 session、capability 與 error-path interop coverage，超出目前 positive-path 與 optional-message proof set。
