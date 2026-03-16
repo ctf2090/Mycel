@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -10,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_WORK_CYCLE = REPO_ROOT / "scripts" / "agent_work_cycle.py"
 SOURCE_REGISTRY = REPO_ROOT / "scripts" / "agent_registry.py"
 SOURCE_TIMESTAMP = REPO_ROOT / "scripts" / "agent_timestamp.py"
+SOURCE_MAILBOX_GC = REPO_ROOT / "scripts" / "mailbox_gc.py"
 SOURCE_CHECKLIST = REPO_ROOT / "scripts" / "item_id_checklist.py"
 SOURCE_MARKER = REPO_ROOT / "scripts" / "item_id_checklist_mark.py"
 
@@ -23,11 +25,13 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         shutil.copy2(SOURCE_WORK_CYCLE, self.root / "scripts" / "agent_work_cycle.py")
         shutil.copy2(SOURCE_REGISTRY, self.root / "scripts" / "agent_registry.py")
         shutil.copy2(SOURCE_TIMESTAMP, self.root / "scripts" / "agent_timestamp.py")
+        shutil.copy2(SOURCE_MAILBOX_GC, self.root / "scripts" / "mailbox_gc.py")
         shutil.copy2(SOURCE_CHECKLIST, self.root / "scripts" / "item_id_checklist.py")
         shutil.copy2(SOURCE_MARKER, self.root / "scripts" / "item_id_checklist_mark.py")
         (self.root / "scripts" / "agent_work_cycle.py").chmod(0o755)
         (self.root / "scripts" / "agent_registry.py").chmod(0o755)
         (self.root / "scripts" / "agent_timestamp.py").chmod(0o755)
+        (self.root / "scripts" / "mailbox_gc.py").chmod(0o755)
         (self.root / "scripts" / "item_id_checklist.py").chmod(0o755)
         (self.root / "scripts" / "item_id_checklist_mark.py").chmod(0o755)
 
@@ -136,6 +140,13 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         path = self.root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+
+    def set_mtime_days_ago(self, relative_path: str, days: int) -> None:
+        path = self.root / relative_path
+        stat = path.stat()
+        stale_time = stat.st_mtime - (days * 86400)
+        path.touch()
+        os.utime(path, (stale_time, stale_time))
 
     def prepare_completed_bootstrap_batch(self, *, role: str = "doc") -> str:
         self.write_agents_md()
@@ -402,6 +413,29 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("shared_fallback_mailbox_limit_bytes: 1024", proc.stdout)
         self.assertIn("oversized_shared_fallback_mailboxes: 1", proc.stdout)
         self.assertIn(".agent-local/coding-to-doc.md (1025 bytes)", proc.stdout)
+
+    def test_end_auto_prunes_stale_orphaned_mailboxes(self) -> None:
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        self.write_shared_fallback_mailbox(".agent-local/mailboxes/agt_orphan.md", "# orphan\n")
+        self.set_mtime_days_ago(".agent-local/mailboxes/agt_orphan.md", 4)
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("mailbox_gc_status: ok", proc.stdout)
+        self.assertIn("mailbox_gc_min_age_days: 3", proc.stdout)
+        self.assertIn("mailbox_gc_deleted: 1", proc.stdout)
+        self.assertIn(".agent-local/mailboxes/agt_orphan.md (4 days)", proc.stdout)
+        self.assertFalse((self.root / ".agent-local/mailboxes/agt_orphan.md").exists())
 
 
 if __name__ == "__main__":

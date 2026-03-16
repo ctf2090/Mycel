@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from agent_timestamp import build_message
+from mailbox_gc import DEFAULT_DELETE_AGE_DAYS, MailboxGcError, delete_stale_mailboxes
 from item_id_checklist import (
     agents_bootstrap_checklist_path,
     agents_workcycle_checklist_path,
@@ -375,6 +376,24 @@ def emit_shared_fallback_summary(records: list[dict[str, int | str | bool]]) -> 
         print(f"  - {record['path']} ({record['size_bytes']} bytes)")
 
 
+def emit_mailbox_gc_summary(result: dict[str, object] | None, *, error: str | None = None) -> None:
+    if error is not None:
+        print("mailbox_gc_status: error")
+        print(f"mailbox_gc_error: {error}")
+        return
+    if result is None:
+        return
+    print("mailbox_gc_status: ok")
+    print(f"mailbox_gc_min_age_days: {result['min_age_days']}")
+    print(f"mailbox_gc_deleted: {result['deleted_count']}")
+    deleted = result.get("deleted")
+    if isinstance(deleted, list) and deleted:
+        print("mailbox_gc_deleted_paths:")
+        for record in deleted:
+            if isinstance(record, dict):
+                print(f"  - {record['path']} ({record['age_days']} days)")
+
+
 def main() -> int:
     args = parse_args()
     registry_command = "touch" if args.stage == "begin" else "finish"
@@ -460,6 +479,15 @@ def main() -> int:
         emit_mailbox_summary(mailbox_path, open_handoff_lines)
         shared_fallback_records = scan_shared_fallback_mailboxes()
         emit_shared_fallback_summary(shared_fallback_records)
+        mailbox_gc_result: dict[str, object] | None = None
+        mailbox_gc_error: str | None = None
+        try:
+            mailbox_gc_result = delete_stale_mailboxes(
+                dry_run=False, min_age_days=DEFAULT_DELETE_AGE_DAYS
+            )
+        except MailboxGcError as exc:
+            mailbox_gc_error = str(exc)
+        emit_mailbox_gc_summary(mailbox_gc_result, error=mailbox_gc_error)
 
         same_role_open_count = len(open_handoff_lines["same_role"])
         other_role_open_count = len(open_handoff_lines["other_role"])

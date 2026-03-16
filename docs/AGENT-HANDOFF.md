@@ -61,7 +61,8 @@ Mailbox retention and cleanup policy:
 - `.agent-local/mailboxes/EXAMPLE-planning-sync-handoff.md`, `.agent-local/mailboxes/EXAMPLE-planning-sync-resolution.md`, and `.agent-local/mailboxes/EXAMPLE-work-continuation-handoff.md` stay in place and are never deleted by cleanup
 - once an agent entry has been removed from `.agent-local/agents.json`, its uid-based mailbox becomes an orphaned mailbox candidate
 - orphaned uid-based mailboxes older than 3 days should be deleted; there is no archive step
-- use `scripts/mailbox_gc.py` to inspect mailbox references and delete orphaned uid-based mailboxes after the retention window
+- `scripts/agent_work_cycle.py end` auto-runs mailbox orphan cleanup for stale uid-based mailboxes older than the retention window
+- use `scripts/mailbox_gc.py` when you need to inspect mailbox references directly or run mailbox cleanup outside the normal work-cycle closeout path
 - shared fallback mailbox files should stay small; each shared fallback file is limited to `1024` bytes
 - use `scripts/inactive_coding_handoffs.py` to collect the latest open `Work Continuation Handoff` left by each `inactive` `coding` agent
 - use `npm run handoffs:inactive-coding` as the short startup command for a new `coding` agent that wants to scan those leftover handoffs first
