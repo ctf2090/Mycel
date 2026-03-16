@@ -13,6 +13,7 @@
 - If the planning-refresh cadence checker reports `due`, use [`docs/PLANNING-SYNC-PLAN.md`](docs/PLANNING-SYNC-PLAN.md) as the single entry point for the next planning-sync batch.
 - Do not check CI immediately after each push, since the workflow may still be running.
 - Only the `coding` and `delivery` roles check the latest completed CI status for the previous push before starting the next piece of work and report any failures.
+- When deciding whether a checklist closure claim still stands after follow-up fixes, treat the latest green landed commit for that change as the validation point; the first commit that introduced the change does not itself need to be the green one if a later landed fix preserves the same substantive closure.
 - The `doc` role does not check CI.
 
 ## Git identity (User vs Agent)
