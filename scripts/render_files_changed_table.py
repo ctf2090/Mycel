@@ -115,6 +115,19 @@ def parse_numstat(text: str) -> list[tuple[str, str, str]]:
     return rows
 
 
+def require_notes_for_all_rows(
+    rows: list[tuple[str, str, str]], note_overrides: dict[str, str]
+) -> None:
+    missing = [path for path, _, _ in rows if path not in note_overrides]
+    if not missing:
+        return
+    missing_display = ", ".join(missing)
+    raise FilesChangedError(
+        "missing required --note entries for: "
+        f"{missing_display}; provide --note PATH=TEXT for every changed file"
+    )
+
+
 def render_count(value: str, prefix: str) -> str:
     if value == "-":
         return f"{prefix}n/a"
@@ -147,18 +160,6 @@ def write_diff_file(git_ref: str, path: str) -> Path:
     return diff_path
 
 
-def default_note(path: str, added: str, removed: str) -> str:
-    if added == "-" or removed == "-":
-        return "Binary or non-line diff in this commit."
-    added_n = int(added)
-    removed_n = int(removed)
-    if added_n > 0 and removed_n == 0:
-        return "Added content in this commit."
-    if removed_n > 0 and added_n == 0:
-        return "Removed content in this commit."
-    return "Updated content in this commit."
-
-
 def render_table(rows: list[tuple[str, str, str]], note_overrides: dict[str, str], *, git_ref: str | None = None) -> str:
     lines = [
         "| File | +/- | One-line note |",
@@ -172,7 +173,7 @@ def render_table(rows: list[tuple[str, str, str]], note_overrides: dict[str, str
         if git_ref is not None:
             diff_path = write_diff_file(git_ref, path)
             delta = f"[{delta}]({diff_path})"
-        note = note_overrides.get(path, default_note(path, added, removed))
+        note = note_overrides[path]
         lines.append(f"| {render_file_cell(path)} | {delta} | {note} |")
     return "\n".join(lines)
 
@@ -182,6 +183,7 @@ def main() -> int:
     try:
         note_overrides = parse_note_overrides(args.note)
         rows = parse_numstat(load_numstat(args.git_ref, args.stdin))
+        require_notes_for_all_rows(rows, note_overrides)
     except FilesChangedError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

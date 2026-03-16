@@ -35,7 +35,7 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
             self.fail(f"command failed {args}: {proc.stderr or proc.stdout}")
         return proc
 
-    def test_renders_markdown_table_with_plain_deltas_from_stdin(self) -> None:
+    def test_renders_markdown_table_when_all_rows_have_notes(self) -> None:
         agents = self.root / "AGENTS.md"
         agents.write_text("rules\n", encoding="utf-8")
         tool = self.root / "scripts" / "tool.py"
@@ -43,14 +43,18 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
 
         proc = self.run_cli(
             "--stdin",
+            "--note",
+            "AGENTS.md=Clarify agent workflow instructions.",
+            "--note",
+            "scripts/tool.py=Adjust repo tooling behavior and command output.",
             stdin_text="12\t3\tAGENTS.md\n7\t0\tscripts/tool.py\n",
         )
 
         self.assertIn("| File | +/- | One-line note |", proc.stdout)
         self.assertIn(f"| [AGENTS.md]({agents.resolve()}) | +12 / -3 |", proc.stdout)
         self.assertIn(f"| [scripts/tool.py]({tool.resolve()}) | +7 / -0 |", proc.stdout)
-        self.assertIn("Updated content in this commit.", proc.stdout)
-        self.assertIn("Added content in this commit.", proc.stdout)
+        self.assertIn("Clarify agent workflow instructions.", proc.stdout)
+        self.assertIn("Adjust repo tooling behavior and command output.", proc.stdout)
 
     def test_renders_clickable_delta_links_and_generates_diff_files(self) -> None:
         tracked = self.root / "AGENTS.md"
@@ -61,7 +65,7 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
         subprocess.run(["git", "commit", "-m", "update"], cwd=self.root, check=True, capture_output=True, text=True)
 
-        proc = self.run_cli("HEAD")
+        proc = self.run_cli("HEAD", "--note", "AGENTS.md=Update AGENTS wording.")
 
         self.assertIn(f"| [AGENTS.md]({tracked.resolve()}) | [+1 / -0](", proc.stdout)
         diff_path = self.root / ".agent-local" / "rendered-diffs"
@@ -78,13 +82,13 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         tracked.write_text("before\nafter\n", encoding="utf-8")
         subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
         subprocess.run(["git", "commit", "-m", "update agents"], cwd=self.root, check=True, capture_output=True, text=True)
-        self.run_cli("HEAD")
+        self.run_cli("HEAD", "--note", "AGENTS.md=Update AGENTS wording.")
 
         tool = self.root / "scripts" / "tool.py"
         tool.write_text("print('hi')\n", encoding="utf-8")
         subprocess.run(["git", "add", "scripts/tool.py"], cwd=self.root, check=True, capture_output=True, text=True)
         subprocess.run(["git", "commit", "-m", "add tool"], cwd=self.root, check=True, capture_output=True, text=True)
-        self.run_cli("HEAD")
+        self.run_cli("HEAD", "--note", "scripts/tool.py=Add helper tool.")
 
         diff_root = self.root / ".agent-local" / "rendered-diffs"
         self.assertEqual([], list(diff_root.rglob("AGENTS.md.diff")))
@@ -101,9 +105,9 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         tracked.write_text("before\nafter\n", encoding="utf-8")
         subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
         subprocess.run(["git", "commit", "-m", "update"], cwd=self.root, check=True, capture_output=True, text=True)
-        self.run_cli("HEAD")
+        self.run_cli("HEAD", "--note", "AGENTS.md=Update AGENTS wording.")
 
-        self.run_cli("HEAD~1")
+        self.run_cli("HEAD~1", "--note", "AGENTS.md=Render previous AGENTS snapshot.")
 
         diff_root = self.root / ".agent-local" / "rendered-diffs"
         buckets = [path.name for path in diff_root.iterdir() if path.is_dir()]
@@ -141,14 +145,16 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertIn("Refresh roadmap status and milestone wording.", proc.stdout)
         self.assertIn("Sync public progress summary with current planning state.", proc.stdout)
 
-    def test_renders_binary_diffs_as_na(self) -> None:
+    def test_renders_binary_diffs_as_na_when_noted(self) -> None:
         proc = self.run_cli(
             "--stdin",
+            "--note",
+            "assets/logo.png=Refresh the binary logo asset.",
             stdin_text="-\t-\tassets/logo.png\n",
         )
 
         self.assertIn("| assets/logo.png | +n/a / -n/a |", proc.stdout)
-        self.assertIn("Binary or non-line diff in this commit.", proc.stdout)
+        self.assertIn("Refresh the binary logo asset.", proc.stdout)
 
     def test_rejects_invalid_note_argument(self) -> None:
         proc = self.run_cli("--stdin", "--note", "bad-note", stdin_text="1\t1\tfoo\n", check=False)
@@ -156,9 +162,23 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertEqual(1, proc.returncode)
         self.assertIn("invalid --note value", proc.stderr)
 
-    def test_leaves_missing_file_paths_as_plain_text(self) -> None:
+    def test_errors_when_any_changed_file_is_missing_a_note(self) -> None:
         proc = self.run_cli(
             "--stdin",
+            "--note",
+            "AGENTS.md=Clarify agent workflow instructions.",
+            stdin_text="1\t0\tAGENTS.md\n1\t0\tmissing/file.txt\n",
+            check=False,
+        )
+
+        self.assertEqual(1, proc.returncode)
+        self.assertIn("missing required --note entries for: missing/file.txt", proc.stderr)
+
+    def test_leaves_missing_file_paths_as_plain_text_when_noted(self) -> None:
+        proc = self.run_cli(
+            "--stdin",
+            "--note",
+            "missing/file.txt=Document a missing path placeholder.",
             stdin_text="1\t0\tmissing/file.txt\n",
         )
 
