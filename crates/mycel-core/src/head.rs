@@ -9,7 +9,9 @@ use serde_json::Value;
 use crate::canonical::prefixed_canonical_hash;
 use crate::protocol::{parse_json_strict, parse_object_envelope, BlockObject, StringFieldError};
 use crate::replay::{replay_revision_from_index, DocumentState};
-use crate::store::{load_store_index_manifest, load_store_object_index, load_stored_object_value};
+use crate::store::{
+    load_doc_replay_objects_from_store, load_store_index_manifest, load_stored_object_value,
+};
 use crate::verify::{verify_object_value, verify_object_value_with_object_index};
 
 #[derive(Debug, Clone, Serialize)]
@@ -527,10 +529,12 @@ pub fn render_head_from_store_path(
         return summary;
     };
 
-    let object_index = match load_store_object_index(store_root) {
+    let object_index = match load_doc_replay_objects_from_store(store_root, doc_id) {
         Ok(index) => index,
         Err(error) => {
-            summary.push_error(format!("failed to load store object index: {error}"));
+            summary.push_error(format!(
+                "failed to load store objects for doc '{doc_id}': {error}"
+            ));
             return summary;
         }
     };

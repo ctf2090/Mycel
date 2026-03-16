@@ -1107,6 +1107,53 @@ pub fn load_store_index_manifest(
     })
 }
 
+/// Load all objects needed to replay any revision of a document from the store.
+///
+/// Uses the store index manifest to find all revision IDs for the document,
+/// then loads those revisions and their referenced patches by object ID. The
+/// returned index is scoped to the document and is suitable for passing to
+/// `replay_revision_from_index`.
+///
+/// This is more efficient than `load_store_object_index` for single-document
+/// reader and render workflows because it loads only the objects relevant to
+/// the requested document instead of the entire store.
+pub fn load_doc_replay_objects_from_store(
+    store_root: &Path,
+    doc_id: &str,
+) -> Result<HashMap<String, Value>, StoreRebuildError> {
+    let manifest = load_store_index_manifest(store_root)?;
+    let revision_ids = manifest
+        .doc_revisions
+        .get(doc_id)
+        .cloned()
+        .unwrap_or_default();
+
+    let mut objects: HashMap<String, Value> = HashMap::new();
+
+    for revision_id in &revision_ids {
+        let revision_value = load_stored_object_value(store_root, revision_id)?;
+
+        if let Some(patches) = revision_value.get("patches").and_then(|v| v.as_array()) {
+            for patch_id_value in patches {
+                if let Some(patch_id) = patch_id_value.as_str() {
+                    if !objects.contains_key(patch_id) {
+                        // Skip patches that are not yet stored; replay will detect
+                        // the gap and emit the canonical "missing patch for replay"
+                        // error rather than failing here with a bare I/O error.
+                        if let Ok(patch) = load_stored_object_value(store_root, patch_id) {
+                            objects.insert(patch_id.to_string(), patch);
+                        }
+                    }
+                }
+            }
+        }
+
+        objects.insert(revision_id.clone(), revision_value);
+    }
+
+    Ok(objects)
+}
+
 pub fn load_stored_object_value(
     store_root: &Path,
     object_id: &str,
@@ -1996,6 +2043,172 @@ mod tests {
         let object_index =
             load_store_object_index(&store_dir).expect("store object index should load");
         assert!(object_index.is_empty());
+
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn load_doc_replay_objects_loads_revisions_and_patches_for_doc() {
+        use crate::author::{
+            commit_revision_to_store, create_document_in_store, create_patch_in_store,
+            parse_signing_key_seed, DocumentCreateParams, PatchCreateParams, RevisionCommitParams,
+        };
+
+        let store_dir = write_temp_dir("doc-replay-objects");
+        let key_seed = base64::engine::general_purpose::STANDARD.encode([7u8; 32]);
+        let signing_key = parse_signing_key_seed(&key_seed).expect("signing key should parse");
+
+        let doc = create_document_in_store(
+            &store_dir,
+            &signing_key,
+            &DocumentCreateParams {
+                doc_id: "doc:replay-index".to_string(),
+                title: "Replay Index".to_string(),
+                language: "en".to_string(),
+                timestamp: 1,
+            },
+        )
+        .expect("document should be created");
+
+        let patch = create_patch_in_store(
+            &store_dir,
+            &signing_key,
+            &PatchCreateParams {
+                doc_id: "doc:replay-index".to_string(),
+                base_revision: doc.genesis_revision_id.clone(),
+                timestamp: 2,
+                ops: serde_json::json!([{
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:ri-001",
+                        "block_type": "paragraph",
+                        "content": "Hello",
+                        "attrs": {},
+                        "children": []
+                    }
+                }]),
+            },
+        )
+        .expect("patch should be created");
+
+        let revision = commit_revision_to_store(
+            &store_dir,
+            &signing_key,
+            &RevisionCommitParams {
+                doc_id: "doc:replay-index".to_string(),
+                parents: vec![doc.genesis_revision_id.clone()],
+                patches: vec![patch.patch_id.clone()],
+                merge_strategy: None,
+                timestamp: 3,
+            },
+        )
+        .expect("revision should be committed");
+
+        let objects = super::load_doc_replay_objects_from_store(&store_dir, "doc:replay-index")
+            .expect("doc replay objects should load");
+
+        assert!(
+            objects.contains_key(&doc.genesis_revision_id),
+            "should contain genesis revision"
+        );
+        assert!(
+            objects.contains_key(&revision.revision_id),
+            "should contain committed revision"
+        );
+        assert!(
+            objects.contains_key(&patch.patch_id),
+            "should contain patch referenced by revision"
+        );
+
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn load_doc_replay_objects_supports_replay_of_stored_revision() {
+        use crate::author::{
+            commit_revision_to_store, create_document_in_store, create_patch_in_store,
+            parse_signing_key_seed, DocumentCreateParams, PatchCreateParams, RevisionCommitParams,
+        };
+
+        let store_dir = write_temp_dir("doc-replay-verify");
+        let key_seed = base64::engine::general_purpose::STANDARD.encode([7u8; 32]);
+        let signing_key = parse_signing_key_seed(&key_seed).expect("signing key should parse");
+
+        let doc = create_document_in_store(
+            &store_dir,
+            &signing_key,
+            &DocumentCreateParams {
+                doc_id: "doc:replay-verify".to_string(),
+                title: "Replay Verify".to_string(),
+                language: "en".to_string(),
+                timestamp: 10,
+            },
+        )
+        .expect("document should be created");
+
+        let patch = create_patch_in_store(
+            &store_dir,
+            &signing_key,
+            &PatchCreateParams {
+                doc_id: "doc:replay-verify".to_string(),
+                base_revision: doc.genesis_revision_id.clone(),
+                timestamp: 11,
+                ops: serde_json::json!([{
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:rv-001",
+                        "block_type": "paragraph",
+                        "content": "Replay content",
+                        "attrs": {},
+                        "children": []
+                    }
+                }]),
+            },
+        )
+        .expect("patch should be created");
+
+        let revision = commit_revision_to_store(
+            &store_dir,
+            &signing_key,
+            &RevisionCommitParams {
+                doc_id: "doc:replay-verify".to_string(),
+                parents: vec![doc.genesis_revision_id.clone()],
+                patches: vec![patch.patch_id.clone()],
+                merge_strategy: None,
+                timestamp: 12,
+            },
+        )
+        .expect("revision should be committed");
+
+        let objects = super::load_doc_replay_objects_from_store(&store_dir, "doc:replay-verify")
+            .expect("doc replay objects should load");
+
+        let revision_value = load_stored_object_value(&store_dir, &revision.revision_id)
+            .expect("revision should load");
+        let replay = replay_revision_from_index(&revision_value, &objects)
+            .expect("replay should succeed with doc-scoped object index");
+
+        assert_eq!(replay.revision_id, revision.revision_id);
+        assert_eq!(replay.state.doc_id, "doc:replay-verify");
+        assert_eq!(replay.state.blocks.len(), 1);
+        assert_eq!(replay.state.blocks[0].content, "Replay content");
+        assert_eq!(replay.recomputed_state_hash, revision.recomputed_state_hash);
+
+        let _ = fs::remove_dir_all(store_dir);
+    }
+
+    #[test]
+    fn load_doc_replay_objects_returns_empty_for_unknown_doc() {
+        let store_dir = write_temp_dir("doc-replay-unknown");
+        initialize_store_root(&store_dir).expect("store init should succeed");
+
+        let objects = super::load_doc_replay_objects_from_store(&store_dir, "doc:nonexistent")
+            .expect("unknown doc should return empty objects without error");
+
+        assert!(
+            objects.is_empty(),
+            "unknown doc should yield empty object map"
+        );
 
         let _ = fs::remove_dir_all(store_dir);
     }
