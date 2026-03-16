@@ -222,10 +222,10 @@ Use this section as the active implementation checklist for the still-open post-
 
 - [x] Broaden peer-interop proof beyond the current peer-store-driven first-time and incremental sync coverage.
 - [x] Add localhost multi-process or equivalent transport proof so the current sync path is not validated only through narrow transcript or simulator-controlled paths.
-- [ ] Define and test the missing production replication behavior that still sits outside the current minimal sync proof. Scope: three specific sub-items below.
+- [x] Define and test the missing production replication behavior that still sits outside the current minimal sync proof. Scope: three specific sub-items below.
   - [x] Re-sync idempotency: running sync twice when the reader is already current produces zero new stored objects, no errors, and stable accepted heads.
   - [x] Depth-N incremental catchup: a reader at revision depth 1 catches up to a seed at depth ≥ 3 in a single HEADS/WANT pass, verifying that only the delta is fetched.
-  - [ ] Partial-doc selective sync: a reader requests only a subset of the seed's documents, ends with a stable partial store, and accepted heads are correct for the requested subset only (PROTOCOL §8 states partial replication is supported).
+  - [x] Partial-doc selective sync: a reader requests only a subset of the seed's documents, ends with a stable partial store, and accepted heads are correct for the requested subset only (PROTOCOL §8 states partial replication is supported).
 - [ ] Expand session, capability, and error-path interop coverage past the current positive-path and optional-message proof set.
 
 ## 17. Cross-Surface Closure Rules

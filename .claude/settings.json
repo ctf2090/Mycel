@@ -1,0 +1,5 @@
+{
+  "env": {
+    "PATH": "/home/codespace/.cargo/bin:/home/codespace/.python/current/bin:/home/codespace/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  }
+}
