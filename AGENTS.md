@@ -103,6 +103,7 @@
 ## Scripts
 - Do not inline Python code inside `scripts/*.sh`.
 - If a script job is better expressed in Python, implement it as a real `scripts/*.py` file and use the `.py` file itself as the entrypoint instead of adding a `.sh` wrapper.
+- Before calling any `scripts/*.py` tool with a subcommand, run `python3 scripts/<tool>.py <subcommand> --help` first if the exact argument names or positions are not already confirmed in the current context; only then assemble the real call. <!-- item-id: scripts.check-help-before-call -->
 
 ## Feature policy
 - For new features, default to no backward compatibility unless the user explicitly requests compatibility support.
