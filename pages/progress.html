@@ -47,14 +47,13 @@
         <p class="lead">
           Mycel is still in the narrow first-client lane. The immediate goal is to finish the last
           shared-core closure work while keeping <code>M4</code> narrow around verified wire-session
-          reachability, minimal peer-sync closure, and broader interop proof beyond the now-landed
-          optional sync flows.
+          reachability, minimal peer-sync closure, and the remaining session/error-path interop proof
+          now that the current production replication sub-proofs are landed.
         </p>
         <ol class="lane-list">
-          <li>Close <code>M1</code> malformed-field depth and canonicalization debt.</li>
-          <li>Finish <code>M2</code> replay, rebuild, and merge-authoring closure.</li>
-          <li>Expand <code>M3</code> reader workflows carefully on top of the accepted-head inspection, render, and editor-admission-aware profile base.</li>
-          <li>Keep <code>M4</code> narrow while peer-store sync proof grows toward broader interop closure and future production replication behavior.</li>
+          <li>Finish <code>M2</code> replay, rebuild, merge-authoring, and narrow write-path closure.</li>
+          <li>Expand <code>M3</code> reader workflows carefully on top of accepted-head inspection, render, clearer profile feedback, and editor-admission-aware profile base.</li>
+          <li>Keep <code>M4</code> narrow while peer-store sync proof grows toward the remaining session/error-path interop closure.</li>
         </ol>
       </header>
 
@@ -62,7 +61,7 @@
         <h2>Milestone Timeline</h2>
         <p>
           The roadmap is sequential: each later phase assumes the earlier one is already stable.
-          Right now, the center of gravity is still the end of <code>M1</code> and the closure of <code>M2</code>.
+          Right now, the center of gravity is the closure of <code>M2</code>, the careful expansion of <code>M3</code>, and the remaining <code>M4</code> interop proof.
         </p>
         <div class="milestones">
           <article class="card">
@@ -108,6 +107,7 @@
               <li>Session reachability and store-backed bootstrap</li>
               <li>Peer-store first-time and incremental sync proof</li>
               <li>Capability-gated <code>SNAPSHOT_OFFER</code> / <code>VIEW_ANNOUNCE</code></li>
+              <li>Localhost multi-process and production-replication proofs</li>
             </ul>
           </article>
           <article class="card">
@@ -185,7 +185,7 @@
               <td data-label="Area">8. Sync Workflow</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Peer-store-driven first-time and incremental <code>sync pull</code> flows now verify/store requested objects, including snapshot-assisted catch-up and announced-view fetching, and <code>WireSession</code> can bootstrap from known verified store state; broader peer interop remains open.</td>
+              <td data-label="Current read">Peer-store-driven first-time and incremental sync now prove shared verify/store flows through <code>mycel-core</code>, the CLI, and simulator positive-path coverage, including snapshot-assisted catch-up, announced-view fetching, localhost multi-process transport proof, re-sync idempotency, depth-N incremental catchup, and partial-doc selective sync; remaining work is broader session/error-path proof.</td>
             </tr>
             <tr>
               <td data-label="Area">9. Views and Head Selection</td>
@@ -203,13 +203,13 @@
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3 / M4</td>
-              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, persisted governance index query surfaces, transcript-backed <code>sync pull</code>, and internal peer-store sync all exist, including optional snapshot/view flows; broader replication behavior remains open.</td>
+              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish, persisted governance index query surfaces, transcript-backed <code>sync pull</code>, and internal <code>sync peer-store</code> all exist, including optional snapshot/view flows, localhost multi-process proof, re-sync idempotency, depth-N catchup, and partial-doc selective sync; the remaining <code>M4</code> gap is broader session/error-path interop proof.</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M2 / M4</td>
-              <td data-label="Current read">Fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, peer-store first-time / incremental sync proofs, optional-message coverage, and simulator positive-path smokes exist, but broader peer-interop cases remain.</td>
+              <td data-label="Current read">Fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, peer-store first-time / incremental sync proofs, optional-message coverage, localhost multi-process proof, re-sync idempotency coverage, depth-N incremental catchup coverage, and partial-doc selective sync coverage exist, but broader session/error-path cases are still open.</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>

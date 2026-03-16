@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; the active lane is now clearly `M2` / `M3` / `M4`, while broader governance persistence, remaining peer interop error/session proof, and the unfinished production replication sub-items remain open
+Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; the active lane is now clearly `M2` / `M3` / `M4`, while broader governance persistence and the remaining peer interop error/session proof stay open after the current production replication sub-items were completed
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -40,7 +40,7 @@ The current lane is:
 
 1. finish `M2` replay, rebuild, merge-authoring, and narrow write-path closure on top of the now-closed `M1` gate
 2. expand `M3` reader-plus-governance workflows without reopening the closed minimal-client gate
-3. advance `M4` from peer-store proof toward the remaining peer-interop error/session coverage and the unfinished production replication sub-items
+3. advance `M4` from peer-store proof toward the remaining peer-interop error/session coverage now that the currently tracked production replication sub-items are proved
 
 ### Next
 
@@ -397,7 +397,7 @@ Still missing or incomplete:
 1. Wiring `OBJECT` body-derived hash and object-ID recomputation into the main incoming verification path
 2. Object fetch and sync state machine
 3. Snapshot-assisted catch-up and capability-gated optional message handling
-4. Production replication behavior: re-sync idempotency, depth-N incremental catchup, and partial-doc selective sync (PROTOCOL §8 states partial replication is supported)
+4. Broader session, capability, and error-path interop proof beyond the current positive-path and optional-message set
 5. App-layer runtime support
 
 ### Milestones in This Phase
@@ -430,7 +430,7 @@ Substantially underway. All M4 completion-gate items are now satisfied at the si
 6. Capability-gated `VIEW_ANNOUNCE` delivery for governance views (`view-sync`)
 7. Per-peer accepted-head comparison surfaced in report (`matching-accepted-heads` outcome)
 
-What is still missing is the remaining production replication behavior plus broader session/error-path interop closure. Re-sync idempotency is now proved: running sync twice when already current produces zero new writes. Depth-N incremental catchup is now proved: a reader at revision depth 2 catches up to a depth-3 seed in a single HEADS/WANT pass, fetching only the delta. The remaining production replication sub-item is partial-doc selective sync (reader requests only a subset of the seed's documents, per PROTOCOL §8).
+What is still missing is broader session/error-path interop closure. Re-sync idempotency is now proved: running sync twice when already current produces zero new writes. Depth-N incremental catchup is now proved: a reader at revision depth 2 catches up to a depth-3 seed in a single HEADS/WANT pass, fetching only the delta. Partial-doc selective sync is now also proved: a reader can request only a subset of the seed's documents, maintain a stable partial store, and compute accepted heads only for the requested subset, matching PROTOCOL §8 partial replication support.
 
 Implementation anchors:
 
