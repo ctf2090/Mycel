@@ -88,6 +88,10 @@
 - For `AGENTS.md`, the registry and work-cycle tools already generate the standard bootstrap/workcycle checklist copies automatically; use `scripts/item_id_checklist.py` directly when you need another source file or need to regenerate manually.
 - In that agent-local copy, every `item-id` line should use checklist-style prefixes such as `- [ ]`, `- [X]`, `- [-]`, and `- [!]` so the agent can mark work in place without changing the tracked source file.
 - Use these meanings consistently in the agent-local copy: `- [ ]` means not checked yet, `- [X]` means checked and completed without problems, `- [-]` means not needed for this work cycle, and `- [!]` means checked but problems were found.
+- A small set of workcycle items are **scrutinized**: marking them `not-needed` (`[-]`) causes `scripts/agent_work_cycle.py end` to fail with exit code 2. Only mark a scrutinized item `not-needed` if it genuinely does not apply to the current cycle. Scrutinized item IDs and their applicable conditions: <!-- item-id: checklist.scrutinized-not-needed -->
+  - `workflow.files-changed-summary` — required whenever any source file changed in the cycle; the `render_files_changed_table.py` output must be pasted verbatim
+  - `workflow.runtime-preflight-before-verification` — required before running `cargo test`, `cargo run`, or any script that validates product behavior
+  - `workflow.reply-with-plan-and-status` — required at the start of every batch > 1; the tool auto-marks it `not-needed` on batch 1, so it is legitimately `[-]` there
 - When an item is marked `- [!]`, the agent should add an indented subitem immediately below it explaining the problem.
 - Agents may update their own checklist copy with `scripts/item_id_checklist_mark.py`. Use `--update <item-id>=<state>` (batch-friendly) or `--state <state>` (single item); do not pass the state as a bare positional argument.
   - Single item: `python3 scripts/item_id_checklist_mark.py <checklist_md> <item_id> --state checked`
