@@ -141,6 +141,12 @@ def render_count(value: str, prefix: str) -> str:
     return f"{prefix}{value}"
 
 
+def render_delta(added: str, removed: str, *, stdin_mode: bool) -> str:
+    if stdin_mode and added == "0" and removed == "0":
+        return "tracked artifact"
+    return f"{render_count(added, '+')} / {render_count(removed, '-')}"
+
+
 def render_file_cell(path: str) -> str:
     resolved = (ROOT_DIR / path).resolve()
     if resolved.exists():
@@ -208,7 +214,7 @@ def render_table(
         clear_other_diff_output_dirs(diff_bucket_key)
         clear_diff_output_dir(diff_bucket_key)
     for path, added, removed in rows:
-        delta = f"{render_count(added, '+')} / {render_count(removed, '-')}"
+        delta = render_delta(added, removed, stdin_mode=stdin_diff_key is not None)
         if git_ref is not None:
             diff_path = write_diff_file(git_ref, path)
             delta = f"[{delta}]({diff_path})"

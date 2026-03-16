@@ -81,6 +81,26 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertIn("+++ b/.agent-local/mailboxes/agt_test.md", diff_text)
         self.assertIn("+# mailbox", diff_text)
 
+    def test_renders_zero_zero_stdin_rows_as_tracked_artifacts(self) -> None:
+        mailbox = self.root / ".agent-local" / "mailboxes" / "agt_test.md"
+        mailbox.parent.mkdir(parents=True, exist_ok=True)
+        mailbox.write_text("# mailbox\n\n- note\n", encoding="utf-8")
+
+        proc = self.run_cli(
+            "--stdin",
+            "--diff-key",
+            "agent-local-mailbox-zero-zero",
+            "--note",
+            ".agent-local/mailboxes/agt_test.md=Mailbox state for the current agent.",
+            stdin_text="0\t0\t.agent-local/mailboxes/agt_test.md\n",
+        )
+
+        self.assertIn(
+            f"| [.agent-local/mailboxes/agt_test.md]({mailbox.resolve()}) | [tracked artifact](",
+            proc.stdout,
+        )
+        self.assertNotIn("+0 / -0", proc.stdout)
+
     def test_renders_clickable_delta_links_and_generates_diff_files(self) -> None:
         tracked = self.root / "AGENTS.md"
         tracked.write_text("before\n", encoding="utf-8")
