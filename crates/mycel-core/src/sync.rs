@@ -815,6 +815,7 @@ pub fn sync_pull_from_peer_store_with_doc_filter(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::fs;
     use std::path::PathBuf;
 
@@ -825,11 +826,13 @@ mod tests {
     use crate::canonical::{signed_payload_bytes, wire_envelope_signed_payload_bytes};
     use crate::protocol::recompute_object_id;
     use crate::replay::{compute_state_hash, DocumentState};
-    use crate::store::{load_store_index_manifest, write_object_value_to_store};
+    use crate::store::{
+        load_store_index_manifest, write_object_value_to_store, StoreIndexManifest,
+    };
 
     use super::{
-        generate_sync_pull_transcript_from_peer_store, sync_pull_from_peer_store,
-        sync_pull_from_transcript, SyncPeer, SyncPullTranscript,
+        generate_sync_pull_transcript_from_peer_store, head_map_from_manifest,
+        sync_pull_from_peer_store, sync_pull_from_transcript, SyncPeer, SyncPullTranscript,
     };
 
     fn signing_key() -> SigningKey {
@@ -1434,6 +1437,75 @@ mod tests {
         assert_eq!(
             manifest.doc_revisions.get("doc:test"),
             Some(&vec![revision_id])
+        );
+    }
+
+    #[test]
+    fn head_map_from_manifest_prefers_persisted_doc_heads() {
+        let manifest = StoreIndexManifest {
+            version: "mycel-store-index/0.1".to_string(),
+            stored_object_count: 2,
+            object_ids_by_type: BTreeMap::new(),
+            doc_revisions: BTreeMap::from([(
+                "doc:test".to_string(),
+                vec!["rev:older".to_string(), "rev:newer".to_string()],
+            )]),
+            revision_parents: BTreeMap::from([(
+                "rev:newer".to_string(),
+                vec!["rev:older".to_string()],
+            )]),
+            author_patches: BTreeMap::new(),
+            view_governance: Vec::new(),
+            maintainer_views: BTreeMap::new(),
+            profile_views: BTreeMap::new(),
+            document_views: BTreeMap::new(),
+            profile_heads: BTreeMap::new(),
+            doc_heads: BTreeMap::from([(
+                "doc:test".to_string(),
+                vec!["rev:persisted-head".to_string()],
+            )]),
+        };
+
+        let heads = head_map_from_manifest(&manifest);
+
+        assert_eq!(
+            heads.get("doc:test"),
+            Some(&vec!["rev:persisted-head".to_string()])
+        );
+    }
+
+    #[test]
+    fn head_map_from_manifest_falls_back_when_doc_heads_missing() {
+        let manifest = StoreIndexManifest {
+            version: "mycel-store-index/0.1".to_string(),
+            stored_object_count: 3,
+            object_ids_by_type: BTreeMap::new(),
+            doc_revisions: BTreeMap::from([(
+                "doc:test".to_string(),
+                vec![
+                    "rev:base".to_string(),
+                    "rev:left".to_string(),
+                    "rev:right".to_string(),
+                ],
+            )]),
+            revision_parents: BTreeMap::from([
+                ("rev:left".to_string(), vec!["rev:base".to_string()]),
+                ("rev:right".to_string(), vec!["rev:base".to_string()]),
+            ]),
+            author_patches: BTreeMap::new(),
+            view_governance: Vec::new(),
+            maintainer_views: BTreeMap::new(),
+            profile_views: BTreeMap::new(),
+            document_views: BTreeMap::new(),
+            profile_heads: BTreeMap::new(),
+            doc_heads: BTreeMap::new(),
+        };
+
+        let heads = head_map_from_manifest(&manifest);
+
+        assert_eq!(
+            heads.get("doc:test"),
+            Some(&vec!["rev:left".to_string(), "rev:right".to_string()])
         );
     }
 
