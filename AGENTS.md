@@ -91,6 +91,7 @@
   - Single item: `python3 scripts/item_id_checklist_mark.py <checklist_md> <item_id> --state checked`
   - Batch: `python3 scripts/item_id_checklist_mark.py <checklist_md> --update id1=checked --update id2=not-needed`
   - Valid states: `checked`, `unchecked`, `not-needed`, `problem`, `toggle`
+- When the tracked checklist source changes and an agent needs to reload its own copy without losing progress, use `scripts/item_id_checklist.py --refresh <existing_checklist_md>` so the tool rewrites that agent-local checklist in place and preserves matching `item-id` states. For `AGENTS.md`, pass `--section bootstrap` or `--section workcycle` with the corresponding existing checklist path. <!-- item-id: checklist.refresh-preserve-state -->
 - Only update checklist state in the agent's own checklist copy unless the source instructions themselves are being intentionally edited.
 
 ## .md

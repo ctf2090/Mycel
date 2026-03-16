@@ -21,6 +21,9 @@ ITEM_ID_COMMENT_RE = re.compile(r"<!--\s*item-id:\s*(?P<item_id>.*?)\s*-->")
 CHECKBOX_PREFIX_RE = re.compile(r"^(?P<indent>\s*)(?:[-*+]|\d+\.)\s+\[(?:X|!|-| )\]\s+(?P<text>.*)$")
 LIST_PREFIX_RE = re.compile(r"^(?P<indent>\s*)(?:[-*+]|\d+\.)\s+(?P<text>.*)$")
 HEADING_RE = re.compile(r"^(?P<marks>#{1,6})\s+(?P<text>.+?)\s*$")
+CHECKLIST_ITEM_RE = re.compile(
+    r"^(?P<indent>\s*)-\s\[(?P<mark>[X!\- ])\]\s.*?(?P<suffix>\s*<!-- item-id: (?P<item_id>.*?) -->\s*)$"
+)
 
 
 class ItemIdChecklistError(Exception):
@@ -104,6 +107,22 @@ def agents_bootstrap_checklist_path(agent_uid: str) -> Path:
 
 def agents_workcycle_checklist_path(agent_uid: str, batch_num: int) -> Path:
     return resolve_path(agents_workcycle_checklist_rel(agent_uid, batch_num))
+
+
+def resolve_existing_agent_checklist(path_value: str, *, agent_uid: str) -> Path:
+    resolved = resolve_path(path_value).resolve()
+    agent_root = (AGENT_DIR / agent_uid).resolve()
+    try:
+        resolved.relative_to(agent_root)
+    except ValueError as exc:
+        raise ItemIdChecklistError(
+            f"refresh checklist must live under .agent-local/agents/{agent_uid}/"
+        ) from exc
+    if not resolved.exists():
+        raise ItemIdChecklistError(f"refresh checklist not found: {relative_to_root(resolved)}")
+    if not resolved.is_file():
+        raise ItemIdChecklistError(f"refresh checklist path is not a file: {relative_to_root(resolved)}")
+    return resolved
 
 
 def resolve_checklist_path(path_value: str | None, *, agent_uid: str, source_path: Path) -> Path:
@@ -277,6 +296,52 @@ def render_checklist_document(
     )
 
 
+def collect_existing_item_states(checklist_path: Path) -> dict[str, tuple[str, str | None]]:
+    states: dict[str, tuple[str, str | None]] = {}
+    lines = checklist_path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        match = CHECKLIST_ITEM_RE.match(line)
+        if match is None:
+            continue
+        item_id = match.group("item_id").strip()
+        mark = match.group("mark")
+        indent = match.group("indent")
+        problem: str | None = None
+        next_index = index + 1
+        problem_prefix = f"{indent}  - Problem: "
+        if mark == "!" and next_index < len(lines) and lines[next_index].startswith(problem_prefix):
+            problem = lines[next_index][len(problem_prefix) :].strip()
+        states[item_id] = (mark, problem)
+    return states
+
+
+def apply_existing_item_states(document_text: str, existing_states: dict[str, tuple[str, str | None]]) -> str:
+    if not existing_states:
+        return document_text
+
+    output_lines: list[str] = []
+    for line in document_text.splitlines():
+        match = CHECKLIST_ITEM_RE.match(line)
+        output_lines.append(line)
+        if match is None:
+            continue
+
+        item_id = match.group("item_id").strip()
+        existing = existing_states.get(item_id)
+        if existing is None:
+            continue
+
+        mark, problem = existing
+        current_mark = match.group("mark")
+        indent = match.group("indent")
+        if mark != current_mark:
+            output_lines[-1] = line.replace(f"[{current_mark}]", f"[{mark}]", 1)
+        if mark == "!" and problem:
+            output_lines.append(f"{indent}  - Problem: {problem}")
+
+    return "\n".join(output_lines) + "\n"
+
+
 def next_agents_workcycle_batch_num(agent_uid: str) -> int:
     checklists_dir = (AGENT_DIR / agent_uid / "checklists").resolve()
     if not checklists_dir.exists():
@@ -315,18 +380,17 @@ def write_agents_section_checklist(
     output_path: Path,
     body_lines: list[str],
     generated_at: str,
+    existing_states: dict[str, tuple[str, str | None]] | None = None,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        render_checklist_document(
-            agent_uid=agent_uid,
-            display_id=display_id,
-            source_path=source_path,
-            body_lines=body_lines,
-            generated_at=generated_at,
-        ),
-        encoding="utf-8",
+    rendered = render_checklist_document(
+        agent_uid=agent_uid,
+        display_id=display_id,
+        source_path=source_path,
+        body_lines=body_lines,
+        generated_at=generated_at,
     )
+    output_path.write_text(apply_existing_item_states(rendered, existing_states or {}), encoding="utf-8")
 
 
 def materialize_agents_checklists(
@@ -337,6 +401,7 @@ def materialize_agents_checklists(
     normalized_lines: list[str],
     item_count: int,
     section: str,
+    refresh_path: Path | None = None,
 ) -> dict[str, Any]:
     root_lines, source_blocks = split_heading_blocks(normalized_lines)
     source_block_map = {title: lines for title, lines in source_blocks}
@@ -356,7 +421,7 @@ def materialize_agents_checklists(
     }
 
     if section in {"all", "bootstrap"}:
-        bootstrap_path = agents_bootstrap_checklist_path(agent_uid)
+        bootstrap_path = refresh_path if section == "bootstrap" and refresh_path is not None else agents_bootstrap_checklist_path(agent_uid)
         write_agents_section_checklist(
             agent_uid=agent_uid,
             display_id=display_id,
@@ -364,6 +429,7 @@ def materialize_agents_checklists(
             output_path=bootstrap_path,
             body_lines=build_agents_section_body(root_lines, bootstrap_block),
             generated_at=generated_at,
+            existing_states=collect_existing_item_states(refresh_path) if refresh_path is not None and section == "bootstrap" else None,
         )
         if section == "bootstrap":
             result["output"] = relative_to_root(bootstrap_path)
@@ -371,8 +437,15 @@ def materialize_agents_checklists(
         result["bootstrap_output"] = relative_to_root(bootstrap_path)
 
     if section in {"all", "workcycle"}:
-        batch_num = next_agents_workcycle_batch_num(agent_uid)
-        workcycle_path = agents_workcycle_checklist_path(agent_uid, batch_num)
+        if section == "workcycle" and refresh_path is not None:
+            workcycle_path = refresh_path
+            batch_match = re.search(r"AGENTS-workcycle-checklist-(?P<batch>\d+)\.md$", workcycle_path.name)
+            if batch_match is None:
+                raise ItemIdChecklistError("refresh path for AGENTS workcycle must target AGENTS-workcycle-checklist-<n>.md")
+            batch_num = int(batch_match.group("batch"))
+        else:
+            batch_num = next_agents_workcycle_batch_num(agent_uid)
+            workcycle_path = agents_workcycle_checklist_path(agent_uid, batch_num)
         write_agents_section_checklist(
             agent_uid=agent_uid,
             display_id=display_id,
@@ -380,6 +453,7 @@ def materialize_agents_checklists(
             output_path=workcycle_path,
             body_lines=build_agents_section_body(root_lines, workcycle_block),
             generated_at=generated_at,
+            existing_states=collect_existing_item_states(refresh_path) if refresh_path is not None and section == "workcycle" else None,
         )
         if section == "workcycle":
             result["output"] = relative_to_root(workcycle_path)
@@ -398,6 +472,7 @@ def materialize_checklist(
     source_path: Path,
     output_path: Path,
     section: str = "all",
+    refresh_path: Path | None = None,
 ) -> dict[str, Any]:
     if not source_path.exists():
         raise ItemIdChecklistError(f"source file not found: {relative_to_root(source_path)}")
@@ -418,17 +493,19 @@ def materialize_checklist(
             normalized_lines=normalized_lines,
             item_count=item_count,
             section=section,
+            refresh_path=refresh_path,
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    rendered = render_checklist_document(
+        agent_uid=agent_uid,
+        display_id=display_id,
+        source_path=source_path,
+        body_lines=normalized_lines,
+        generated_at=utc_now(),
+    )
     output_path.write_text(
-        render_checklist_document(
-            agent_uid=agent_uid,
-            display_id=display_id,
-            source_path=source_path,
-            body_lines=normalized_lines,
-            generated_at=utc_now(),
-        ),
+        apply_existing_item_states(rendered, collect_existing_item_states(refresh_path) if refresh_path is not None else {}),
         encoding="utf-8",
     )
 
@@ -468,6 +545,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("source_md")
     parser.add_argument("--output", default="")
     parser.add_argument("--section", choices=["all", "bootstrap", "workcycle"], default="all")
+    parser.add_argument(
+        "--refresh",
+        default="",
+        help="rewrite an existing agent-local checklist in place and preserve item states by item-id",
+    )
     parser.add_argument("--json", action="store_true")
     return parser
 
@@ -483,15 +565,28 @@ def main() -> int:
         if not isinstance(display_id, str) or not display_id.strip():
             display_id = None
         source_path = resolve_path(args.source_md)
+        refresh_path = None
+        if args.refresh:
+            refresh_path = resolve_existing_agent_checklist(args.refresh, agent_uid=agent_uid)
+        if args.output and args.refresh:
+            raise ItemIdChecklistError("--output cannot be combined with --refresh; refresh rewrites the existing checklist in place")
         if source_path.name == "AGENTS.md" and args.output:
             raise ItemIdChecklistError("AGENTS.md checklist generation manages its own bootstrap/workcycle filenames; omit --output")
-        output_path = resolve_checklist_path(args.output or None, agent_uid=agent_uid, source_path=source_path)
+        if source_path.name == "AGENTS.md" and refresh_path is not None:
+            if args.section == "all":
+                raise ItemIdChecklistError("AGENTS.md refresh requires --section bootstrap or --section workcycle")
+            if args.section == "bootstrap" and refresh_path.name != "AGENTS-bootstrap-checklist.md":
+                raise ItemIdChecklistError("AGENTS.md bootstrap refresh must target AGENTS-bootstrap-checklist.md")
+            if args.section == "workcycle" and not re.search(r"AGENTS-workcycle-checklist-\d+\.md$", refresh_path.name):
+                raise ItemIdChecklistError("AGENTS.md workcycle refresh must target AGENTS-workcycle-checklist-<n>.md")
+        output_path = refresh_path or resolve_checklist_path(args.output or None, agent_uid=agent_uid, source_path=source_path)
         result = materialize_checklist(
             agent_uid=agent_uid,
             display_id=display_id,
             source_path=source_path,
             output_path=output_path,
             section=args.section,
+            refresh_path=refresh_path,
         )
     except ItemIdChecklistError as exc:
         print(str(exc), file=sys.stderr)

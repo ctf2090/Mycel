@@ -298,6 +298,166 @@ Context line that should not be copied.
         self.assertNotEqual(0, proc.returncode)
         self.assertIn("AGENTS.md checklist generation manages its own bootstrap/workcycle filenames", proc.stderr)
 
+    def test_refresh_preserves_states_for_regular_checklist(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "docs/source.md",
+            """# Source
+
+- Alpha <!-- item-id: item.alpha -->
+- Beta <!-- item-id: item.beta -->
+- Gamma <!-- item-id: item.gamma -->
+""",
+        )
+
+        first = json.loads(self.run_cli("agt_doc", "docs/source.md", "--json").stdout)
+        checklist_path = self.root / first["output"]
+        checklist_path.write_text(
+            """# Agent Item-ID Checklist Copy
+
+- [X] Alpha <!-- item-id: item.alpha -->
+- [!] Beta <!-- item-id: item.beta -->
+  - Problem: needs follow-up
+- [ ] Gamma <!-- item-id: item.gamma -->
+""",
+            encoding="utf-8",
+        )
+
+        self.write_source(
+            "docs/source.md",
+            """# Source
+
+- Alpha updated <!-- item-id: item.alpha -->
+- Beta updated <!-- item-id: item.beta -->
+- Delta new <!-- item-id: item.delta -->
+""",
+        )
+
+        refreshed = json.loads(
+            self.run_cli("agt_doc", "docs/source.md", "--refresh", first["output"], "--json").stdout
+        )
+        content = (self.root / refreshed["output"]).read_text(encoding="utf-8")
+
+        self.assertEqual(first["output"], refreshed["output"])
+        self.assertIn("- [X] Alpha updated <!-- item-id: item.alpha -->", content)
+        self.assertIn("- [!] Beta updated <!-- item-id: item.beta -->", content)
+        self.assertIn("  - Problem: needs follow-up", content)
+        self.assertIn("- [ ] Delta new <!-- item-id: item.delta -->", content)
+        self.assertNotIn("item.gamma", content)
+
+    def test_refresh_preserves_states_for_agents_bootstrap(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "AGENTS.md",
+            """# Repo Working Agreements
+
+## New chat bootstrap
+- Bootstrap one <!-- item-id: bootstrap.one -->
+
+## Work Cycle Workflow
+- Workflow one <!-- item-id: workflow.one -->
+""",
+        )
+
+        first = json.loads(self.run_cli("agt_doc", "AGENTS.md", "--section", "bootstrap", "--json").stdout)
+        bootstrap_path = self.root / first["output"]
+        bootstrap_path.write_text(
+            """# Agent Item-ID Checklist Copy
+
+## New chat bootstrap
+
+- [X] Bootstrap one <!-- item-id: bootstrap.one -->
+""",
+            encoding="utf-8",
+        )
+
+        self.write_source(
+            "AGENTS.md",
+            """# Repo Working Agreements
+
+## New chat bootstrap
+- Bootstrap one updated <!-- item-id: bootstrap.one -->
+- Bootstrap two new <!-- item-id: bootstrap.two -->
+
+## Work Cycle Workflow
+- Workflow one <!-- item-id: workflow.one -->
+""",
+        )
+
+        refreshed = json.loads(
+            self.run_cli(
+                "agt_doc",
+                "AGENTS.md",
+                "--section",
+                "bootstrap",
+                "--refresh",
+                first["output"],
+                "--json",
+            ).stdout
+        )
+        content = (self.root / refreshed["output"]).read_text(encoding="utf-8")
+
+        self.assertEqual(first["output"], refreshed["output"])
+        self.assertIn("- [X] Bootstrap one updated <!-- item-id: bootstrap.one -->", content)
+        self.assertIn("- [ ] Bootstrap two new <!-- item-id: bootstrap.two -->", content)
+
+    def test_refresh_preserves_states_for_agents_workcycle_without_new_batch(self) -> None:
+        self.write_registry()
+        self.write_source(
+            "AGENTS.md",
+            """# Repo Working Agreements
+
+## New chat bootstrap
+- Bootstrap one <!-- item-id: bootstrap.one -->
+
+## Work Cycle Workflow
+- Workflow one <!-- item-id: workflow.one -->
+""",
+        )
+
+        first = json.loads(self.run_cli("agt_doc", "AGENTS.md", "--section", "workcycle", "--json").stdout)
+        workcycle_path = self.root / first["output"]
+        workcycle_path.write_text(
+            """# Agent Item-ID Checklist Copy
+
+## Work Cycle Workflow
+
+- [X] Workflow one <!-- item-id: workflow.one -->
+""",
+            encoding="utf-8",
+        )
+
+        self.write_source(
+            "AGENTS.md",
+            """# Repo Working Agreements
+
+## New chat bootstrap
+- Bootstrap one <!-- item-id: bootstrap.one -->
+
+## Work Cycle Workflow
+- Workflow one updated <!-- item-id: workflow.one -->
+- Workflow two new <!-- item-id: workflow.two -->
+""",
+        )
+
+        refreshed = json.loads(
+            self.run_cli(
+                "agt_doc",
+                "AGENTS.md",
+                "--section",
+                "workcycle",
+                "--refresh",
+                first["output"],
+                "--json",
+            ).stdout
+        )
+        content = (self.root / refreshed["output"]).read_text(encoding="utf-8")
+
+        self.assertEqual(first["output"], refreshed["output"])
+        self.assertEqual(1, refreshed["batch_num"])
+        self.assertIn("- [X] Workflow one updated <!-- item-id: workflow.one -->", content)
+        self.assertIn("- [ ] Workflow two new <!-- item-id: workflow.two -->", content)
+
     def test_accepts_display_id_as_agent_ref(self) -> None:
         self.write_registry()
         self.write_source(
