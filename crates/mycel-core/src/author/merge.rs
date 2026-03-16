@@ -197,10 +197,7 @@ fn assess_merge_resolution(
             ));
         }
 
-        if primary_content_variant == "<absent>"
-            || resolved_content_variant == "<absent>"
-            || resolved_parent_is_composed_in_resolved(&block_id, &primary_blocks, &resolved_blocks)
-        {
+        if primary_content_variant == "<absent>" || resolved_content_variant == "<absent>" {
             continue;
         }
 
@@ -215,6 +212,14 @@ fn assess_merge_resolution(
             .into_iter()
             .filter(|variant| variant != &primary_parent_variant)
             .collect::<BTreeSet<_>>();
+
+        let resolved_parent_is_novel_composed = resolved_parent_variant != primary_parent_variant
+            && !alternative_parent_variants.contains(&resolved_parent_variant)
+            && resolved_parent_is_composed_in_resolved(&block_id, &primary_blocks, &resolved_blocks);
+
+        if resolved_parent_is_novel_composed {
+            continue;
+        }
 
         if resolved_parent_variant != primary_parent_variant
             && !alternative_parent_variants.contains(&resolved_parent_variant)
