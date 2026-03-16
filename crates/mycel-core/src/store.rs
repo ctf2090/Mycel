@@ -2484,9 +2484,8 @@ mod tests {
         .expect("revision beta should be committed");
 
         // Load objects scoped to doc alpha — must not include doc beta objects
-        let alpha_objects =
-            super::load_doc_replay_objects_from_store(&store_dir, "doc:cc-alpha")
-                .expect("alpha replay objects should load");
+        let alpha_objects = super::load_doc_replay_objects_from_store(&store_dir, "doc:cc-alpha")
+            .expect("alpha replay objects should load");
 
         assert!(
             alpha_objects.contains_key(&doc_a.genesis_revision_id),
@@ -2514,9 +2513,8 @@ mod tests {
         );
 
         // Load objects scoped to doc beta — must not include doc alpha objects
-        let beta_objects =
-            super::load_doc_replay_objects_from_store(&store_dir, "doc:cc-beta")
-                .expect("beta replay objects should load");
+        let beta_objects = super::load_doc_replay_objects_from_store(&store_dir, "doc:cc-beta")
+            .expect("beta replay objects should load");
 
         assert!(
             beta_objects.contains_key(&doc_b.genesis_revision_id),
