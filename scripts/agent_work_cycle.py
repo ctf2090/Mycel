@@ -37,6 +37,13 @@ class WorkCycleError(Exception):
     pass
 
 
+class WorkCycleArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        if "invalid choice: 'start'" in message:
+            message = message + "; did you mean 'begin'?"
+        super().error(message)
+
+
 def run_registry(command: str, agent_ref: str) -> dict[str, str]:
     proc = subprocess.run(
         [sys.executable, str(REGISTRY_SCRIPT), command, agent_ref, "--json"],
@@ -51,14 +58,18 @@ def run_registry(command: str, agent_ref: str) -> dict[str, str]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    argv = sys.argv[1:]
+    if argv and argv[0] == "start":
+        argv = ["begin", *argv[1:]]
+
+    parser = WorkCycleArgumentParser(
         prog="scripts/agent_work_cycle.py",
         description="Wrap agent_registry touch/finish with human-facing timestamp lines.",
     )
     parser.add_argument("stage", choices=["begin", "end"], help="begin or end the current work cycle")
     parser.add_argument("agent_ref", help="agent_uid or current display_id")
     parser.add_argument("--scope", help="scope label to append to the timestamp line")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def emit_registry_summary(payload: dict[str, str]) -> None:

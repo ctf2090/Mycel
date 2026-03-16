@@ -29,6 +29,30 @@ class MailboxHandoffError(Exception):
     pass
 
 
+class MailboxArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        if "unrecognized arguments: --summary" in message:
+            message = (
+                message
+                + "; use --current-state, --next-step, and optionally --notes instead of --summary"
+            )
+        super().error(message)
+
+
+def normalize_argv(argv: list[str]) -> list[str]:
+    normalized = list(argv)
+    if len(normalized) >= 1 and normalized[0] == "create":
+        if "--type" in normalized:
+            idx = normalized.index("--type")
+            if idx + 1 >= len(normalized):
+                raise MailboxHandoffError("--type requires a value such as work-continuation")
+            type_value = normalized[idx + 1]
+            del normalized[idx : idx + 2]
+            insert_at = 2 if len(normalized) >= 2 and not normalized[1].startswith("-") else 1
+            normalized[insert_at:insert_at] = [type_value]
+    return normalized
+
+
 @dataclass(frozen=True)
 class TemplateSpec:
     kind: str
@@ -83,7 +107,9 @@ def human_timestamp(now: datetime | None = None) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    argv = normalize_argv(sys.argv[1:])
+
+    parser = MailboxArgumentParser(
         prog="scripts/mailbox_handoff.py",
         description="Create mailbox handoff entries from tracked templates.",
     )
@@ -115,7 +141,7 @@ def parse_args() -> argparse.Namespace:
     create.add_argument("--docs-impacted", action="append", default=[], help="docs impacted bullet")
     create.add_argument("--remaining-follow-up", action="append", default=[], help="remaining follow-up bullet")
     create.add_argument("--json", action="store_true", help="emit JSON instead of plain text")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def normalize_items(values: list[str], *, default: str | None = None) -> list[str]:

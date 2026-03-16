@@ -63,10 +63,22 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 - Bootstrap one <!-- item-id: bootstrap.one -->
 
 ## Work Cycle Workflow
+- Run git status <!-- item-id: bootstrap.git-status -->
 - Begin the work cycle <!-- item-id: workflow.touch-work-cycle -->
+- Install additional tools if needed <!-- item-id: workflow.install-needed-tools -->
+- Run runtime preflight before verification <!-- item-id: workflow.runtime-preflight-before-verification -->
 - Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->
+- Use the exact emitted timestamp line <!-- item-id: workflow.timestamped-commentary -->
+- Avoid double-touching the registry <!-- item-id: workflow.no-double-touch-finish -->
 - Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->
 - Finish the work cycle <!-- item-id: workflow.finish-work-cycle -->
+- Include a files-changed summary when source changes land <!-- item-id: workflow.files-changed-summary -->
+- Put the after-work line before next-stage options <!-- item-id: workflow.final-after-work-line-before-next-items -->
+- Offer next-stage options <!-- item-id: workflow.next-stage-options -->
+  - Highest-value option first <!-- item-id: workflow.next-stage-highest-value-first -->
+  - Use numbered options <!-- item-id: workflow.next-stage-numbered-options -->
+  - Include roadmap location when relevant <!-- item-id: workflow.next-stage-roadmap-location -->
+  - Ask short clarifying questions when needed <!-- item-id: workflow.next-stage-clarifying-questions -->
 """,
             encoding="utf-8",
         )
@@ -75,6 +87,44 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         path = self.root / relative_path
         content = path.read_text(encoding="utf-8")
         path.write_text(content.replace(old, new), encoding="utf-8")
+
+    def set_checklist_state(self, relative_path: str, item_id: str, state: str, label: str) -> None:
+        path = self.root / relative_path
+        content = path.read_text(encoding="utf-8")
+        new = f"- [{state}] {label} <!-- item-id: {item_id} -->"
+        for current_state in (" ", "X", "-", "!"):
+            old = f"- [{current_state}] {label} <!-- item-id: {item_id} -->"
+            if old in content:
+                path.write_text(content.replace(old, new), encoding="utf-8")
+                return
+        self.fail(f"missing checklist item {item_id} in {relative_path}")
+
+    def mark_workcycle_defaults(
+        self,
+        relative_path: str,
+        *,
+        mailbox_state: str | None,
+        plan_state: str = "X",
+    ) -> None:
+        states = [
+            ("bootstrap.git-status", "Run git status", "X"),
+            ("workflow.install-needed-tools", "Install additional tools if needed", "-"),
+            ("workflow.runtime-preflight-before-verification", "Run runtime preflight before verification", "-"),
+            ("workflow.reply-with-plan-and-status", "Reply with a short plan", plan_state),
+            ("workflow.timestamped-commentary", "Use the exact emitted timestamp line", "X"),
+            ("workflow.no-double-touch-finish", "Avoid double-touching the registry", "X"),
+            ("workflow.files-changed-summary", "Include a files-changed summary when source changes land", "-"),
+            ("workflow.final-after-work-line-before-next-items", "Put the after-work line before next-stage options", "X"),
+            ("workflow.next-stage-options", "Offer next-stage options", "X"),
+            ("workflow.next-stage-highest-value-first", "Highest-value option first", "X"),
+            ("workflow.next-stage-numbered-options", "Use numbered options", "X"),
+            ("workflow.next-stage-roadmap-location", "Include roadmap location when relevant", "-"),
+            ("workflow.next-stage-clarifying-questions", "Ask short clarifying questions when needed", "-"),
+        ]
+        if mailbox_state is not None:
+            states.append(("workflow.mailbox-handoff-each-cycle", "Leave a mailbox handoff", mailbox_state))
+        for item_id, label, state in states:
+            self.set_checklist_state(relative_path, item_id, state, label)
 
     def write_mailbox(self, agent_uid: str, content: str) -> None:
         path = self.root / ".agent-local" / "mailboxes" / f"{agent_uid}.md"
@@ -97,10 +147,9 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             "- [X] Bootstrap one <!-- item-id: bootstrap.one -->",
         )
         self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
-        self.replace_in_file(
+        self.mark_workcycle_defaults(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md",
-            "- [ ] Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->",
-            "- [X] Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->",
+            mailbox_state=None,
         )
         end = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper")
         self.assertEqual(0, end.returncode)
@@ -110,15 +159,9 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         agent_uid = self.prepare_completed_bootstrap_batch(role=role)
         begin = self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
         self.assertEqual(0, begin.returncode)
-        self.replace_in_file(
+        self.mark_workcycle_defaults(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
-            "- [ ] Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->",
-            "- [X] Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->",
-        )
-        self.replace_in_file(
-            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
-            "- [ ] Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->",
-            "- [X] Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->",
+            mailbox_state="X",
         )
         return agent_uid
 
@@ -141,6 +184,18 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn(f"Before work | doc-1 ({agent_uid}) | timestamp-wrapper", proc.stdout)
         self.assertIn("- [-] Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->", checklist)
 
+    def test_start_alias_maps_to_begin(self) -> None:
+        self.write_agents_md()
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper")
+        agent_uid = claim["agent_uid"]
+        self.run_registry("start", agent_uid)
+
+        proc = self.run_cli("start", agent_uid, "--scope", "timestamp-wrapper")
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("workcycle_output:", proc.stdout)
+        self.assertIn(f"Before work | doc-1 ({agent_uid}) | timestamp-wrapper", proc.stdout)
+
     def test_end_finishes_agent_and_prints_after_work_line(self) -> None:
         self.write_agents_md()
         claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper")
@@ -154,10 +209,9 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         begin = self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
         self.assertEqual(0, begin.returncode)
-        self.replace_in_file(
+        self.mark_workcycle_defaults(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md",
-            "- [ ] Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->",
-            "- [X] Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->",
+            mailbox_state=None,
         )
 
         proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper")
@@ -195,7 +249,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(2, proc.returncode)
         self.assertIn("bootstrap_batch: true", proc.stdout)
-        self.assertIn("unchecked_items: 2", proc.stdout)
+        self.assertIn("unchecked_items: 12", proc.stdout)
 
     def test_end_returns_pending_when_mailbox_has_multiple_open_handoffs(self) -> None:
         agent_uid = self.prepare_second_batch(role="doc")

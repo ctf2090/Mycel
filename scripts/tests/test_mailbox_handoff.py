@@ -135,6 +135,60 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual(1, mailbox.count("- Status: superseded"))
         self.assertLess(mailbox.index("- Scope: older-scope"), mailbox.index("- Scope: new-scope"))
 
+    def test_create_accepts_type_alias_for_template(self) -> None:
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": "2026-03-13T10:00:00+0800",
+                "agent_count": 1,
+                "agents": [self.registry_entry(agent_uid="agt_coding", role="coding", display_id="coding-7")],
+            }
+        )
+
+        payload = json.loads(
+            self.run_cli(
+                "create",
+                "coding-7",
+                "--type",
+                "work-continuation",
+                "--scope",
+                "type-alias-scope",
+                "--current-state",
+                "alias worked",
+                "--next-step",
+                "continue",
+                "--json",
+            ).stdout
+        )
+
+        self.assertEqual("work-continuation", payload["template"])
+        mailbox = (self.root / payload["mailbox"]).read_text(encoding="utf-8")
+        self.assertIn("- Scope: type-alias-scope", mailbox)
+
+    def test_create_summary_error_suggests_supported_fields(self) -> None:
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": "2026-03-13T10:00:00+0800",
+                "agent_count": 1,
+                "agents": [self.registry_entry(agent_uid="agt_coding", role="coding", display_id="coding-7")],
+            }
+        )
+
+        proc = self.run_cli(
+            "create",
+            "coding-7",
+            "work-continuation",
+            "--scope",
+            "summary-error",
+            "--summary",
+            "wrong field",
+            check=False,
+        )
+
+        self.assertNotEqual(0, proc.returncode)
+        self.assertIn("use --current-state, --next-step, and optionally --notes", proc.stderr)
+
     def test_create_doc_continuation_uses_doc_template(self) -> None:
         self.write_registry(
             {
