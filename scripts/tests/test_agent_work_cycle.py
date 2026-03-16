@@ -105,15 +105,16 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         *,
         mailbox_state: str | None,
         plan_state: str = "X",
+        scrutinized_state: str = "-",
     ) -> None:
         states = [
             ("bootstrap.git-status", "Run git status", "X"),
             ("workflow.install-needed-tools", "Install additional tools if needed", "-"),
-            ("workflow.runtime-preflight-before-verification", "Run runtime preflight before verification", "-"),
+            ("workflow.runtime-preflight-before-verification", "Run runtime preflight before verification", scrutinized_state),
             ("workflow.reply-with-plan-and-status", "Reply with a short plan", plan_state),
             ("workflow.timestamped-commentary", "Use the exact emitted timestamp line", "X"),
             ("workflow.no-double-touch-finish", "Avoid double-touching the registry", "X"),
-            ("workflow.files-changed-summary", "Include a files-changed summary when source changes land", "-"),
+            ("workflow.files-changed-summary", "Include a files-changed summary when source changes land", scrutinized_state),
             ("workflow.final-after-work-line-before-next-items", "Put the after-work line before next-stage options", "X"),
             ("workflow.next-stage-options", "Offer next-stage options", "X"),
             ("workflow.next-stage-highest-value-first", "Highest-value option first", "X"),
@@ -162,6 +163,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.mark_workcycle_defaults(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
             mailbox_state="X",
+            scrutinized_state="X",
         )
         return agent_uid
 
@@ -179,6 +181,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertIn(f"workcycle_output: .agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md", proc.stdout)
         self.assertIn("batch_num: 1", proc.stdout)
+        self.assertIn(f"closeout_command: python3 scripts/agent_work_cycle.py end {agent_uid}", proc.stdout)
         self.assertIn(f"agent_uid: {agent_uid}", proc.stdout)
         self.assertIn("current_status: active", proc.stdout)
         self.assertIn(f"Before work | doc-1 ({agent_uid}) | timestamp-wrapper", proc.stdout)
@@ -194,7 +197,24 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(0, proc.returncode)
         self.assertIn("workcycle_output:", proc.stdout)
+        self.assertIn(f"closeout_command: python3 scripts/agent_work_cycle.py end {agent_uid}", proc.stdout)
         self.assertIn(f"Before work | doc-1 ({agent_uid}) | timestamp-wrapper", proc.stdout)
+
+    def test_end_rejects_batch_flag_with_targeted_guidance(self) -> None:
+        self.write_agents_md()
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper")
+        agent_uid = claim["agent_uid"]
+        self.run_registry("start", agent_uid)
+        self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
+
+        proc = self.run_cli("end", agent_uid, "--batch", "1", check=False)
+
+        self.assertEqual(1, proc.returncode)
+        self.assertIn("batch is inferred from the latest workcycle checklist", proc.stderr)
+        self.assertIn(
+            f"Use `python3 scripts/agent_work_cycle.py end {agent_uid}`.",
+            proc.stderr,
+        )
 
     def test_end_finishes_agent_and_prints_after_work_line(self) -> None:
         self.write_agents_md()

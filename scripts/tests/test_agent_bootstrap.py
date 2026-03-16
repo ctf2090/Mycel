@@ -46,9 +46,20 @@ class AgentBootstrapCliTest(unittest.TestCase):
 ## Work Cycle Workflow
 - Begin the work cycle <!-- item-id: workflow.touch-work-cycle -->
 - Run git status <!-- item-id: bootstrap.git-status -->
+- Install additional tools if needed <!-- item-id: workflow.install-needed-tools -->
+- Run runtime preflight before verification <!-- item-id: workflow.runtime-preflight-before-verification -->
 - Reply with a short plan <!-- item-id: workflow.reply-with-plan-and-status -->
+- Use the exact emitted timestamp line <!-- item-id: workflow.timestamped-commentary -->
+- Avoid double-touching the registry <!-- item-id: workflow.no-double-touch-finish -->
 - Leave a mailbox handoff <!-- item-id: workflow.mailbox-handoff-each-cycle -->
 - Finish the work cycle <!-- item-id: workflow.finish-work-cycle -->
+- Include a files-changed summary when source changes land <!-- item-id: workflow.files-changed-summary -->
+- Put the after-work line before next-stage options <!-- item-id: workflow.final-after-work-line-before-next-items -->
+- Offer next-stage options <!-- item-id: workflow.next-stage-options -->
+  - Highest-value option first <!-- item-id: workflow.next-stage-highest-value-first -->
+  - Use numbered options <!-- item-id: workflow.next-stage-numbered-options -->
+  - Include roadmap location when relevant <!-- item-id: workflow.next-stage-roadmap-location -->
+  - Ask short clarifying questions when needed <!-- item-id: workflow.next-stage-clarifying-questions -->
 """,
             encoding="utf-8",
         )
@@ -81,6 +92,10 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("startup_mode: fresh-chat-fast-path", proc.stdout)
         self.assertRegex(proc.stdout, r"Before work \| doc-1 \(agt_[a-z0-9]+/test-model\) \| fast-bootstrap")
         self.assertIn("repo_status:\n  ## No commits yet on main", proc.stdout)
+        self.assertRegex(
+            proc.stdout,
+            r"closeout_command: python3 scripts/agent_work_cycle.py end agt_[a-z0-9]+",
+        )
         self.assertIn("fast_path_steps:", proc.stdout)
         self.assertIn("next_actions:", proc.stdout)
         self.assertIn("deferred_reads:", proc.stdout)
@@ -99,6 +114,10 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertTrue(payload["workcycle_output"].startswith(".agent-local/agents/"))
         self.assertEqual("active", payload["current_status"])
         self.assertEqual("fresh-chat-fast-path", payload["startup_mode"])
+        self.assertRegex(
+            payload["closeout_command"],
+            r"python3 scripts/agent_work_cycle.py end agt_[a-z0-9]+",
+        )
         self.assertRegex(
             payload["before_work_line"],
             r"Before work \| coding-1 \(agt_[a-z0-9]+/test-model\) \| pending scope",
@@ -143,6 +162,10 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("startup_mode: fresh-chat-fast-path", proc.stdout)
         self.assertRegex(proc.stdout, r"Before work \| coding-1 \(agt_[a-z0-9]+/test-model\) \| relay-ready")
         self.assertIn("repo_status:\n  ## No commits yet on main", proc.stdout)
+        self.assertRegex(
+            proc.stdout,
+            r"closeout_command: python3 scripts/agent_work_cycle.py end agt_[a-z0-9]+",
+        )
         self.assertIn("next_actions:", proc.stdout)
         self.assertIn("deferred_reads:", proc.stdout)
         self.assertNotIn("bootstrap_output:", proc.stdout)

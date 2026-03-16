@@ -85,6 +85,18 @@ def parse_args() -> argparse.Namespace:
     argv = sys.argv[1:]
     if argv and argv[0] == "start":
         argv = ["begin", *argv[1:]]
+    if argv and argv[0] == "end" and "--batch" in argv:
+        batch_index = argv.index("--batch")
+        batch_value = None
+        if batch_index + 1 < len(argv):
+            batch_value = argv[batch_index + 1]
+        agent_ref = argv[1] if len(argv) > 1 else "<agent_ref>"
+        guessed_batch = f" {batch_value}" if batch_value is not None else ""
+        raise WorkCycleError(
+            "batch is inferred from the latest workcycle checklist; "
+            f"do not pass `--batch{guessed_batch}`. "
+            f"Use `python3 scripts/agent_work_cycle.py end {agent_ref}`."
+        )
 
     parser = WorkCycleArgumentParser(
         prog="scripts/agent_work_cycle.py",
@@ -388,6 +400,7 @@ def main() -> int:
         print(f"workcycle_output: {workcycle_output}")
         if "batch_num" in checklist_result:
             print(f"batch_num: {checklist_result['batch_num']}")
+        print(f"closeout_command: python3 scripts/agent_work_cycle.py end {agent_uid}")
     else:
         latest_batch = latest_agents_workcycle_batch_num(agent_uid)
         if latest_batch is None:

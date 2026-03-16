@@ -174,6 +174,7 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "bootstrap_created": start_payload.get("bootstrap_created"),
         "workcycle_output": begin_fields.get("workcycle_output"),
         "batch_num": begin_fields.get("batch_num"),
+        "closeout_command": begin_fields.get("closeout_command"),
         "previous_status": begin_fields.get("previous_status"),
         "current_status": begin_fields.get("current_status"),
         "last_touched_at": begin_fields.get("last_touched_at"),
@@ -207,6 +208,10 @@ def print_concise_text_result(result: dict[str, Any]) -> None:
     for line in result.get("repo_status", []):
         print(f"  {line}")
 
+    closeout_command = result.get("closeout_command")
+    if closeout_command:
+        print(f"closeout_command: {closeout_command}")
+
     next_actions = result.get("next_actions", [])
     if next_actions:
         print("next_actions:")
@@ -239,6 +244,7 @@ def print_text_result(result: dict[str, Any], *, concise: bool = False) -> None:
         "bootstrap_created",
         "workcycle_output",
         "batch_num",
+        "closeout_command",
         "previous_status",
         "current_status",
         "last_touched_at",
