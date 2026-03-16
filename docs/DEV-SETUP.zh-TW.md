@@ -80,8 +80,18 @@ rustup component add clippy --toolchain stable
 
 - `scripts/check-dev-env.sh` 用來取得 repo-local 的環境與驗證結果
 - `scripts/update-dev-setup-status.py` 用來更新本地 readiness record（就緒紀錄）
+- `scripts/check-runtime-preflight.sh` 用來在特定測試或驗證命令前檢查目前 shell session
 
 只有當記錄內容已涵蓋目前 workspace 需要的工具與驗證面時，才把它視為有效的 `Status: ready`。
+
+`Status: ready` 不保證目前 shell session 的 `PATH` 與輔助工具已符合你接下來要跑的那條驗證命令。對於像 `cargo test ... | grep ...` 這類會依賴額外 shell 工具的命令，先做一次輕量 runtime preflight：
+
+```bash
+scripts/check-runtime-preflight.sh
+scripts/check-runtime-preflight.sh --require grep --require tail
+```
+
+如果缺少命令，或後續命令出現 `126`、`127` 這類退出碼，應先視為環境阻塞，而不是直接判定為產品失敗。
 
 ## 2. Clone 並進入 Repo
 

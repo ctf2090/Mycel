@@ -80,8 +80,18 @@ Recommended tools for populating the file:
 
 - `scripts/check-dev-env.sh` to gather the repo-local environment and validation result
 - `scripts/update-dev-setup-status.py` to refresh the local readiness record
+- `scripts/check-runtime-preflight.sh` to verify the current shell session before a specific test or validation command
 
 Treat `Status: ready` as valid only when the recorded checks cover the tools and validation surface you rely on for the current workspace.
+
+`Status: ready` does not guarantee that the current shell session has the right `PATH` or helper utilities for the exact verification command you are about to run. Before commands such as `cargo test ... | grep ...` or repo scripts that rely on extra shell tools, run a lightweight runtime preflight:
+
+```bash
+scripts/check-runtime-preflight.sh
+scripts/check-runtime-preflight.sh --require grep --require tail
+```
+
+Treat missing commands, or follow-on command exits such as `126` and `127`, as environment blockers first rather than product failures.
 
 ## 2. Clone and Enter the Repo
 
