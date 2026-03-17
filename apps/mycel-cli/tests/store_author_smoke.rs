@@ -300,6 +300,67 @@ fn write_nested_sibling_manual_resolved_state_file(prefix: &str) -> (common::Tem
     (dir, path)
 }
 
+fn write_composed_branch_manual_resolved_state_file(prefix: &str) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("resolved-state.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!({
+            "doc_id": "doc:author-smoke-composed-manual",
+            "blocks": [
+                {
+                    "block_id": "blk:cmp-anchor",
+                    "block_type": "paragraph",
+                    "content": "Anchor",
+                    "attrs": {},
+                    "children": []
+                },
+                {
+                    "block_id": "blk:cmp-wrapper",
+                    "block_type": "paragraph",
+                    "content": "Wrapper",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-section",
+                            "block_type": "paragraph",
+                            "content": "Section",
+                            "attrs": {},
+                            "children": [
+                                {
+                                    "block_id": "blk:cmp-subsection",
+                                    "block_type": "paragraph",
+                                    "content": "Subsection",
+                                    "attrs": {},
+                                    "children": [
+                                        {
+                                            "block_id": "blk:cmp-leaf-a",
+                                            "block_type": "paragraph",
+                                            "content": "Leaf A",
+                                            "attrs": {},
+                                            "children": []
+                                        },
+                                        {
+                                            "block_id": "blk:cmp-leaf-b",
+                                            "block_type": "paragraph",
+                                            "content": "Leaf B",
+                                            "attrs": {},
+                                            "children": []
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }))
+        .expect("composed branch manual resolved state JSON should serialize"),
+    )
+    .expect("composed branch manual resolved state JSON should write");
+    (dir, path)
+}
+
 #[test]
 fn store_authoring_flow_creates_document_patch_and_revision() {
     let store_dir = create_temp_dir("store-author-root");
@@ -1851,5 +1912,310 @@ fn store_merge_authoring_flow_rejects_novel_nested_sibling_choice_as_manual_cura
     assert_stderr_contains(
         &merge,
         "merge resolution is manual-curation-required: resolved block 'blk:nested-child-a' does not match any parent sibling placement",
+    );
+}
+
+#[test]
+fn store_merge_authoring_flow_rejects_deep_composed_branch_reuse_as_manual_curation_required() {
+    let store_dir = create_temp_dir("store-merge-composed-manual-root");
+    let (_key_dir, key_path) = write_signing_key_file("store-merge-composed-manual-key");
+    let (_resolved_dir, resolved_state_path) =
+        write_composed_branch_manual_resolved_state_file("store-merge-composed-manual-state");
+    let store_root = path_arg(&store_dir.path().to_path_buf());
+    let key_file = path_arg(&key_path);
+    let resolved_state_file = path_arg(&resolved_state_path);
+
+    let init = run_mycel(&["store", "init", &store_root, "--json"]);
+    assert_success(&init);
+
+    let document = run_mycel(&[
+        "store",
+        "create-document",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--title",
+        "Author Smoke Composed Manual",
+        "--language",
+        "en",
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "60",
+        "--json",
+    ]);
+    assert_success(&document);
+    let document_json = assert_json_status(&document, "ok");
+    let genesis_revision_id = document_json["genesis_revision_id"]
+        .as_str()
+        .expect("genesis revision should be string")
+        .to_string();
+
+    let base_ops_dir = create_temp_dir("store-merge-composed-manual-base-ops");
+    let base_ops_path = base_ops_dir.path().join("ops.json");
+    fs::write(
+        &base_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:cmp-anchor",
+                    "block_type": "paragraph",
+                    "content": "Anchor",
+                    "attrs": {},
+                    "children": []
+                }
+            },
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:cmp-old-parent",
+                    "block_type": "paragraph",
+                    "content": "Old Parent",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-leaf-a",
+                            "block_type": "paragraph",
+                            "content": "Leaf A",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:cmp-leaf-b",
+                            "block_type": "paragraph",
+                            "content": "Leaf B",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]))
+        .expect("composed manual base ops JSON should serialize"),
+    )
+    .expect("composed manual base ops JSON should write");
+    let base_ops_file = path_arg(&base_ops_path);
+
+    let delete_ops_dir = create_temp_dir("store-merge-composed-manual-delete-ops");
+    let delete_ops_path = delete_ops_dir.path().join("ops.json");
+    fs::write(
+        &delete_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "delete_block",
+                "block_id": "blk:cmp-old-parent"
+            }
+        ]))
+        .expect("composed manual delete ops JSON should serialize"),
+    )
+    .expect("composed manual delete ops JSON should write");
+    let delete_ops_file = path_arg(&delete_ops_path);
+
+    let insert_ops_dir = create_temp_dir("store-merge-composed-manual-insert-ops");
+    let insert_ops_path = insert_ops_dir.path().join("ops.json");
+    fs::write(
+        &insert_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block_after",
+                "after_block_id": "blk:cmp-anchor",
+                "new_block": {
+                    "block_id": "blk:cmp-wrapper",
+                    "block_type": "paragraph",
+                    "content": "Wrapper",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-section",
+                            "block_type": "paragraph",
+                            "content": "Section",
+                            "attrs": {},
+                            "children": [
+                                {
+                                    "block_id": "blk:cmp-subsection",
+                                    "block_type": "paragraph",
+                                    "content": "Subsection",
+                                    "attrs": {},
+                                    "children": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ]))
+        .expect("composed manual insert ops JSON should serialize"),
+    )
+    .expect("composed manual insert ops JSON should write");
+    let insert_ops_file = path_arg(&insert_ops_path);
+
+    let base_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--base-revision",
+        &genesis_revision_id,
+        "--ops",
+        &base_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "61",
+        "--json",
+    ]);
+    assert_success(&base_patch);
+    let base_patch_json = assert_json_status(&base_patch, "ok");
+    let base_patch_id = base_patch_json["patch_id"]
+        .as_str()
+        .expect("base patch_id should be string")
+        .to_string();
+
+    let base_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--parent",
+        &genesis_revision_id,
+        "--patch",
+        &base_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "62",
+        "--json",
+    ]);
+    assert_success(&base_revision);
+    let base_revision_json = assert_json_status(&base_revision, "ok");
+    let base_revision_id = base_revision_json["revision_id"]
+        .as_str()
+        .expect("base revision_id should be string")
+        .to_string();
+
+    let delete_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--base-revision",
+        &base_revision_id,
+        "--ops",
+        &delete_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "63",
+        "--json",
+    ]);
+    assert_success(&delete_patch);
+    let delete_patch_json = assert_json_status(&delete_patch, "ok");
+    let delete_patch_id = delete_patch_json["patch_id"]
+        .as_str()
+        .expect("delete patch_id should be string")
+        .to_string();
+
+    let delete_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--parent",
+        &base_revision_id,
+        "--patch",
+        &delete_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "64",
+        "--json",
+    ]);
+    assert_success(&delete_revision);
+    let delete_revision_json = assert_json_status(&delete_revision, "ok");
+    let delete_revision_id = delete_revision_json["revision_id"]
+        .as_str()
+        .expect("delete revision_id should be string")
+        .to_string();
+
+    let insert_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--base-revision",
+        &base_revision_id,
+        "--ops",
+        &insert_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "65",
+        "--json",
+    ]);
+    assert_success(&insert_patch);
+    let insert_patch_json = assert_json_status(&insert_patch, "ok");
+    let insert_patch_id = insert_patch_json["patch_id"]
+        .as_str()
+        .expect("insert patch_id should be string")
+        .to_string();
+
+    let insert_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--parent",
+        &base_revision_id,
+        "--patch",
+        &insert_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "66",
+        "--json",
+    ]);
+    assert_success(&insert_revision);
+    let insert_revision_json = assert_json_status(&insert_revision, "ok");
+    let insert_revision_id = insert_revision_json["revision_id"]
+        .as_str()
+        .expect("insert revision_id should be string")
+        .to_string();
+
+    let merge = run_mycel(&[
+        "store",
+        "create-merge-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-composed-manual",
+        "--parent",
+        &base_revision_id,
+        "--parent",
+        &delete_revision_id,
+        "--parent",
+        &insert_revision_id,
+        "--resolved-state",
+        &resolved_state_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "67",
+    ]);
+
+    assert!(
+        !merge.status.success(),
+        "expected manual-curation failure, stdout: {}, stderr: {}",
+        String::from_utf8_lossy(&merge.stdout),
+        String::from_utf8_lossy(&merge.stderr)
+    );
+    assert_stderr_contains(
+        &merge,
+        "merge resolution is manual-curation-required: resolved block 'blk:cmp-leaf-a' does not match any parent placement",
     );
 }
