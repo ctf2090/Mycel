@@ -784,11 +784,12 @@ fn sync_pull_json_reports_missing_bye_as_session_note() {
     assert_eq!(json["written_object_count"], 2);
     assert_eq!(json["existing_object_count"], 0);
     assert!(
-        json["notes"].as_array().is_some_and(|notes| notes.iter().any(
-            |note| note.as_str().is_some_and(
-                |message| message.contains("sync transcript ended without BYE from 'node:alpha'")
-            )
-        )),
+        json["notes"]
+            .as_array()
+            .is_some_and(|notes| notes
+                .iter()
+                .any(|note| note.as_str().is_some_and(|message| message
+                    .contains("sync transcript ended without BYE from 'node:alpha'")))),
         "expected missing-BYE session note, stdout: {}",
         stdout_text(&output)
     );
