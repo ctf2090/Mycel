@@ -2331,6 +2331,140 @@ fn merge_authoring_rejects_novel_nested_parent_choice_when_other_parent_moves_bl
 }
 
 #[test]
+fn merge_authoring_rejects_novel_nested_sibling_choice_as_manual_curation_required() {
+    let store_root = temp_dir("merge-nested-sibling-manual");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-nested-sibling-manual".to_string(),
+            title: "Merge Nested Sibling Manual".to_string(),
+            language: "en".to_string(),
+            timestamp: 74,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-manual",
+        &document.genesis_revision_id,
+        75,
+        76,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:nested-parent",
+                    "block_type": "paragraph",
+                    "content": "Parent",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:nested-child-a",
+                            "block_type": "paragraph",
+                            "content": "Child A",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:nested-child-b",
+                            "block_type": "paragraph",
+                            "content": "Child B",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:nested-child-c",
+                            "block_type": "paragraph",
+                            "content": "Child C",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let insert_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-manual",
+        &base_revision_id,
+        77,
+        78,
+        json!([
+            {
+                "op": "insert_block_after",
+                "after_block_id": "blk:nested-child-b",
+                "new_block": {
+                    "block_id": "blk:nested-child-d",
+                    "block_type": "paragraph",
+                    "content": "Child D",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let moved_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-manual",
+        &base_revision_id,
+        79,
+        80,
+        json!([
+            {
+                "op": "move_block",
+                "block_id": "blk:nested-child-a",
+                "parent_block_id": "blk:nested-parent",
+                "after_block_id": "blk:nested-child-b"
+            }
+        ]),
+    );
+
+    let error = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-nested-sibling-manual".to_string(),
+            parents: vec![base_revision_id, insert_revision_id, moved_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-nested-sibling-manual".to_string(),
+                blocks: vec![paragraph_block_with_children(
+                    "blk:nested-parent",
+                    "Parent",
+                    vec![
+                        paragraph_block("blk:nested-child-b", "Child B"),
+                        paragraph_block("blk:nested-child-d", "Child D"),
+                        paragraph_block("blk:nested-child-a", "Child A"),
+                        paragraph_block("blk:nested-child-c", "Child C"),
+                    ],
+                )],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 81,
+        },
+    )
+    .expect_err("merge revision should require manual curation");
+
+    assert!(
+        error.to_string().contains(
+            "merge resolution is manual-curation-required: resolved block 'blk:nested-child-a' does not match any parent sibling placement"
+        ),
+        "expected nested sibling manual-curation error, got {error}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
 fn merge_authoring_marks_composed_descendant_of_non_primary_parent_as_multi_variant() {
     let store_root = temp_dir("merge-composed-non-primary-parent-choice");
     let signing_key = signing_key();
@@ -2461,6 +2595,166 @@ fn merge_authoring_marks_composed_descendant_of_non_primary_parent_as_multi_vari
         PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
         if block_id == "blk:composed-leaf" && parent_block_id == "blk:composed-subsection"
     )));
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_rejects_deep_composed_branch_reuse_as_manual_curation_required() {
+    let store_root = temp_dir("merge-composed-manual");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-composed-manual".to_string(),
+            title: "Merge Composed Manual".to_string(),
+            language: "en".to_string(),
+            timestamp: 82,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-composed-manual",
+        &document.genesis_revision_id,
+        83,
+        84,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:cmp-anchor",
+                    "block_type": "paragraph",
+                    "content": "Anchor",
+                    "attrs": {},
+                    "children": []
+                }
+            },
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:cmp-old-parent",
+                    "block_type": "paragraph",
+                    "content": "Old Parent",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-leaf-a",
+                            "block_type": "paragraph",
+                            "content": "Leaf A",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:cmp-leaf-b",
+                            "block_type": "paragraph",
+                            "content": "Leaf B",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let deleted_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-composed-manual",
+        &base_revision_id,
+        85,
+        86,
+        json!([
+            {
+                "op": "delete_block",
+                "block_id": "blk:cmp-old-parent"
+            }
+        ]),
+    );
+
+    let inserted_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-composed-manual",
+        &base_revision_id,
+        87,
+        88,
+        json!([
+            {
+                "op": "insert_block_after",
+                "after_block_id": "blk:cmp-anchor",
+                "new_block": {
+                    "block_id": "blk:cmp-wrapper",
+                    "block_type": "paragraph",
+                    "content": "Wrapper",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:cmp-section",
+                            "block_type": "paragraph",
+                            "content": "Section",
+                            "attrs": {},
+                            "children": [
+                                {
+                                    "block_id": "blk:cmp-subsection",
+                                    "block_type": "paragraph",
+                                    "content": "Subsection",
+                                    "attrs": {},
+                                    "children": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let error = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-composed-manual".to_string(),
+            parents: vec![base_revision_id, deleted_revision_id, inserted_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-composed-manual".to_string(),
+                blocks: vec![
+                    paragraph_block("blk:cmp-anchor", "Anchor"),
+                    paragraph_block_with_children(
+                        "blk:cmp-wrapper",
+                        "Wrapper",
+                        vec![paragraph_block_with_children(
+                            "blk:cmp-section",
+                            "Section",
+                            vec![paragraph_block_with_children(
+                                "blk:cmp-subsection",
+                                "Subsection",
+                                vec![
+                                    paragraph_block("blk:cmp-leaf-a", "Leaf A"),
+                                    paragraph_block("blk:cmp-leaf-b", "Leaf B"),
+                                ],
+                            )],
+                        )],
+                    ),
+                ],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 89,
+        },
+    )
+    .expect_err("merge revision should require manual curation");
+
+    assert!(
+        error.to_string().contains(
+            "merge resolution is manual-curation-required: resolved block 'blk:cmp-leaf-a' does not match any parent placement"
+        ),
+        "expected composed branch manual-curation error, got {error}"
+    );
 
     let _ = fs::remove_dir_all(store_root);
 }
