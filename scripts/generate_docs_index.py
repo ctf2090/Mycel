@@ -13,13 +13,6 @@ ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "pages" / "docs.html"
 GITHUB_BLOB_BASE = "https://github.com/ctf2090/Mycel/blob/main/"
 
-LANGUAGE_LABELS = {
-    "default": "Default",
-    "en": "English",
-    "zh-TW": "繁體中文",
-    "zh-CN": "简体中文",
-}
-
 LANGUAGE_ORDER = {
     "default": 0,
     "en": 1,
@@ -90,10 +83,6 @@ class DocEntry:
     @property
     def github_url(self) -> str:
         return GITHUB_BLOB_BASE + quote(self.path)
-
-    @property
-    def language_label(self) -> str:
-        return LANGUAGE_LABELS.get(self.language, self.language)
 
 
 def iter_category_paths(category: Category) -> list[Path]:
@@ -211,11 +200,18 @@ def parse_doc(path: Path, category: Category) -> DocEntry:
     )
 
 
+def include_language(language: str) -> bool:
+    return language in {"default", "en"}
+
+
 def collect_entries() -> list[DocEntry]:
     entries: list[DocEntry] = []
     for category in CATEGORIES:
         for path in iter_category_paths(category):
-            entries.append(parse_doc(path, category))
+            entry = parse_doc(path, category)
+            if not include_language(entry.language):
+                continue
+            entries.append(entry)
     entries.sort(
         key=lambda entry: (
             entry.category.title,
@@ -233,14 +229,22 @@ def render_status(status: str | None) -> str:
     return f'<span class="meta-pill status-pill">{html.escape(status)}</span>'
 
 
+def render_meta_row(entry: DocEntry) -> str:
+    status = render_status(entry.status)
+    if not status:
+        return ""
+    return f"""
+              <div class="meta-row">
+                {status}
+              </div>
+    """.rstrip()
+
+
 def render_doc(entry: DocEntry) -> str:
     return f"""
           <article class="doc-card">
             <div class="doc-card-top">
-              <div class="meta-row">
-                <span class="meta-pill">{html.escape(entry.language_label)}</span>
-                {render_status(entry.status)}
-              </div>
+{render_meta_row(entry)}
               <p class="doc-path"><code>{html.escape(entry.path)}</code></p>
             </div>
             <h3>{html.escape(entry.title)}</h3>
@@ -289,200 +293,33 @@ def render_page(entries: list[DocEntry]) -> str:
     <title>Mycel Docs Index</title>
     <meta
       name="description"
-      content="Generated index of Mycel project docs, protocol references, profiles, and design notes."
+      content="Generated index of Mycel English project docs, protocol references, profiles, and design notes."
     >
     <meta name="theme-color" content="#0d6b57">
-    <style>
-      :root {{
-        --landing-body-font: "IBM Plex Sans", "Segoe UI", sans-serif;
-        --landing-heading-font: "IBM Plex Serif", Georgia, serif;
-        --landing-heading-line-height: 1.04;
-        --landing-card-line-height: 1.62;
-        --landing-section-line-height: 1.72;
-        --bg: #f3efe6;
-        --surface: rgba(255, 250, 242, 0.9);
-        --surface-strong: #fffaf1;
-        --text: #1d2a26;
-        --muted: #5a6a62;
-        --accent: #0d6b57;
-        --accent-strong: #084d3f;
-        --line: rgba(29, 42, 38, 0.12);
-        --shadow: 0 24px 80px rgba(20, 32, 27, 0.12);
-      }}
-
-      .docs-page .hero {{
-        display: grid;
-        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
-        gap: 22px;
-      }}
-
-      .docs-page .hero-copy,
-      .docs-page .hero-sidebar {{
-        padding: 34px;
-      }}
-
-      .docs-page .eyebrow,
-      .docs-page .section-kicker {{
-        margin: 0 0 10px;
-        font-size: 0.84rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--accent-strong);
-      }}
-
-      .docs-page h1 {{
-        font-size: clamp(2.8rem, 6vw, 5rem);
-        margin-bottom: 18px;
-      }}
-
-      .docs-page .hero-copy p,
-      .docs-page .section-copy,
-      .docs-page .hero-sidebar p {{
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.72;
-      }}
-
-      .docs-page .hero-copy p + p {{
-        margin-top: 14px;
-      }}
-
-      .docs-page .stats-list {{
-        display: grid;
-        gap: 14px;
-      }}
-
-      .docs-page .stats-card {{
-        padding: 18px 20px;
-        border-radius: 20px;
-        background: var(--surface-strong);
-        border: 1px solid var(--line);
-      }}
-
-      .docs-page .stats-card strong {{
-        display: block;
-        margin-bottom: 8px;
-        color: var(--accent-strong);
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        font-size: 0.88rem;
-      }}
-
-      .docs-page .section-heading {{
-        display: grid;
-        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-        gap: 22px;
-        align-items: start;
-        margin-bottom: 22px;
-      }}
-
-      .docs-page .section-heading h2 {{
-        font-size: clamp(2rem, 4vw, 3rem);
-      }}
-
-      .docs-page .docs-grid {{
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 18px;
-      }}
-
-      .docs-page .doc-card {{
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        padding: 24px;
-        border-radius: 22px;
-        background: var(--surface-strong);
-        border: 1px solid var(--line);
-      }}
-
-      .docs-page .doc-card-top {{
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }}
-
-      .docs-page .doc-card h3 {{
-        font-size: 1.5rem;
-      }}
-
-      .docs-page .meta-row {{
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }}
-
-      .docs-page .meta-pill {{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 7px 11px;
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        background: rgba(13, 107, 87, 0.08);
-        color: var(--accent-strong);
-        font-size: 0.82rem;
-        font-weight: 600;
-      }}
-
-      .docs-page .status-pill {{
-        background: rgba(175, 126, 53, 0.14);
-        color: #815314;
-      }}
-
-      .docs-page .doc-path {{
-        margin: 0;
-        color: var(--muted);
-      }}
-
-      .docs-page .doc-summary {{
-        margin: 0;
-        color: var(--muted);
-        line-height: var(--landing-card-line-height);
-        flex: 1;
-      }}
-
-      .docs-page .doc-actions {{
-        display: flex;
-        gap: 12px;
-        margin-top: auto;
-      }}
-
-      .docs-page footer {{
-        margin-top: 22px;
-        padding: 22px 4px 0;
-        color: var(--muted);
-        font-size: 0.95rem;
-      }}
-
-      @media (max-width: 980px) {{
-        .docs-page .hero,
-        .docs-page .section-heading,
-        .docs-page .docs-grid {{
-          grid-template-columns: 1fr;
-        }}
-      }}
-    </style>
     <link rel="stylesheet" href="/Mycel/assets/landing-common.css">
+    <link rel="stylesheet" href="/Mycel/assets/docs-index.css">
   </head>
   <body class="landing-page docs-page">
     <div class="page">
       <nav class="nav">
         <div class="brand">Mycel</div>
         <div class="nav-links">
-          <a href="/Mycel/">Home</a>
+          <a href="https://ctf2090.github.io/Mycel/zh-TW/">繁體中文</a>
+          <a href="https://ctf2090.github.io/Mycel/zh-CN/">简体中文</a>
+          <a href="https://github.com/ctf2090/Mycel">GitHub</a>
+          <a href="https://github.com/ctf2090/Mycel/blob/main/README.md">README</a>
           <a href="/Mycel/docs.html" aria-current="page">Docs</a>
           <a href="/Mycel/progress.html">Progress</a>
-          <a href="https://github.com/ctf2090/Mycel">GitHub</a>
+          <a href="/Mycel/support.html">Support</a>
         </div>
       </nav>
 
       <section class="hero">
         <div class="panel hero-copy">
-          <p class="eyebrow">Generated Document Index</p>
-          <h1>Read the Mycel docs by intent, not by directory.</h1>
+          <p class="eyebrow">Generated English Docs Index</p>
+          <h1>Read the English Mycel docs by intent, not by directory.</h1>
           <p>
-            This page is generated from selected Markdown sources in the repository. It lists public
+            This page is generated from selected English Markdown sources in the repository. It lists
             project docs, protocol references, profiles, and design notes with a short opening note
             taken from each file's heading section.
           </p>
@@ -500,7 +337,7 @@ def render_page(entries: list[DocEntry]) -> str:
           <div class="stats-list">
             <div class="stats-card">
               <strong>Coverage</strong>
-              <p>{total_docs} generated entries across project docs, protocol references, profiles, and design notes.</p>
+              <p>{total_docs} generated English entries across project docs, protocol references, profiles, and design notes.</p>
             </div>
             <div class="stats-card">
               <strong>Generation Rule</strong>
