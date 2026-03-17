@@ -361,6 +361,31 @@ fn write_composed_branch_manual_resolved_state_file(prefix: &str) -> (common::Te
     (dir, path)
 }
 
+fn write_attrs_manual_resolved_state_file(prefix: &str) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("resolved-state.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!({
+            "doc_id": "doc:author-smoke-attrs-manual",
+            "blocks": [
+                {
+                    "block_id": "blk:merge-attrs",
+                    "block_type": "paragraph",
+                    "content": "Attrs",
+                    "attrs": {
+                        "style": "note"
+                    },
+                    "children": []
+                }
+            ]
+        }))
+        .expect("attrs manual resolved state JSON should serialize"),
+    )
+    .expect("attrs manual resolved state JSON should write");
+    (dir, path)
+}
+
 #[test]
 fn store_authoring_flow_creates_document_patch_and_revision() {
     let store_dir = create_temp_dir("store-author-root");
@@ -2217,5 +2242,211 @@ fn store_merge_authoring_flow_rejects_deep_composed_branch_reuse_as_manual_curat
     assert_stderr_contains(
         &merge,
         "merge resolution is manual-curation-required: resolved block 'blk:cmp-leaf-a' does not match any parent placement",
+    );
+}
+
+#[test]
+fn store_merge_authoring_flow_rejects_attr_variant_as_manual_curation_required() {
+    let store_dir = create_temp_dir("store-merge-attrs-manual-root");
+    let (_key_dir, key_path) = write_signing_key_file("store-merge-attrs-manual-key");
+    let (_resolved_dir, resolved_state_path) =
+        write_attrs_manual_resolved_state_file("store-merge-attrs-manual-state");
+    let store_root = path_arg(&store_dir.path().to_path_buf());
+    let key_file = path_arg(&key_path);
+    let resolved_state_file = path_arg(&resolved_state_path);
+
+    let init = run_mycel(&["store", "init", &store_root, "--json"]);
+    assert_success(&init);
+
+    let document = run_mycel(&[
+        "store",
+        "create-document",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-attrs-manual",
+        "--title",
+        "Author Smoke Attrs Manual",
+        "--language",
+        "en",
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "70",
+        "--json",
+    ]);
+    assert_success(&document);
+    let document_json = assert_json_status(&document, "ok");
+    let genesis_revision_id = document_json["genesis_revision_id"]
+        .as_str()
+        .expect("genesis revision should be string")
+        .to_string();
+
+    let base_ops_dir = create_temp_dir("store-merge-attrs-manual-base-ops");
+    let base_ops_path = base_ops_dir.path().join("ops.json");
+    fs::write(
+        &base_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-attrs",
+                    "block_type": "paragraph",
+                    "content": "Attrs",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]))
+        .expect("attrs manual base ops JSON should serialize"),
+    )
+    .expect("attrs manual base ops JSON should write");
+    let base_ops_file = path_arg(&base_ops_path);
+
+    let attrs_ops_dir = create_temp_dir("store-merge-attrs-manual-attrs-ops");
+    let attrs_ops_path = attrs_ops_dir.path().join("ops.json");
+    fs::write(
+        &attrs_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "delete_block",
+                "block_id": "blk:merge-attrs"
+            },
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-attrs",
+                    "block_type": "paragraph",
+                    "content": "Attrs",
+                    "attrs": {
+                        "style": "note"
+                    },
+                    "children": []
+                }
+            }
+        ]))
+        .expect("attrs manual variant ops JSON should serialize"),
+    )
+    .expect("attrs manual variant ops JSON should write");
+    let attrs_ops_file = path_arg(&attrs_ops_path);
+
+    let base_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-attrs-manual",
+        "--base-revision",
+        &genesis_revision_id,
+        "--ops",
+        &base_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "71",
+        "--json",
+    ]);
+    assert_success(&base_patch);
+    let base_patch_json = assert_json_status(&base_patch, "ok");
+    let base_patch_id = base_patch_json["patch_id"]
+        .as_str()
+        .expect("base patch_id should be string")
+        .to_string();
+
+    let base_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-attrs-manual",
+        "--parent",
+        &genesis_revision_id,
+        "--patch",
+        &base_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "72",
+        "--json",
+    ]);
+    assert_success(&base_revision);
+    let base_revision_json = assert_json_status(&base_revision, "ok");
+    let base_revision_id = base_revision_json["revision_id"]
+        .as_str()
+        .expect("base revision_id should be string")
+        .to_string();
+
+    let attrs_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-attrs-manual",
+        "--base-revision",
+        &base_revision_id,
+        "--ops",
+        &attrs_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "73",
+        "--json",
+    ]);
+    assert_success(&attrs_patch);
+    let attrs_patch_json = assert_json_status(&attrs_patch, "ok");
+    let attrs_patch_id = attrs_patch_json["patch_id"]
+        .as_str()
+        .expect("attrs patch_id should be string")
+        .to_string();
+
+    let attrs_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-attrs-manual",
+        "--parent",
+        &base_revision_id,
+        "--patch",
+        &attrs_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "74",
+        "--json",
+    ]);
+    assert_success(&attrs_revision);
+    let attrs_revision_json = assert_json_status(&attrs_revision, "ok");
+    let attrs_revision_id = attrs_revision_json["revision_id"]
+        .as_str()
+        .expect("attrs revision_id should be string")
+        .to_string();
+
+    let merge = run_mycel(&[
+        "store",
+        "create-merge-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-attrs-manual",
+        "--parent",
+        &base_revision_id,
+        "--parent",
+        &attrs_revision_id,
+        "--resolved-state",
+        &resolved_state_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "75",
+    ]);
+
+    assert!(
+        !merge.status.success(),
+        "expected manual-curation failure, stdout: {}, stderr: {}",
+        String::from_utf8_lossy(&merge.stdout),
+        String::from_utf8_lossy(&merge.stderr)
+    );
+    assert_stderr_contains(
+        &merge,
+        "manual-curation-required: block 'blk:merge-attrs' changes attrs in an unsupported way",
     );
 }
