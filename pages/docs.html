@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mycel Docs Index</title>
+    <meta
+      name="description"
+      content="Generated index of Mycel project docs, protocol references, profiles, and design notes."
+    >
+    <meta name="theme-color" content="#0d6b57">
+    <style>
+      :root {
+        --landing-body-font: "IBM Plex Sans", "Segoe UI", sans-serif;
+        --landing-heading-font: "IBM Plex Serif", Georgia, serif;
+        --landing-heading-line-height: 1.04;
+        --landing-card-line-height: 1.62;
+        --landing-section-line-height: 1.72;
+        --bg: #f3efe6;
+        --surface: rgba(255, 250, 242, 0.9);
+        --surface-strong: #fffaf1;
+        --text: #1d2a26;
+        --muted: #5a6a62;
+        --accent: #0d6b57;
+        --accent-strong: #084d3f;
+        --line: rgba(29, 42, 38, 0.12);
+        --shadow: 0 24px 80px rgba(20, 32, 27, 0.12);
+      }
+
+      .docs-page .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+        gap: 22px;
+      }
+
+      .docs-page .hero-copy,
+      .docs-page .hero-sidebar {
+        padding: 34px;
+      }
+
+      .docs-page .eyebrow,
+      .docs-page .section-kicker {
+        margin: 0 0 10px;
+        font-size: 0.84rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      .docs-page h1 {
+        font-size: clamp(2.8rem, 6vw, 5rem);
+        margin-bottom: 18px;
+      }
+
+      .docs-page .hero-copy p,
+      .docs-page .section-copy,
+      .docs-page .hero-sidebar p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .docs-page .hero-copy p + p {
+        margin-top: 14px;
+      }
+
+      .docs-page .stats-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .docs-page .stats-card {
+        padding: 18px 20px;
+        border-radius: 20px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .docs-page .stats-card strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--accent-strong);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        font-size: 0.88rem;
+      }
+
+      .docs-page .section-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 22px;
+      }
+
+      .docs-page .section-heading h2 {
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      .docs-page .docs-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .docs-page .doc-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 24px;
+        border-radius: 22px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .docs-page .doc-card-top {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .docs-page .doc-card h3 {
+        font-size: 1.5rem;
+      }
+
+      .docs-page .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .docs-page .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 11px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(13, 107, 87, 0.08);
+        color: var(--accent-strong);
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      .docs-page .status-pill {
+        background: rgba(175, 126, 53, 0.14);
+        color: #815314;
+      }
+
+      .docs-page .doc-path {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .docs-page .doc-summary {
+        margin: 0;
+        color: var(--muted);
+        line-height: var(--landing-card-line-height);
+        flex: 1;
+      }
+
+      .docs-page .doc-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: auto;
+      }
+
+      .docs-page footer {
+        margin-top: 22px;
+        padding: 22px 4px 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 980px) {
+        .docs-page .hero,
+        .docs-page .section-heading,
+        .docs-page .docs-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="/Mycel/assets/landing-common.css">
+  </head>
+  <body class="landing-page docs-page">
+    <div class="page">
+      <nav class="nav">
+        <div class="brand">Mycel</div>
+        <div class="nav-links">
+          <a href="/Mycel/">Home</a>
+          <a href="/Mycel/docs.html" aria-current="page">Docs</a>
+          <a href="/Mycel/progress.html">Progress</a>
+          <a href="https://github.com/ctf2090/Mycel">GitHub</a>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div class="panel hero-copy">
+          <p class="eyebrow">Generated Document Index</p>
+          <h1>Read the Mycel docs by intent, not by directory.</h1>
+          <p>
+            This page is generated from selected Markdown sources in the repository. It lists public
+            project docs, protocol references, profiles, and design notes with a short opening note
+            taken from each file's heading section.
+          </p>
+          <p>
+            The short note prefers a leading <code>Status:</code> line when one exists, otherwise it
+            falls back to the first summary paragraph under the document title.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/ctf2090/Mycel">Open Repository</a>
+            <a class="button secondary" href="https://github.com/ctf2090/Mycel/tree/main/docs/design-notes">Browse Design Notes</a>
+          </div>
+        </div>
+
+        <aside class="panel hero-sidebar">
+          <div class="stats-list">
+            <div class="stats-card">
+              <strong>Coverage</strong>
+              <p>109 generated entries across project docs, protocol references, profiles, and design notes.</p>
+            </div>
+            <div class="stats-card">
+              <strong>Generation Rule</strong>
+              <p>Built from repository Markdown before GitHub Pages deploy, so the public site stays static while the index stays current.</p>
+            </div>
+            <div class="stats-card">
+              <strong>Source of Truth</strong>
+              <p>The Markdown files remain authoritative. This page is a navigation layer, not a second source of content truth.</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+
+      <section class="panel section-panel category-panel" id="project-docs">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">33 documents</p>
+            <h2>Project Docs</h2>
+          </div>
+          <p class="section-copy">High-level project overviews, roadmap materials, and public-facing reference notes.</p>
+        </div>
+        <div class="docs-grid">
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>docs/DEV-SETUP.md</code></p>
+            </div>
+            <h3>Dev Setup</h3>
+            <p class="doc-summary">This guide is the shortest path from a fresh checkout to a usable Mycel development environment.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>README.md</code></p>
+            </div>
+            <h3>Mycel</h3>
+            <p class="doc-summary">Mycel is a Rust-based protocol stack for verifiable text history, governed reading state, and decentralized replication.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/README.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>README.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel</h3>
+            <p class="doc-summary">語言：繁體中文 | English | 简体中文</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/README.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>README.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel</h3>
+            <p class="doc-summary">语言：简体中文 | English | 繁體中文</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/README.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+                <span class="meta-pill status-pill">working checklist</span>
+              </div>
+              <p class="doc-path"><code>docs/FEATURE-REVIEW-CHECKLIST.md</code></p>
+            </div>
+            <h3>Mycel Feature Review Checklist</h3>
+            <p class="doc-summary">This document is a recurring review list for any proposed new Mycel feature.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/FEATURE-REVIEW-CHECKLIST.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-GRANT-CONCEPT-NOTE.md</code></p>
+            </div>
+            <h3>Mycel Grant Concept Note</h3>
+            <p class="doc-summary">Mycel: Verifiable Text History, Governed Reading State, and Decentralized Replication</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-GRANT-CONCEPT-NOTE.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+                <span class="meta-pill status-pill">draft, refreshed after the implementation checklist was split into a closed M1 gate plus a live post-M1 follow-up checklist so the summary now reflects M2 / M3 / M4 as the active planning lane; M4 now also records localhost transport proof plus all three currently tracked production replication sub-proofs as landed</span>
+              </div>
+              <p class="doc-path"><code>docs/PROGRESS.md</code></p>
+            </div>
+            <h3>Mycel Progress View</h3>
+            <p class="doc-summary">This page turns ROADMAP.md and IMPLEMENTATION-CHECKLIST.en.md into one quick progress view.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/PROGRESS.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+                <span class="meta-pill status-pill">major progress, refreshed after the implementation checklist was split into a closed M1 minimal-client gate plus a live post-M1 follow-up checklist; the active lane is now clearly M2 / M3 / M4, while broader governance persistence and the remaining peer interop error/session proof stay open after the current production replication sub-items were completed</span>
+              </div>
+              <p class="doc-path"><code>ROADMAP.md</code></p>
+            </div>
+            <h3>Mycel Roadmap</h3>
+            <p class="doc-summary">This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>ROADMAP.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Roadmap</h3>
+            <p class="doc-summary">狀態：major progress，已在 implementation checklist 拆成已關閉的 M1 minimal-client gate 與活的 post-M1 follow-up checklist 後刷新；目前 active lane 已清楚轉到 M2 / M3 / M4，而更廣的 governance persistence 與剩餘的 peer interop error/session proof 仍未完成；...</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+                <span class="meta-pill status-pill">draft</span>
+              </div>
+              <p class="doc-path"><code>SPEC-ISSUES.md</code></p>
+            </div>
+            <h3>Mycel Spec Issue List</h3>
+            <p class="doc-summary">This document tracks protocol-spec issues that are likely to cause interoperability problems, ambiguous validation behavior, or incompatible implementations.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/SPEC-ISSUES.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">M1 minimal-client gate closed and retained below as a completed checklist; a post-M1 follow-up checklist now tracks the still-open M2 / M3 / M4 work, including broader governance persistence, broader peer interop, and production replication behavior</span>
+              </div>
+              <p class="doc-path"><code>IMPLEMENTATION-CHECKLIST.en.md</code></p>
+            </div>
+            <h3>Mycel v0.1 Implementation Checklist</h3>
+            <p class="doc-summary">This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>IMPLEMENTATION-CHECKLIST.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel v0.1 实现检查清单</h3>
+            <p class="doc-summary">状态：late partial progress，M1 parsing、parser / verify / CLI strictness coverage、更广的 inspect-surface parity、signature-edge 与 replay/verify smoke coverage、fixture isolation、test-foundation cleanup 和 canonical reproducibil...</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>IMPLEMENTATION-CHECKLIST.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel v0.1 實作檢查清單</h3>
+            <p class="doc-summary">狀態：M1 minimal-client gate 已關閉，並在下方保留為已完成清單；新的 post-M1 follow-up checklist 現在用來追蹤仍未完成的 M2 / M3 / M4 工作，包括更廣的 governance persistence、更廣的 peer interop，以及 production replication behavior</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/IMPLEMENTATION-CHECKLIST.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/FEATURE-REVIEW-CHECKLIST.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel 功能審查檢查清單</h3>
+            <p class="doc-summary">狀態：目前有效的工作檢查清單</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/FEATURE-REVIEW-CHECKLIST.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-GAP.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel 想补上的空白</h3>
+            <p class="doc-summary">状态：说明文档</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-GAP.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/TERMINOLOGY.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel 术语表（简体中文）</h3>
+            <p class="doc-summary">状态：working glossary</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/TERMINOLOGY.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-VALUE.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel 的价值</h3>
+            <p class="doc-summary">这份文件把 Mycel 的价值主张改写成一种更容易对外沟通的方式： 不是先讲协议特性，而是先从人们今天使用现有工具时已经感受到的痛点切入。</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/TERMINOLOGY.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel 術語表（繁中）</h3>
+            <p class="doc-summary">狀態：working glossary</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/TERMINOLOGY.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-GAP.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel 要補上的空缺</h3>
+            <p class="doc-summary">狀態：說明文件</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-GAP.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-GRANT-CONCEPT-NOTE.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel 資助概念說明</h3>
+            <p class="doc-summary">Mycel：可驗證文本歷史、依規則導出的預設閱讀版本與去中心化複製</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-GRANT-CONCEPT-NOTE.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>ROADMAP.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel 路线图</h3>
+            <p class="doc-summary">状态：major progress，已在 implementation checklist 拆成已关闭的 M1 minimal-client gate 与活跃的 post-M1 follow-up checklist 之后刷新；当前 active lane 已明确转到 M2 / M3 / M4，而更广的 governance persistence 与剩余的 peer interop error/session proof 仍未完...</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/ROADMAP.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-VALUE.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel的價值</h3>
+            <p class="doc-summary">這份文件把 Mycel 的價值主張改寫成一種較容易對外溝通的方式： 不是先講協定特性，而是先從人們今天使用現存工具時已經感受到的痛點切入。</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>PROJECT-INTENT.md</code></p>
+            </div>
+            <h3>Project Intent</h3>
+            <p class="doc-summary">Illustrative conditions and corresponding possible Mycel uses:</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROJECT-INTENT.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+                <span class="meta-pill status-pill">current outward-facing naming guidance</span>
+              </div>
+              <p class="doc-path"><code>docs/PROJECT-NAMING.md</code></p>
+            </div>
+            <h3>Project Naming</h3>
+            <p class="doc-summary">This document defines how Mycel and MycelLayer should be used across the repository and public-facing surfaces.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/PROJECT-NAMING.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>RUST-WORKSPACE.md</code></p>
+            </div>
+            <h3>Rust Workspace</h3>
+            <p class="doc-summary">This note describes the first Rust workspace cut for Mycel.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/RUST-WORKSPACE.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>SECURITY.md</code></p>
+            </div>
+            <h3>Security Policy</h3>
+            <p class="doc-summary">Mycel is currently an early-stage, spec-first project.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/SECURITY.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+                <span class="meta-pill status-pill">explanatory note</span>
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-GAP.md</code></p>
+            </div>
+            <h3>The Gap Mycel Fills</h3>
+            <p class="doc-summary">This document explains why protocols like Mycel have been relatively rare, and how the problems Mycel is trying to address are usually handled today.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-GAP.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">Default</span>
+
+              </div>
+              <p class="doc-path"><code>docs/MYCEL-VALUE.md</code></p>
+            </div>
+            <h3>The Value of Mycel</h3>
+            <p class="doc-summary">This document rewrites Mycel&#x27;s value proposition in a form that is easier to explain outwardly: instead of starting with protocol mechanics, it starts with the pain points people already feel in today&#x27;s tools.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/MYCEL-VALUE.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/PROJECT-NAMING.zh-TW.md</code></p>
+            </div>
+            <h3>專案命名規則</h3>
+            <p class="doc-summary">狀態：目前有效的對外命名使用指引</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/PROJECT-NAMING.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>PROJECT-INTENT.zh-TW.md</code></p>
+            </div>
+            <h3>專案意圖</h3>
+            <p class="doc-summary">以下列出幾個條件與可能用途的對應例子：</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROJECT-INTENT.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/DEV-SETUP.zh-CN.md</code></p>
+            </div>
+            <h3>开发环境设置</h3>
+            <p class="doc-summary">这份文档提供从全新 checkout 到可以实际开发 Mycel 的最短路径。</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/DEV-SETUP.zh-TW.md</code></p>
+            </div>
+            <h3>開發環境設置</h3>
+            <p class="doc-summary">這份文件提供從全新 checkout 到可實際開發 Mycel 的最短路徑。</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/DEV-SETUP.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>PROJECT-INTENT.zh-CN.md</code></p>
+            </div>
+            <h3>项目意图</h3>
+            <p class="doc-summary">下面列出几组条件和可能用途的示例：</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROJECT-INTENT.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="panel section-panel category-panel" id="protocol">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">6 documents</p>
+            <h2>Protocol</h2>
+          </div>
+          <p class="section-copy">Core protocol and wire-level reference documents.</p>
+        </div>
+        <div class="docs-grid">
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+
+              </div>
+              <p class="doc-path"><code>PROTOCOL.en.md</code></p>
+            </div>
+            <h3>Mycel Protocol v0.1</h3>
+            <p class="doc-summary">Mycel is a text protocol with the following characteristics:</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+
+              </div>
+              <p class="doc-path"><code>WIRE-PROTOCOL.en.md</code></p>
+            </div>
+            <h3>Mycel Wire Protocol v0.1 (Draft)</h3>
+            <p class="doc-summary">This document defines the transport-level message format and minimum synchronization flow for Mycel nodes.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/WIRE-PROTOCOL.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>WIRE-PROTOCOL.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel 传输协议 v0.1（草案）</h3>
+            <p class="doc-summary">语言：简体中文 | English | 繁體中文</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/WIRE-PROTOCOL.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>WIRE-PROTOCOL.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel 傳輸協定 v0.1（草案）</h3>
+            <p class="doc-summary">語言：繁體中文 | English</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/WIRE-PROTOCOL.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">简体中文</span>
+
+              </div>
+              <p class="doc-path"><code>PROTOCOL.zh-CN.md</code></p>
+            </div>
+            <h3>Mycel 协议 v0.1</h3>
+            <p class="doc-summary">语言：简体中文 | English | 繁體中文</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.zh-CN.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>PROTOCOL.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel 協定 v0.1</h3>
+            <p class="doc-summary">語言：繁體中文 | English</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROTOCOL.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="panel section-panel category-panel" id="profiles">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">4 documents</p>
+            <h2>Profiles</h2>
+          </div>
+          <p class="section-copy">Profile documents that define governed interpretations and application-specific shapes.</p>
+        </div>
+        <div class="docs-grid">
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">profile draft</span>
+              </div>
+              <p class="doc-path"><code>PROFILE.fund-auto-disbursement-v0.1.en.md</code></p>
+            </div>
+            <h3>Fund Auto-disbursement Profile v0.1</h3>
+            <p class="doc-summary">This profile defines a narrow interoperable model for automatic fund disbursement built on top of Mycel app-layer records, accepted-state selection, and policy-driven m-of-n custody.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROFILE.fund-auto-disbursement-v0.1.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">profile draft</span>
+              </div>
+              <p class="doc-path"><code>PROFILE.mycel-over-tor-v0.1.en.md</code></p>
+            </div>
+            <h3>Mycel over Tor Profile v0.1</h3>
+            <p class="doc-summary">This profile defines a narrow deployment model for running Mycel over Tor-oriented transport.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROFILE.mycel-over-tor-v0.1.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>PROFILE.mycel-over-tor-v0.1.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel over Tor Profile v0.1</h3>
+            <p class="doc-summary">狀態：profile 草案</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROFILE.mycel-over-tor-v0.1.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>PROFILE.fund-auto-disbursement-v0.1.zh-TW.md</code></p>
+            </div>
+            <h3>自動撥付 Profile v0.1</h3>
+            <p class="doc-summary">狀態：profile 草案</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/PROFILE.fund-auto-disbursement-v0.1.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="panel section-panel category-panel" id="design-notes">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">66 documents</p>
+            <h2>Design Notes</h2>
+          </div>
+          <p class="section-copy">Deeper design explorations for protocol, app-layer, and governance concepts.</p>
+        </div>
+        <div class="docs-grid">
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.auto-signer-consent-model.en.md</code></p>
+            </div>
+            <h3>Auto-signer Consent Model</h3>
+            <p class="doc-summary">This note describes how a Mycel-based system should model consent for automatic threshold signers.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.auto-signer-consent-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.auto-signer-consent-model.zh-TW.md</code></p>
+            </div>
+            <h3>Auto-signer Consent Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.auto-signer-consent-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.canonical-text-profile.en.md</code></p>
+            </div>
+            <h3>Canonical Text Profile</h3>
+            <p class="doc-summary">This note describes a neutral text profile for carrying structured, cited, and annotated canonical corpora on top of Mycel.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.canonical-text-profile.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.canonical-text-profile.zh-TW.md</code></p>
+            </div>
+            <h3>Canonical Text Profile</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.canonical-text-profile.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.en.md</code></p>
+            </div>
+            <h3>Client-Non-Discretionary Multi-View</h3>
+            <p class="doc-summary">This note describes one way to keep Mycel multi-view while minimizing how much ordinary clients can influence the active accepted head.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md</code></p>
+            </div>
+            <h3>Client-Non-Discretionary Multi-View</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.client-non-discretionary-multi-view.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.commentary-citation-schema.en.md</code></p>
+            </div>
+            <h3>Commentary and Citation Schema</h3>
+            <p class="doc-summary">This note defines a narrow app-level schema for maintainer-authored commentary works that heavily cite one or more source documents without overwriting them.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.commentary-citation-schema.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.commentary-citation-schema.zh-TW.md</code></p>
+            </div>
+            <h3>Commentary and Citation Schema</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.commentary-citation-schema.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.donation-app-layer.en.md</code></p>
+            </div>
+            <h3>Donation App Layer</h3>
+            <p class="doc-summary">This note describes a donation-oriented application layer carried by Mycel while keeping payment execution outside the core protocol.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.donation-app-layer.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.donation-app-layer.zh-TW.md</code></p>
+            </div>
+            <h3>Donation App Layer</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.donation-app-layer.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.enterprise-messenger-app-layer.en.md</code></p>
+            </div>
+            <h3>Enterprise Messenger App Layer</h3>
+            <p class="doc-summary">This note describes how Mycel can carry an enterprise instant messenger app for internal planning, operations, and compliance-heavy collaboration without turning the core protocol into a chat transport, DLP engine, or...</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.enterprise-messenger-app-layer.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md</code></p>
+            </div>
+            <h3>First-client Scope v0.1</h3>
+            <p class="doc-summary">This note defines the narrowest practical first-client scope for Mycel.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md</code></p>
+            </div>
+            <h3>First-client Scope v0.1</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.first-client-scope-v0.1.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.forum-qa-relationship.en.md</code></p>
+            </div>
+            <h3>Forum and Q&amp;A Relationship</h3>
+            <p class="doc-summary">This note defines the relationship between the Forum App Layer and the Q&amp;A App Layer.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.forum-qa-relationship.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.forum-app-layer.en.md</code></p>
+            </div>
+            <h3>Forum App Layer</h3>
+            <p class="doc-summary">This note describes how Mycel could carry a forum-style application layer while keeping forum semantics outside the protocol core.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.forum-app-layer.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.forum-app-layer.zh-TW.md</code></p>
+            </div>
+            <h3>Forum App Layer</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.forum-app-layer.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.forum-qa-relationship.zh-TW.md</code></p>
+            </div>
+            <h3>Forum 與 Q&amp;A 的關係</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.forum-qa-relationship.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.governance-history-security.en.md</code></p>
+            </div>
+            <h3>Governance History Security</h3>
+            <p class="doc-summary">This note describes how a Mycel-based system should secure governance history so that decisions remain verifiable, replayable, and recoverable over time.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.governance-history-security.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.governance-history-security.zh-TW.md</code></p>
+            </div>
+            <h3>Governance History Security</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.governance-history-security.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.en.md</code></p>
+            </div>
+            <h3>Interpretation Dispute Model</h3>
+            <p class="doc-summary">This note describes how Mycel can model, preserve, and arbitrate interpretation disputes without silently replacing root text or forcing all deployments into one universal reading.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.zh-TW.md</code></p>
+            </div>
+            <h3>Interpretation Dispute Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.interpretation-dispute-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-anonymity-model.en.md</code></p>
+            </div>
+            <h3>Mycel Anonymity Model</h3>
+            <p class="doc-summary">This note describes how a Mycel-based system should reason about anonymity as a multi-layer property rather than a single transport setting.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-anonymity-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-anonymity-model.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Anonymity Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-anonymity-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-app-layer.en.md</code></p>
+            </div>
+            <h3>Mycel App Layer</h3>
+            <p class="doc-summary">This note describes an application layer carried by Mycel while keeping side-effect execution outside the core protocol.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-app-layer.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-app-layer.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel App Layer</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-app-layer.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.app-signing-model.en.md</code></p>
+            </div>
+            <h3>Mycel App-signing Model</h3>
+            <p class="doc-summary">This note describes how a Mycel-based system should think about application signing as a layered model rather than one single signature decision.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.app-signing-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.app-signing-model.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel App-signing Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.app-signing-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.blind-address-threat-model.en.md</code></p>
+            </div>
+            <h3>Mycel Blind-address Threat Model</h3>
+            <p class="doc-summary">This note describes the main threat surfaces, trust boundaries, and control requirements for a Mycel deployment that uses a blind-address custody model.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.blind-address-threat-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.blind-address-threat-model.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Blind-address Threat Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.blind-address-threat-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md</code></p>
+            </div>
+            <h3>Mycel Full-stack Map</h3>
+            <p class="doc-summary">This note maps the current Mycel document set into a full-stack system view.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Full-stack Map</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-full-stack-map.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.maintainer-conflict-flow.en.md</code></p>
+            </div>
+            <h3>Mycel Maintainer Conflict Flow</h3>
+            <p class="doc-summary">This note describes how a Mycel deployment should model and preserve a conflict between maintainers over a document idea or direction without collapsing the conflict into silent overwrite.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.maintainer-conflict-flow.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.maintainer-conflict-flow.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Maintainer Conflict Flow</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.maintainer-conflict-flow.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md</code></p>
+            </div>
+            <h3>Mycel Protocol Upgrade Philosophy</h3>
+            <p class="doc-summary">This note describes how Mycel should evolve its protocol, profiles, and design notes without turning the core specification into a fast-moving target.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-protocol-upgrade-philosophy.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Protocol Upgrade Philosophy</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.mycel-protocol-upgrade-philosophy.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signature-role-matrix.en.md</code></p>
+            </div>
+            <h3>Mycel Signature Role Matrix</h3>
+            <p class="doc-summary">This note maps the main object families in the current repo to the roles that should sign them.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signature-role-matrix.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signature-role-matrix.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Signature Role Matrix</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signature-role-matrix.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signature-priority.en.md</code></p>
+            </div>
+            <h3>Mycel Signature-priority Note</h3>
+            <p class="doc-summary">This note organizes which object families in the current Mycel repo should require signatures first, rather than treating every possible object family as equally urgent.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signature-priority.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signature-priority.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Signature-priority Note</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signature-priority.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signer-activity-model.en.md</code></p>
+            </div>
+            <h3>Mycel Signer Activity Model</h3>
+            <p class="doc-summary">This note describes how a Mycel-based custody deployment should evaluate signer activity rather than treating signer availability as a binary guess.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signer-activity-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signer-activity-model.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Signer Activity Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signer-activity-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signer-availability-emergency-response.en.md</code></p>
+            </div>
+            <h3>Mycel Signer-availability Emergency Response</h3>
+            <p class="doc-summary">This note describes how a Mycel-based m-of-n custody deployment should detect dangerous signer-availability decline and trigger emergency rotation, address renewal, or other recovery paths before practical lockout occ...</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signer-availability-emergency-response.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.signer-availability-emergency-response.zh-TW.md</code></p>
+            </div>
+            <h3>Mycel Signer-availability Emergency Response</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.signer-availability-emergency-response.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.peer-discovery-model.en.md</code></p>
+            </div>
+            <h3>Peer Discovery Model</h3>
+            <p class="doc-summary">This note describes how a Mycel-based system should discover, classify, and retain peers without assuming one universal global discovery mode.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.peer-discovery-model.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.peer-discovery-model.zh-TW.md</code></p>
+            </div>
+            <h3>Peer Discovery Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.peer-discovery-model.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.peer-simulator-v0.en.md</code></p>
+            </div>
+            <h3>Peer Simulator v0</h3>
+            <p class="doc-summary">This note defines a narrow multi-peer simulator for early Mycel implementation testing.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.peer-simulator-v0.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.peer-simulator-v0.zh-TW.md</code></p>
+            </div>
+            <h3>Peer Simulator v0</h3>
+            <p class="doc-summary">本文件定義一個狹窄的多 peer simulator，供 Mycel 早期實作測試使用。</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.peer-simulator-v0.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.en.md</code></p>
+            </div>
+            <h3>Policy-driven m-of-n Custody</h3>
+            <p class="doc-summary">This note describes a custody model where Mycel carries the policy and governance history for fund movements, while an m-of-n signer network executes approved transactions automatically under fixed policy constraints.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md</code></p>
+            </div>
+            <h3>Policy-driven m-of-n Custody</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.policy-driven-threshold-custody.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.qa-app-layer.en.md</code></p>
+            </div>
+            <h3>Q&amp;A App Layer</h3>
+            <p class="doc-summary">This note describes a Q&amp;A application layer carried by Mycel while keeping domain-specific interpretation and advisory workflows outside the core protocol.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.qa-app-layer.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.qa-app-layer.zh-TW.md</code></p>
+            </div>
+            <h3>Q&amp;A App Layer</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.qa-app-layer.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.qa-minimal-schema.en.md</code></p>
+            </div>
+            <h3>Q&amp;A Minimal Schema</h3>
+            <p class="doc-summary">This note defines a minimal app-level schema for a Mycel-carried Q&amp;A application.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.qa-minimal-schema.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.qa-minimal-schema.zh-TW.md</code></p>
+            </div>
+            <h3>Q&amp;A Minimal Schema</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.qa-minimal-schema.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.realtime-media-app-layer.en.md</code></p>
+            </div>
+            <h3>Realtime Media App Layer</h3>
+            <p class="doc-summary">This note describes how Mycel can support realtime audio/video services without turning the core protocol or wire layer into a media-streaming transport.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.realtime-media-app-layer.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design note</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.relay-node-layering.en.md</code></p>
+            </div>
+            <h3>Relay Node Layering</h3>
+            <p class="doc-summary">This note defines where a relay node belongs in Mycel&#x27;s layer model.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.relay-node-layering.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.relay-node-layering.zh-TW.md</code></p>
+            </div>
+            <h3>Relay Node 分層位置</h3>
+            <p class="doc-summary">狀態：設計備忘錄</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.relay-node-layering.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.sensor-triggered-donation.en.md</code></p>
+            </div>
+            <h3>Sensor-triggered Donation App/Profile Architecture</h3>
+            <p class="doc-summary">This note describes an app/profile architecture where a runtime observes machine-derived user-state events and may create donation-related records under a pre-authorized consent policy.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.sensor-triggered-donation.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.sensor-triggered-donation.zh-TW.md</code></p>
+            </div>
+            <h3>Sensor-triggered Donation App/Profile Architecture</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.sensor-triggered-donation.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.text-worker-editor.en.md</code></p>
+            </div>
+            <h3>Text-worker Editor</h3>
+            <p class="doc-summary">This note describes a future editor surface for serious text work on top of Mycel.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.text-worker-editor.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.text-worker-editor-implementation.en.md</code></p>
+            </div>
+            <h3>Text-worker Editor Implementation Sketch</h3>
+            <p class="doc-summary">This note describes a plausible implementation plan for a future Mycel text-worker editor.</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.text-worker-editor-implementation.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.two-maintainer-role.en.md</code></p>
+            </div>
+            <h3>Two-Maintainer-Role Model</h3>
+            <p class="doc-summary">This note proposes splitting maintainer responsibility into two explicit roles:</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.two-maintainer-role.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.two-maintainer-role.zh-TW.md</code></p>
+            </div>
+            <h3>Two-Maintainer-Role Model</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.two-maintainer-role.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">English</span>
+                <span class="meta-pill status-pill">design draft</span>
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.en.md</code></p>
+            </div>
+            <h3>Viewer-Editor-View-Maintainer Checks and Balances</h3>
+            <p class="doc-summary">This note proposes a checks-and-balances model for Mycel with three distinct roles:</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.en.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.zh-TW.md</code></p>
+            </div>
+            <h3>Viewer-Editor-View-Maintainer Checks and Balances</h3>
+            <p class="doc-summary">狀態：design draft</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.viewer-editor-view-maintainer-checks-and-balances.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.enterprise-messenger-app-layer.zh-TW.md</code></p>
+            </div>
+            <h3>企業即時通訊應用層</h3>
+            <p class="doc-summary">狀態：設計草案</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.enterprise-messenger-app-layer.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+<article class="doc-card">
+            <div class="doc-card-top">
+              <div class="meta-row">
+                <span class="meta-pill">繁體中文</span>
+
+              </div>
+              <p class="doc-path"><code>docs/design-notes/DESIGN-NOTES.realtime-media-app-layer.zh-TW.md</code></p>
+            </div>
+            <h3>即時影音應用層</h3>
+            <p class="doc-summary">狀態：設計草案</p>
+            <div class="doc-actions">
+              <a class="button secondary" href="https://github.com/ctf2090/Mycel/blob/main/docs/design-notes/DESIGN-NOTES.realtime-media-app-layer.zh-TW.md">Open Markdown</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer>
+        Generated by <code>scripts/generate_docs_index.py</code> from tracked Markdown sources.
+      </footer>
+    </div>
+  </body>
+</html>

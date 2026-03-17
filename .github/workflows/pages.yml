@@ -5,7 +5,10 @@ on:
     branches:
       - main
     paths:
+      - '*.md'
+      - 'docs/**/*.md'
       - 'pages/**'
+      - 'scripts/generate_docs_index.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -31,6 +34,9 @@ jobs:
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+
+      - name: Generate docs index
+        run: python3 scripts/generate_docs_index.py
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
