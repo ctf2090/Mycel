@@ -2274,7 +2274,7 @@ fn merge_authoring_rejects_novel_nested_parent_choice_when_other_parent_moves_bl
         ]),
     );
 
-    let error = create_merge_revision_in_store(
+    let summary = create_merge_revision_in_store(
         &store_root,
         &signing_key,
         &MergeRevisionCreateParams {
@@ -2296,14 +2296,36 @@ fn merge_authoring_rejects_novel_nested_parent_choice_when_other_parent_moves_bl
             timestamp: 65,
         },
     )
-    .expect_err("merge revision should require manual curation");
+    .expect("merge revision should be created");
 
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
     assert!(
-        error
-            .to_string()
-            .contains("manual-curation-required: resolved block 'blk:manual-leaf' does not match any parent placement"),
-        "expected nested placement manual-curation error, got {error}"
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("selected a non-primary parent placement")),
+        "expected nested placement multi-variant reason, got {summary:?}"
     );
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::InsertBlock { new_block, .. }
+        if new_block.block_id == "blk:manual-wrapper"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+        if block_id == "blk:manual-left" && parent_block_id == "blk:manual-wrapper"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: Some(after_block_id) }
+        if block_id == "blk:manual-leaf"
+            && parent_block_id == "blk:manual-wrapper"
+            && after_block_id == "blk:manual-left"
+    )));
 
     let _ = fs::remove_dir_all(store_root);
 }

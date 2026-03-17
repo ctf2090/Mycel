@@ -217,6 +217,8 @@ fn assess_merge_resolution(
             && !alternative_parent_variants.contains(&resolved_parent_variant))
         .then(|| resolved_parent_anchor_variant(&block_id, &primary_blocks, &resolved_blocks))
         .flatten();
+        let primary_sibling_variant = block_sibling_variant(primary_blocks.get(&block_id));
+        let resolved_sibling_variant = block_sibling_variant(resolved_blocks.get(&block_id));
         let root_only_alternatives = alternative_parent_variants.is_empty()
             || alternative_parent_variants
                 .iter()
@@ -227,7 +229,27 @@ fn assess_merge_resolution(
                 continue;
             }
 
-            if anchor_variant != "<root>" && anchor_variant == primary_parent_variant {
+            if anchor_variant != "<root>"
+                && anchor_variant == primary_parent_variant
+                && resolved_sibling_variant == primary_sibling_variant
+            {
+                continue;
+            }
+
+            let anchor_sibling_variants = parent_states
+                .iter()
+                .skip(1)
+                .map(|(_, state)| flatten_blocks(&state.blocks))
+                .filter(|blocks| block_parent_variant(blocks.get(&block_id)) == anchor_variant)
+                .map(|blocks| block_sibling_variant(blocks.get(&block_id)))
+                .collect::<BTreeSet<_>>();
+
+            if anchor_sibling_variants.contains(&resolved_sibling_variant) {
+                saw_multi_variant = true;
+                reasons.push(format!(
+                    "block '{}' selected a non-primary parent placement",
+                    block_id
+                ));
                 continue;
             }
 
@@ -264,8 +286,6 @@ fn assess_merge_resolution(
             ));
         }
 
-        let primary_sibling_variant = block_sibling_variant(primary_blocks.get(&block_id));
-        let resolved_sibling_variant = block_sibling_variant(resolved_blocks.get(&block_id));
         let alternative_sibling_variants = parent_states
             .iter()
             .skip(1)
