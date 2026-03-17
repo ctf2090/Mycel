@@ -79,9 +79,9 @@
             <div class="status partial">已大幅展開</div>
             <ul>
               <li>Replay 與 <code>state_hash</code></li>
-              <li>Store rebuild、indexes 與 ancestry context</li>
+              <li>Store rebuild、indexes，以及具 ancestry-aware 的 render/store verification</li>
               <li>Narrow write-path closure</li>
-              <li>Conservative merge authoring</li>
+              <li>具更廣 structural coverage 的 conservative merge authoring</li>
             </ul>
           </article>
           <article class="card">
@@ -91,8 +91,10 @@
             <ul>
               <li>Accepted-head reader workflows</li>
               <li>Bundle 與 store rendering，並保留 ancestry context</li>
-              <li>具名 fixed-profile reading</li>
-              <li>具備 editor-admission 感知的 render flows</li>
+              <li>具名 fixed-profile reading，並具備更清楚的 available-profile 與 profile-error feedback</li>
+              <li>具備 editor-admission 感知的 inspect/render flows</li>
+              <li>head inspection 中的 bounded viewer score surfaces</li>
+              <li>Filtered governance inspect/list/publish workflows</li>
               <li>Persisted governance reverse indexes</li>
             </ul>
           </article>
@@ -106,6 +108,7 @@
               <li>Peer-store 的 first-time / incremental sync proof</li>
               <li>Capability-gated 的 <code>SNAPSHOT_OFFER</code> / <code>VIEW_ANNOUNCE</code></li>
               <li>localhost multi-process、re-sync idempotency、depth-N catchup 與 partial-doc selective sync proofs</li>
+              <li>剩餘工作是更廣的 session/error-path interop proof</li>
             </ul>
           </article>
           <article class="card">
