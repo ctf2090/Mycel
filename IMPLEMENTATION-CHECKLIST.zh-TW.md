@@ -171,6 +171,7 @@
 - [x] 提供 view inspection 或 head inspection 入口。
 - [x] 提供可從 stored objects 或明確 object bundles 進行 accepted-head render 的入口。
 - [x] 把 reader-facing accepted-head inspection 與 curator-facing View publication workflow 分開。
+- [x] 為 accepted-head inspection/render 提供獨立的 `human` 與 `debug` 文字輸出模式，同時把 JSON 與 typed arrays 保持為機器可依賴的穩定細節介面。
 - [x] 讓 head inspection 的 `decision_trace` 只保留高階摘要層。
 - [x] 把 maintainer、weight、violation 的機器可消費細節放在 `effective_weights[]`、`maintainer_support[]`、`critical_violations[]` 這類 typed arrays，而不是塞進 `decision_trace`。
 - [x] 把 `decision_trace` 視為給人讀的解釋輸出；把 typed arrays 視為給工具與測試依賴的穩定細節介面。

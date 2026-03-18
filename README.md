@@ -67,7 +67,7 @@ What those commands show:
 
 - Protocol stage: `v0.1` conceptual specification with growing profile and design-note layers
 - Current implementation focus: first-client scoping, replay/verification hardening, shared canonical-helper convergence, and ancestry-aware accepted-head/render proof coverage
-- Current CLI boundary: suitable for internal validation, object inspection, object verification, accepted-head inspection/render, report inspection, and simulator runs inside this repository
+- Current CLI boundary: suitable for internal validation, object inspection, object verification, accepted-head inspection/render with human/debug text modes plus JSON detail, report inspection, and simulator runs inside this repository
 - Not yet delivered: production node behavior, public-network wire sync, or a finished end-user client
 
 ## Read By Goal

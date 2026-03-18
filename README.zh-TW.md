@@ -138,7 +138,7 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 ## 近期優先事項
 
-1. 完成窄版 first-client core，聚焦 verification、replay、storage、accepted-head inspection/render，以及最後幾個 shared-core canonicalization 缺口。
+1. 完成窄版 first-client core，聚焦 verification、replay、storage、accepted-head inspection/render（含 human/debug 文字模式），以及最後幾個 shared-core canonicalization 缺口。
 2. 在擴大 protocol-core 範圍之前，先把成熟想法落成明確的 profiles、schemas、fixtures 與 tests。
 3. 採逐層上推的方式擴展：先 reader-first text reconstruction，再逐步加入選擇性的 app-layer 支援。
 

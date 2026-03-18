@@ -273,7 +273,7 @@ Implementation anchors：
 
 ### Current Status
 
-屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection、更清楚的可用 profile 探索與 profile 錯誤回饋、具備 editor-admission 感知的 inspect/render behavior，以及 head inspection 裡的 bounded viewer score surfaces；`M3` 仍未完成，主要剩下更廣泛的 governance persistence、超出這一輪初步打磨的 reader-facing profile ergonomics，以及最後的獨立 dual-role 角色指派收尾。
+屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection、更清楚的可用 profile 探索與 profile 錯誤回饋、具備 editor-admission 感知的 inspect/render behavior、`head inspect` / `head render` 的 `human` / `debug` 文字輸出模式，以及 head inspection 裡的 bounded viewer score surfaces；`M3` 仍未完成，主要剩下更廣泛的 governance persistence、超出這一輪初步打磨的 reader-facing profile ergonomics，以及最後的獨立 dual-role 角色指派收尾。
 
 已在進行中或部分完成：
 
@@ -283,10 +283,11 @@ Implementation anchors：
 4. 可從 persisted store state 或 explicit bundle objects 產生 accepted-head render output
 5. 為 accepted-head inspection 與 render workflows 提供具名 fixed-profile selection，並補上更清楚的可用 profile 摘要與對稱的 profile 錯誤回饋
 6. 在具名 profile 與 store-backed 路徑中，提供具備 editor-admission 感知的 accepted-head inspect/render behavior
-7. 提供獨立於 reader-facing `head` commands 的 `view inspect` / `view list` / `view publish` governance workflows，並具備 listing filter、sort、time window、grouped summary 與 projection modes
-8. persisted governance reverse indexes，支援依 maintainer、profile 與 document 反查 view
-9. simulator 與 validation workflows，涵蓋 peer、topology、test 與 report 範圍
-10. head inspection 中的 bounded viewer score channels，包括 typed signal summaries、anti-Sybil gating、challenge review/freeze pressure，以及 fixture-backed coverage
+7. 為 `head inspect` / `head render` 提供獨立的 `human` 與 `debug` 文字輸出模式，讓高階決策摘要與 debug trace 細節分層呈現
+8. 提供獨立於 reader-facing `head` commands 的 `view inspect` / `view list` / `view publish` governance workflows，並具備 listing filter、sort、time window、grouped summary 與 projection modes
+9. persisted governance reverse indexes，支援依 maintainer、profile 與 document 反查 view
+10. simulator 與 validation workflows，涵蓋 peer、topology、test 與 report 範圍
+11. head inspection 中的 bounded viewer score channels，包括 typed signal summaries、anti-Sybil gating、challenge review/freeze pressure，以及 fixture-backed coverage
 
 主要剩餘缺口：
 

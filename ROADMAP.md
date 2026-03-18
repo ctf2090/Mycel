@@ -273,7 +273,7 @@ Goal: add a usable reader-oriented client layer with deterministic accepted-head
 
 ### Current Status
 
-Early partial progress, now with accepted-head rendering, named fixed-profile selection, clearer available-profile discovery and profile-error feedback, editor-admission-aware inspect/render behavior, and bounded viewer score surfaces in head inspection on top of the deterministic selector path; `M3` still remains open for broader governance persistence, reader-facing profile ergonomics beyond this initial polish, and final independent dual-role role-assignment closure.
+Early partial progress, now with accepted-head rendering, named fixed-profile selection, clearer available-profile discovery and profile-error feedback, editor-admission-aware inspect/render behavior, distinct human/debug text output modes for `head inspect` / `head render`, and bounded viewer score surfaces in head inspection on top of the deterministic selector path; `M3` still remains open for broader governance persistence, reader-facing profile ergonomics beyond this initial polish, and final independent dual-role role-assignment closure.
 
 Already in progress or partially implemented:
 
@@ -326,10 +326,11 @@ Already visible in the repo:
 4. accepted-head rendering from persisted store state or explicit bundle objects
 5. named fixed-profile selection for accepted-head inspection and render workflows, including clearer available-profile summaries and symmetric profile-error feedback
 6. editor-admission-aware inspect/render behavior for named-profile and store-backed reader flows
-7. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, grouped summaries, and projection modes
-8. persisted governance reverse indexes for maintainer, profile, and document-oriented view lookups
-9. simulator and validation workflows around peer, topology, test, and report scopes
-10. bounded viewer score channels in head inspection, including typed signal summaries, anti-Sybil gating, challenge review/freeze pressure, and fixture-backed coverage
+7. distinct `human` and `debug` text output modes for `head inspect` / `head render`, keeping high-level decision summaries separate from debug trace detail
+8. dedicated `view inspect` / `view list` / `view publish` governance workflows alongside reader-facing `head` commands, with filtered listing, sorting, time windows, grouped summaries, and projection modes
+9. persisted governance reverse indexes for maintainer, profile, and document-oriented view lookups
+10. simulator and validation workflows around peer, topology, test, and report scopes
+11. bounded viewer score channels in head inspection, including typed signal summaries, anti-Sybil gating, challenge review/freeze pressure, and fixture-backed coverage
 
 Main remaining gaps:
 
