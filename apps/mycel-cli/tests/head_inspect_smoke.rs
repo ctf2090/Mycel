@@ -678,8 +678,9 @@ fn head_inspect_requires_profile_id_for_multi_profile_bundle() {
     let output = run_mycel(&["head", "inspect", doc_id, "--input", &path_arg(&input.path)]);
 
     assert_exit_code(&output, 1);
-    assert_stdout_contains(&output, "available profiles: preview, stable");
-    assert_stdout_contains(&output, "head inspection: failed");
+    assert_stdout_contains(&output, "Head inspection: failed");
+    assert_stdout_contains(&output, "Document");
+    assert_stdout_contains(&output, "Decision");
     assert_stderr_contains(
         &output,
         "head input declares multiple named profiles; pass --profile-id (preview, stable)",
@@ -1972,8 +1973,8 @@ fn head_render_text_reports_rendered_text() {
     ]);
 
     assert_success(&output);
-    assert_stdout_contains(&output, "head render: ok");
-    assert_stdout_contains(&output, "rendered text:");
+    assert_stdout_contains(&output, "Head render: ok");
+    assert_stdout_contains(&output, "Rendered Text");
     assert_stdout_contains(&output, "Rendered line");
 }
 
@@ -2201,8 +2202,8 @@ fn head_render_requires_profile_id_for_multi_profile_bundle() {
     let output = run_mycel(&["head", "render", doc_id, "--input", &path_arg(&input.path)]);
 
     assert_exit_code(&output, 1);
-    assert_stdout_contains(&output, "available profiles: preview, stable");
-    assert_stdout_contains(&output, "head render: failed");
+    assert_stdout_contains(&output, "Head render: failed");
+    assert_stdout_contains(&output, "Document");
     assert_stderr_contains(
         &output,
         "head input declares multiple named profiles; pass --profile-id (preview, stable)",
@@ -2243,8 +2244,8 @@ fn head_render_reports_unknown_profile_id_for_multi_profile_bundle() {
     ]);
 
     assert_exit_code(&output, 1);
-    assert_stdout_contains(&output, "available profiles: preview, stable");
-    assert_stdout_contains(&output, "head render: failed");
+    assert_stdout_contains(&output, "Head render: failed");
+    assert_stdout_contains(&output, "Document");
     assert_stderr_contains(
         &output,
         "unknown --profile-id 'missing' for head input; available profiles: preview, stable",
@@ -2564,7 +2565,8 @@ fn head_inspect_text_fails_when_no_eligible_head_exists() {
     let output = run_mycel(&["head", "inspect", "doc:missing", "--input", &path]);
 
     assert_exit_code(&output, 1);
-    assert_stdout_contains(&output, "head inspection: failed");
+    assert_stdout_contains(&output, "Head inspection: failed");
+    assert_stdout_contains(&output, "status: selection failed");
     assert_stderr_starts_with(&output, "error: ");
     assert_stderr_contains(&output, "NO_ELIGIBLE_HEAD");
 }
@@ -2616,9 +2618,13 @@ fn head_inspect_text_reports_decision_trace() {
     ]);
 
     assert_success(&output);
-    assert_stdout_contains(&output, "trace: selector_epoch:");
-    assert_stdout_contains(&output, "trace: maintainer_support:");
-    assert_stdout_contains(&output, "trace: selected_head:");
+    assert_stdout_contains(&output, "Decision");
+    assert_stdout_contains(&output, "- selected head:");
+    assert_stdout_contains(&output, "- selector score: 2");
+    assert_stdout_contains(
+        &output,
+        "- trace: selected=rev:b98e3dca59291ebab04e88eadafaf30d52fcc78dd18df41568e5689c2be300ad tie_break_reason=higher_selector_score",
+    );
     assert!(
         !stdout_text(&output).contains("pk:ed25519:"),
         "expected high-level decision trace only, stdout: {}",
@@ -3932,7 +3938,8 @@ fn head_inspect_reports_unknown_repo_native_fixture() {
     let output = run_mycel(&["head", "inspect", "doc:sample", "--input", "does-not-exist"]);
 
     assert_exit_code(&output, 1);
-    assert_stdout_contains(&output, "head inspection: failed");
+    assert_stdout_contains(&output, "Head inspection: failed");
+    assert_stdout_contains(&output, "- input: does-not-exist");
     assert_stderr_contains(
         &output,
         "could not resolve head-inspect input 'does-not-exist'",
