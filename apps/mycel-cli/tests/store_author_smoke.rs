@@ -1947,7 +1947,7 @@ fn store_merge_authoring_flow_marks_nested_sibling_choice_through_inserted_sibli
 }
 
 #[test]
-fn store_merge_authoring_flow_rejects_deep_composed_branch_reuse_as_manual_curation_required() {
+fn store_merge_authoring_flow_marks_deep_composed_branch_reuse_as_multi_variant() {
     let store_dir = create_temp_dir("store-merge-composed-manual-root");
     let (_key_dir, key_path) = write_signing_key_file("store-merge-composed-manual-key");
     let (_resolved_dir, resolved_state_path) =
@@ -2237,18 +2237,23 @@ fn store_merge_authoring_flow_rejects_deep_composed_branch_reuse_as_manual_curat
         &key_file,
         "--timestamp",
         "67",
+        "--json",
     ]);
 
+    assert_success(&merge);
+    let merge_json = assert_json_status(&merge, "ok");
+    assert_eq!(merge_json["merge_outcome"], "multi-variant");
     assert!(
-        !merge.status.success(),
-        "expected manual-curation failure, stdout: {}, stderr: {}",
-        String::from_utf8_lossy(&merge.stdout),
-        String::from_utf8_lossy(&merge.stderr)
+        merge_json["merge_reasons"]
+            .as_array()
+            .is_some_and(|reasons| reasons.iter().any(|reason| {
+                reason.as_str().is_some_and(|reason| {
+                    reason.contains("selected a non-primary parent placement")
+                })
+            })),
+        "expected composed branch multi-variant reason, got {merge_json}"
     );
-    assert_stderr_contains(
-        &merge,
-        "merge resolution is manual-curation-required: resolved block 'blk:cmp-leaf-a' does not match any parent placement",
-    );
+    assert_eq!(merge_json["patch_op_count"], 4);
 }
 
 #[test]

@@ -238,13 +238,20 @@ fn assess_merge_resolution(
             resolved_sibling_anchor_variant(&block_id, &resolved_blocks, &accepted_sibling_variants)
         })
         .flatten();
-        let root_only_alternatives = alternative_parent_variants.is_empty()
+        let root_or_absent_only_alternatives = alternative_parent_variants.is_empty()
             || alternative_parent_variants
                 .iter()
-                .all(|variant| variant == "<root>");
+                .all(|variant| variant == "<root>" || variant == "<absent>");
 
         if let Some(anchor_variant) = resolved_parent_anchor_variant.as_deref() {
-            if anchor_variant == "<root>" && root_only_alternatives {
+            if anchor_variant == "<root>" && root_or_absent_only_alternatives {
+                if alternative_parent_variants.contains("<absent>") {
+                    saw_multi_variant = true;
+                    reasons.push(format!(
+                        "block '{}' selected a non-primary parent placement",
+                        block_id
+                    ));
+                }
                 continue;
             }
 
@@ -555,29 +562,12 @@ fn build_conservative_merge_ops(
         ops.push(op);
     }
 
-    let mut deletions = deleted_ids
-        .iter()
-        .filter_map(|block_id| {
-            let placement = primary_blocks.get(block_id)?;
-            let parent_is_deleted = placement
-                .parent_block_id
-                .as_ref()
-                .is_some_and(|parent_id| deleted_ids.contains(parent_id));
-            (!parent_is_deleted).then(|| (placement.depth, block_id.clone()))
-        })
-        .collect::<Vec<_>>();
-    deletions.sort_by(|left, right| right.0.cmp(&left.0).then_with(|| left.1.cmp(&right.1)));
-    for (_, block_id) in deletions {
-        let op = PatchOperation::DeleteBlock { block_id };
-        apply_generated_op(&mut simulated, &op)?;
-        ops.push(op);
-    }
-
     sync_child_list(
         &mut simulated,
         None,
         &resolved_state.blocks,
         &resolved_blocks,
+        &deleted_ids,
         &new_ids,
         &mut ops,
     )?;
@@ -597,6 +587,7 @@ fn sync_child_list(
     parent_block_id: Option<&str>,
     resolved_children: &[BlockObject],
     resolved_blocks: &HashMap<String, BlockPlacement>,
+    deleted_ids: &BTreeSet<String>,
     new_ids: &BTreeSet<String>,
     ops: &mut Vec<PatchOperation>,
 ) -> Result<(), StoreRebuildError> {
@@ -666,6 +657,7 @@ fn sync_child_list(
                 Some(&resolved_block.block_id),
                 &resolved_block.children,
                 resolved_blocks,
+                deleted_ids,
                 new_ids,
                 ops,
             )?;
@@ -696,6 +688,7 @@ fn sync_child_list(
                 Some(&resolved_block.block_id),
                 &resolved_block.children,
                 resolved_blocks,
+                deleted_ids,
                 new_ids,
                 ops,
             )?;
@@ -712,6 +705,14 @@ fn sync_child_list(
         if !resolved_ids.contains(current_id.as_str())
             && !resolved_blocks.contains_key(current_id.as_str())
         {
+            if deleted_ids.contains(&current_id) {
+                let op = PatchOperation::DeleteBlock {
+                    block_id: current_id,
+                };
+                apply_generated_op(simulated, &op)?;
+                ops.push(op);
+                continue;
+            }
             return Err(StoreRebuildError::new(format!(
                 "manual-curation-required: unresolved extra block '{}' remained under '{}'",
                 current_id,

@@ -2922,7 +2922,7 @@ fn merge_authoring_marks_composed_descendant_of_non_primary_parent_as_multi_vari
 }
 
 #[test]
-fn merge_authoring_rejects_deep_composed_branch_reuse_as_manual_curation_required() {
+fn merge_authoring_marks_deep_composed_branch_reuse_as_multi_variant() {
     let store_root = temp_dir("merge-composed-manual");
     let signing_key = signing_key();
     let document = create_document_in_store(
@@ -3036,7 +3036,7 @@ fn merge_authoring_rejects_deep_composed_branch_reuse_as_manual_curation_require
         ]),
     );
 
-    let error = create_merge_revision_in_store(
+    let summary = create_merge_revision_in_store(
         &store_root,
         &signing_key,
         &MergeRevisionCreateParams {
@@ -3069,14 +3069,43 @@ fn merge_authoring_rejects_deep_composed_branch_reuse_as_manual_curation_require
             timestamp: 89,
         },
     )
-    .expect_err("merge revision should require manual curation");
+    .expect("merge revision should be created");
 
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
     assert!(
-        error.to_string().contains(
-            "merge resolution is manual-curation-required: resolved block 'blk:cmp-leaf-a' does not match any parent placement"
-        ),
-        "expected composed branch manual-curation error, got {error}"
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("selected a non-primary parent placement")),
+        "expected composed branch multi-variant reason, got {summary:?}"
     );
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert_eq!(patch.ops.len(), 4);
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::InsertBlockAfter { after_block_id, new_block }
+        if after_block_id == "blk:cmp-anchor" && new_block.block_id == "blk:cmp-wrapper"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: None }
+        if block_id == "blk:cmp-leaf-a"
+            && parent_block_id == "blk:cmp-subsection"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: Some(after_block_id) }
+        if block_id == "blk:cmp-leaf-b"
+            && parent_block_id == "blk:cmp-subsection"
+            && after_block_id == "blk:cmp-leaf-a"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::DeleteBlock { block_id }
+        if block_id == "blk:cmp-old-parent"
+    )));
 
     let _ = fs::remove_dir_all(store_root);
 }
