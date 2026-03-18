@@ -3150,6 +3150,7 @@ fn head_inspect_debug_text_reports_viewer_channels_without_overloading_trace() {
     assert_stdout_contains(&output, "review_pressure=2");
     assert_stdout_contains(&output, "freeze_pressure=2");
     assert_stdout_contains(&output, "review_state=freeze-pressure");
+    assert_stdout_contains(&output, "score_formula=\"1 + 2 - 0 = 3\"");
     assert!(
         !stdout_text(&output).contains("trace: viewer_signal_id"),
         "expected trace to stay high-level, stdout: {}",
@@ -3178,6 +3179,8 @@ fn head_inspect_human_mode_groups_summary_candidates_and_decision() {
         &output,
         "status: selection succeeded after blocking candidates under viewer freeze pressure",
     );
+    assert_stdout_contains(&output, "selector score: 4");
+    assert_stdout_contains(&output, "score formula: 2 + 2 - 0 = 4");
     assert_stdout_contains(
         &output,
         "reason: higher selector score after another candidate was frozen",

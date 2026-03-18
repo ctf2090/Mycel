@@ -168,6 +168,15 @@ fn human_tie_break_reason(reason: &str) -> String {
     }
 }
 
+fn selector_score_formula(maintainer_score: u64, viewer_bonus: u64, viewer_penalty: u64) -> String {
+    format!(
+        "{maintainer_score} + {viewer_bonus} - {viewer_penalty} = {}",
+        maintainer_score
+            .saturating_add(viewer_bonus)
+            .saturating_sub(viewer_penalty)
+    )
+}
+
 fn print_head_inspect_debug(summary: &HeadInspectSummary) -> i32 {
     println!("input path: {}", summary.input_path.display());
     println!("doc id: {}", summary.doc_id);
@@ -196,22 +205,32 @@ fn print_head_inspect_debug(summary: &HeadInspectSummary) -> i32 {
     for head in &summary.eligible_heads {
         if head.viewer_bonus > 0 || head.viewer_penalty > 0 {
             println!(
-                "eligible head: {} timestamp={} score={} supporters={} maintainer_score={} viewer_bonus={} viewer_penalty={}",
+                "eligible head: {} timestamp={} score={} supporters={} maintainer_score={} viewer_bonus={} viewer_penalty={} score_formula=\"{}\"",
                 head.revision_id,
                 head.revision_timestamp,
                 head.selector_score,
                 head.supporter_count,
                 head.maintainer_score,
                 head.viewer_bonus,
-                head.viewer_penalty
+                head.viewer_penalty,
+                selector_score_formula(
+                    head.maintainer_score,
+                    head.viewer_bonus,
+                    head.viewer_penalty
+                )
             );
         } else {
             println!(
-                "eligible head: {} timestamp={} score={} supporters={}",
+                "eligible head: {} timestamp={} score={} supporters={} score_formula=\"{}\"",
                 head.revision_id,
                 head.revision_timestamp,
                 head.selector_score,
-                head.supporter_count
+                head.supporter_count,
+                selector_score_formula(
+                    head.maintainer_score,
+                    head.viewer_bonus,
+                    head.viewer_penalty
+                )
             );
         }
     }
@@ -344,6 +363,21 @@ fn print_head_inspect_human(summary: &HeadInspectSummary) -> i32 {
     println!("Decision");
     if let Some(selected_head) = &summary.selected_head {
         println!("- selected head: {selected_head}");
+        if let Some(selected) = summary
+            .eligible_heads
+            .iter()
+            .find(|head| &head.revision_id == selected_head)
+        {
+            println!("- selector score: {}", selected.selector_score);
+            println!(
+                "- score formula: {}",
+                selector_score_formula(
+                    selected.maintainer_score,
+                    selected.viewer_bonus,
+                    selected.viewer_penalty
+                )
+            );
+        }
     }
     if let Some(tie_break_reason) = &summary.tie_break_reason {
         println!("- reason: {}", human_tie_break_reason(tie_break_reason));
