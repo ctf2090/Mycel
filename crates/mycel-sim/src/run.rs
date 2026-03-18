@@ -462,6 +462,31 @@ fn simulate_peer_store_sync_report(
                     peer.node_id
                 )
             })?
+        } else if let Some(session_fault) = fixture_session_fault_mode(fixture) {
+            let mut transcript = generate_sync_pull_transcript_from_peer_store(
+                &seed_peer,
+                &signing_key,
+                &seed_store_root,
+                &peer_store_root,
+            )
+            .map_err(|err| {
+                format!(
+                    "peer-store transcript generation failed for '{}' with session fault '{session_fault}': {err}",
+                    peer.node_id
+                )
+            })?;
+            inject_session_fault(&mut transcript, &signing_key, &session_fault).map_err(|err| {
+                format!(
+                    "failed to inject session fault '{session_fault}' for '{}': {err}",
+                    peer.node_id
+                )
+            })?;
+            sync_pull_from_transcript(&transcript, &peer_store_root).map_err(|err| {
+                format!(
+                    "peer-store sync failed for '{}' after injecting session fault '{session_fault}': {err}",
+                    peer.node_id
+                )
+            })?
         } else {
             sync_pull_from_peer_store(&seed_peer, &signing_key, &seed_store_root, &peer_store_root)
                 .map_err(|err| format!("peer-store sync failed for '{}': {err}", peer.node_id))?
@@ -521,6 +546,11 @@ fn simulate_peer_store_sync_report(
             report_peer.notes.push(format!(
                 "Seed transcript suppressed advertised capabilities: {}.",
                 fixture_suppressed_seed_capabilities(fixture).join(", ")
+            ));
+        }
+        if let Some(session_fault) = fixture_session_fault_mode(fixture) {
+            report_peer.notes.push(format!(
+                "Seed transcript injected session fault: {session_fault}."
             ));
         }
         report_peer.notes.extend(summary.notes.clone());
@@ -1778,6 +1808,15 @@ fn fixture_suppressed_seed_capabilities(fixture: &Fixture) -> Vec<String> {
         .unwrap_or_default()
 }
 
+fn fixture_session_fault_mode(fixture: &Fixture) -> Option<String> {
+    fixture
+        .metadata
+        .as_ref()
+        .and_then(|value| value.get("session_fault"))
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+}
+
 fn suppress_transcript_capabilities(
     transcript: &mut mycel_core::sync::SyncPullTranscript,
     signing_key: &ed25519_dalek::SigningKey,
@@ -1831,6 +1870,59 @@ fn resign_wire_message(
         base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
     ));
     Ok(())
+}
+
+fn inject_session_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+    session_fault: &str,
+) -> Result<(), String> {
+    match session_fault {
+        "messages-after-bye" => inject_messages_after_bye_fault(transcript, signing_key),
+        other => Err(format!("unsupported session fault '{other}'")),
+    }
+}
+
+fn inject_messages_after_bye_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| "transcript is missing HELLO for messages-after-bye injection".to_owned())?;
+    let bye = signed_sim_wire_message(
+        signing_key,
+        &transcript.peer.node_id,
+        "BYE",
+        "msg:peer-sync-fault-bye-0000",
+        json!({
+            "reason": "done"
+        }),
+    )?;
+    transcript.messages.insert(hello_index + 1, bye);
+    Ok(())
+}
+
+fn signed_sim_wire_message(
+    signing_key: &ed25519_dalek::SigningKey,
+    sender: &str,
+    message_type: &str,
+    msg_id: &str,
+    payload: Value,
+) -> Result<Value, String> {
+    let mut value = json!({
+        "type": message_type,
+        "version": "mycel-wire/0.1",
+        "msg_id": msg_id,
+        "timestamp": "2026-03-08T20:00:00+08:00",
+        "from": sender,
+        "payload": payload,
+        "sig": "sig:placeholder"
+    });
+    resign_wire_message(&mut value, signing_key)?;
+    Ok(value)
 }
 
 fn fixture_requested_doc_ids(fixture: &Fixture) -> Option<Vec<String>> {

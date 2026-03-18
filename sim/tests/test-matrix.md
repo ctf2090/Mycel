@@ -18,6 +18,8 @@
   Reference JSON: `sim/tests/view-sync-without-capability.example.json`
 - `snapshot-sync-without-capability`: reject SNAPSHOT_OFFER when the seed omitted the required `snapshot-sync` capability
   Reference JSON: `sim/tests/snapshot-sync-without-capability.example.json`
+- `session-messages-after-bye`: reject the remaining sync transcript after the seed closes the session with an early `BYE`
+  Reference JSON: `sim/tests/session-messages-after-bye.example.json`
 
 ## Recovery
 

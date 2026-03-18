@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-messages-after-bye",
+    "description": "A reader should fail sync when the seed closes the session with BYE before the remaining sync messages arrive.",
+    "category": "negative",
+    "topology": "sim/topologies/session-messages-after-bye.example.json",
+    "fixture_set": "fixtures/object-sets/session-messages-after-bye",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "messages-after-bye-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "messages-after-bye-rejected",
+            "description": "Reader rejects the remaining transcript because the wire session is already closed after BYE.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the closed-session violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends simulator coverage into session-level error-path interop beyond capability-gated optional messages.",
+        "The failure should surface the same already-closed session rule that transcript-level sync-pull smoke already verifies."
+    ]
+}

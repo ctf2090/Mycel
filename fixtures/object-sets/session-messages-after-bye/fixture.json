@@ -1,0 +1,26 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-messages-after-bye",
+    "description": "Seed injects an early BYE so the reader rejects the remaining transcript as messages-after-BYE",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-fault-test"
+        }
+    ],
+    "expected_outcomes": [
+        "messages-after-bye-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "messages-after-bye"
+    },
+    "notes": [
+        "Simulator injects a BYE immediately after HELLO, before the normal sync transcript continues.",
+        "The next transcript message should fail with the standard wire-session closed error.",
+        "This keeps the session-error proof at the simulator level without needing a separate manual transcript fixture."
+    ]
+}

@@ -628,6 +628,65 @@ fn sim_run_rejects_snapshot_offer_without_advertised_capability() {
 }
 
 #[test]
+fn sim_run_rejects_messages_after_bye() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/session-messages-after-bye.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    let outcomes = summary["matched_expected_outcomes"]
+        .as_array()
+        .expect("matched_expected_outcomes should be an array");
+    assert!(
+        outcomes
+            .iter()
+            .any(|entry| entry == "messages-after-bye-rejected"),
+        "expected messages-after-bye outcome, stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let report = load_report(&summary);
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
+    assert!(
+        failures.iter().any(|entry| entry["description"].as_str().is_some_and(
+            |description| description.contains("wire session for 'node:peer-seed' is already closed")
+        )),
+        "expected closed-session error in report failures, report: {report}"
+    );
+    let reader = report["peers"]
+        .as_array()
+        .expect("peers should be an array")
+        .iter()
+        .find(|peer| peer["node_id"] == "node:peer-reader-a")
+        .expect("expected reader peer in report");
+    assert!(
+        reader["verified_object_ids"]
+            .as_array()
+            .is_some_and(|verified| verified.is_empty()),
+        "expected no verified objects after closed-session rejection, report: {report}"
+    );
+    assert!(
+        reader["notes"].as_array().is_some_and(|notes| notes.iter().any(|note| {
+            note.as_str().is_some_and(|text| text.contains("session fault"))
+        })),
+        "expected reader notes to mention the injected session fault, report: {report}"
+    );
+}
+
+#[test]
 fn sim_run_with_seed_snapshot_sync_publishes_snapshots_to_readers() {
     let _guard = sim_run_lock();
     let workspace = create_temp_workspace("sim-snapshot-sync");

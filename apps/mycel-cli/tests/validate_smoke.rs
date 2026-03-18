@@ -129,8 +129,8 @@ fn tests_directory_validate_json_reports_ok_status() {
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
     assert_eq!(json["peer_count"], 1);
-    assert_eq!(json["test_case_count"], 15);
-    assert_eq!(json["topology_count"], 15);
+    assert_eq!(json["test_case_count"], 16);
+    assert_eq!(json["topology_count"], 16);
 }
 
 #[test]
@@ -140,8 +140,8 @@ fn peer_file_validate_json_scopes_related_artifacts() {
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
     assert_eq!(json["peer_count"], 1);
-    assert_eq!(json["topology_count"], 15);
-    assert_eq!(json["test_case_count"], 15);
+    assert_eq!(json["topology_count"], 16);
+    assert_eq!(json["test_case_count"], 16);
     assert!(
         json["report_count"]
             .as_u64()
@@ -261,8 +261,8 @@ fn peers_directory_validate_json_scopes_related_artifacts() {
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
     assert_eq!(json["peer_count"], 1);
-    assert_eq!(json["topology_count"], 15);
-    assert_eq!(json["test_case_count"], 15);
+    assert_eq!(json["topology_count"], 16);
+    assert_eq!(json["test_case_count"], 16);
     assert!(
         json["report_count"]
             .as_u64()
@@ -299,10 +299,10 @@ fn topologies_directory_validate_json_reports_ok_status() {
 
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
-    assert_eq!(json["fixture_count"], 14);
+    assert_eq!(json["fixture_count"], 15);
     assert_eq!(json["peer_count"], 1);
-    assert_eq!(json["topology_count"], 15);
-    assert_eq!(json["test_case_count"], 15);
+    assert_eq!(json["topology_count"], 16);
+    assert_eq!(json["test_case_count"], 16);
 }
 
 #[test]
