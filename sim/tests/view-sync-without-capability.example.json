@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "view-sync-without-capability",
+    "description": "A reader should fail sync when the seed emits VIEW_ANNOUNCE without first advertising view-sync capability.",
+    "category": "negative",
+    "topology": "sim/topologies/view-sync-without-capability.example.json",
+    "fixture_set": "fixtures/object-sets/view-sync-without-capability",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "view-announce-capability-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "view-announce-capability-rejected",
+            "description": "Reader rejects VIEW_ANNOUNCE because the seed did not advertise view-sync capability.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write an invalid manifest or governance view object after the capability violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix beyond positive optional-message proof into a real capability-negative interop case.",
+        "The seed still publishes a governance view object, but the generated transcript intentionally suppresses view-sync from HELLO and MANIFEST."
+    ]
+}

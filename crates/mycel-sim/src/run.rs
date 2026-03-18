@@ -14,7 +14,7 @@ use mycel_core::author::{
     parse_signing_key_seed, signer_id, DocumentCreateParams, PatchCreateParams,
     RevisionCommitParams,
 };
-use mycel_core::canonical::signed_payload_bytes;
+use mycel_core::canonical::{signed_payload_bytes, wire_envelope_signed_payload_bytes};
 use mycel_core::protocol::{parse_json_strict, recompute_object_id};
 use mycel_core::replay::replay_revision_from_index;
 use mycel_core::store::{
@@ -22,7 +22,8 @@ use mycel_core::store::{
     StoreIndexManifest,
 };
 use mycel_core::sync::{
-    sync_pull_from_peer_store, sync_pull_from_peer_store_with_doc_filter, SyncPeer,
+    generate_sync_pull_transcript_from_peer_store, sync_pull_from_peer_store,
+    sync_pull_from_peer_store_with_doc_filter, sync_pull_from_transcript, SyncPeer,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -431,25 +432,70 @@ fn simulate_peer_store_sync_report(
                 ids,
             )
             .map_err(|err| format!("partial-doc sync failed for '{}': {err}", peer.node_id))?
+        } else if !fixture_suppressed_seed_capabilities(fixture).is_empty() {
+            let mut transcript = generate_sync_pull_transcript_from_peer_store(
+                &seed_peer,
+                &signing_key,
+                &seed_store_root,
+                &peer_store_root,
+            )
+            .map_err(|err| {
+                format!(
+                    "peer-store transcript generation failed for '{}' with suppressed capabilities: {err}",
+                    peer.node_id
+                )
+            })?;
+            suppress_transcript_capabilities(
+                &mut transcript,
+                &signing_key,
+                &fixture_suppressed_seed_capabilities(fixture),
+            )
+            .map_err(|err| {
+                format!(
+                    "failed to suppress transcript capabilities for '{}': {err}",
+                    peer.node_id
+                )
+            })?;
+            sync_pull_from_transcript(&transcript, &peer_store_root).map_err(|err| {
+                format!(
+                    "peer-store sync failed for '{}' after suppressing capabilities: {err}",
+                    peer.node_id
+                )
+            })?
         } else {
             sync_pull_from_peer_store(&seed_peer, &signing_key, &seed_store_root, &peer_store_root)
                 .map_err(|err| format!("peer-store sync failed for '{}': {err}", peer.node_id))?
         };
 
-        let manifest = load_store_index_manifest(&peer_store_root).map_err(|err| {
-            format!(
-                "failed to read reader store manifest '{}': {err}",
-                peer.node_id
-            )
-        })?;
-        let verified_object_ids = manifest_object_ids(&manifest);
+        let manifest = match load_store_index_manifest(&peer_store_root) {
+            Ok(manifest) => Some(manifest),
+            Err(_err) if !summary.is_ok() => None,
+            Err(err) => {
+                return Err(format!(
+                    "failed to read reader store manifest '{}': {err}",
+                    peer.node_id
+                ));
+            }
+        };
+        let verified_object_ids = manifest
+            .as_ref()
+            .map(manifest_object_ids)
+            .unwrap_or_default();
         let synced_object_ids = summary
             .stored_objects
             .iter()
             .map(|record| record.object_id.clone())
             .collect::<Vec<_>>();
-        let replay_hashes = store_head_replay_hashes(&peer_store_root)?;
-        let leaf_ids = store_leaf_revision_ids(&peer_store_root)?;
+        let replay_hashes = if summary.is_ok() {
+            store_head_replay_hashes(&peer_store_root)?
+        } else {
+            BTreeMap::new()
+        };
+        let leaf_ids = if summary.is_ok() {
+            store_leaf_revision_ids(&peer_store_root)?
+        } else {
+            BTreeMap::new()
+        };
         let action = if uses_partial_doc_sync {
             "partial-doc-accept"
         } else if starts_with_partial_store && uses_incremental {
@@ -471,6 +517,12 @@ fn simulate_peer_store_sync_report(
             "peer-store sync exchanged {} messages, verified {} objects, wrote {} new objects.",
             summary.message_count, summary.verified_object_count, summary.written_object_count
         ));
+        if !fixture_suppressed_seed_capabilities(fixture).is_empty() {
+            report_peer.notes.push(format!(
+                "Seed transcript suppressed advertised capabilities: {}.",
+                fixture_suppressed_seed_capabilities(fixture).join(", ")
+            ));
+        }
         report_peer.notes.extend(summary.notes.clone());
 
         if !summary.errors.is_empty() {
@@ -624,7 +676,7 @@ fn simulate_peer_store_sync_report(
                     manifest.doc_revisions.keys().collect::<Vec<_>>()
                 ));
             }
-        } else {
+        } else if summary.is_ok() {
             reader_object_sets.insert(peer.node_id.clone(), verified_object_ids);
             reader_replay_hashes.insert(peer.node_id.clone(), replay_hashes);
             reader_head_ids.insert(peer.node_id.clone(), leaf_ids);
@@ -1709,6 +1761,76 @@ fn fixture_requests_seed_snapshot_sync(fixture: &Fixture) -> bool {
         .and_then(|value| value.get("publish_seed_snapshot"))
         .and_then(Value::as_bool)
         .unwrap_or(false)
+}
+
+fn fixture_suppressed_seed_capabilities(fixture: &Fixture) -> Vec<String> {
+    fixture
+        .metadata
+        .as_ref()
+        .and_then(|value| value.get("suppress_seed_capabilities"))
+        .and_then(Value::as_array)
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|value| value.as_str().map(str::to_owned))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
+fn suppress_transcript_capabilities(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+    suppressed_capabilities: &[String],
+) -> Result<(), String> {
+    if suppressed_capabilities.is_empty() {
+        return Ok(());
+    }
+
+    for message in &mut transcript.messages {
+        let message_type = message
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        if !matches!(message_type.as_str(), "HELLO" | "MANIFEST") {
+            continue;
+        }
+        let payload = message
+            .get_mut("payload")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| format!("{message_type} message is missing object payload"))?;
+        let capabilities = payload
+            .entry("capabilities".to_owned())
+            .or_insert_with(|| Value::Array(Vec::new()));
+        let capability_list = capabilities.as_array_mut().ok_or_else(|| {
+            format!("{message_type} payload field 'capabilities' is not an array")
+        })?;
+        capability_list.retain(|value| {
+            !value.as_str().is_some_and(|capability| {
+                suppressed_capabilities
+                    .iter()
+                    .any(|blocked| blocked == capability)
+            })
+        });
+        resign_wire_message(message, signing_key)?;
+    }
+
+    Ok(())
+}
+
+fn resign_wire_message(
+    message: &mut Value,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let payload = wire_envelope_signed_payload_bytes(message)
+        .map_err(|err| format!("failed to canonicalize wire payload: {err}"))?;
+    let signature = signing_key.sign(&payload);
+    message["sig"] = Value::String(format!(
+        "sig:ed25519:{}",
+        base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
+    ));
+    Ok(())
 }
 
 fn fixture_requested_doc_ids(fixture: &Fixture) -> Option<Vec<String>> {

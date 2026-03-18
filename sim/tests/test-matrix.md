@@ -14,6 +14,8 @@
   Reference JSON: `sim/tests/hash-mismatch.example.json`
 - `reject-signature-mismatch`: reject invalid object or wire signature
   Reference JSON: `sim/tests/signature-mismatch.example.json`
+- `view-sync-without-capability`: reject VIEW_ANNOUNCE when the seed omitted the required `view-sync` capability
+  Reference JSON: `sim/tests/view-sync-without-capability.example.json`
 
 ## Recovery
 

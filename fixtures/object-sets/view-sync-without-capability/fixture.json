@@ -1,0 +1,29 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "view-sync-without-capability",
+    "description": "Seed publishes a governance view but suppresses the advertised view-sync capability so the reader rejects VIEW_ANNOUNCE",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:view-sync-capability-test"
+        }
+    ],
+    "expected_outcomes": [
+        "view-announce-capability-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "publish_seed_view": true,
+        "suppress_seed_capabilities": [
+            "view-sync"
+        ]
+    },
+    "notes": [
+        "Seed still publishes a governance view object into the peer store.",
+        "Simulator suppresses advertised view-sync capability from HELLO and MANIFEST while leaving VIEW_ANNOUNCE in the generated transcript.",
+        "Reader must reject the optional VIEW_ANNOUNCE message under the normal wire capability gate."
+    ]
+}
