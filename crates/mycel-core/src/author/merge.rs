@@ -219,6 +219,25 @@ fn assess_merge_resolution(
         .flatten();
         let primary_sibling_variant = block_sibling_variant(primary_blocks.get(&block_id));
         let resolved_sibling_variant = block_sibling_variant(resolved_blocks.get(&block_id));
+        let alternative_sibling_variants = parent_states
+            .iter()
+            .skip(1)
+            .map(|(_, state)| flatten_blocks(&state.blocks))
+            .filter(|blocks| block_parent_variant(blocks.get(&block_id)) == resolved_parent_variant)
+            .map(|blocks| block_sibling_variant(blocks.get(&block_id)))
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .filter(|variant| variant != &primary_sibling_variant)
+            .collect::<BTreeSet<_>>();
+        let accepted_sibling_variants = std::iter::once(primary_sibling_variant.clone())
+            .chain(alternative_sibling_variants.iter().cloned())
+            .collect::<BTreeSet<_>>();
+        let resolved_sibling_anchor = (!accepted_sibling_variants
+            .contains(&resolved_sibling_variant))
+        .then(|| {
+            resolved_sibling_anchor_variant(&block_id, &resolved_blocks, &accepted_sibling_variants)
+        })
+        .flatten();
         let root_only_alternatives = alternative_parent_variants.is_empty()
             || alternative_parent_variants
                 .iter()
@@ -231,7 +250,8 @@ fn assess_merge_resolution(
 
             if anchor_variant != "<root>"
                 && anchor_variant == primary_parent_variant
-                && resolved_sibling_variant == primary_sibling_variant
+                && (resolved_sibling_variant == primary_sibling_variant
+                    || resolved_sibling_anchor.as_deref() == Some(primary_sibling_variant.as_str()))
             {
                 continue;
             }
@@ -244,7 +264,11 @@ fn assess_merge_resolution(
                 .map(|blocks| block_sibling_variant(blocks.get(&block_id)))
                 .collect::<BTreeSet<_>>();
 
-            if anchor_sibling_variants.contains(&resolved_sibling_variant) {
+            if anchor_sibling_variants.contains(&resolved_sibling_variant)
+                || resolved_sibling_anchor
+                    .as_ref()
+                    .is_some_and(|variant| anchor_sibling_variants.contains(variant))
+            {
                 saw_multi_variant = true;
                 reasons.push(format!(
                     "block '{}' selected a non-primary parent placement",
@@ -286,21 +310,25 @@ fn assess_merge_resolution(
             ));
         }
 
-        let alternative_sibling_variants = parent_states
-            .iter()
-            .skip(1)
-            .map(|(_, state)| flatten_blocks(&state.blocks))
-            .filter(|blocks| block_parent_variant(blocks.get(&block_id)) == resolved_parent_variant)
-            .map(|blocks| block_sibling_variant(blocks.get(&block_id)))
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .filter(|variant| variant != &primary_sibling_variant)
-            .collect::<BTreeSet<_>>();
-
         if resolved_parent_variant == primary_parent_variant
             && resolved_sibling_variant != primary_sibling_variant
             && !alternative_sibling_variants.contains(&resolved_sibling_variant)
         {
+            if resolved_sibling_anchor.as_deref() == Some(primary_sibling_variant.as_str()) {
+                continue;
+            }
+            if primary_sibling_variant != "<absent>"
+                && resolved_sibling_anchor
+                    .as_ref()
+                    .is_some_and(|variant| alternative_sibling_variants.contains(variant))
+            {
+                saw_multi_variant = true;
+                reasons.push(format!(
+                    "block '{}' selected a non-primary sibling placement",
+                    block_id
+                ));
+                continue;
+            }
             reasons.push(format!(
                 "resolved block '{}' does not match any parent sibling placement",
                 block_id
@@ -449,6 +477,31 @@ fn resolved_parent_anchor_variant(
             return Some("<root>".to_string());
         };
         parent_block_id = next_parent_id.clone();
+    }
+}
+
+fn resolved_sibling_anchor_variant(
+    block_id: &str,
+    resolved_blocks: &HashMap<String, BlockPlacement>,
+    accepted_variants: &BTreeSet<String>,
+) -> Option<String> {
+    let mut previous_sibling_id = resolved_blocks
+        .get(block_id)
+        .and_then(|placement| placement.previous_sibling_id.as_ref())
+        .cloned()?;
+
+    loop {
+        if accepted_variants.contains(&previous_sibling_id) {
+            return Some(previous_sibling_id);
+        }
+
+        let previous_sibling = resolved_blocks.get(&previous_sibling_id)?;
+        let Some(next_previous_sibling_id) = previous_sibling.previous_sibling_id.as_ref() else {
+            return accepted_variants
+                .contains("<start>")
+                .then(|| "<start>".to_string());
+        };
+        previous_sibling_id = next_previous_sibling_id.clone();
     }
 }
 

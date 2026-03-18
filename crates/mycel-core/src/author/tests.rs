@@ -2331,7 +2331,7 @@ fn merge_authoring_rejects_novel_nested_parent_choice_when_other_parent_moves_bl
 }
 
 #[test]
-fn merge_authoring_rejects_novel_nested_sibling_choice_as_manual_curation_required() {
+fn merge_authoring_marks_nested_sibling_choice_through_inserted_sibling_as_multi_variant() {
     let store_root = temp_dir("merge-nested-sibling-manual");
     let signing_key = signing_key();
     let document = create_document_in_store(
@@ -2428,7 +2428,7 @@ fn merge_authoring_rejects_novel_nested_sibling_choice_as_manual_curation_requir
         ]),
     );
 
-    let error = create_merge_revision_in_store(
+    let summary = create_merge_revision_in_store(
         &store_root,
         &signing_key,
         &MergeRevisionCreateParams {
@@ -2452,14 +2452,336 @@ fn merge_authoring_rejects_novel_nested_sibling_choice_as_manual_curation_requir
             timestamp: 81,
         },
     )
-    .expect_err("merge revision should require manual curation");
+    .expect("merge revision should be created");
 
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
     assert!(
-        error.to_string().contains(
-            "merge resolution is manual-curation-required: resolved block 'blk:nested-child-a' does not match any parent sibling placement"
-        ),
-        "expected nested sibling manual-curation error, got {error}"
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("selected a non-primary sibling placement")),
+        "expected nested sibling multi-variant reason, got {summary:?}"
     );
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::InsertBlockAfter { after_block_id, new_block }
+        if after_block_id == "blk:nested-child-b" && new_block.block_id == "blk:nested-child-d"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: Some(after_block_id) }
+        if block_id == "blk:nested-child-a"
+            && parent_block_id == "blk:nested-parent"
+            && after_block_id == "blk:nested-child-d"
+    )));
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_marks_nested_sibling_choice_through_inserted_sibling_chain_as_multi_variant() {
+    let store_root = temp_dir("merge-nested-sibling-chain");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-nested-sibling-chain".to_string(),
+            title: "Merge Nested Sibling Chain".to_string(),
+            language: "en".to_string(),
+            timestamp: 82,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-chain",
+        &document.genesis_revision_id,
+        83,
+        84,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:chain-parent",
+                    "block_type": "paragraph",
+                    "content": "Parent",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:chain-child-a",
+                            "block_type": "paragraph",
+                            "content": "Child A",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:chain-child-b",
+                            "block_type": "paragraph",
+                            "content": "Child B",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:chain-child-c",
+                            "block_type": "paragraph",
+                            "content": "Child C",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let insert_d_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-chain",
+        &base_revision_id,
+        85,
+        86,
+        json!([
+            {
+                "op": "insert_block_after",
+                "after_block_id": "blk:chain-child-b",
+                "new_block": {
+                    "block_id": "blk:chain-child-d",
+                    "block_type": "paragraph",
+                    "content": "Child D",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let insert_e_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-chain",
+        &insert_d_revision_id,
+        87,
+        88,
+        json!([
+            {
+                "op": "insert_block_after",
+                "after_block_id": "blk:chain-child-d",
+                "new_block": {
+                    "block_id": "blk:chain-child-e",
+                    "block_type": "paragraph",
+                    "content": "Child E",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let moved_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-sibling-chain",
+        &base_revision_id,
+        89,
+        90,
+        json!([
+            {
+                "op": "move_block",
+                "block_id": "blk:chain-child-a",
+                "parent_block_id": "blk:chain-parent",
+                "after_block_id": "blk:chain-child-b"
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-nested-sibling-chain".to_string(),
+            parents: vec![
+                base_revision_id,
+                insert_d_revision_id,
+                insert_e_revision_id,
+                moved_revision_id,
+            ],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-nested-sibling-chain".to_string(),
+                blocks: vec![paragraph_block_with_children(
+                    "blk:chain-parent",
+                    "Parent",
+                    vec![
+                        paragraph_block("blk:chain-child-b", "Child B"),
+                        paragraph_block("blk:chain-child-d", "Child D"),
+                        paragraph_block("blk:chain-child-e", "Child E"),
+                        paragraph_block("blk:chain-child-a", "Child A"),
+                        paragraph_block("blk:chain-child-c", "Child C"),
+                    ],
+                )],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 91,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("selected a non-primary sibling placement")),
+        "expected nested sibling chain multi-variant reason, got {summary:?}"
+    );
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::InsertBlockAfter { after_block_id, new_block }
+        if after_block_id == "blk:chain-child-b" && new_block.block_id == "blk:chain-child-d"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::InsertBlockAfter { after_block_id, new_block }
+        if after_block_id == "blk:chain-child-d" && new_block.block_id == "blk:chain-child-e"
+    )));
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::MoveBlock { block_id, parent_block_id: Some(parent_block_id), after_block_id: Some(after_block_id) }
+        if block_id == "blk:chain-child-a"
+            && parent_block_id == "blk:chain-parent"
+            && after_block_id == "blk:chain-child-e"
+    )));
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_supports_nested_leading_insert_without_manual_curation() {
+    let store_root = temp_dir("merge-nested-leading-insert");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-nested-leading-insert".to_string(),
+            title: "Merge Nested Leading Insert".to_string(),
+            language: "en".to_string(),
+            timestamp: 82,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-leading-insert",
+        &document.genesis_revision_id,
+        83,
+        84,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:leading-parent",
+                    "block_type": "paragraph",
+                    "content": "Parent",
+                    "attrs": {},
+                    "children": [
+                        {
+                            "block_id": "blk:leading-child-a",
+                            "block_type": "paragraph",
+                            "content": "Child A",
+                            "attrs": {},
+                            "children": []
+                        },
+                        {
+                            "block_id": "blk:leading-child-b",
+                            "block_type": "paragraph",
+                            "content": "Child B",
+                            "attrs": {},
+                            "children": []
+                        }
+                    ]
+                }
+            }
+        ]),
+    );
+
+    let insert_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-nested-leading-insert",
+        &base_revision_id,
+        85,
+        86,
+        json!([
+            {
+                "op": "insert_block",
+                "parent_block_id": "blk:leading-parent",
+                "index": 0,
+                "new_block": {
+                    "block_id": "blk:leading-child-new",
+                    "block_type": "paragraph",
+                    "content": "Child New",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-nested-leading-insert".to_string(),
+            parents: vec![base_revision_id, insert_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-nested-leading-insert".to_string(),
+                blocks: vec![paragraph_block_with_children(
+                    "blk:leading-parent",
+                    "Parent",
+                    vec![
+                        paragraph_block("blk:leading-child-new", "Child New"),
+                        paragraph_block("blk:leading-child-a", "Child A"),
+                        paragraph_block("blk:leading-child-b", "Child B"),
+                    ],
+                )],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 87,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("selected a non-primary sibling placement")),
+        "expected leading-insert sibling multi-variant reason, got {summary:?}"
+    );
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert_eq!(patch.ops.len(), 1);
+    assert!(matches!(
+        &patch.ops[0],
+        PatchOperation::InsertBlock { parent_block_id: Some(parent_block_id), index: Some(0), new_block }
+        if parent_block_id == "blk:leading-parent" && new_block.block_id == "blk:leading-child-new"
+    ));
 
     let _ = fs::remove_dir_all(store_root);
 }
