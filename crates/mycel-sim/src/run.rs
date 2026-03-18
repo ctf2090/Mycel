@@ -1879,6 +1879,7 @@ fn inject_session_fault(
 ) -> Result<(), String> {
     match session_fault {
         "messages-after-bye" => inject_messages_after_bye_fault(transcript, signing_key),
+        "want-before-hello" => inject_want_before_hello_fault(transcript, signing_key),
         other => Err(format!("unsupported session fault '{other}'")),
     }
 }
@@ -1902,6 +1903,28 @@ fn inject_messages_after_bye_fault(
         }),
     )?;
     transcript.messages.insert(hello_index + 1, bye);
+    Ok(())
+}
+
+fn inject_want_before_hello_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| "transcript is missing HELLO for want-before-hello injection".to_owned())?;
+    let want = signed_sim_wire_message(
+        signing_key,
+        &transcript.peer.node_id,
+        "WANT",
+        "msg:peer-sync-fault-want-0000",
+        json!({
+            "objects": ["patch:peer-sync-fault-placeholder"]
+        }),
+    )?;
+    transcript.messages.insert(hello_index, want);
     Ok(())
 }
 

@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-want-before-hello",
+    "description": "Seed injects WANT before HELLO so the reader rejects the transcript for violating wire session sequencing",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-sequencing-test"
+        }
+    ],
+    "expected_outcomes": [
+        "want-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "want-before-hello"
+    },
+    "notes": [
+        "Simulator injects WANT before the normal HELLO so the reader sees an out-of-sequence control message first.",
+        "The transcript should fail on the standard prior-HELLO sequencing rule before any object verification or store writes happen."
+    ]
+}

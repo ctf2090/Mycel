@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-want-before-hello",
+    "description": "A reader should fail sync when the seed emits WANT before establishing the session with HELLO.",
+    "category": "negative",
+    "topology": "sim/topologies/session-want-before-hello.example.json",
+    "fixture_set": "fixtures/object-sets/session-want-before-hello",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "want-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "want-before-hello-rejected",
+            "description": "Reader rejects WANT because the seed did not establish the session with HELLO first.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the session sequencing violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a session-sequencing negative interop case beyond BYE-after-close handling.",
+        "The seed still uses the normal peer-store transcript generator, but the harness injects WANT before HELLO."
+    ]
+}

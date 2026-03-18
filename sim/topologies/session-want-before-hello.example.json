@@ -1,0 +1,31 @@
+{
+    "$schema": "./topology.schema.json",
+    "topology_id": "session-want-before-hello",
+    "description": "Seed emits WANT before HELLO so the reader rejects the transcript as a session sequencing violation",
+    "fixture_set": "fixtures/object-sets/session-want-before-hello",
+    "execution_mode": "single-process",
+    "peers": [
+        {
+            "node_id": "node:peer-seed",
+            "role": "seed",
+            "bootstrap_peers": [],
+            "endpoint": "local:peer-seed"
+        },
+        {
+            "node_id": "node:peer-reader-a",
+            "role": "reader",
+            "bootstrap_peers": [
+                "node:peer-seed"
+            ],
+            "endpoint": "local:peer-reader-a"
+        }
+    ],
+    "expected_outcomes": [
+        "want-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "notes": [
+        "Session-level negative interop proof for control messages arriving before HELLO.",
+        "The simulator injects the fault into an otherwise normal peer-store-generated transcript."
+    ]
+}

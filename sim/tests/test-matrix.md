@@ -20,6 +20,8 @@
   Reference JSON: `sim/tests/snapshot-sync-without-capability.example.json`
 - `session-messages-after-bye`: reject the remaining sync transcript after the seed closes the session with an early `BYE`
   Reference JSON: `sim/tests/session-messages-after-bye.example.json`
+- `session-want-before-hello`: reject a sync transcript that emits `WANT` before the seed establishes the session with `HELLO`
+  Reference JSON: `sim/tests/session-want-before-hello.example.json`
 
 ## Recovery
 
