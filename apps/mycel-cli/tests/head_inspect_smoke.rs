@@ -3063,7 +3063,7 @@ fn head_inspect_gates_low_confidence_challenge_from_review_path() {
 }
 
 #[test]
-fn head_inspect_text_reports_viewer_channels_without_overloading_trace() {
+fn head_inspect_debug_text_reports_viewer_channels_without_overloading_trace() {
     let doc_id = "doc:viewer-score-text";
     let revision_author = signing_key(111);
     let maintainer_a = signing_key(112);
@@ -3134,7 +3134,15 @@ fn head_inspect_text_reports_viewer_channels_without_overloading_trace() {
         "critical_violations": []
     });
     let input = write_input_file("head-inspect-viewer-score-text", "input.json", bundle);
-    let output = run_mycel(&["head", "inspect", doc_id, "--input", &path_arg(&input.path)]);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--output-mode",
+        "debug",
+    ]);
 
     assert_success(&output);
     assert_stdout_contains(&output, "viewer signals: 2");
@@ -3145,6 +3153,34 @@ fn head_inspect_text_reports_viewer_channels_without_overloading_trace() {
     assert!(
         !stdout_text(&output).contains("trace: viewer_signal_id"),
         "expected trace to stay high-level, stdout: {}",
+        stdout_text(&output)
+    );
+}
+
+#[test]
+fn head_inspect_human_mode_groups_summary_candidates_and_decision() {
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        "doc:sample",
+        "--input",
+        "viewer-score-channels",
+    ]);
+
+    assert_success(&output);
+    assert_stdout_contains(&output, "Head inspection: ok");
+    assert_stdout_contains(&output, "Document");
+    assert_stdout_contains(&output, "Candidates");
+    assert_stdout_contains(&output, "(selected)");
+    assert_stdout_contains(&output, "Viewer Effects");
+    assert_stdout_contains(&output, "Decision");
+    assert_stdout_contains(
+        &output,
+        "reason: higher_selector_score_after_viewer-freeze-block",
+    );
+    assert!(
+        !stdout_text(&output).contains("trace: selector_epoch"),
+        "expected human mode to avoid full debug trace, stdout: {}",
         stdout_text(&output)
     );
 }
