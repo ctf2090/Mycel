@@ -78,6 +78,50 @@ fn write_resolved_state_file(prefix: &str) -> (common::TempDir, PathBuf) {
     (dir, path)
 }
 
+fn write_content_variant_ops_file(prefix: &str, content: &str) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("ops.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "replace_block",
+                "block_id": "blk:author-smoke-variant-001",
+                "new_content": content
+            }
+        ]))
+        .expect("content variant ops JSON should serialize"),
+    )
+    .expect("content variant ops JSON should write");
+    (dir, path)
+}
+
+fn write_content_variant_resolved_state_file(
+    prefix: &str,
+    content: &str,
+) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("resolved-state.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!({
+            "doc_id": "doc:author-smoke-content-variant",
+            "blocks": [
+                {
+                    "block_id": "blk:author-smoke-variant-001",
+                    "block_type": "paragraph",
+                    "content": content,
+                    "attrs": {},
+                    "children": []
+                }
+            ]
+        }))
+        .expect("content variant resolved state JSON should serialize"),
+    )
+    .expect("content variant resolved state JSON should write");
+    (dir, path)
+}
+
 fn write_structural_move_ops_file(prefix: &str) -> (common::TempDir, PathBuf) {
     let dir = create_temp_dir(prefix);
     let path = dir.path().join("ops.json");
@@ -1033,6 +1077,308 @@ fn store_merge_authoring_flow_supports_structural_move_and_insert() {
             .as_array()
             .map(Vec::len),
         Some(5)
+    );
+}
+
+#[test]
+fn store_merge_authoring_flow_reports_content_variant_choice_as_multi_variant() {
+    let store_dir = create_temp_dir("store-merge-content-variant-root");
+    let (_key_dir, key_path) = write_signing_key_file("store-merge-content-variant-key");
+    let (_resolved_dir, resolved_state_path) = write_content_variant_resolved_state_file(
+        "store-merge-content-variant-state",
+        "Right variant",
+    );
+    let (_left_ops_dir, left_ops_path) =
+        write_content_variant_ops_file("store-merge-content-variant-left-ops", "Left variant");
+    let (_right_ops_dir, right_ops_path) =
+        write_content_variant_ops_file("store-merge-content-variant-right-ops", "Right variant");
+    let (_center_ops_dir, center_ops_path) =
+        write_content_variant_ops_file("store-merge-content-variant-center-ops", "Center variant");
+    let store_root = path_arg(&store_dir.path().to_path_buf());
+    let key_file = path_arg(&key_path);
+    let resolved_state_file = path_arg(&resolved_state_path);
+    let left_ops_file = path_arg(&left_ops_path);
+    let right_ops_file = path_arg(&right_ops_path);
+    let center_ops_file = path_arg(&center_ops_path);
+
+    let init = run_mycel(&["store", "init", &store_root, "--json"]);
+    assert_success(&init);
+
+    let document = run_mycel(&[
+        "store",
+        "create-document",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--title",
+        "Author Smoke Content Variant",
+        "--language",
+        "en",
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "30",
+        "--json",
+    ]);
+    assert_success(&document);
+    let document_json = assert_json_status(&document, "ok");
+    let genesis_revision_id = document_json["genesis_revision_id"]
+        .as_str()
+        .expect("genesis revision should be string")
+        .to_string();
+
+    let base_ops_dir = create_temp_dir("store-merge-content-variant-base-ops");
+    let base_ops_path = base_ops_dir.path().join("ops.json");
+    fs::write(
+        &base_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:author-smoke-variant-001",
+                    "block_type": "paragraph",
+                    "content": "Base",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]))
+        .expect("content variant base ops JSON should serialize"),
+    )
+    .expect("content variant base ops JSON should write");
+    let base_ops_file = path_arg(&base_ops_path);
+
+    let base_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--base-revision",
+        &genesis_revision_id,
+        "--ops",
+        &base_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "31",
+        "--json",
+    ]);
+    assert_success(&base_patch);
+    let base_patch_json = assert_json_status(&base_patch, "ok");
+    let base_patch_id = base_patch_json["patch_id"]
+        .as_str()
+        .expect("base patch_id should be string")
+        .to_string();
+
+    let base_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--parent",
+        &genesis_revision_id,
+        "--patch",
+        &base_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "32",
+        "--json",
+    ]);
+    assert_success(&base_revision);
+    let base_revision_json = assert_json_status(&base_revision, "ok");
+    let base_revision_id = base_revision_json["revision_id"]
+        .as_str()
+        .expect("base revision_id should be string")
+        .to_string();
+
+    let left_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--base-revision",
+        &base_revision_id,
+        "--ops",
+        &left_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "33",
+        "--json",
+    ]);
+    assert_success(&left_patch);
+    let left_patch_json = assert_json_status(&left_patch, "ok");
+    let left_patch_id = left_patch_json["patch_id"]
+        .as_str()
+        .expect("left patch_id should be string")
+        .to_string();
+
+    let left_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--parent",
+        &base_revision_id,
+        "--patch",
+        &left_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "34",
+        "--json",
+    ]);
+    assert_success(&left_revision);
+    let left_revision_json = assert_json_status(&left_revision, "ok");
+    let left_revision_id = left_revision_json["revision_id"]
+        .as_str()
+        .expect("left revision_id should be string")
+        .to_string();
+
+    let right_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--base-revision",
+        &base_revision_id,
+        "--ops",
+        &right_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "35",
+        "--json",
+    ]);
+    assert_success(&right_patch);
+    let right_patch_json = assert_json_status(&right_patch, "ok");
+    let right_patch_id = right_patch_json["patch_id"]
+        .as_str()
+        .expect("right patch_id should be string")
+        .to_string();
+
+    let right_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--parent",
+        &base_revision_id,
+        "--patch",
+        &right_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "36",
+        "--json",
+    ]);
+    assert_success(&right_revision);
+    let right_revision_json = assert_json_status(&right_revision, "ok");
+    let right_revision_id = right_revision_json["revision_id"]
+        .as_str()
+        .expect("right revision_id should be string")
+        .to_string();
+
+    let center_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--base-revision",
+        &base_revision_id,
+        "--ops",
+        &center_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "37",
+        "--json",
+    ]);
+    assert_success(&center_patch);
+    let center_patch_json = assert_json_status(&center_patch, "ok");
+    let center_patch_id = center_patch_json["patch_id"]
+        .as_str()
+        .expect("center patch_id should be string")
+        .to_string();
+
+    let center_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--parent",
+        &base_revision_id,
+        "--patch",
+        &center_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "38",
+        "--json",
+    ]);
+    assert_success(&center_revision);
+    let center_revision_json = assert_json_status(&center_revision, "ok");
+    let center_revision_id = center_revision_json["revision_id"]
+        .as_str()
+        .expect("center revision_id should be string")
+        .to_string();
+
+    let merge = run_mycel(&[
+        "store",
+        "create-merge-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke-content-variant",
+        "--parent",
+        &left_revision_id,
+        "--parent",
+        &right_revision_id,
+        "--parent",
+        &center_revision_id,
+        "--resolved-state",
+        &resolved_state_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "39",
+        "--json",
+    ]);
+    assert_success(&merge);
+    let merge_json = assert_json_status(&merge, "ok");
+    assert_eq!(merge_json["merge_outcome"], "multi-variant");
+    assert!(
+        merge_json["merge_reasons"]
+            .as_array()
+            .is_some_and(|reasons| reasons.iter().any(|reason| {
+                reason
+                    .as_str()
+                    .is_some_and(|reason| reason.contains("selected a non-primary parent variant"))
+            })),
+        "expected content variant multi-variant reason, got {merge_json}"
+    );
+    assert!(
+        merge_json["merge_reasons"]
+            .as_array()
+            .is_some_and(|reasons| reasons.iter().any(|reason| {
+                reason
+                    .as_str()
+                    .is_some_and(|reason| reason.contains("multiple competing parent variants"))
+            })),
+        "expected competing content variant reason, got {merge_json}"
+    );
+    assert_eq!(merge_json["patch_op_count"], 1);
+    assert_eq!(
+        merge_json["parent_revision_ids"].as_array().map(Vec::len),
+        Some(3)
     );
 }
 
