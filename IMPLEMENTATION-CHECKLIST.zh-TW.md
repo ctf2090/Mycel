@@ -206,10 +206,10 @@
 
 ## 14. `M2` Replay、Storage 與 Rebuild Follow-Up
 
-- [ ] 擴大 persisted store indexes 在 reader 與 recovery workflows 中的重用，避免 accepted-head 與 render paths 過度依賴臨時 CLI glue。
+- [x] 擴大 persisted store indexes 在 reader 與 recovery workflows 中的重用，避免 accepted-head 與 render paths 過度依賴臨時 CLI glue。
 - [x] 補上比目前直接 proof points 更強的 replay 與 store-rebuild fixtures，涵蓋更真實的 multi-document 與 recovery-oriented 情境。
-- [ ] 把更多 authoring 與 replay helper ownership 收斂到 `mycel-core`，避免 storage-write 與 replay 行為過度偏 CLI 驅動。
-- [ ] 擴大 conservative merge-authoring 對 richer nested 與 reparenting conflict cases 的 coverage，處理目前仍落回 manual curation 的情況。
+- [x] 把更多 authoring 與 replay helper ownership 收斂到 `mycel-core`，避免 storage-write 與 replay 行為過度偏 CLI 驅動。
+- [ ] 擴大 conservative merge-authoring 對 remaining content-variant 與 metadata-variant conflict cases 的 coverage，處理目前仍會把多個 non-primary alternatives 壓成過度粗略 manual-curation 分類的情況。
 - [x] 明確定義並驗證在 minimal-client gate 之後仍未完成的 narrow object-authoring 與 storage-write path。
 
 ## 15. `M3` Reader 與 Governance Follow-Up
@@ -227,7 +227,7 @@
   - [x] Re-sync 冪等性：reader 已是最新狀態時，再次執行 sync 應產生零次新寫入、無錯誤、accepted heads 不變。
   - [x] Depth-N 增量追趕：位於 revision depth 1 的 reader 透過一次 HEADS/WANT 追上 depth ≥ 3 的 seed，且只抓取差異部分。
   - [x] 部分文件選擇性 sync：reader 只請求 seed 部分文件，最終 store 穩定在所請求的子集，且 accepted heads 僅針對請求文件正確計算（PROTOCOL §8 明訂支援 partial replication）。
-- [ ] 擴大 session、capability 與 error-path interop coverage，超出目前 positive-path 與 optional-message proof set。
+- [ ] 擴大 session、capability 與 error-path interop coverage，超出目前 positive-path、optional-message 與 messages-after-BYE proof set。
 
 ## 17. Cross-Surface Closure Rules
 

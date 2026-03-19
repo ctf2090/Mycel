@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; the active lane is now clearly `M2` / `M3` / `M4`, while broader governance persistence, the remaining richer merge-authoring conflict classification in `M2`, and the remaining peer interop error/session proof in `M4` stay open after the current production replication sub-items were completed
+Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; the active lane is now clearly `M2` / `M3` / `M4`, while broader governance persistence, the remaining richer merge-authoring competing-variant classification in `M2`, and the remaining peer interop error/session proof in `M4` stay open after the current production replication sub-items were completed and the first permanent messages-after-BYE session proof landed
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -38,9 +38,9 @@ The repository does not yet have:
 
 The current lane is:
 
-1. finish `M2` replay, rebuild, merge-authoring, and narrow write-path closure on top of the now-closed `M1` gate, with the remaining focus now narrowed to richer nested/reparenting conflict classification after the recent manual-curation smoke growth
+1. finish `M2` replay, rebuild, merge-authoring, and narrow write-path closure on top of the now-closed `M1` gate, with the remaining focus now narrowed to richer competing-variant classification for the still-coarse content and metadata branches after the recent nested/anchor placement classification growth
 2. expand `M3` reader-plus-governance workflows without reopening the closed minimal-client gate
-3. advance `M4` from peer-store proof toward the remaining peer-interop error/session coverage now that the currently tracked production replication sub-items are proved
+3. advance `M4` from peer-store proof toward the remaining peer-interop error/session coverage now that the currently tracked production replication sub-items are proved and a first permanent messages-after-BYE session proof is in place
 
 ### Next
 
@@ -225,7 +225,7 @@ Substantially underway. Replay-based verification, store rebuild, persisted inde
 
 Main remaining gaps:
 
-1. conservative merge authoring now covers basic move/reorder, insert/delete composition, reparenting into newly introduced parents, simple composed parent-chain reparenting, a broader initial nested structural matrix, and CLI smoke proof for manual-curation-required nested parent-choice, nested sibling-choice, and composed-branch placement conflicts, but richer nested/reparenting conflict classification still remains open
+1. conservative merge authoring now covers basic move/reorder, insert/delete composition, reparenting into newly introduced parents, simple composed parent-chain reparenting, a broader initial nested structural matrix, CLI smoke proof for manual-curation-required nested parent-choice, nested sibling-choice, and composed-branch placement conflicts, plus richer direct and anchor-based competing parent/sibling placement reasons, but the content-variant and metadata-variant branches still collapse multiple non-primary alternatives into coarse classification
 
 Implementation anchors:
 
@@ -429,7 +429,7 @@ Substantially underway. All M4 completion-gate items are now satisfied at the si
 7. Per-peer accepted-head comparison surfaced in report (`matching-accepted-heads` outcome)
 8. Localhost multi-process transport proof via `mycel sync stream | mycel sync pull --transcript -` (`localhost-multi-process`)
 
-What is still missing is broader session/error-path interop closure. Re-sync idempotency is now proved: running sync twice when already current produces zero new writes. Depth-N incremental catchup is now proved: a reader at revision depth 2 catches up to a depth-3 seed in a single HEADS/WANT pass, fetching only the delta. Partial-doc selective sync is now also proved: a reader can request only a subset of the seed's documents, maintain a stable partial store, and compute accepted heads only for the requested subset, matching PROTOCOL §8 partial replication support. The localhost proof also confirms the current wire flow works across real process boundaries instead of only inside transcript fixtures or in-process simulator hooks.
+What is still missing is broader session/error-path interop closure. Re-sync idempotency is now proved: running sync twice when already current produces zero new writes. Depth-N incremental catchup is now proved: a reader at revision depth 2 catches up to a depth-3 seed in a single HEADS/WANT pass, fetching only the delta. Partial-doc selective sync is now also proved: a reader can request only a subset of the seed's documents, maintain a stable partial store, and compute accepted heads only for the requested subset, matching PROTOCOL §8 partial replication support. A permanent messages-after-BYE simulator proof now also exists, so the remaining M4 gap is no longer "any session negative case" but the next broader set of session/capability/error-path interop faults such as duplicate-HELLO or similar protocol-state violations. The localhost proof also confirms the current wire flow works across real process boundaries instead of only inside transcript fixtures or in-process simulator hooks.
 
 Implementation anchors:
 

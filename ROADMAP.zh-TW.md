@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-狀態：整體進度已有明顯推進；implementation checklist 已拆成已關閉的 `M1` minimal-client gate 與持續追蹤中的 post-`M1` 後續清單。現在的主線已清楚轉到 `M2` / `M3` / `M4`，而更完整的治理狀態持久化、`M2` 剩餘的較細緻 merge-authoring 衝突分類，以及 `M4` 尚未補齊的 peer interop error/session proof，仍是目前未完成的部分；原先規劃的 production replication 子項則都已補上
+狀態：整體進度已有明顯推進；implementation checklist 已拆成已關閉的 `M1` minimal-client gate 與持續追蹤中的 post-`M1` 後續清單。現在的主線已清楚轉到 `M2` / `M3` / `M4`，而更完整的治理狀態持久化、`M2` 剩餘的較細緻 merge-authoring competing-variant 分類，以及 `M4` 尚未補齊的 peer interop error/session proof，仍是目前未完成的部分；原先規劃的 production replication 子項則都已補上，並且已新增第一個常設的 messages-after-BYE session proof
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的實作推進順序。
 
@@ -38,9 +38,9 @@
 
 目前主線是：
 
-1. 在已關閉的 `M1` gate 之上，把 `M2` 的 replay、rebuild、merge-authoring 與 narrow write path 剩餘收尾做完；目前焦點已縮到 recent manual-curation smoke 擴充後，仍待補齊的更細緻 nested / reparenting 衝突分類
+1. 在已關閉的 `M1` gate 之上，把 `M2` 的 replay、rebuild、merge-authoring 與 narrow write path 剩餘收尾做完；目前焦點已縮到 recent nested/anchor placement classification 擴充後，content 與 metadata 分支仍待補齊的 competing-variant 分類
 2. 擴展 `M3` 的 reader-plus-governance 工作流程，但不要重新打開已經關閉的 minimal-client gate
-3. 在目前規劃中的 production replication 子項都已補齊後，讓 `M4` 從 peer-store proof 繼續往剩餘的 peer interop error/session coverage 推進
+3. 在目前規劃中的 production replication 子項都已補齊，且已補上第一個 messages-after-BYE session proof 後，讓 `M4` 從 peer-store proof 繼續往剩餘的 peer interop error/session coverage 推進
 
 ### 下一步
 
@@ -225,7 +225,7 @@ Implementation anchors：
 
 主要剩餘缺口：
 
-1. 保守型 merge authoring 現在已覆蓋基本 move/reorder、insert/delete 組合、reparent 到新引入 parent 的 case、簡單的 composed parent-chain reparenting、更廣的初步 nested structural matrix，以及 manual-curation-required 的 nested parent-choice、nested sibling-choice、composed-branch placement conflicts 的 CLI smoke proof；但更細緻的 nested / reparenting 衝突分類仍未完成
+1. 保守型 merge authoring 現在已覆蓋基本 move/reorder、insert/delete 組合、reparent 到新引入 parent 的 case、簡單的 composed parent-chain reparenting、更廣的初步 nested structural matrix、manual-curation-required 的 nested parent-choice、nested sibling-choice、composed-branch placement conflicts 的 CLI smoke proof，以及更細緻的 direct 與 anchor-based competing parent/sibling placement reasons；但 content-variant 與 metadata-variant 分支仍會把多個 non-primary alternatives 壓成過度粗略的分類
 
 Implementation anchors：
 
@@ -375,7 +375,7 @@ Implementation anchors：
 
 目前判讀：
 
-`mycel-core` 已有 early groundwork：canonical envelope parsing、payload shape validation、RFC 3339 timestamp enforcement、通用 wire signature verification、sender checks、對 `HELLO`、`MANIFEST`、`HEADS`、`WANT`、`OBJECT`、`BYE`、`ERROR` 的 inbound sequencing/head-tracking、reachability gating、store-backed session bootstrap，以及 `OBJECT` body 衍生的 hash / `object_id` 驗證。現在也已有 `mycel-core` 內的 peer-store sync path、CLI entry points，以及 9 個 simulator scenarios 的 positive-path coverage，可在不把手寫 transcript 當成唯一整合表面的前提下，證明 first-time 與 incremental 的 verify/store flow；同時 capability-gated 的 `SNAPSHOT_OFFER` / `VIEW_ANNOUNCE` handling 也已透過 peer-store generation、fetch/store behavior 與 simulator proof 落地。`localhost-multi-process` 也已透過 `mycel sync stream | mycel sync pull --transcript -` 的 stdin/stdout pipe proof，確認目前 wire flow 可以跨真實 process boundary 運作。Re-sync 冪等性也已經補上 proof：reader 已是最新狀態時，再跑一次 sync 會得到零次新寫入。Depth-N incremental catchup 也已經補上 proof：位於 revision depth 2 的 reader 透過一次 HEADS/WANT pass 追上 depth-3 的 seed，且只抓取差異部分。Partial-doc selective sync 也已補上 proof：reader 只請求 seed 的部分文件時，仍可維持穩定 partial store，並只對所請求子集計算 accepted heads，與 PROTOCOL §8 的 partial replication 支援一致。剩下的則是 peer interop 的 session/error-path coverage。
+`mycel-core` 已有 early groundwork：canonical envelope parsing、payload shape validation、RFC 3339 timestamp enforcement、通用 wire signature verification、sender checks、對 `HELLO`、`MANIFEST`、`HEADS`、`WANT`、`OBJECT`、`BYE`、`ERROR` 的 inbound sequencing/head-tracking、reachability gating、store-backed session bootstrap，以及 `OBJECT` body 衍生的 hash / `object_id` 驗證。現在也已有 `mycel-core` 內的 peer-store sync path、CLI entry points，以及 9 個 simulator scenarios 的 positive-path coverage，可在不把手寫 transcript 當成唯一整合表面的前提下，證明 first-time 與 incremental 的 verify/store flow；同時 capability-gated 的 `SNAPSHOT_OFFER` / `VIEW_ANNOUNCE` handling 也已透過 peer-store generation、fetch/store behavior 與 simulator proof 落地。`localhost-multi-process` 也已透過 `mycel sync stream | mycel sync pull --transcript -` 的 stdin/stdout pipe proof，確認目前 wire flow 可以跨真實 process boundary 運作。Re-sync 冪等性也已經補上 proof：reader 已是最新狀態時，再跑一次 sync 會得到零次新寫入。Depth-N incremental catchup 也已經補上 proof：位於 revision depth 2 的 reader 透過一次 HEADS/WANT pass 追上 depth-3 的 seed，且只抓取差異部分。Partial-doc selective sync 也已補上 proof：reader 只請求 seed 的部分文件時，仍可維持穩定 partial store，並只對所請求子集計算 accepted heads，與 PROTOCOL §8 的 partial replication 支援一致。現在也已有常設的 messages-after-BYE simulator proof，因此剩餘缺口已不再是「任何 session negative case 都沒補」，而是更廣的 session/capability/error-path interop faults，例如 duplicate-HELLO 或類似的 protocol-state violations。剩下的則是 peer interop 的 session/error-path coverage。
 
 Implementation anchors：
 

@@ -209,7 +209,7 @@ Use this section as the active implementation checklist for the still-open post-
 - [x] Broaden persisted-store index reuse across reader and recovery workflows so accepted-head and render paths rely less on ad hoc CLI-only glue.
 - [x] Add stronger replay and store-rebuild fixture coverage beyond the current direct proof points, including more realistic multi-document and recovery-oriented fixture sets.
 - [x] Move more authoring and replay helper ownership into `mycel-core` so storage-write and replay behavior are not disproportionately CLI-driven.
-- [ ] Expand conservative merge-authoring coverage for richer nested and reparenting conflict cases that still fall back to manual curation.
+- [ ] Expand conservative merge-authoring coverage for the remaining content-variant and metadata-variant conflict cases that still collapse multiple non-primary alternatives into coarse manual-curation classifications.
 - [x] Define and verify the intended narrow object-authoring and storage-write path that remains open after the closed minimal-client gate.
 
 ## 15. `M3` Reader and Governance Follow-Up
@@ -227,7 +227,7 @@ Use this section as the active implementation checklist for the still-open post-
   - [x] Re-sync idempotency: running sync twice when the reader is already current produces zero new stored objects, no errors, and stable accepted heads.
   - [x] Depth-N incremental catchup: a reader at revision depth 1 catches up to a seed at depth ≥ 3 in a single HEADS/WANT pass, verifying that only the delta is fetched.
   - [x] Partial-doc selective sync: a reader requests only a subset of the seed's documents, ends with a stable partial store, and accepted heads are correct for the requested subset only (PROTOCOL §8 states partial replication is supported).
-- [ ] Expand session, capability, and error-path interop coverage past the current positive-path and optional-message proof set.
+- [ ] Expand session, capability, and error-path interop coverage past the current positive-path, optional-message, and messages-after-BYE proof set.
 
 ## 17. Cross-Surface Closure Rules
 
