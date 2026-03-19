@@ -620,6 +620,24 @@ fn merge_authoring_reports_multi_variant_when_metadata_parents_disagree() {
                 .contains("metadata key 'topic' has multiple competing parent variants")),
         "expected competing metadata reason, got {summary:?}"
     );
+    let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
+        .expect("generated merge patch should be stored");
+    let ops = patch_value["ops"]
+        .as_array()
+        .expect("generated patch ops should be an array");
+    assert_eq!(ops.len(), 1);
+    assert_eq!(ops[0]["op"], "set_metadata");
+    assert_eq!(ops[0]["metadata"]["topic"], "right");
+    assert!(
+        ops[0].get("entries").is_none(),
+        "merge-generated set_metadata op should use parser-compatible metadata field"
+    );
+    let patch = parse_patch_object(&patch_value).expect("generated patch should parse");
+    assert!(patch.ops.iter().any(|op| matches!(
+        op,
+        PatchOperation::SetMetadata { entries }
+        if entries.get("topic") == Some(&Value::String("right".to_string()))
+    )));
 
     let _ = fs::remove_dir_all(store_root);
 }
