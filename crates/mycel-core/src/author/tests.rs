@@ -446,19 +446,53 @@ fn merge_authoring_reports_multi_variant_when_parents_disagree() {
     )
     .expect("right revision should be committed");
 
+    let center_patch = create_patch_in_store(
+        &store_root,
+        &signing_key,
+        &PatchCreateParams {
+            doc_id: "doc:merge-variant".to_string(),
+            base_revision: base_revision.revision_id.clone(),
+            timestamp: 17,
+            ops: json!([
+                {
+                    "op": "replace_block",
+                    "block_id": "blk:merge-001",
+                    "new_content": "Center variant"
+                }
+            ]),
+        },
+    )
+    .expect("center patch should be created");
+    let center_revision = commit_revision_to_store(
+        &store_root,
+        &signing_key,
+        &RevisionCommitParams {
+            doc_id: "doc:merge-variant".to_string(),
+            parents: vec![base_revision.revision_id.clone()],
+            patches: vec![center_patch.patch_id],
+            merge_strategy: None,
+            timestamp: 18,
+        },
+    )
+    .expect("center revision should be committed");
+
     let summary = create_merge_revision_in_store(
         &store_root,
         &signing_key,
         &MergeRevisionCreateParams {
             doc_id: "doc:merge-variant".to_string(),
-            parents: vec![left_revision.revision_id, right_revision.revision_id],
+            parents: vec![
+                left_revision.revision_id,
+                right_revision.revision_id,
+                center_revision.revision_id,
+            ],
             resolved_state: crate::replay::DocumentState {
                 doc_id: "doc:merge-variant".to_string(),
                 blocks: vec![paragraph_block("blk:merge-001", "Right variant")],
                 metadata: serde_json::Map::new(),
             },
             merge_strategy: "semantic-block-merge".to_string(),
-            timestamp: 17,
+            timestamp: 19,
         },
     )
     .expect("merge revision should be created");
@@ -471,6 +505,13 @@ fn merge_authoring_reports_multi_variant_when_parents_disagree() {
             .iter()
             .any(|reason| reason.contains("selected a non-primary parent variant")),
         "expected multi-variant reason, got {summary:?}"
+    );
+    assert!(
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("has multiple competing parent variants")),
+        "expected competing-variant reason, got {summary:?}"
     );
 
     let _ = fs::remove_dir_all(store_root);

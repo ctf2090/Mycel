@@ -189,6 +189,12 @@ fn assess_merge_resolution(
                 "block '{}' selected a non-primary parent variant",
                 block_id
             ));
+            if alternative_content_variants.len() > 1 {
+                reasons.push(format!(
+                    "block '{}' has multiple competing parent variants",
+                    block_id
+                ));
+            }
         } else if alternative_content_variants.len() > 1 {
             saw_multi_variant = true;
             reasons.push(format!(
