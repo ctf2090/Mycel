@@ -434,8 +434,7 @@ fn assess_merge_resolution(
                 "resolved metadata key '{}' does not match any parent variant",
                 key
             ));
-        } else if primary_variant != "<absent>"
-            && resolved_variant != primary_variant
+        } else if resolved_variant != primary_variant
             && alternative_variants.contains(&resolved_variant)
         {
             saw_multi_variant = true;
