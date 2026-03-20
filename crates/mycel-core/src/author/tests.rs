@@ -643,6 +643,80 @@ fn merge_authoring_reports_multi_variant_when_metadata_parents_disagree() {
 }
 
 #[test]
+fn merge_authoring_reports_multi_variant_when_block_is_added_from_non_primary_parent() {
+    let store_root = temp_dir("merge-content-added-non-primary");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-content-added-non-primary".to_string(),
+            title: "Merge Content Added Non Primary".to_string(),
+            language: "en".to_string(),
+            timestamp: 20,
+        },
+    )
+    .expect("document should be created");
+
+    let right_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-added-non-primary",
+        &document.genesis_revision_id,
+        21,
+        22,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-added",
+                    "block_type": "paragraph",
+                    "content": "right",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-content-added-non-primary".to_string(),
+            parents: vec![document.genesis_revision_id.clone(), right_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-content-added-non-primary".to_string(),
+                blocks: vec![paragraph_block("blk:merge-content-added", "right")],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 23,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert_eq!(summary.patch_op_count, 1);
+    assert!(
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("block 'blk:merge-content-added' selected a non-primary parent variant")),
+        "expected added-from-parent multi-variant reason, got {summary:?}"
+    );
+    assert!(
+        !summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason.contains("block 'blk:merge-content-added' has multiple competing parent variants")),
+        "did not expect competing content reason with only one alternative, got {summary:?}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
 fn merge_authoring_reports_multi_variant_when_metadata_key_is_added_from_non_primary_parent() {
     let store_root = temp_dir("merge-metadata-added-non-primary");
     let signing_key = signing_key();

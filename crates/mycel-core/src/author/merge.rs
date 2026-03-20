@@ -143,6 +143,11 @@ fn assess_merge_resolution(
         .1;
     let primary_blocks = flatten_blocks(&primary_state.blocks);
     let resolved_blocks = flatten_blocks(&resolved_state.blocks);
+    let alternative_block_maps = parent_states
+        .iter()
+        .skip(1)
+        .map(|(_, state)| flatten_blocks(&state.blocks))
+        .collect::<Vec<_>>();
     let mut reasons = Vec::new();
     let mut saw_multi_variant = false;
 
@@ -166,8 +171,8 @@ fn assess_merge_resolution(
         let alternative_content_variants = parent_states
             .iter()
             .skip(1)
-            .map(|(_, state)| flatten_blocks(&state.blocks))
-            .map(|blocks| block_content_variant(blocks.get(&block_id).map(|entry| &entry.block)))
+            .zip(alternative_block_maps.iter())
+            .map(|(_, blocks)| block_content_variant(blocks.get(&block_id).map(|entry| &entry.block)))
             .collect::<Result<BTreeSet<_>, _>>()?
             .into_iter()
             .filter(|variant| variant != &primary_content_variant)
@@ -180,9 +185,15 @@ fn assess_merge_resolution(
                 "resolved block '{}' does not match any parent variant",
                 block_id
             ));
-        } else if primary_content_variant != "<absent>"
-            && resolved_content_variant != primary_content_variant
+        } else if resolved_content_variant != primary_content_variant
             && alternative_content_variants.contains(&resolved_content_variant)
+            && (primary_content_variant != "<absent>"
+                || !block_is_structural_parent(
+                    &block_id,
+                    &primary_blocks,
+                    &resolved_blocks,
+                    &alternative_block_maps,
+                ))
         {
             saw_multi_variant = true;
             reasons.push(format!(
@@ -212,8 +223,8 @@ fn assess_merge_resolution(
         let alternative_parent_variants = parent_states
             .iter()
             .skip(1)
-            .map(|(_, state)| flatten_blocks(&state.blocks))
-            .map(|blocks| block_parent_variant(blocks.get(&block_id)))
+            .zip(alternative_block_maps.iter())
+            .map(|(_, blocks)| block_parent_variant(blocks.get(&block_id)))
             .collect::<BTreeSet<_>>()
             .into_iter()
             .filter(|variant| variant != &primary_parent_variant)
@@ -228,7 +239,8 @@ fn assess_merge_resolution(
         let alternative_sibling_variants = parent_states
             .iter()
             .skip(1)
-            .map(|(_, state)| flatten_blocks(&state.blocks))
+            .zip(alternative_block_maps.iter())
+            .map(|(_, blocks)| blocks)
             .filter(|blocks| block_parent_variant(blocks.get(&block_id)) == resolved_parent_variant)
             .map(|blocks| block_sibling_variant(blocks.get(&block_id)))
             .collect::<BTreeSet<_>>()
@@ -278,7 +290,8 @@ fn assess_merge_resolution(
             let anchor_sibling_variants = parent_states
                 .iter()
                 .skip(1)
-                .map(|(_, state)| flatten_blocks(&state.blocks))
+                .zip(alternative_block_maps.iter())
+                .map(|(_, blocks)| blocks)
                 .filter(|blocks| block_parent_variant(blocks.get(&block_id)) == anchor_variant)
                 .map(|blocks| block_sibling_variant(blocks.get(&block_id)))
                 .collect::<BTreeSet<_>>();
@@ -517,6 +530,29 @@ fn block_sibling_variant(block: Option<&BlockPlacement>) -> String {
             .unwrap_or_else(|| "<start>".to_string()),
         None => "<absent>".to_string(),
     }
+}
+
+fn block_is_structural_parent(
+    block_id: &str,
+    primary_blocks: &HashMap<String, BlockPlacement>,
+    resolved_blocks: &HashMap<String, BlockPlacement>,
+    alternative_block_maps: &[HashMap<String, BlockPlacement>],
+) -> bool {
+    block_has_structural_role(block_id, primary_blocks)
+        || block_has_structural_role(block_id, resolved_blocks)
+        || alternative_block_maps
+            .iter()
+            .any(|blocks| block_has_structural_role(block_id, blocks))
+}
+
+fn block_has_structural_role(
+    block_id: &str,
+    blocks: &HashMap<String, BlockPlacement>,
+) -> bool {
+    blocks.get(block_id).is_some_and(|placement| !placement.block.children.is_empty())
+        || blocks
+            .values()
+            .any(|placement| placement.parent_block_id.as_deref() == Some(block_id))
 }
 
 fn resolved_parent_anchor_variant(
