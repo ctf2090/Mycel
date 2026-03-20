@@ -912,7 +912,9 @@ fn store_merge_authoring_flow_creates_merge_patch_and_revision() {
             .as_array()
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
-                    reason.contains("block 'blk:author-smoke-merge-002' selected a non-primary parent variant")
+                    reason.contains(
+                        "block 'blk:author-smoke-merge-002' selected a non-primary parent variant",
+                    )
                 })
             })),
         "expected merge-reason classification for side-branch addition, got {merge_json}"

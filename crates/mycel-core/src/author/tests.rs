@@ -699,17 +699,13 @@ fn merge_authoring_reports_multi_variant_when_block_is_added_from_non_primary_pa
     assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
     assert_eq!(summary.patch_op_count, 1);
     assert!(
-        summary
-            .merge_reasons
-            .iter()
-            .any(|reason| reason.contains("block 'blk:merge-content-added' selected a non-primary parent variant")),
+        summary.merge_reasons.iter().any(|reason| reason
+            .contains("block 'blk:merge-content-added' selected a non-primary parent variant")),
         "expected added-from-parent multi-variant reason, got {summary:?}"
     );
     assert!(
-        !summary
-            .merge_reasons
-            .iter()
-            .any(|reason| reason.contains("block 'blk:merge-content-added' has multiple competing parent variants")),
+        !summary.merge_reasons.iter().any(|reason| reason
+            .contains("block 'blk:merge-content-added' has multiple competing parent variants")),
         "did not expect competing content reason with only one alternative, got {summary:?}"
     );
 

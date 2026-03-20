@@ -172,7 +172,9 @@ fn assess_merge_resolution(
             .iter()
             .skip(1)
             .zip(alternative_block_maps.iter())
-            .map(|(_, blocks)| block_content_variant(blocks.get(&block_id).map(|entry| &entry.block)))
+            .map(|(_, blocks)| {
+                block_content_variant(blocks.get(&block_id).map(|entry| &entry.block))
+            })
             .collect::<Result<BTreeSet<_>, _>>()?
             .into_iter()
             .filter(|variant| variant != &primary_content_variant)
@@ -545,11 +547,10 @@ fn block_is_structural_parent(
             .any(|blocks| block_has_structural_role(block_id, blocks))
 }
 
-fn block_has_structural_role(
-    block_id: &str,
-    blocks: &HashMap<String, BlockPlacement>,
-) -> bool {
-    blocks.get(block_id).is_some_and(|placement| !placement.block.children.is_empty())
+fn block_has_structural_role(block_id: &str, blocks: &HashMap<String, BlockPlacement>) -> bool {
+    blocks
+        .get(block_id)
+        .is_some_and(|placement| !placement.block.children.is_empty())
         || blocks
             .values()
             .any(|placement| placement.parent_block_id.as_deref() == Some(block_id))
