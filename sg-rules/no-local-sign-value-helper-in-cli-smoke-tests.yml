@@ -4,7 +4,7 @@ id: no-local-sign-value-helper-in-cli-smoke-tests
 message: >-
   CLI smoke tests should not define a local sign_value helper; prefer shared
   signing helpers or shared test support instead.
-severity: warning
+severity: error
 language: Rust
 files:
   - apps/mycel-cli/tests/**/*.rs
