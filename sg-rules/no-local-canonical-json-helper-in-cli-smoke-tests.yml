@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-local-canonical-json-helper-in-cli-smoke-tests
+message: >-
+  CLI smoke tests should not define a local canonical_json helper; prefer shared
+  canonical helpers or shared test support instead.
+severity: warning
+language: Rust
+files:
+  - apps/mycel-cli/tests/**/*.rs
+rule:
+  pattern: |
+    fn canonical_json($VALUE: &Value) -> String {
+      $$$BODY
+    }
+note: >-
+  Local canonical JSON helpers drift easily from mycel-core canonicalization
+  rules. Prefer shared helpers from production code or shared test support.

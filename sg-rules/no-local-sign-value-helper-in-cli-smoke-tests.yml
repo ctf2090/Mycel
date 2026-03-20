@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-local-sign-value-helper-in-cli-smoke-tests
+message: >-
+  CLI smoke tests should not define a local sign_value helper; prefer shared
+  signing helpers or shared test support instead.
+severity: warning
+language: Rust
+files:
+  - apps/mycel-cli/tests/**/*.rs
+rule:
+  pattern: |
+    fn sign_value($SIGNING_KEY: &SigningKey, $VALUE: &Value) -> String {
+      $$$BODY
+    }
+note: >-
+  Local signing helpers duplicate canonical payload construction and signature
+  formatting rules that should stay centralized.

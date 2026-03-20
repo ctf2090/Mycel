@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - '.github/workflows/ci.yml'
+      - 'sgconfig.yml'
+      - 'sg-rules/**'
       - 'apps/**'
       - 'crates/**'
       - 'fixtures/**'
@@ -16,6 +18,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/ci.yml'
+      - 'sgconfig.yml'
+      - 'sg-rules/**'
       - 'apps/**'
       - 'crates/**'
       - 'fixtures/**'
@@ -56,3 +60,24 @@ jobs:
 
       - name: Run negative validation smoke
         run: ./sim/negative-validation/smoke.sh --summary-only
+
+  ast-grep-quality:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install ast-grep
+        run: cargo install ast-grep
+
+      - name: Run ast-grep quality scan (non-blocking)
+        run: sg scan --config sgconfig.yml --report-style short --format github

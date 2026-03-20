@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-local-recompute-id-helper-in-cli-smoke-tests
+message: >-
+  CLI smoke tests should not define a local recompute_id helper; prefer shared
+  identity helpers or shared test support instead.
+severity: warning
+language: Rust
+files:
+  - apps/mycel-cli/tests/**/*.rs
+rule:
+  pattern: |
+    fn recompute_id($VALUE: &Value, $ID_FIELD: &str, $PREFIX: &str) -> String {
+      $$$BODY
+    }
+note: >-
+  Local ID recomputation logic repeats canonicalization and hashing rules that
+  should stay centralized.
