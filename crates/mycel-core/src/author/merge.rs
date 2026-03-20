@@ -208,6 +208,27 @@ fn assess_merge_resolution(
                     block_id
                 ));
             }
+        } else if primary_content_variant == "<absent>"
+            && !alternative_content_variants.is_empty()
+            && !block_is_structural_parent(
+                &block_id,
+                &primary_blocks,
+                &resolved_blocks,
+                &alternative_block_maps,
+            )
+        {
+            saw_multi_variant = true;
+            if alternative_content_variants.len() > 1 {
+                reasons.push(format!(
+                    "block '{}' has multiple competing parent variants",
+                    block_id
+                ));
+            } else {
+                reasons.push(format!(
+                    "block '{}' kept the primary parent variant over a competing non-primary alternative",
+                    block_id
+                ));
+            }
         } else if alternative_content_variants.len() > 1 {
             saw_multi_variant = true;
             reasons.push(format!(
