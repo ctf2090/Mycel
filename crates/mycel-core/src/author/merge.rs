@@ -428,7 +428,13 @@ fn assess_merge_resolution(
             .filter(|variant| variant != &primary_variant)
             .collect::<BTreeSet<_>>();
 
-        if resolved_variant != primary_variant && !alternative_variants.contains(&resolved_variant)
+        if resolved_variant == "<absent>" && primary_variant != "<absent>" {
+            reasons.push(format!(
+                "resolved metadata key '{}' removes primary metadata but v0.1 patch ops cannot express metadata deletion",
+                key
+            ));
+        } else if resolved_variant != primary_variant
+            && !alternative_variants.contains(&resolved_variant)
         {
             reasons.push(format!(
                 "resolved metadata key '{}' does not match any parent variant",
@@ -464,10 +470,10 @@ fn assess_merge_resolution(
         }
     }
 
-    let outcome = if reasons
-        .iter()
-        .any(|reason| reason.contains("does not match any parent"))
-    {
+    let outcome = if reasons.iter().any(|reason| {
+        reason.contains("does not match any parent")
+            || reason.contains("cannot express metadata deletion")
+    }) {
         MergeOutcome::ManualCurationRequired
     } else if saw_multi_variant {
         MergeOutcome::MultiVariant
@@ -597,7 +603,7 @@ fn build_conservative_merge_ops(
     for key in primary_state.metadata.keys() {
         if !resolved_state.metadata.contains_key(key) {
             return Err(StoreRebuildError::new(format!(
-                "manual-curation-required: resolved state removes metadata key '{}'",
+                "manual-curation-required: resolved state removes metadata key '{}' but v0.1 patch ops cannot express metadata deletion",
                 key
             )));
         }

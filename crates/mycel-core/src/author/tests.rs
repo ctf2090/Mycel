@@ -790,6 +790,83 @@ fn merge_authoring_reports_multi_variant_when_metadata_keeps_primary_over_non_pr
 }
 
 #[test]
+fn merge_authoring_requires_manual_curation_for_metadata_removal() {
+    let store_root = temp_dir("merge-metadata-removal");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-metadata-removal".to_string(),
+            title: "Merge Metadata Removal".to_string(),
+            language: "en".to_string(),
+            timestamp: 20,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-metadata-removal",
+        &document.genesis_revision_id,
+        21,
+        22,
+        json!([
+            {
+                "op": "set_metadata",
+                "metadata": {
+                    "topic": "base"
+                }
+            }
+        ]),
+    );
+
+    let right_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-metadata-removal",
+        &base_revision_id,
+        23,
+        24,
+        json!([
+            {
+                "op": "set_metadata",
+                "metadata": {
+                    "topic": "right"
+                }
+            }
+        ]),
+    );
+
+    let error = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-metadata-removal".to_string(),
+            parents: vec![base_revision_id, right_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-metadata-removal".to_string(),
+                blocks: Vec::new(),
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 25,
+        },
+    )
+    .expect_err("metadata removal should require manual curation");
+
+    assert!(
+        error.to_string().contains(
+            "manual-curation-required: resolved metadata key 'topic' removes primary metadata but v0.1 patch ops cannot express metadata deletion"
+        ),
+        "expected metadata removal manual-curation error, got {error}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
 fn merge_authoring_updates_only_target_document_in_multi_doc_store() {
     let store_root = temp_dir("merge-multi-doc");
     let signing_key = signing_key();
