@@ -49,6 +49,12 @@ Suggested warning signs:
 - long sections separated only by comments instead of module boundaries
 - one file containing CLI parsing, domain logic, and output formatting together
 
+Useful tools/modules:
+
+- `wc -l`, `rg --files`, and editor outline/symbol view for size and scanability
+- `ast-grep` for repeated structural sections that suggest a split by concern
+- `cloc` or repository stats tools for a quick file-size hotspot pass
+
 ### 2.2 Function Size and Intent
 
 - Does each function do one job?
@@ -65,6 +71,12 @@ Suggested warning signs:
 - functions growing past roughly `40-60` lines without strong reason
 - deeply nested branching that hides the main path
 - setup, execution, and rendering mixed in one function
+
+Useful tools/modules:
+
+- `rg` plus editor symbol outline for long-function triage
+- `ast-grep` for repeated setup, branch, or method-chain shapes worth extracting
+- `clippy` for complexity-adjacent warnings and suspicious control flow patterns
 
 ### 2.3 Hard-Coded Values and Repeated Literals
 
@@ -84,6 +96,12 @@ Suggested warning signs:
 - duplicated protocol version strings or object-type strings
 - policy defaults copied into multiple places by hand
 
+Useful tools/modules:
+
+- `rg` for repeated strings, prefixes, IDs, timestamps, and object-type literals
+- `ast-grep` or `comby` for repeated JSON/object construction shapes with renamed locals
+- shared constants, builders, or profile/config modules when a literal carries policy meaning
+
 ### 2.4 Shared Logic vs Local Reimplementation
 
 - Is this code reimplementing canonicalization, hashing, signing, parsing, replay, or selection logic that already exists in shared code?
@@ -101,6 +119,12 @@ Suggested warning signs:
 - copy-pasted derived ID or hash computation
 - multiple modules building the same object shape by hand
 
+Useful tools/modules:
+
+- `ast-grep` for local copies of canonicalization, hashing, replay, or selector-like code shapes
+- `rg` for calls or literals that should flow through shared helpers instead of local logic
+- shared modules such as `canonical`, `signature`, `replay`, `verify`, and test-support helpers as the first places to reuse
+
 ### 2.5 Layer Boundaries
 
 - Does CLI code stay thin while core logic stays reusable?
@@ -113,6 +137,12 @@ Default bias:
 - keep boundaries explicit
 - keep the core reusable and the CLI thin
 
+Useful tools/modules:
+
+- module layout review with `rg --files` and editor symbol/navigation tools
+- `ast-grep` for CLI code that directly performs core-domain work instead of delegating
+- existing crate/module boundaries such as `mycel-core`, CLI entrypoints, and store/protocol modules as the boundary map
+
 ### 2.6 Error Surfaces and Debuggability
 
 - Do errors say what failed and where?
@@ -123,6 +153,12 @@ Default bias:
 Default bias:
 
 - prefer clear failures over vague success/failure states
+
+Useful tools/modules:
+
+- `clippy` for weak error-handling patterns and suspicious `unwrap`/`expect` usage
+- `rg 'expect\\(|unwrap\\(|map_err\\('` for quick failure-surface review
+- CLI-visible smoke tests and focused unit tests to verify the actual user-facing failure path
 
 ### 2.7 Test Quality
 
@@ -141,6 +177,12 @@ Suggested warning signs:
 - helper functions that reconstruct product algorithms
 - assertions on incidental output instead of stable behavior
 
+Useful tools/modules:
+
+- `rg` for repeated fixture blobs, repeated assertions, and duplicated helper names across tests
+- `ast-grep` for tests that structurally mirror production algorithms too closely
+- shared test-support helpers/builders when fixture setup starts repeating across files
+
 ### 2.8 Changeability
 
 - If we need to adjust this behavior next week, where would we edit it?
@@ -151,6 +193,12 @@ Suggested warning signs:
 Default bias:
 
 - organize around expected change points, not only current convenience
+
+Useful tools/modules:
+
+- `git grep`/`rg` to estimate how many edit points a future change would touch
+- `ast-grep` for repeated policy or construction patterns that imply future multi-file edits
+- `git log -p` or blame/history review to see where changes repeatedly cluster
 
 ## 3. Repeated Review Questions
 
@@ -195,6 +243,14 @@ These are not hard rules, but they are useful default prompts:
 - Repeated literal warning: same non-trivial literal appears `3+` times
 - Drift warning: tests or CLI helpers reimplement canonicalization, signatures, hashing, replay, or selector logic
 - Boundary warning: one module mixes parsing, domain decisions, and rendering
+
+Starter check tools/modules:
+
+- size and hotspot scan: `wc -l`, `rg --files`, editor outline
+- repeated literals: `rg`
+- structural repetition or local reimplementation: `ast-grep`
+- broad structural search-and-rewrite experiments: `comby`
+- complexity and lint signals: `clippy`
 
 ## 7. Relation to Other Surfaces
 

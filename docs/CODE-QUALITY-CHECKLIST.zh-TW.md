@@ -47,6 +47,12 @@
 - 只能靠註解分段，而沒有真正的模組邊界
 - 同一檔案同時包含 CLI 解析、領域邏輯與輸出格式化
 
+可用工具 / 模組：
+
+- `wc -l`、`rg --files`、編輯器 outline / symbol view：快速看檔案大小與可掃讀性
+- `ast-grep`：找出暗示應按 concern 拆分的重複結構區段
+- `cloc` 或其他 repo 統計工具：快速掃出大型檔案熱點
+
 ### 2.2 函式大小與意圖
 
 - 每個函式是否只做一件事？
@@ -63,6 +69,12 @@
 - 函式長度成長到大約 `40-60` 行以上，卻沒有很強的理由
 - 巢狀分支太深，主路徑被淹沒
 - setup、執行與 rendering 混在同一個函式裡
+
+可用工具 / 模組：
+
+- `rg` 搭配編輯器 symbol outline：快速找長函式與可疑熱點
+- `ast-grep`：找出值得抽 helper 的重複 setup、分支或 method chain 形狀
+- `clippy`：補充偵測複雜控制流與可疑寫法
 
 ### 2.3 硬編碼值與重複 literals
 
@@ -82,6 +94,12 @@
 - 協定版本字串或 object-type 字串在多處手寫複製
 - policy 預設值被手動複製到很多地方
 
+可用工具 / 模組：
+
+- `rg`：搜尋重複字串、prefix、ID、timestamp、object-type literals
+- `ast-grep` 或 `comby`：找變數名不同但物件 / JSON 拼裝形狀相似的重複樣板
+- 共用 constants、builders、profile / config 模組：當 literal 承載 policy 時優先放這裡
+
 ### 2.4 共用邏輯與本地重實作
 
 - 這段程式是否重做了 canonicalization、hashing、signing、parsing、replay 或 selection 邏輯，而這些邏輯其實已存在共用程式中？
@@ -99,6 +117,12 @@
 - copy-paste 的 derived ID 或 hash 計算
 - 多個模組都手動拼同樣的物件結構
 
+可用工具 / 模組：
+
+- `ast-grep`：找本地重做 canonicalization、hashing、replay、selector 等邏輯的結構樣式
+- `rg`：搜尋本應走共用 helper、卻在本地直接實作的呼叫或 literals
+- `canonical`、`signature`、`replay`、`verify` 與 test-support helpers：優先回頭重用這些模組
+
 ### 2.5 分層邊界
 
 - CLI 程式是否保持輕薄，而 core 邏輯是否保持可重用？
@@ -111,6 +135,12 @@
 - 讓邊界保持明確
 - 讓 core 可重用，CLI 保持輕薄
 
+可用工具 / 模組：
+
+- `rg --files` 與編輯器導覽：先看模組布局與責任落點
+- `ast-grep`：找 CLI 直接做 core 領域決策、而不是委派給共用模組的區塊
+- 既有 crate / module 邊界，例如 `mycel-core`、CLI entrypoints、store / protocol 模組：當作分層地圖
+
 ### 2.6 錯誤表面與可除錯性
 
 - 錯誤訊息是否有說清楚哪裡失敗、怎麼失敗？
@@ -121,6 +151,12 @@
 預設偏向：
 
 - 優先提供清楚失敗，而不是模糊的成功 / 失敗狀態
+
+可用工具 / 模組：
+
+- `clippy`：找可疑錯誤處理與過於脆弱的 `unwrap` / `expect`
+- `rg 'expect\\(|unwrap\\(|map_err\\('`：快速巡檢錯誤表面
+- CLI-visible smoke tests 與聚焦 unit tests：驗證使用者實際看得到的失敗路徑
 
 ### 2.7 測試品質
 
@@ -139,6 +175,12 @@
 - helper 函式重建產品演算法
 - assertion 綁定偶然輸出，而非穩定行為
 
+可用工具 / 模組：
+
+- `rg`：找重複 fixture blobs、重複 assertions 與跨檔測試 helpers
+- `ast-grep`：找測試是否在結構上過度鏡像 production 演算法
+- 共用 test-support helpers / builders：當 fixture setup 開始跨檔重複時優先抽出
+
 ### 2.8 可變更性
 
 - 如果下週要調整這個行為，我們應該去哪裡改？
@@ -149,6 +191,12 @@
 預設偏向：
 
 - 依照預期變更點來組織，而不是只追求當下方便
+
+可用工具 / 模組：
+
+- `git grep` / `rg`：估算未來一次需求變更會牽動多少編輯點
+- `ast-grep`：找出暗示未來會多檔同步修改的重複 policy / construction patterns
+- `git log -p`、blame、history review：看變更是否反覆集中在同一批區塊
 
 ## 3. 反覆審查問題
 
@@ -193,6 +241,14 @@
 - 重複 literal 警訊：同一個非 trivial literal 出現 `3+` 次
 - drift 警訊：測試或 CLI helper 重做 canonicalization、signatures、hashing、replay 或 selector 邏輯
 - 邊界警訊：同一模組混合 parsing、領域決策與 rendering
+
+起始檢查可用工具 / 模組：
+
+- 大小與熱點掃描：`wc -l`、`rg --files`、編輯器 outline
+- 重複 literals：`rg`
+- 結構重複或本地重實作：`ast-grep`
+- 廣義結構搜尋 / 重寫實驗：`comby`
+- 複雜度與 lint 訊號：`clippy`
 
 ## 7. 與其他表面的關係
 
