@@ -97,6 +97,28 @@ fn write_content_variant_ops_file(prefix: &str, content: &str) -> (common::TempD
     (dir, path)
 }
 
+fn write_content_variant_ops_for_block_file(
+    prefix: &str,
+    block_id: &str,
+    content: &str,
+) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("ops.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "replace_block",
+                "block_id": block_id,
+                "new_content": content
+            }
+        ]))
+        .expect("content variant ops JSON should serialize"),
+    )
+    .expect("content variant ops JSON should write");
+    (dir, path)
+}
+
 fn write_content_addition_ops_file(prefix: &str, content: &str) -> (common::TempDir, PathBuf) {
     let dir = create_temp_dir(prefix);
     let path = dir.path().join("ops.json");
@@ -107,6 +129,33 @@ fn write_content_addition_ops_file(prefix: &str, content: &str) -> (common::Temp
                 "op": "insert_block",
                 "new_block": {
                     "block_id": "blk:author-smoke-variant-001",
+                    "block_type": "paragraph",
+                    "content": content,
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]))
+        .expect("content addition ops JSON should serialize"),
+    )
+    .expect("content addition ops JSON should write");
+    (dir, path)
+}
+
+fn write_content_addition_ops_for_block_file(
+    prefix: &str,
+    block_id: &str,
+    content: &str,
+) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("ops.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": block_id,
                     "block_type": "paragraph",
                     "content": content,
                     "attrs": {},
@@ -143,6 +192,38 @@ fn write_content_variant_resolved_state_file(
         .expect("content variant resolved state JSON should serialize"),
     )
     .expect("content variant resolved state JSON should write");
+    (dir, path)
+}
+
+fn write_content_entries_resolved_state_for_doc_file(
+    prefix: &str,
+    doc_id: &str,
+    entries: &[(&str, &str)],
+) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("resolved-state.json");
+    let blocks = entries
+        .iter()
+        .map(|(block_id, content)| {
+            json!({
+                "block_id": block_id,
+                "block_type": "paragraph",
+                "content": content,
+                "attrs": {},
+                "children": []
+            })
+        })
+        .collect::<Vec<_>>();
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!({
+            "doc_id": doc_id,
+            "blocks": blocks,
+            "metadata": {}
+        }))
+        .expect("content entries resolved state JSON should serialize"),
+    )
+    .expect("content entries resolved state JSON should write");
     (dir, path)
 }
 

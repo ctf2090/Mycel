@@ -328,7 +328,15 @@ fn assess_merge_resolution(
                     ),
                 );
             }
-        } else if alternative_content_variants.len() > 1 {
+        } else if !alternative_content_variants.is_empty()
+            && (primary_content_variant != "<absent>"
+                || !block_is_structural_parent(
+                    &block_id,
+                    &primary_blocks,
+                    &resolved_blocks,
+                    &alternative_block_maps,
+                ))
+        {
             saw_multi_variant = true;
             push_variant_reason(
                 &mut reasons,
@@ -350,25 +358,27 @@ fn assess_merge_resolution(
                     kept_primary_branch_kind(&primary_content_variant),
                 ),
             );
-            push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
-                MergeReasonDetail {
-                    subject_kind: MergeReasonSubjectKind::Block,
-                    subject_id: block_id.clone(),
-                    variant_kind: MergeReasonVariantKind::Content,
-                    reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
-                    branch_kind: Some(multiple_competing_branch_kind(&primary_content_variant)),
-                    primary_variant: primary_content_variant.clone(),
-                    resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: alternative_content_variants.iter().cloned().collect(),
-                },
-                multiple_competing_reason(
-                    "block",
-                    &block_id,
-                    multiple_competing_branch_kind(&primary_content_variant),
-                ),
-            );
+            if alternative_content_variants.len() > 1 {
+                push_variant_reason(
+                    &mut reasons,
+                    &mut reason_details,
+                    MergeReasonDetail {
+                        subject_kind: MergeReasonSubjectKind::Block,
+                        subject_id: block_id.clone(),
+                        variant_kind: MergeReasonVariantKind::Content,
+                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        branch_kind: Some(multiple_competing_branch_kind(&primary_content_variant)),
+                        primary_variant: primary_content_variant.clone(),
+                        resolved_variant: resolved_content_variant.clone(),
+                        competing_variants: alternative_content_variants.iter().cloned().collect(),
+                    },
+                    multiple_competing_reason(
+                        "block",
+                        &block_id,
+                        multiple_competing_branch_kind(&primary_content_variant),
+                    ),
+                );
+            }
         }
 
         if primary_content_variant == "<absent>" || resolved_content_variant == "<absent>" {
