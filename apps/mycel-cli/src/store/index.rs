@@ -59,6 +59,17 @@ pub(super) struct StoreIndexCliArgs {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct StoreIndexGovernanceRecordSummary {
+    view_id: String,
+    maintainer: String,
+    profile_id: String,
+    documents: std::collections::BTreeMap<String, String>,
+    maintainer_view_ids: Vec<String>,
+    profile_view_ids: Vec<String>,
+    document_view_ids: std::collections::BTreeMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct StoreIndexQuerySummary {
     store_root: PathBuf,
     manifest_path: PathBuf,
@@ -68,7 +79,7 @@ struct StoreIndexQuerySummary {
     doc_revisions: std::collections::BTreeMap<String, Vec<String>>,
     revision_parents: std::collections::BTreeMap<String, Vec<String>>,
     author_patches: std::collections::BTreeMap<String, Vec<String>>,
-    view_governance: Vec<ViewGovernanceRecord>,
+    view_governance: Vec<StoreIndexGovernanceRecordSummary>,
     maintainer_views: std::collections::BTreeMap<String, Vec<String>>,
     profile_views: std::collections::BTreeMap<String, Vec<String>>,
     document_views: std::collections::BTreeMap<String, Vec<String>>,
@@ -409,6 +420,48 @@ fn filtered_view_governance(
         .collect()
 }
 
+fn related_document_view_ids(
+    manifest: &StoreIndexManifest,
+    documents: &std::collections::BTreeMap<String, String>,
+) -> std::collections::BTreeMap<String, Vec<String>> {
+    documents
+        .keys()
+        .filter_map(|doc_id| {
+            manifest
+                .document_views
+                .get(doc_id)
+                .cloned()
+                .map(|view_ids| (doc_id.clone(), view_ids))
+        })
+        .collect()
+}
+
+fn summarize_view_governance(
+    manifest: &StoreIndexManifest,
+    view_governance: Vec<ViewGovernanceRecord>,
+) -> Vec<StoreIndexGovernanceRecordSummary> {
+    view_governance
+        .into_iter()
+        .map(|record| StoreIndexGovernanceRecordSummary {
+            maintainer_view_ids: manifest
+                .maintainer_views
+                .get(&record.maintainer)
+                .cloned()
+                .unwrap_or_default(),
+            profile_view_ids: manifest
+                .profile_views
+                .get(&record.profile_id)
+                .cloned()
+                .unwrap_or_default(),
+            document_view_ids: related_document_view_ids(manifest, &record.documents),
+            view_id: record.view_id,
+            maintainer: record.maintainer,
+            profile_id: record.profile_id,
+            documents: record.documents,
+        })
+        .collect()
+}
+
 fn filtered_doc_revisions(
     manifest: &StoreIndexManifest,
     doc_id: &Option<String>,
@@ -550,7 +603,7 @@ fn build_store_index_query_summary(
     let doc_revisions = filtered_doc_revisions(&manifest, &filters.doc_id, &filters.revision_id);
     let author_patches = filter_single_map(&manifest.author_patches, &filters.author);
     let object_ids_by_type = filter_single_map(&manifest.object_ids_by_type, &filters.object_type);
-    let view_governance = filtered_view_governance(
+    let filtered_view_governance = filtered_view_governance(
         &manifest,
         &filters.maintainer,
         &filters.view_id,
@@ -558,7 +611,7 @@ fn build_store_index_query_summary(
         &filters.doc_id,
         &filters.revision_id,
     );
-    let allowed_view_ids = allowed_view_ids(&view_governance);
+    let allowed_view_ids = allowed_view_ids(&filtered_view_governance);
     let maintainer_views = filtered_view_index(
         &manifest.maintainer_views,
         &filters.maintainer,
@@ -572,11 +625,12 @@ fn build_store_index_query_summary(
     let document_views =
         filtered_view_index(&manifest.document_views, &filters.doc_id, &allowed_view_ids);
     let profile_heads = filtered_profile_heads(
-        &view_governance,
+        &filtered_view_governance,
         &filters.profile_id,
         &filters.doc_id,
         &filters.revision_id,
     );
+    let view_governance = summarize_view_governance(&manifest, filtered_view_governance);
     let revision_ids = selected_revision_ids(&doc_revisions, &filters.revision_id);
     let revision_parents = filtered_revision_parents(&manifest, &revision_ids);
 
@@ -644,6 +698,33 @@ fn print_store_index_text(summary: &StoreIndexQuerySummary) -> i32 {
     }
     if let Some(projection) = &summary.projection {
         println!("projection: {projection}");
+    }
+    if summary.projection.as_deref() == Some("governance-only") {
+        for record in &summary.view_governance {
+            println!("view governance record: {}", record.view_id);
+            println!("  maintainer: {}", record.maintainer);
+            println!("  profile id: {}", record.profile_id);
+            println!(
+                "  maintainer related views: {}",
+                record.maintainer_view_ids.join(", ")
+            );
+            println!(
+                "  profile related views: {}",
+                record.profile_view_ids.join(", ")
+            );
+            for (doc_id, revision_id) in &record.documents {
+                println!("  document: {doc_id} -> {revision_id}");
+                let related = record
+                    .document_view_ids
+                    .get(doc_id)
+                    .cloned()
+                    .unwrap_or_default();
+                println!(
+                    "  document related views: {doc_id} -> {}",
+                    related.join(", ")
+                );
+            }
+        }
     }
     println!("store index: {}", summary.status);
     if summary.status == "ok" {

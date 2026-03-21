@@ -39,6 +39,13 @@ struct StoreFixtureInfo {
     profile_id: String,
 }
 
+struct RelatedGovernanceFixtureInfo {
+    store_dir: common::TempDir,
+    view_a1_id: String,
+    view_a2_id: String,
+    view_b1_id: String,
+}
+
 fn build_store_with_view() -> StoreFixtureInfo {
     let source_dir = create_temp_dir("store-index-source");
     let store_dir = create_temp_dir("store-index-root");
@@ -136,6 +143,111 @@ fn build_store_with_view() -> StoreFixtureInfo {
         revision_id,
         view_id,
         profile_id,
+    }
+}
+
+fn build_store_with_related_views() -> RelatedGovernanceFixtureInfo {
+    let source_dir = create_temp_dir("store-index-related-source");
+    let store_dir = create_temp_dir("store-index-related-root");
+
+    let policy_a = json!({
+        "accept_keys": [signer_id(&signing_key())],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let policy_b = json!({
+        "accept_keys": [signer_id(&SigningKey::from_bytes(&[8u8; 32]))],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+
+    let view_a1 = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:alpha": "rev:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "doc:beta": "rev:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "policy": policy_a,
+            "timestamp": 10u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+    let view_a2 = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:alpha": "rev:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            "policy": policy_a,
+            "timestamp": 11u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+    let view_b1 = signed_object(
+        json!({
+            "type": "view",
+            "version": "mycel/0.1",
+            "documents": {
+                "doc:beta": "rev:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            },
+            "policy": policy_b,
+            "timestamp": 12u64
+        }),
+        "maintainer",
+        "view_id",
+        "view",
+    );
+
+    let view_a1_id = view_a1["view_id"]
+        .as_str()
+        .expect("view a1 id should exist")
+        .to_string();
+    let view_a2_id = view_a2["view_id"]
+        .as_str()
+        .expect("view a2 id should exist")
+        .to_string();
+    let view_b1_id = view_b1["view_id"]
+        .as_str()
+        .expect("view b1 id should exist")
+        .to_string();
+
+    fs::write(
+        source_dir.path().join("view-a1.json"),
+        serde_json::to_string_pretty(&view_a1).expect("view a1 should serialize"),
+    )
+    .expect("view a1 should write");
+    fs::write(
+        source_dir.path().join("view-a2.json"),
+        serde_json::to_string_pretty(&view_a2).expect("view a2 should serialize"),
+    )
+    .expect("view a2 should write");
+    fs::write(
+        source_dir.path().join("view-b1.json"),
+        serde_json::to_string_pretty(&view_b1).expect("view b1 should serialize"),
+    )
+    .expect("view b1 should write");
+
+    let ingest = run_mycel(&[
+        "store",
+        "ingest",
+        &path_arg(source_dir.path()),
+        "--into",
+        &path_arg(store_dir.path()),
+    ]);
+    assert_success(&ingest);
+
+    RelatedGovernanceFixtureInfo {
+        store_dir,
+        view_a1_id,
+        view_a2_id,
+        view_b1_id,
     }
 }
 
@@ -621,6 +733,92 @@ fn store_index_governance_only_json_prunes_non_governance_sections() {
             .as_object()
             .map(|values| values.len()),
         Some(0)
+    );
+    assert_eq!(
+        json["view_governance"][0]["maintainer_view_ids"],
+        json!([fixture.view_id.clone()])
+    );
+    assert_eq!(
+        json["view_governance"][0]["profile_view_ids"],
+        json!([fixture.view_id.clone()])
+    );
+    assert_eq!(
+        json["view_governance"][0]["document_view_ids"]["doc:index"],
+        json!([fixture.view_id])
+    );
+}
+
+#[test]
+fn store_index_governance_only_json_embeds_related_view_context_per_record() {
+    let fixture = build_store_with_related_views();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(fixture.store_dir.path()),
+        "--governance-only",
+        "--view-id",
+        &fixture.view_a1_id,
+        "--json",
+    ]);
+
+    assert_success(&output);
+    let json = assert_json_status(&output, "ok");
+    assert_eq!(
+        json["view_governance"]
+            .as_array()
+            .map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(
+        json["view_governance"][0]["maintainer_view_ids"],
+        json!([fixture.view_a1_id, fixture.view_b1_id, fixture.view_a2_id])
+    );
+    assert_eq!(
+        json["view_governance"][0]["profile_view_ids"],
+        json!([fixture.view_a1_id, fixture.view_a2_id])
+    );
+    assert_eq!(
+        json["view_governance"][0]["document_view_ids"]["doc:alpha"],
+        json!([fixture.view_a1_id, fixture.view_a2_id])
+    );
+    assert_eq!(
+        json["view_governance"][0]["document_view_ids"]["doc:beta"],
+        json!([fixture.view_a1_id, fixture.view_b1_id])
+    );
+}
+
+#[test]
+fn store_index_governance_only_text_reports_related_view_context() {
+    let fixture = build_store_with_related_views();
+    let output = run_mycel(&[
+        "store",
+        "index",
+        &path_arg(fixture.store_dir.path()),
+        "--governance-only",
+        "--view-id",
+        &fixture.view_a1_id,
+    ]);
+
+    assert_success(&output);
+    assert_empty_stderr(&output);
+    let stdout = stdout_text(&output);
+    assert!(
+        stdout.contains(&format!("view governance record: {}", fixture.view_a1_id)),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains(&format!(
+            "  maintainer related views: {}, {}, {}",
+            fixture.view_a1_id, fixture.view_b1_id, fixture.view_a2_id
+        )),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains(&format!(
+            "  document related views: doc:beta -> {}, {}",
+            fixture.view_a1_id, fixture.view_b1_id
+        )),
+        "stdout: {stdout}"
     );
 }
 
