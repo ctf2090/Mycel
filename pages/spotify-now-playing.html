@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mycel Spotify Now Playing Widget</title>
+    <meta
+      name="description"
+      content="A transparent Spotify now-playing overlay for OBS Browser Source and GitHub Pages."
+    >
+    <meta name="theme-color" content="#1db954">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: rgba(7, 10, 18, 0.84);
+        --panel: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.12);
+        --text: #f8fbff;
+        --muted: rgba(248, 251, 255, 0.72);
+        --spotify: #1db954;
+        --accent: #8cf0b2;
+        --warning: #ffd166;
+        --danger: #ff647c;
+        --idle: #9fb4cc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      }
+
+      body {
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+      }
+
+      .card {
+        display: grid;
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 14px;
+        width: min(720px, 100vw);
+        min-height: 112px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background:
+          linear-gradient(135deg, rgba(29, 185, 84, 0.18), rgba(29, 185, 84, 0.02)),
+          var(--bg);
+        color: var(--text);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+      }
+
+      .art {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        border-radius: 14px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 30% 30%, rgba(29, 185, 84, 0.6), rgba(29, 185, 84, 0) 58%),
+          linear-gradient(160deg, rgba(18, 26, 42, 0.9), rgba(7, 10, 18, 0.94));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .art img {
+        display: none;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .art.has-image img {
+        display: block;
+      }
+
+      .art::after {
+        content: "Spotify";
+        position: absolute;
+        inset: auto 8px 8px auto;
+        padding: 3px 6px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.52);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .copy {
+        min-width: 0;
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 1px;
+        min-width: 0;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--idle);
+        box-shadow: 0 0 16px currentColor;
+        color: var(--idle);
+      }
+
+      .dot.live {
+        color: var(--spotify);
+        background: var(--spotify);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+
+      .dot.warn {
+        color: var(--warning);
+        background: var(--warning);
+      }
+
+      .dot.error {
+        color: var(--danger);
+        background: var(--danger);
+      }
+
+      .title-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-top: 8px;
+        min-width: 0;
+      }
+
+      .title-wrap {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 27px;
+        line-height: 1.08;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .title.scroll {
+        display: inline-block;
+        min-width: 100%;
+        padding-right: 2.4rem;
+        animation: marquee 12s linear infinite;
+      }
+
+      .artists {
+        margin-top: 6px;
+        font-size: 15px;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .progress {
+        position: relative;
+        height: 7px;
+        margin-top: 10px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--spotify), var(--accent));
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn,
+      .text-link {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        cursor: pointer;
+        font: inherit;
+        text-decoration: none;
+      }
+
+      .btn {
+        padding: 9px 14px;
+        background: var(--spotify);
+        color: #04120b;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .btn.secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+
+      .btn:disabled {
+        cursor: default;
+        opacity: 0.6;
+      }
+
+      .text-link {
+        padding: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .hint {
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.18);
+          opacity: 0.72;
+        }
+      }
+
+      @keyframes marquee {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(calc(-100% + 16rem));
+        }
+      }
+
+      @media (max-width: 560px) {
+        .card {
+          grid-template-columns: 64px minmax(0, 1fr);
+          width: min(100vw, 560px);
+          min-height: 96px;
+          padding: 12px;
+        }
+
+        .art {
+          width: 64px;
+          height: 64px;
+        }
+
+        .title {
+          font-size: 20px;
+        }
+
+        .artists {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="card" aria-live="polite">
+      <div class="art" id="art-shell">
+        <img
+          id="art"
+          src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+          alt="Album art"
+        >
+      </div>
+
+      <div class="copy">
+        <div class="eyebrow">
+          <div class="pill">
+            <span class="dot" id="dot"></span>
+            <span id="status">Setup required</span>
+          </div>
+          <span class="hint" id="scope-note">Spotify Now Playing for OBS</span>
+        </div>
+
+        <div class="title-row">
+          <div class="title-wrap">
+            <h1 class="title" id="title">Connect Spotify</h1>
+          </div>
+        </div>
+
+        <div class="artists" id="artists">Set your Spotify app client ID, then authorize this page once.</div>
+        <div class="meta" id="meta">GitHub Pages + OBS friendly, transparent background, no backend required.</div>
+
+        <div class="progress" aria-hidden="true">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="connect-btn" type="button">Connect Spotify</button>
+          <button class="btn secondary hidden" id="refresh-btn" type="button">Refresh Now</button>
+          <button class="text-link hidden" id="disconnect-btn" type="button">Forget session</button>
+          <a class="text-link hidden" id="open-link" href="#" rel="noreferrer noopener" target="_blank">Open in Spotify</a>
+        </div>
+
+        <div class="hint" id="hint">
+          Add this page URL to your Spotify app redirect URIs before the first login.
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const CONFIG = {
+        clientId: "",
+        scopes: [
+          "user-read-currently-playing",
+          "user-read-playback-state"
+        ],
+        pollMs: 15000,
+        redirectPath: "/Mycel/spotify-now-playing.html",
+        storageKey: "mycel-spotify-now-playing"
+      };
+
+      const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
+      const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
+      const PLAYER_ENDPOINT = "https://api.spotify.com/v1/me/player/currently-playing";
+      const storagePrefix = `${CONFIG.storageKey}:`;
+
+      const els = {
+        art: document.getElementById("art"),
+        artShell: document.getElementById("art-shell"),
+        status: document.getElementById("status"),
+        scopeNote: document.getElementById("scope-note"),
+        title: document.getElementById("title"),
+        artists: document.getElementById("artists"),
+        meta: document.getElementById("meta"),
+        progressBar: document.getElementById("progress-bar"),
+        connectBtn: document.getElementById("connect-btn"),
+        refreshBtn: document.getElementById("refresh-btn"),
+        disconnectBtn: document.getElementById("disconnect-btn"),
+        openLink: document.getElementById("open-link"),
+        hint: document.getElementById("hint"),
+        dot: document.getElementById("dot")
+      };
+
+      let trackTimer = null;
+      let refreshPromise = null;
+
+      function setDotState(kind) {
+        els.dot.className = "dot";
+        if (kind) {
+          els.dot.classList.add(kind);
+        }
+      }
+
+      function showActionState({ canRefresh, canDisconnect, canOpen }) {
+        els.refreshBtn.classList.toggle("hidden", !canRefresh);
+        els.disconnectBtn.classList.toggle("hidden", !canDisconnect);
+        els.openLink.classList.toggle("hidden", !canOpen);
+      }
+
+      function getRedirectUri() {
+        return new URL(CONFIG.redirectPath || window.location.pathname, window.location.origin).toString();
+      }
+
+      function readSession() {
+        const raw = localStorage.getItem(`${storagePrefix}session`);
+        return raw ? JSON.parse(raw) : null;
+      }
+
+      function writeSession(session) {
+        localStorage.setItem(`${storagePrefix}session`, JSON.stringify(session));
+      }
+
+      function clearSession() {
+        localStorage.removeItem(`${storagePrefix}session`);
+        localStorage.removeItem(`${storagePrefix}verifier`);
+      }
+
+      function setSetupState() {
+        els.status.textContent = "Setup required";
+        els.scopeNote.textContent = "Spotify Now Playing for OBS";
+        els.title.textContent = "Connect Spotify";
+        els.title.classList.remove("scroll");
+        els.artists.textContent = CONFIG.clientId
+          ? "Authorize this page once, then OBS can keep polling your playback state."
+          : "Set CONFIG.clientId in this file before using the widget.";
+        els.meta.textContent = CONFIG.clientId
+          ? `Redirect URI: ${getRedirectUri()}`
+          : "Spotify Developer app required.";
+        els.hint.textContent = "Add this page URL to your Spotify app redirect URIs before the first login.";
+        els.progressBar.style.width = "0%";
+        els.artShell.classList.remove("has-image");
+        els.art.removeAttribute("src");
+        els.openLink.href = "#";
+        setDotState();
+        showActionState({ canRefresh: false, canDisconnect: false, canOpen: false });
+      }
+
+      function setBusyState(message, detail) {
+        els.status.textContent = "Authorizing";
+        els.scopeNote.textContent = "Spotify Accounts";
+        els.title.textContent = message;
+        els.title.classList.remove("scroll");
+        els.artists.textContent = detail;
+        els.meta.textContent = "Completing OAuth handshake...";
+        els.hint.textContent = "If OBS cannot interact with the login page, open this widget in a normal browser once first.";
+        els.progressBar.style.width = "16%";
+        setDotState("warn");
+        showActionState({ canRefresh: false, canDisconnect: true, canOpen: false });
+      }
+
+      function setErrorState(message, detail) {
+        els.status.textContent = "Attention";
+        els.scopeNote.textContent = "Spotify auth";
+        els.title.textContent = message;
+        els.title.classList.remove("scroll");
+        els.artists.textContent = detail;
+        els.meta.textContent = "Reconnect after fixing the app config or permissions.";
+        els.hint.textContent = "Common causes: wrong redirect URI, expired session, or missing playback permissions.";
+        els.progressBar.style.width = "0%";
+        setDotState("error");
+        showActionState({ canRefresh: false, canDisconnect: true, canOpen: false });
+      }
+
+      function setIdleState(message, detail) {
+        els.status.textContent = "Idle";
+        els.scopeNote.textContent = "Spotify connected";
+        els.title.textContent = message;
+        els.title.classList.remove("scroll");
+        els.artists.textContent = detail;
+        els.meta.textContent = "Spotify returned no active playback for this account.";
+        els.hint.textContent = "Start playback on any device that belongs to the authorized account.";
+        els.progressBar.style.width = "0%";
+        setDotState();
+        showActionState({ canRefresh: true, canDisconnect: true, canOpen: false });
+      }
+
+      function setTrackState(item, isPlaying, progressMs) {
+        const artistNames = item.artists.map((artist) => artist.name).join(", ");
+        const titleText = item.name || "Unknown track";
+        const albumImage = item.album.images && item.album.images[0] ? item.album.images[0].url : "";
+        const totalMs = item.duration_ms || 0;
+        const pct = totalMs > 0 ? Math.max(0, Math.min(100, (progressMs / totalMs) * 100)) : 0;
+
+        els.status.textContent = isPlaying ? "Live" : "Paused";
+        els.scopeNote.textContent = item.album.name || "Spotify";
+        els.title.textContent = titleText;
+        els.title.classList.toggle("scroll", titleText.length > 26);
+        els.artists.textContent = artistNames;
+        els.meta.textContent = `${formatMs(progressMs)} / ${formatMs(totalMs)}`;
+        els.hint.textContent = isPlaying
+          ? "Polling Spotify for the latest now playing track."
+          : "Track detected, but playback is currently paused.";
+        els.progressBar.style.width = `${pct}%`;
+        setDotState(isPlaying ? "live" : "warn");
+        showActionState({ canRefresh: true, canDisconnect: true, canOpen: true });
+
+        if (albumImage) {
+          els.art.src = albumImage;
+          els.art.alt = `${item.album.name} album art`;
+          els.artShell.classList.add("has-image");
+        } else {
+          els.art.removeAttribute("src");
+          els.artShell.classList.remove("has-image");
+        }
+
+        els.openLink.href = item.external_urls && item.external_urls.spotify
+          ? item.external_urls.spotify
+          : "https://open.spotify.com/";
+      }
+
+      function formatMs(ms) {
+        if (!Number.isFinite(ms) || ms < 0) {
+          return "--:--";
+        }
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = String(totalSeconds % 60).padStart(2, "0");
+        return `${minutes}:${seconds}`;
+      }
+
+      async function sha256Base64Url(input) {
+        const bytes = new TextEncoder().encode(input);
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        const binary = Array.from(new Uint8Array(digest), (byte) => String.fromCharCode(byte)).join("");
+        return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      }
+
+      function makeVerifier(length = 64) {
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+        const buffer = new Uint8Array(length);
+        crypto.getRandomValues(buffer);
+        return Array.from(buffer, (value) => alphabet[value % alphabet.length]).join("");
+      }
+
+      async function beginAuth() {
+        if (!CONFIG.clientId) {
+          setErrorState("Missing client ID", "Edit CONFIG.clientId in this file before connecting.");
+          return;
+        }
+
+        const verifier = makeVerifier();
+        const challenge = await sha256Base64Url(verifier);
+        localStorage.setItem(`${storagePrefix}verifier`, verifier);
+
+        const url = new URL(AUTHORIZE_ENDPOINT);
+        url.searchParams.set("client_id", CONFIG.clientId);
+        url.searchParams.set("response_type", "code");
+        url.searchParams.set("redirect_uri", getRedirectUri());
+        url.searchParams.set("scope", CONFIG.scopes.join(" "));
+        url.searchParams.set("code_challenge_method", "S256");
+        url.searchParams.set("code_challenge", challenge);
+        url.searchParams.set("show_dialog", "false");
+        window.location.assign(url.toString());
+      }
+
+      async function exchangeCode(code) {
+        const verifier = localStorage.getItem(`${storagePrefix}verifier`);
+        if (!verifier) {
+          throw new Error("Missing PKCE verifier in local storage.");
+        }
+
+        const body = new URLSearchParams({
+          client_id: CONFIG.clientId,
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: getRedirectUri(),
+          code_verifier: verifier
+        });
+
+        const response = await fetch(TOKEN_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body
+        });
+
+        if (!response.ok) {
+          throw new Error(`Spotify token exchange failed (${response.status}).`);
+        }
+
+        const token = await response.json();
+        writeSession({
+          accessToken: token.access_token,
+          refreshToken: token.refresh_token,
+          expiresAt: Date.now() + (token.expires_in * 1000) - 30000
+        });
+        localStorage.removeItem(`${storagePrefix}verifier`);
+      }
+
+      async function refreshAccessToken(session) {
+        if (refreshPromise) {
+          return refreshPromise;
+        }
+
+        refreshPromise = (async () => {
+          if (!session || !session.refreshToken) {
+            throw new Error("Missing refresh token.");
+          }
+
+          const body = new URLSearchParams({
+            client_id: CONFIG.clientId,
+            grant_type: "refresh_token",
+            refresh_token: session.refreshToken
+          });
+
+          const response = await fetch(TOKEN_ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body
+          });
+
+          if (!response.ok) {
+            throw new Error(`Spotify refresh failed (${response.status}).`);
+          }
+
+          const token = await response.json();
+          const nextSession = {
+            accessToken: token.access_token,
+            refreshToken: token.refresh_token || session.refreshToken,
+            expiresAt: Date.now() + (token.expires_in * 1000) - 30000
+          };
+          writeSession(nextSession);
+          return nextSession;
+        })();
+
+        try {
+          return await refreshPromise;
+        } finally {
+          refreshPromise = null;
+        }
+      }
+
+      async function getValidSession() {
+        const session = readSession();
+        if (!session) {
+          return null;
+        }
+        if (Date.now() < session.expiresAt) {
+          return session;
+        }
+        return refreshAccessToken(session);
+      }
+
+      async function fetchCurrentlyPlaying() {
+        const session = await getValidSession();
+        if (!session) {
+          setSetupState();
+          return;
+        }
+
+        const response = await fetch(PLAYER_ENDPOINT, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`
+          }
+        });
+
+        if (response.status === 204) {
+          setIdleState("Nothing playing", "Spotify is connected, but no active track is playing right now.");
+          return;
+        }
+
+        if (response.status === 401) {
+          const nextSession = await refreshAccessToken(session);
+          if (!nextSession) {
+            throw new Error("Session expired.");
+          }
+          return fetchCurrentlyPlaying();
+        }
+
+        if (!response.ok) {
+          throw new Error(`Spotify player API failed (${response.status}).`);
+        }
+
+        const payload = await response.json();
+        if (!payload || !payload.item) {
+          setIdleState("No playable item", "Spotify returned a player state without a current track.");
+          return;
+        }
+
+        setTrackState(payload.item, Boolean(payload.is_playing), payload.progress_ms || 0);
+      }
+
+      function clearTrackTimer() {
+        if (trackTimer) {
+          window.clearInterval(trackTimer);
+          trackTimer = null;
+        }
+      }
+
+      function startPolling() {
+        clearTrackTimer();
+        trackTimer = window.setInterval(async () => {
+          try {
+            await fetchCurrentlyPlaying();
+          } catch (error) {
+            setErrorState("Refresh failed", error.message);
+          }
+        }, Math.max(CONFIG.pollMs, 5000));
+      }
+
+      async function initializeAuthCallback() {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+        const error = url.searchParams.get("error");
+
+        if (error) {
+          setErrorState("Spotify denied access", error);
+          url.searchParams.delete("error");
+          window.history.replaceState({}, document.title, url.toString());
+          return;
+        }
+
+        if (!code) {
+          return;
+        }
+
+        setBusyState("Finishing login", "Spotify sent us back with an authorization code.");
+
+        try {
+          await exchangeCode(code);
+          url.searchParams.delete("code");
+          window.history.replaceState({}, document.title, url.toString());
+        } catch (authError) {
+          clearSession();
+          setErrorState("Login failed", authError.message);
+        }
+      }
+
+      function handleDisconnect() {
+        clearSession();
+        clearTrackTimer();
+        setSetupState();
+      }
+
+      async function boot() {
+        els.connectBtn.addEventListener("click", beginAuth);
+        els.refreshBtn.addEventListener("click", async () => {
+          try {
+            await fetchCurrentlyPlaying();
+          } catch (error) {
+            setErrorState("Refresh failed", error.message);
+          }
+        });
+        els.disconnectBtn.addEventListener("click", handleDisconnect);
+
+        if (!CONFIG.clientId) {
+          setSetupState();
+          return;
+        }
+
+        await initializeAuthCallback();
+
+        try {
+          await fetchCurrentlyPlaying();
+        } catch (error) {
+          setErrorState("Spotify unavailable", error.message);
+        }
+
+        startPolling();
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
