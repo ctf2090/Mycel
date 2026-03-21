@@ -4,6 +4,23 @@ from scripts import report_code_quality_hotspots_issue as report
 
 
 class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
+    def test_list_matching_issues_accepts_legacy_title(self) -> None:
+        args = report.parse_args.__globals__["argparse"].Namespace(
+            repo=None,
+            title=report.DEFAULT_TITLE,
+        )
+        original_run_cmd = report.run_cmd
+        try:
+            report.run_cmd = lambda *a, **k: (
+                '[{"number":7,"title":"[Report] Code Quality Hotspots","body":"legacy"},'
+                '{"number":8,"title":"Code Quality Hotspots","body":"current"},'
+                '{"number":9,"title":"Something Else","body":"skip"}]'
+            )
+            issues = report.list_matching_issues(args)
+        finally:
+            report.run_cmd = original_run_cmd
+        self.assertEqual([7, 8], [issue.number for issue in issues])
+
     def test_extract_marker_returns_none_when_missing(self) -> None:
         self.assertIsNone(report.extract_marker("plain body", report.HEAD_MARKER))
 
@@ -50,6 +67,11 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         self.assertIn("<!-- hotspot-report-head: abc123def456 -->", body)
         self.assertIn("<!-- hotspot-report-threshold: 20 -->", body)
         self.assertIn("Top split candidates", body)
+        self.assertIn("## Snapshot", body)
+        self.assertIn("## Manual refresh", body)
+        self.assertIn("Code Quality Hotspots (`abc123d`)", body)
+        self.assertIn("Refresh threshold: `20` commits", body)
+        self.assertIn("--title 'Code Quality Hotspots'", body)
         self.assertIn("crates/a.rs", body)
 
 

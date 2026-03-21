@@ -11,7 +11,8 @@ from pathlib import Path
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_TITLE = "[Report] Code Quality Hotspots"
+DEFAULT_TITLE = "Code Quality Hotspots"
+LEGACY_TITLES = ("[Report] Code Quality Hotspots",)
 DEFAULT_LABELS = ("documentation",)
 HEAD_MARKER = "hotspot-report-head"
 THRESHOLD_MARKER = "hotspot-report-threshold"
@@ -115,9 +116,10 @@ def list_matching_issues(args: argparse.Namespace) -> list[IssueRecord]:
         payload = json.loads(raw)
     except Exception as exc:  # pragma: no cover
         raise SystemExit(f"failed to parse gh issue list output: {exc}") from exc
+    accepted_titles = {args.title, *LEGACY_TITLES}
     matches: list[IssueRecord] = []
     for entry in payload:
-        if entry.get("title") != args.title:
+        if entry.get("title") not in accepted_titles:
             continue
         matches.append(
             IssueRecord(
@@ -172,14 +174,25 @@ def build_issue_body(*, head_rev: str, threshold: int, scan_text: str, top_n: in
         ranked_block = "- No ranked split candidates were emitted."
     return "\n".join(
         [
-            f"# Code Quality Hotspots Report (`{short}`)",
+            f"# Code Quality Hotspots (`{short}`)",
             "",
-            f"Generated from `HEAD` commit `{head_rev}` after reaching the `{threshold}`-commit reporting threshold.",
+            "This issue is refreshed when the hotspot scan reaches the configured landed-commit threshold.",
             "",
-            f"{summary_line(scan_text)}",
+            "## Snapshot",
+            f"- Reported `HEAD`: `{head_rev}`",
+            f"- Refresh threshold: `{threshold}` commits",
+            f"- {summary_line(scan_text).removeprefix('Summary: ')}",
             "",
             "## Top split candidates",
             ranked_block,
+            "",
+            "## Manual refresh",
+            "```bash",
+            (
+                "python3 scripts/report_code_quality_hotspots_issue.py "
+                f"--threshold {threshold} --top {top_n} --title {DEFAULT_TITLE!r}"
+            ),
+            "```",
             "",
             "## Source command",
             "```bash",
