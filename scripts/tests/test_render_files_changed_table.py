@@ -118,6 +118,42 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertEqual(1, len(generated))
         self.assertIn("+after", generated[0].read_text(encoding="utf-8"))
 
+    def test_renders_commit_range_without_traceback_and_generates_range_diff(self) -> None:
+        tracked = self.root / "AGENTS.md"
+        tracked.write_text("before\n", encoding="utf-8")
+        subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=self.root, check=True, capture_output=True, text=True)
+
+        tracked.write_text("before\nafter\n", encoding="utf-8")
+        subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "update"], cwd=self.root, check=True, capture_output=True, text=True)
+
+        proc = self.run_cli("HEAD~1..HEAD", "--note", "AGENTS.md=Render only the update commit range.")
+
+        self.assertIn(f"| [AGENTS.md]({tracked.resolve()}) | [+1 / -0](", proc.stdout)
+        generated = list((self.root / ".agent-local" / "rendered-diffs").rglob("AGENTS.md.diff"))
+        self.assertEqual(1, len(generated))
+        self.assertIn("+after", generated[0].read_text(encoding="utf-8"))
+
+    def test_ignores_untracked_files_when_rendering_head_commit(self) -> None:
+        tracked = self.root / "AGENTS.md"
+        tracked.write_text("before\n", encoding="utf-8")
+        subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "initial"], cwd=self.root, check=True, capture_output=True, text=True)
+
+        tracked.write_text("before\nafter\n", encoding="utf-8")
+        subprocess.run(["git", "add", "AGENTS.md"], cwd=self.root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "update"], cwd=self.root, check=True, capture_output=True, text=True)
+
+        backlog = self.root / "docs" / "REFACTOR-HOTSPOTS.md"
+        backlog.parent.mkdir(parents=True, exist_ok=True)
+        backlog.write_text("# backlog\n", encoding="utf-8")
+
+        proc = self.run_cli("HEAD", "--note", "AGENTS.md=Render the latest committed AGENTS change only.")
+
+        self.assertIn(f"| [AGENTS.md]({tracked.resolve()}) | [+1 / -0](", proc.stdout)
+        self.assertNotIn("REFACTOR-HOTSPOTS.md", proc.stdout)
+
     def test_reuses_git_ref_bucket_but_cleans_stale_diff_files(self) -> None:
         tracked = self.root / "AGENTS.md"
         tracked.write_text("before\n", encoding="utf-8")

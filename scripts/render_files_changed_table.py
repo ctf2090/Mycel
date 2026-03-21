@@ -49,19 +49,23 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def is_range_ref(git_ref: str) -> bool:
+    return ".." in git_ref
+
+
 def load_numstat(git_ref: str, from_stdin: bool) -> str:
     if from_stdin:
         return sys.stdin.read()
 
-    proc = subprocess.run(
-        ["git", "show", "--numstat", "--format=", git_ref],
-        cwd=ROOT_DIR,
-        text=True,
-        capture_output=True,
-        check=False,
+    command = (
+        ["git", "diff", "--numstat", git_ref]
+        if is_range_ref(git_ref)
+        else ["git", "show", "--numstat", "--format=", git_ref]
     )
+    proc = subprocess.run(command, cwd=ROOT_DIR, text=True, capture_output=True, check=False)
     if proc.returncode != 0:
-        raise FilesChangedError(proc.stderr.strip() or f"git show failed for {git_ref}")
+        action = "git diff" if is_range_ref(git_ref) else "git show"
+        raise FilesChangedError(proc.stderr.strip() or f"{action} failed for {git_ref}")
     return proc.stdout
 
 
@@ -159,13 +163,12 @@ def write_diff_file(git_ref: str, path: str) -> Path:
     diff_path = output_dir / f"{path}.diff"
     diff_path.parent.mkdir(parents=True, exist_ok=True)
 
-    proc = subprocess.run(
-        ["git", "diff", "--no-ext-diff", "--binary", f"{git_ref}^!", "--", path],
-        cwd=ROOT_DIR,
-        text=True,
-        capture_output=True,
-        check=False,
+    command = (
+        ["git", "diff", "--no-ext-diff", "--binary", git_ref, "--", path]
+        if is_range_ref(git_ref)
+        else ["git", "diff", "--no-ext-diff", "--binary", f"{git_ref}^!", "--", path]
     )
+    proc = subprocess.run(command, cwd=ROOT_DIR, text=True, capture_output=True, check=False)
     if proc.returncode != 0:
         raise FilesChangedError(proc.stderr.strip() or f"git diff failed for {git_ref} -- {path}")
 
@@ -232,6 +235,12 @@ def main() -> int:
         note_overrides = parse_note_overrides(args.note)
         rows = parse_numstat(load_numstat(args.git_ref, args.stdin))
         require_notes_for_all_rows(rows, note_overrides)
+        output = render_table(
+            rows,
+            note_overrides,
+            git_ref=None if args.stdin else args.git_ref,
+            stdin_diff_key=args.diff_key if args.stdin else None,
+        )
     except FilesChangedError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -240,14 +249,7 @@ def main() -> int:
         print("No file changes found.", file=sys.stderr)
         return 1
 
-    print(
-        render_table(
-            rows,
-            note_overrides,
-            git_ref=None if args.stdin else args.git_ref,
-            stdin_diff_key=args.diff_key if args.stdin else None,
-        )
-    )
+    print(output)
     return 0
 
 
