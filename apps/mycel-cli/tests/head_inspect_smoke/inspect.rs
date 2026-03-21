@@ -376,10 +376,53 @@ fn head_inspect_requires_profile_id_for_multi_profile_bundle() {
     assert_exit_code(&output, 1);
     assert_stdout_contains(&output, "Head inspection: failed");
     assert_stdout_contains(&output, "Document");
+    assert_stdout_contains(&output, "- available profiles: preview, stable");
     assert_stdout_contains(&output, "Decision");
     assert_stderr_contains(
         &output,
         "head input declares multiple named profiles; pass --profile-id (preview, stable)",
+    );
+}
+
+#[test]
+fn head_inspect_reports_unknown_profile_id_for_multi_profile_bundle() {
+    let doc_id = "doc:inspect-unknown-profile";
+    let revision_author = signing_key(63);
+    let maintainer = signing_key(76);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+    let state_hash = empty_document_state_hash(doc_id);
+    let revision = signed_revision(&revision_author, doc_id, vec![], 10, &state_hash);
+    let bundle = json!({
+        "profiles": named_profiles(&[
+            ("stable", head_profile(hash_json(&policy), 18)),
+            ("preview", head_profile(hash_json(&policy), 30))
+        ]),
+        "revisions": [revision],
+        "views": [],
+        "critical_violations": []
+    });
+    let input = write_input_file("head-inspect-unknown-profile", "input.json", bundle);
+    let output = run_mycel(&[
+        "head",
+        "inspect",
+        doc_id,
+        "--input",
+        &path_arg(&input.path),
+        "--profile-id",
+        "missing",
+    ]);
+
+    assert_exit_code(&output, 1);
+    assert_stdout_contains(&output, "Head inspection: failed");
+    assert_stdout_contains(&output, "Document");
+    assert_stdout_contains(&output, "- available profiles: preview, stable");
+    assert_stderr_contains(
+        &output,
+        "unknown --profile-id 'missing' for head input; available profiles: preview, stable",
     );
 }
 
