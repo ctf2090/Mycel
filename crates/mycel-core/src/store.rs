@@ -128,13 +128,26 @@ pub struct StoreWriteSummary {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoreRebuildError {
     message: String,
+    json_summary: Option<Value>,
 }
 
 impl StoreRebuildError {
     pub(crate) fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
+            json_summary: None,
         }
+    }
+
+    pub(crate) fn with_json_summary(message: impl Into<String>, json_summary: Value) -> Self {
+        Self {
+            message: message.into(),
+            json_summary: Some(json_summary),
+        }
+    }
+
+    pub fn json_summary(&self) -> Option<&Value> {
+        self.json_summary.as_ref()
     }
 }
 

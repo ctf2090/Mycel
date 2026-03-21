@@ -7,7 +7,8 @@ use serde_json::json;
 mod common;
 
 use common::{
-    assert_json_status, assert_stderr_contains, assert_success, create_temp_dir, run_mycel,
+    assert_exit_code, assert_json_status, assert_stderr_contains, assert_success, create_temp_dir,
+    parse_json_stdout, run_mycel,
 };
 
 fn path_arg(path: &Path) -> String {

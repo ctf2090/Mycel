@@ -126,7 +126,22 @@ pub(super) fn store_create_merge_revision(
                 Ok(print_merge_revision_create_text(&summary))
             }
         }
-        Err(error) => Err(CliError::usage(error.to_string())),
+        Err(error) => {
+            if args.json {
+                if let Some(summary) = error.json_summary() {
+                    let print_code = print_json(summary, "merge revision manual curation summary")?;
+                    if print_code != 0 {
+                        Ok(print_code)
+                    } else {
+                        Ok(1)
+                    }
+                } else {
+                    Err(CliError::usage(error.to_string()))
+                }
+            } else {
+                Err(CliError::usage(error.to_string()))
+            }
+        }
     }
 }
 

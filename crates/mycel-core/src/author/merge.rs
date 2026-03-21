@@ -11,8 +11,8 @@ use crate::store::{load_doc_replay_objects_from_store, StoreRebuildError};
 
 use super::shared::{ensure_document_exists, ensure_object_exists};
 use super::types::{
-    BlockPlacement, MergeAssessment, MergeOutcome, MergeReasonDetail, MergeReasonKind,
-    MergeReasonSubjectKind, MergeReasonVariantKind, MergeRevisionCreateParams,
+    BlockPlacement, ManualCurationSummary, MergeAssessment, MergeOutcome, MergeReasonDetail,
+    MergeReasonKind, MergeReasonSubjectKind, MergeReasonVariantKind, MergeRevisionCreateParams,
     MergeRevisionCreateSummary, PatchCreateParams, RevisionCommitParams,
 };
 use super::write::{commit_revision_to_store, create_patch_in_store};
@@ -76,10 +76,21 @@ pub fn create_merge_revision_in_store(
         .clone();
     let assessment = assess_merge_resolution(&parent_states, &params.resolved_state)?;
     if assessment.outcome == MergeOutcome::ManualCurationRequired {
-        return Err(StoreRebuildError::new(format!(
+        let message = format!(
             "merge resolution is manual-curation-required: {}",
             assessment.reasons.join("; ")
-        )));
+        );
+        let json_summary = serde_json::to_value(ManualCurationSummary {
+            status: "failed".to_string(),
+            doc_id: params.doc_id.clone(),
+            merge_outcome: assessment.outcome,
+            merge_reasons: assessment.reasons.clone(),
+            merge_reason_details: assessment.reason_details.clone(),
+            parent_revision_ids: params.parents.clone(),
+            errors: vec![message.clone()],
+        })
+        .expect("manual curation summary should serialize");
+        return Err(StoreRebuildError::with_json_summary(message, json_summary));
     }
 
     let ops = build_conservative_merge_ops(&primary_state, &params.resolved_state)?;
@@ -512,10 +523,23 @@ fn assess_merge_resolution(
         if resolved_parent_variant != primary_parent_variant
             && !alternative_parent_variants.contains(&resolved_parent_variant)
         {
-            reasons.push(format!(
-                "resolved block '{}' does not match any parent placement",
-                block_id
-            ));
+            push_variant_reason(
+                &mut reasons,
+                &mut reason_details,
+                MergeReasonDetail {
+                    subject_kind: MergeReasonSubjectKind::Block,
+                    subject_id: block_id.clone(),
+                    variant_kind: MergeReasonVariantKind::ParentPlacement,
+                    reason_kind: MergeReasonKind::NoMatchingParentPlacement,
+                    primary_variant: primary_parent_variant.clone(),
+                    resolved_variant: resolved_parent_variant.clone(),
+                    competing_variants: alternative_parent_variants.iter().cloned().collect(),
+                },
+                format!(
+                    "resolved block '{}' does not match any parent placement",
+                    block_id
+                ),
+            );
         } else if resolved_parent_variant != primary_parent_variant
             && alternative_parent_variants.contains(&resolved_parent_variant)
         {
@@ -635,6 +659,15 @@ fn assess_merge_resolution(
                 "resolved block '{}' does not match any parent sibling placement",
                 block_id
             ));
+            reason_details.push(MergeReasonDetail {
+                subject_kind: MergeReasonSubjectKind::Block,
+                subject_id: block_id.clone(),
+                variant_kind: MergeReasonVariantKind::SiblingPlacement,
+                reason_kind: MergeReasonKind::NoMatchingSiblingPlacement,
+                primary_variant: primary_sibling_variant.clone(),
+                resolved_variant: resolved_sibling_variant.clone(),
+                competing_variants: alternative_sibling_variants.iter().cloned().collect(),
+            });
         } else if resolved_parent_variant == primary_parent_variant
             && primary_sibling_variant != "<absent>"
             && resolved_sibling_variant != primary_sibling_variant

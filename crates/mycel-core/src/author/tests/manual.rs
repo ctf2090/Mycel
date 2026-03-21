@@ -1,5 +1,4 @@
 use super::*;
-
 #[test]
 fn merge_authoring_requires_manual_curation_for_metadata_removal() {
     let store_root = temp_dir("merge-metadata-removal");
@@ -309,6 +308,171 @@ fn merge_authoring_rejects_parent_matched_attr_variant_as_manual_curation_requir
             "manual-curation-required: block 'blk:merge-attrs' changes attrs in an unsupported way"
         ),
         "expected attrs manual-curation error, got {error}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_exposes_structured_detail_for_manual_parent_placement_mismatch() {
+    let store_root = temp_dir("merge-manual-parent-detail");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-manual-parent-detail".to_string(),
+            title: "Merge Manual Parent Detail".to_string(),
+            language: "en".to_string(),
+            timestamp: 80,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-manual-parent-detail",
+        &document.genesis_revision_id,
+        81,
+        82,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:manual-left",
+                    "block_type": "paragraph",
+                    "content": "Left",
+                    "attrs": {},
+                    "children": []
+                }
+            },
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:manual-right",
+                    "block_type": "paragraph",
+                    "content": "Right",
+                    "attrs": {},
+                    "children": []
+                }
+            },
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:manual-leaf",
+                    "block_type": "paragraph",
+                    "content": "Leaf",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let wrapper_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-manual-parent-detail",
+        &base_revision_id,
+        83,
+        84,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:manual-wrapper",
+                    "block_type": "paragraph",
+                    "content": "Wrapper",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let moved_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-manual-parent-detail",
+        &base_revision_id,
+        85,
+        86,
+        json!([
+            {
+                "op": "move_block",
+                "block_id": "blk:manual-leaf",
+                "parent_block_id": "blk:manual-left"
+            }
+        ]),
+    );
+
+    let error = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-manual-parent-detail".to_string(),
+            parents: vec![base_revision_id, wrapper_revision_id, moved_revision_id],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-manual-parent-detail".to_string(),
+                blocks: vec![paragraph_block_with_children(
+                    "blk:manual-left",
+                    "Left",
+                    vec![
+                        paragraph_block("blk:manual-right", "Right"),
+                        paragraph_block_with_children(
+                            "blk:manual-wrapper",
+                            "Wrapper",
+                            vec![paragraph_block("blk:manual-leaf", "Leaf")],
+                        ),
+                    ],
+                )],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 87,
+        },
+    )
+    .expect_err("manual placement mismatch should require manual curation");
+
+    let json_summary = error
+        .json_summary()
+        .expect("manual curation error should expose json summary");
+    assert_eq!(json_summary["status"], "failed");
+    assert_eq!(json_summary["merge_outcome"], "manual-curation-required");
+    assert!(
+        json_summary["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|entry| {
+                entry.as_str().is_some_and(|message| {
+                    message.contains(
+                        "resolved block 'blk:manual-right' does not match any parent placement",
+                    )
+                })
+            })),
+        "expected manual placement error, got {json_summary}"
+    );
+    assert!(
+        json_summary["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "blk:manual-right"
+                    && detail["variant_kind"] == "parent-placement"
+                    && detail["reason_kind"] == "no-matching-parent-placement"
+                    && detail["resolved_variant"] == "blk:manual-left"
+            })),
+        "expected structured manual parent detail, got {json_summary}"
+    );
+    assert!(
+        json_summary["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "blk:manual-leaf"
+                    && detail["variant_kind"] == "parent-placement"
+                    && detail["reason_kind"] == "selected-non-primary-parent-variant"
+                    && detail["resolved_variant"] == "blk:manual-wrapper"
+            })),
+        "expected selected non-primary parent detail, got {json_summary}"
     );
 
     let _ = fs::remove_dir_all(store_root);

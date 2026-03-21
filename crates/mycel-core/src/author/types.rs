@@ -81,6 +81,8 @@ pub enum MergeReasonKind {
     SelectedNonPrimaryParentVariant,
     KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
     MultipleCompetingParentVariants,
+    NoMatchingParentPlacement,
+    NoMatchingSiblingPlacement,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -159,6 +161,17 @@ pub struct MergeRevisionCreateSummary {
     pub stored_objects: Vec<StoredObjectRecord>,
     pub index_manifest_path: Option<PathBuf>,
     pub notes: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ManualCurationSummary {
+    pub status: String,
+    pub doc_id: String,
+    pub merge_outcome: MergeOutcome,
+    pub merge_reasons: Vec<String>,
+    pub merge_reason_details: Vec<MergeReasonDetail>,
+    pub parent_revision_ids: Vec<String>,
     pub errors: Vec<String>,
 }
 
