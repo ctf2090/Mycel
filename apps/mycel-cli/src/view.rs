@@ -112,6 +112,9 @@ struct ViewListRecord {
     profile_id: String,
     timestamp: u64,
     documents: BTreeMap<String, String>,
+    maintainer_view_ids: Vec<String>,
+    profile_view_ids: Vec<String>,
+    document_view_ids: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, ValueEnum)]
@@ -373,6 +376,25 @@ fn find_view_record(
         .cloned()
 }
 
+fn related_document_view_ids(
+    manifest: &mycel_core::store::StoreIndexManifest,
+    documents: &BTreeMap<String, String>,
+) -> BTreeMap<String, Vec<String>> {
+    documents
+        .keys()
+        .map(|doc_id| {
+            (
+                doc_id.clone(),
+                manifest
+                    .document_views
+                    .get(doc_id)
+                    .cloned()
+                    .unwrap_or_default(),
+            )
+        })
+        .collect()
+}
+
 fn load_source_value(source_path: &Path) -> Result<Value, String> {
     let content = fs::read_to_string(source_path).map_err(|error| {
         format!(
@@ -448,6 +470,12 @@ fn print_view_list_text(summary: &ViewListSummary) -> i32 {
             record.profile_id,
             record.timestamp,
             record.documents.len()
+        );
+        println!(
+            "  related views: maintainer={} profile={} docs={}",
+            record.maintainer_view_ids.len(),
+            record.profile_view_ids.len(),
+            record.document_view_ids.len()
         );
     }
     for grouped in &summary.groups {
@@ -863,12 +891,26 @@ fn view_list(args: ViewListArgs) -> Result<i32, CliError> {
         if !matches_timestamp_filters(view.timestamp, &summary.filters) {
             continue;
         }
+        let maintainer_view_ids = manifest
+            .maintainer_views
+            .get(&record.maintainer)
+            .cloned()
+            .unwrap_or_default();
+        let profile_view_ids = manifest
+            .profile_views
+            .get(&record.profile_id)
+            .cloned()
+            .unwrap_or_default();
+        let document_view_ids = related_document_view_ids(&manifest, &record.documents);
         summary.records.push(ViewListRecord {
             view_id: record.view_id,
             maintainer: record.maintainer,
             profile_id: record.profile_id,
             timestamp: view.timestamp,
             documents: record.documents,
+            maintainer_view_ids,
+            profile_view_ids,
+            document_view_ids,
         });
     }
 
@@ -979,20 +1021,7 @@ fn view_inspect(store_root: PathBuf, view_id: String, json: bool) -> Result<i32,
         .get(&record.profile_id)
         .cloned()
         .unwrap_or_default();
-    summary.document_view_ids = record
-        .documents
-        .keys()
-        .map(|doc_id| {
-            (
-                doc_id.clone(),
-                manifest
-                    .document_views
-                    .get(doc_id)
-                    .cloned()
-                    .unwrap_or_default(),
-            )
-        })
-        .collect();
+    summary.document_view_ids = related_document_view_ids(&manifest, &record.documents);
     summary.notes.push(
         "governance inspection is separate from reader-facing accepted-head workflows".to_string(),
     );

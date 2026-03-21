@@ -264,6 +264,15 @@ fn view_list_json_filters_governance_records() {
     assert_success(&all);
     let all_json = parse_json_stdout(&all);
     assert_eq!(all_json["record_count"], 3);
+    assert!(all_json["records"][0]["maintainer_view_ids"]
+        .as_array()
+        .is_some_and(|values| !values.is_empty()));
+    assert!(all_json["records"][0]["profile_view_ids"]
+        .as_array()
+        .is_some_and(|values| !values.is_empty()));
+    assert!(all_json["records"][0]["document_view_ids"]
+        .as_object()
+        .is_some_and(|values| !values.is_empty()));
 
     let by_profile = run_mycel(&[
         "view",
@@ -344,6 +353,12 @@ fn view_list_json_filters_governance_records() {
     let by_view_id_json = parse_json_stdout(&by_view_id);
     assert_eq!(by_view_id_json["record_count"], 1);
     assert_eq!(by_view_id_json["records"][0]["view_id"], view_b1["view_id"]);
+    assert_eq!(
+        by_view_id_json["records"][0]["maintainer_view_ids"],
+        json!([publish_b1["view_id"]
+            .as_str()
+            .expect("view id should exist")])
+    );
 }
 
 #[test]
