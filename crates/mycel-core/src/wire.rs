@@ -540,223 +540,244 @@ pub fn validate_wire_payload(
     payload: &Map<String, Value>,
 ) -> Result<(), String> {
     match message_type {
-        WireMessageType::Hello => {
-            reject_unknown_fields(
-                payload,
-                "top-level",
-                &["node_id", "agent", "capabilities", "topics", "nonce"],
-            )
-            .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "node_id", "wire payload")?,
-                "node_id",
-                "node:",
-            )
-            .map_err(|error| error.to_string())?;
-            validate_wire_string_array(payload, "capabilities")?;
-            optional_wire_string(payload, "agent", "wire payload")?;
-            if payload.contains_key("topics") {
-                validate_wire_string_array(payload, "topics")?;
-            }
-            validate_prefixed_string(
-                &required_wire_string(payload, "nonce", "wire payload")?,
-                "nonce",
-                "n:",
-            )
-            .map_err(|error| error.to_string())?;
-        }
-        WireMessageType::Manifest => {
-            reject_unknown_fields(
-                payload,
-                "top-level",
-                &[
-                    "node_id",
-                    "capabilities",
-                    "topics",
-                    "heads",
-                    "snapshots",
-                    "views",
-                ],
-            )
-            .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "node_id", "wire payload")?,
-                "node_id",
-                "node:",
-            )
-            .map_err(|error| error.to_string())?;
-            validate_wire_string_array(payload, "capabilities")?;
-            if payload.contains_key("topics") {
-                validate_wire_string_array(payload, "topics")?;
-            }
-            validate_wire_head_map(payload, "heads")?;
-            if payload.contains_key("snapshots") {
-                for (index, object_id) in validate_wire_string_array(payload, "snapshots")?
-                    .iter()
-                    .enumerate()
-                {
-                    validate_canonical_object_id(object_id, &format!("snapshots[{index}]"))
-                        .map_err(|error| error.to_string())?;
-                }
-            }
-            if payload.contains_key("views") {
-                for (index, object_id) in validate_wire_string_array(payload, "views")?
-                    .iter()
-                    .enumerate()
-                {
-                    validate_canonical_object_id(object_id, &format!("views[{index}]"))
-                        .map_err(|error| error.to_string())?;
-                }
-            }
-        }
-        WireMessageType::Heads => {
-            reject_unknown_fields(payload, "top-level", &["documents", "replace"])
-                .map_err(|error| error.to_string())?;
-            validate_wire_head_map(payload, "documents")?;
-            match payload.get("replace") {
-                Some(Value::Bool(_)) => {}
-                Some(_) => return Err("top-level 'replace' must be a boolean".to_string()),
-                None => return Err("missing boolean field 'replace'".to_string()),
-            }
-        }
-        WireMessageType::Want => {
-            reject_unknown_fields(payload, "top-level", &["objects", "max_items"])
-                .map_err(|error| error.to_string())?;
-            for (index, object_id) in validate_wire_string_array(payload, "objects")?
-                .iter()
-                .enumerate()
-            {
-                validate_canonical_object_id(object_id, &format!("objects[{index}]"))
-                    .map_err(|error| error.to_string())?;
-            }
-            optional_wire_u64(payload, "max_items", "wire payload")?;
-        }
-        WireMessageType::Object => {
-            reject_unknown_fields(
-                payload,
-                "top-level",
-                &[
-                    "object_id",
-                    "object_type",
-                    "encoding",
-                    "hash_alg",
-                    "hash",
-                    "body",
-                ],
-            )
-            .map_err(|error| error.to_string())?;
-            validate_canonical_object_id(
-                &required_wire_string(payload, "object_id", "OBJECT payload")?,
-                "object_id",
-            )
-            .map_err(|error| error.to_string())?;
-            object_schema(&required_wire_string(
-                payload,
-                "object_type",
-                "OBJECT payload",
-            )?)
-            .ok_or_else(|| {
-                "OBJECT payload 'object_type' must be a supported object type".to_string()
-            })?;
-            let encoding = required_wire_string(payload, "encoding", "OBJECT payload")?;
-            if encoding != "json" {
-                return Err("OBJECT payload 'encoding' must equal 'json'".to_string());
-            }
-            validate_prefixed_string(
-                &required_wire_string(payload, "hash", "OBJECT payload")?,
-                "hash",
-                "hash:",
-            )
-            .map_err(|error| error.to_string())?;
-            let hash_alg = required_wire_string(payload, "hash_alg", "OBJECT payload")?;
-            if hash_alg != WIRE_OBJECT_HASH_ALGORITHM {
-                return Err(format!(
-                    "OBJECT payload 'hash_alg' must equal '{WIRE_OBJECT_HASH_ALGORITHM}'"
-                ));
-            }
-            if !matches!(payload.get("body"), Some(Value::Object(_))) {
-                return Err("top-level 'body' must be an object".to_string());
-            }
-        }
-        WireMessageType::SnapshotOffer => {
-            reject_unknown_fields(
-                payload,
-                "top-level",
-                &[
-                    "snapshot_id",
-                    "root_hash",
-                    "documents",
-                    "object_count",
-                    "size_bytes",
-                ],
-            )
-            .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "snapshot_id", "wire payload")?,
-                "snapshot_id",
-                "snap:",
-            )
-            .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "root_hash", "wire payload")?,
-                "root_hash",
-                "hash:",
-            )
-            .map_err(|error| error.to_string())?;
-            for (index, doc_id) in validate_wire_string_array(payload, "documents")?
-                .iter()
-                .enumerate()
-            {
-                validate_prefixed_string(doc_id, &format!("documents[{index}]"), "doc:")
-                    .map_err(|error| error.to_string())?;
-            }
-            optional_wire_u64(payload, "object_count", "wire payload")?;
-            optional_wire_u64(payload, "size_bytes", "wire payload")?;
-        }
-        WireMessageType::ViewAnnounce => {
-            reject_unknown_fields(
-                payload,
-                "top-level",
-                &["view_id", "maintainer", "documents"],
-            )
-            .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "view_id", "wire payload")?,
-                "view_id",
-                "view:",
-            )
-            .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "maintainer", "wire payload")?,
-                "maintainer",
-                "pk:",
-            )
-            .map_err(|error| error.to_string())?;
-            let documents = required_prefixed_string_map(payload, "documents", "doc:", "rev:")
-                .map_err(|error| error.to_string())?;
-            if documents.is_empty() {
-                return Err("top-level 'documents' must not be empty".to_string());
-            }
-        }
-        WireMessageType::Bye => {
-            reject_unknown_fields(payload, "top-level", &["reason"])
-                .map_err(|error| error.to_string())?;
-            required_wire_string(payload, "reason", "wire payload")?;
-        }
-        WireMessageType::Error => {
-            reject_unknown_fields(payload, "top-level", &["in_reply_to", "code", "detail"])
-                .map_err(|error| error.to_string())?;
-            validate_prefixed_string(
-                &required_wire_string(payload, "in_reply_to", "wire payload")?,
-                "in_reply_to",
-                "msg:",
-            )
-            .map_err(|error| error.to_string())?;
-            required_wire_string(payload, "code", "wire payload")?;
-            optional_wire_string(payload, "detail", "wire payload")?;
-        }
+        WireMessageType::Hello => validate_wire_hello_payload(payload)?,
+        WireMessageType::Manifest => validate_wire_manifest_payload(payload)?,
+        WireMessageType::Heads => validate_wire_heads_payload(payload)?,
+        WireMessageType::Want => validate_wire_want_payload(payload)?,
+        WireMessageType::Object => validate_wire_object_payload(payload)?,
+        WireMessageType::SnapshotOffer => validate_wire_snapshot_offer_payload(payload)?,
+        WireMessageType::ViewAnnounce => validate_wire_view_announce_payload(payload)?,
+        WireMessageType::Bye => validate_wire_bye_payload(payload)?,
+        WireMessageType::Error => validate_wire_error_payload(payload)?,
     }
 
+    Ok(())
+}
+
+fn validate_wire_hello_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(
+        payload,
+        "top-level",
+        &["node_id", "agent", "capabilities", "topics", "nonce"],
+    )
+    .map_err(|error| error.to_string())?;
+    validate_wire_node_capabilities_payload(payload)?;
+    optional_wire_string(payload, "agent", "wire payload")?;
+    validate_prefixed_string(
+        &required_wire_string(payload, "nonce", "wire payload")?,
+        "nonce",
+        "n:",
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn validate_wire_manifest_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(
+        payload,
+        "top-level",
+        &[
+            "node_id",
+            "capabilities",
+            "topics",
+            "heads",
+            "snapshots",
+            "views",
+        ],
+    )
+    .map_err(|error| error.to_string())?;
+    validate_wire_node_capabilities_payload(payload)?;
+    validate_wire_head_map(payload, "heads")?;
+    validate_wire_optional_canonical_object_array(payload, "snapshots")?;
+    validate_wire_optional_canonical_object_array(payload, "views")?;
+    Ok(())
+}
+
+fn validate_wire_heads_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(payload, "top-level", &["documents", "replace"])
+        .map_err(|error| error.to_string())?;
+    validate_wire_head_map(payload, "documents")?;
+    match payload.get("replace") {
+        Some(Value::Bool(_)) => Ok(()),
+        Some(_) => Err("top-level 'replace' must be a boolean".to_string()),
+        None => Err("missing boolean field 'replace'".to_string()),
+    }
+}
+
+fn validate_wire_want_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(payload, "top-level", &["objects", "max_items"])
+        .map_err(|error| error.to_string())?;
+    validate_wire_required_canonical_object_array(payload, "objects")?;
+    optional_wire_u64(payload, "max_items", "wire payload")?;
+    Ok(())
+}
+
+fn validate_wire_object_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(
+        payload,
+        "top-level",
+        &[
+            "object_id",
+            "object_type",
+            "encoding",
+            "hash_alg",
+            "hash",
+            "body",
+        ],
+    )
+    .map_err(|error| error.to_string())?;
+    validate_canonical_object_id(
+        &required_wire_string(payload, "object_id", "OBJECT payload")?,
+        "object_id",
+    )
+    .map_err(|error| error.to_string())?;
+    object_schema(&required_wire_string(
+        payload,
+        "object_type",
+        "OBJECT payload",
+    )?)
+    .ok_or_else(|| "OBJECT payload 'object_type' must be a supported object type".to_string())?;
+    let encoding = required_wire_string(payload, "encoding", "OBJECT payload")?;
+    if encoding != "json" {
+        return Err("OBJECT payload 'encoding' must equal 'json'".to_string());
+    }
+    validate_prefixed_string(
+        &required_wire_string(payload, "hash", "OBJECT payload")?,
+        "hash",
+        "hash:",
+    )
+    .map_err(|error| error.to_string())?;
+    let hash_alg = required_wire_string(payload, "hash_alg", "OBJECT payload")?;
+    if hash_alg != WIRE_OBJECT_HASH_ALGORITHM {
+        return Err(format!(
+            "OBJECT payload 'hash_alg' must equal '{WIRE_OBJECT_HASH_ALGORITHM}'"
+        ));
+    }
+    if !matches!(payload.get("body"), Some(Value::Object(_))) {
+        return Err("top-level 'body' must be an object".to_string());
+    }
+    Ok(())
+}
+
+fn validate_wire_snapshot_offer_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(
+        payload,
+        "top-level",
+        &[
+            "snapshot_id",
+            "root_hash",
+            "documents",
+            "object_count",
+            "size_bytes",
+        ],
+    )
+    .map_err(|error| error.to_string())?;
+    validate_prefixed_string(
+        &required_wire_string(payload, "snapshot_id", "wire payload")?,
+        "snapshot_id",
+        "snap:",
+    )
+    .map_err(|error| error.to_string())?;
+    validate_prefixed_string(
+        &required_wire_string(payload, "root_hash", "wire payload")?,
+        "root_hash",
+        "hash:",
+    )
+    .map_err(|error| error.to_string())?;
+    for (index, doc_id) in validate_wire_string_array(payload, "documents")?
+        .iter()
+        .enumerate()
+    {
+        validate_prefixed_string(doc_id, &format!("documents[{index}]"), "doc:")
+            .map_err(|error| error.to_string())?;
+    }
+    optional_wire_u64(payload, "object_count", "wire payload")?;
+    optional_wire_u64(payload, "size_bytes", "wire payload")?;
+    Ok(())
+}
+
+fn validate_wire_view_announce_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(
+        payload,
+        "top-level",
+        &["view_id", "maintainer", "documents"],
+    )
+    .map_err(|error| error.to_string())?;
+    validate_prefixed_string(
+        &required_wire_string(payload, "view_id", "wire payload")?,
+        "view_id",
+        "view:",
+    )
+    .map_err(|error| error.to_string())?;
+    validate_prefixed_string(
+        &required_wire_string(payload, "maintainer", "wire payload")?,
+        "maintainer",
+        "pk:",
+    )
+    .map_err(|error| error.to_string())?;
+    let documents = required_prefixed_string_map(payload, "documents", "doc:", "rev:")
+        .map_err(|error| error.to_string())?;
+    if documents.is_empty() {
+        return Err("top-level 'documents' must not be empty".to_string());
+    }
+    Ok(())
+}
+
+fn validate_wire_bye_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(payload, "top-level", &["reason"]).map_err(|error| error.to_string())?;
+    required_wire_string(payload, "reason", "wire payload")?;
+    Ok(())
+}
+
+fn validate_wire_error_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    reject_unknown_fields(payload, "top-level", &["in_reply_to", "code", "detail"])
+        .map_err(|error| error.to_string())?;
+    validate_prefixed_string(
+        &required_wire_string(payload, "in_reply_to", "wire payload")?,
+        "in_reply_to",
+        "msg:",
+    )
+    .map_err(|error| error.to_string())?;
+    required_wire_string(payload, "code", "wire payload")?;
+    optional_wire_string(payload, "detail", "wire payload")?;
+    Ok(())
+}
+
+fn validate_wire_node_capabilities_payload(payload: &Map<String, Value>) -> Result<(), String> {
+    validate_prefixed_string(
+        &required_wire_string(payload, "node_id", "wire payload")?,
+        "node_id",
+        "node:",
+    )
+    .map_err(|error| error.to_string())?;
+    validate_wire_string_array(payload, "capabilities")?;
+    if payload.contains_key("topics") {
+        validate_wire_string_array(payload, "topics")?;
+    }
+    Ok(())
+}
+
+fn validate_wire_optional_canonical_object_array(
+    payload: &Map<String, Value>,
+    field: &str,
+) -> Result<(), String> {
+    if payload.contains_key(field) {
+        validate_wire_required_canonical_object_array(payload, field)?;
+    }
+    Ok(())
+}
+
+fn validate_wire_required_canonical_object_array(
+    payload: &Map<String, Value>,
+    field: &str,
+) -> Result<(), String> {
+    for (index, object_id) in validate_wire_string_array(payload, field)?
+        .iter()
+        .enumerate()
+    {
+        validate_canonical_object_id(object_id, &format!("{field}[{index}]"))
+            .map_err(|error| error.to_string())?;
+    }
     Ok(())
 }
 
