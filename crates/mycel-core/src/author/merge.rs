@@ -287,6 +287,26 @@ fn assess_merge_resolution(
             )
         {
             saw_multi_variant = true;
+            push_variant_reason(
+                &mut reasons,
+                &mut reason_details,
+                MergeReasonDetail {
+                    subject_kind: MergeReasonSubjectKind::Block,
+                    subject_id: block_id.clone(),
+                    variant_kind: MergeReasonVariantKind::Content,
+                    reason_kind:
+                        MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
+                    branch_kind: Some(kept_primary_branch_kind(&primary_content_variant)),
+                    primary_variant: primary_content_variant.clone(),
+                    resolved_variant: resolved_content_variant.clone(),
+                    competing_variants: alternative_content_variants.iter().cloned().collect(),
+                },
+                kept_primary_reason(
+                    "block",
+                    &block_id,
+                    kept_primary_branch_kind(&primary_content_variant),
+                ),
+            );
             if alternative_content_variants.len() > 1 {
                 push_variant_reason(
                     &mut reasons,
@@ -307,29 +327,29 @@ fn assess_merge_resolution(
                         multiple_competing_branch_kind(&primary_content_variant),
                     ),
                 );
-            } else {
-                push_variant_reason(
-                    &mut reasons,
-                    &mut reason_details,
-                    MergeReasonDetail {
-                        subject_kind: MergeReasonSubjectKind::Block,
-                        subject_id: block_id.clone(),
-                        variant_kind: MergeReasonVariantKind::Content,
-                        reason_kind: MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
-                        branch_kind: Some(kept_primary_branch_kind(&primary_content_variant)),
-                        primary_variant: primary_content_variant.clone(),
-                        resolved_variant: resolved_content_variant.clone(),
-                        competing_variants: alternative_content_variants.iter().cloned().collect(),
-                    },
-                    kept_primary_reason(
-                        "block",
-                        &block_id,
-                        kept_primary_branch_kind(&primary_content_variant),
-                    ),
-                );
             }
         } else if alternative_content_variants.len() > 1 {
             saw_multi_variant = true;
+            push_variant_reason(
+                &mut reasons,
+                &mut reason_details,
+                MergeReasonDetail {
+                    subject_kind: MergeReasonSubjectKind::Block,
+                    subject_id: block_id.clone(),
+                    variant_kind: MergeReasonVariantKind::Content,
+                    reason_kind:
+                        MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
+                    branch_kind: Some(kept_primary_branch_kind(&primary_content_variant)),
+                    primary_variant: primary_content_variant.clone(),
+                    resolved_variant: resolved_content_variant.clone(),
+                    competing_variants: alternative_content_variants.iter().cloned().collect(),
+                },
+                kept_primary_reason(
+                    "block",
+                    &block_id,
+                    kept_primary_branch_kind(&primary_content_variant),
+                ),
+            );
             push_variant_reason(
                 &mut reasons,
                 &mut reason_details,
@@ -871,6 +891,26 @@ fn assess_merge_resolution(
             }
         } else if !alternative_variants.is_empty() {
             saw_multi_variant = true;
+            push_variant_reason(
+                &mut reasons,
+                &mut reason_details,
+                MergeReasonDetail {
+                    subject_kind: MergeReasonSubjectKind::MetadataKey,
+                    subject_id: key.clone(),
+                    variant_kind: MergeReasonVariantKind::Metadata,
+                    reason_kind:
+                        MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
+                    branch_kind: Some(kept_primary_branch_kind(&primary_variant)),
+                    primary_variant: primary_variant.clone(),
+                    resolved_variant: resolved_variant.clone(),
+                    competing_variants: alternative_variants.iter().cloned().collect(),
+                },
+                kept_primary_reason(
+                    "metadata key",
+                    &key,
+                    kept_primary_branch_kind(&primary_variant),
+                ),
+            );
             if alternative_variants.len() > 1 {
                 push_variant_reason(
                     &mut reasons,
@@ -889,26 +929,6 @@ fn assess_merge_resolution(
                         "metadata key",
                         &key,
                         multiple_competing_branch_kind(&primary_variant),
-                    ),
-                );
-            } else {
-                push_variant_reason(
-                    &mut reasons,
-                    &mut reason_details,
-                    MergeReasonDetail {
-                        subject_kind: MergeReasonSubjectKind::MetadataKey,
-                        subject_id: key.clone(),
-                        variant_kind: MergeReasonVariantKind::Metadata,
-                        reason_kind: MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
-                        branch_kind: Some(kept_primary_branch_kind(&primary_variant)),
-                        primary_variant: primary_variant.clone(),
-                        resolved_variant: resolved_variant.clone(),
-                        competing_variants: alternative_variants.iter().cloned().collect(),
-                    },
-                    kept_primary_reason(
-                        "metadata key",
-                        &key,
-                        kept_primary_branch_kind(&primary_variant),
                     ),
                 );
             }
