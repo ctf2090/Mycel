@@ -169,9 +169,15 @@ fn store_merge_authoring_flow_requires_manual_curation_for_metadata_removal() {
         String::from_utf8_lossy(&merge.stdout),
         String::from_utf8_lossy(&merge.stderr)
     );
-    assert_stderr_contains(
+    assert_stdout_contains(&merge, "merge revision create: failed");
+    assert_stdout_contains(&merge, "merge outcome: manual-curation-required");
+    assert_stdout_contains(
         &merge,
-        "manual-curation-required: resolved metadata key 'topic' removes primary metadata but v0.1 patch ops cannot express metadata deletion",
+        "merge reasons: resolved metadata key 'topic' removes primary metadata but v0.1 patch ops cannot express metadata deletion",
+    );
+    assert_stdout_contains(
+        &merge,
+        "error: merge resolution is manual-curation-required: resolved metadata key 'topic' removes primary metadata but v0.1 patch ops cannot express metadata deletion",
     );
 }
 
@@ -454,9 +460,15 @@ fn store_merge_authoring_flow_rejects_novel_nested_parent_choice_as_manual_curat
         String::from_utf8_lossy(&merge.stdout),
         String::from_utf8_lossy(&merge.stderr)
     );
-    assert_stderr_contains(
+    assert_stdout_contains(&merge, "merge revision create: failed");
+    assert_stdout_contains(&merge, "merge outcome: manual-curation-required");
+    assert_stdout_contains(
         &merge,
-        "merge resolution is manual-curation-required: resolved block 'blk:manual-leaf' does not match any parent placement",
+        "merge reasons: resolved block 'blk:manual-leaf' does not match any parent placement",
+    );
+    assert_stdout_contains(
+        &merge,
+        "error: merge resolution is manual-curation-required: resolved block 'blk:manual-leaf' does not match any parent placement",
     );
 }
 
@@ -963,8 +975,14 @@ fn store_merge_authoring_flow_rejects_attr_variant_as_manual_curation_required()
         String::from_utf8_lossy(&merge.stdout),
         String::from_utf8_lossy(&merge.stderr)
     );
-    assert_stderr_contains(
+    assert_stdout_contains(&merge, "merge revision create: failed");
+    assert_stdout_contains(&merge, "merge outcome: manual-curation-required");
+    assert_stdout_contains(
         &merge,
-        "manual-curation-required: block 'blk:merge-attrs' changes attrs in an unsupported way",
+        "merge reasons: block 'blk:merge-attrs' changes attrs in an unsupported way",
+    );
+    assert_stdout_contains(
+        &merge,
+        "error: merge resolution is manual-curation-required: block 'blk:merge-attrs' changes attrs in an unsupported way",
     );
 }

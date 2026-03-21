@@ -127,16 +127,17 @@ pub(super) fn store_create_merge_revision(
             }
         }
         Err(error) => {
-            if args.json {
-                if let Some(summary) = error.json_summary() {
-                    let print_code = print_json(summary, "merge revision manual curation summary")?;
+            if let Some(summary_value) = error.json_summary() {
+                if args.json {
+                    let print_code =
+                        print_json(summary_value, "merge revision manual curation summary")?;
                     if print_code != 0 {
                         Ok(print_code)
                     } else {
                         Ok(1)
                     }
                 } else {
-                    Err(CliError::usage(error.to_string()))
+                    Ok(print_manual_curation_text(summary_value))
                 }
             } else {
                 Err(CliError::usage(error.to_string()))
@@ -257,6 +258,41 @@ fn print_merge_revision_create_text(summary: &MergeRevisionCreateSummary) -> i32
         println!("index manifest: {}", path.display());
     }
     0
+}
+
+fn print_manual_curation_text(summary: &Value) -> i32 {
+    let status = summary["status"].as_str().unwrap_or("failed");
+    println!("merge revision create: {status}");
+    if let Some(doc_id) = summary["doc_id"].as_str() {
+        println!("doc_id: {doc_id}");
+    }
+    if let Some(merge_outcome) = summary["merge_outcome"].as_str() {
+        println!("merge outcome: {merge_outcome}");
+    }
+    if let Some(parent_revision_ids) = summary["parent_revision_ids"].as_array() {
+        let parent_revision_ids = parent_revision_ids
+            .iter()
+            .filter_map(|entry| entry.as_str())
+            .collect::<Vec<_>>();
+        if !parent_revision_ids.is_empty() {
+            println!("parent revisions: {}", parent_revision_ids.join(", "));
+        }
+    }
+    if let Some(merge_reasons) = summary["merge_reasons"].as_array() {
+        let merge_reasons = merge_reasons
+            .iter()
+            .filter_map(|entry| entry.as_str())
+            .collect::<Vec<_>>();
+        if !merge_reasons.is_empty() {
+            println!("merge reasons: {}", merge_reasons.join("; "));
+        }
+    }
+    if let Some(errors) = summary["errors"].as_array() {
+        for error in errors.iter().filter_map(|entry| entry.as_str()) {
+            println!("error: {error}");
+        }
+    }
+    1
 }
 
 fn print_json<T: Serialize>(value: &T, context: &'static str) -> Result<i32, CliError> {
