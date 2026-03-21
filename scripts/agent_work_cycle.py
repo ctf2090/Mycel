@@ -61,6 +61,8 @@ SCRUTINIZED_NOT_NEEDED_ITEMS: dict[str, str] = {
 # scope-consistency checks (a placeholder scope never matches a real scope, so
 # the check would always fail for newly claimed agents).
 PLACEHOLDER_SCOPES: frozenset[str] = frozenset({"pending scope", "", "none", "n/a"})
+NON_SOURCE_PATH_PREFIXES: tuple[str, ...] = (".agent-local/", "docs/", ".git/")
+NON_SOURCE_PATH_SUFFIXES: tuple[str, ...] = (".md",)
 
 
 class WorkCycleError(Exception):
@@ -187,6 +189,126 @@ def scan_unchecked_items(checklist_path: Path) -> list[str]:
     return unchecked
 
 
+def workcycle_git_state_path(agent_uid: str, batch_num: int) -> Path:
+    return (
+        ROOT_DIR
+        / ".agent-local"
+        / "agents"
+        / agent_uid
+        / "workcycles"
+        / f"git-state-{batch_num}.json"
+    )
+
+
+def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=ROOT_DIR,
+        text=True,
+        capture_output=True,
+    )
+
+
+def parse_git_status_paths(output: str) -> list[str]:
+    paths: list[str] = []
+    for line in output.splitlines():
+        if len(line) < 4:
+            continue
+        path = line[3:]
+        if " -> " in path:
+            _, path = path.split(" -> ", 1)
+        normalized = path.strip()
+        if normalized:
+            paths.append(normalized)
+    return paths
+
+
+def capture_git_state_snapshot() -> dict[str, object]:
+    head_proc = run_git(["rev-parse", "HEAD"])
+    status_proc = run_git(["status", "--porcelain=v1", "--untracked-files=all"])
+    if head_proc.returncode != 0 or status_proc.returncode != 0:
+        return {
+            "available": False,
+            "head": None,
+            "status_paths": [],
+        }
+    return {
+        "available": True,
+        "head": head_proc.stdout.strip(),
+        "status_paths": parse_git_status_paths(status_proc.stdout),
+    }
+
+
+def store_git_state_snapshot(agent_uid: str, batch_num: int) -> None:
+    path = workcycle_git_state_path(agent_uid, batch_num)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(capture_git_state_snapshot(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def load_git_state_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:
+    path = workcycle_git_state_path(agent_uid, batch_num)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def is_source_path(path: str) -> bool:
+    normalized = path.strip().replace("\\", "/")
+    if not normalized:
+        return False
+    if normalized.startswith(NON_SOURCE_PATH_PREFIXES):
+        return False
+    if normalized.endswith(NON_SOURCE_PATH_SUFFIXES):
+        return False
+    return True
+
+
+def cycle_has_source_changes(agent_uid: str, batch_num: int) -> bool | None:
+    snapshot = load_git_state_snapshot(agent_uid, batch_num)
+    if snapshot is None or snapshot.get("available") is not True:
+        return None
+
+    base_head = snapshot.get("head")
+    base_status_paths = {
+        str(path)
+        for path in snapshot.get("status_paths", [])
+        if isinstance(path, str) and path.strip()
+    }
+
+    current_snapshot = capture_git_state_snapshot()
+    if current_snapshot.get("available") is not True:
+        return None
+
+    current_head = current_snapshot.get("head")
+    current_status_paths = {
+        str(path)
+        for path in current_snapshot.get("status_paths", [])
+        if isinstance(path, str) and path.strip()
+    }
+
+    cycle_paths = set()
+    cycle_paths.update(current_status_paths - base_status_paths)
+
+    if isinstance(base_head, str) and base_head and isinstance(current_head, str) and current_head:
+        diff_proc = run_git(["diff", "--name-only", f"{base_head}..{current_head}"])
+        if diff_proc.returncode != 0:
+            return None
+        cycle_paths.update(
+            path.strip()
+            for path in diff_proc.stdout.splitlines()
+            if path.strip()
+        )
+
+    return any(is_source_path(path) for path in cycle_paths)
+
+
 def emit_checklist_summary(
     *,
     checklist_paths: list[Path],
@@ -211,7 +333,7 @@ def emit_checklist_summary(
 
 
 def scan_scrutinized_not_needed_items(
-    checklist_path: Path, *, batch_num: int
+    checklist_path: Path, *, batch_num: int, source_changes_present: bool | None = None
 ) -> list[tuple[str, str]]:
     """Return (item_id, reason) for scrutinized items marked `not-needed` (`[-]`).
 
@@ -228,6 +350,8 @@ def scan_scrutinized_not_needed_items(
         scrutinized.pop("workflow.reply-with-plan-and-status", None)
         scrutinized.pop("workflow.files-changed-summary", None)
         scrutinized.pop("workflow.runtime-preflight-before-verification", None)
+    elif source_changes_present is False:
+        scrutinized.pop("workflow.files-changed-summary", None)
 
     violations: list[tuple[str, str]] = []
     for line in checklist_path.read_text(encoding="utf-8").splitlines():
@@ -450,6 +574,9 @@ def main() -> int:
             updates.append(("workflow.install-needed-tools", "not-needed"))
             updates.append(("workflow.reply-with-plan-and-status", "not-needed"))
         set_checklist_item_states(workcycle_path, updates)
+        batch_num = checklist_result.get("batch_num")
+        if isinstance(batch_num, int):
+            store_git_state_snapshot(agent_uid, batch_num)
         print(f"workcycle_output: {workcycle_output}")
         if "batch_num" in checklist_result:
             print(f"batch_num: {checklist_result['batch_num']}")
@@ -482,9 +609,14 @@ def main() -> int:
 
         # Scrutinize not-needed markings on high-value required items.
         not_needed_violations: list[tuple[str, str]] = []
+        source_changes_present = cycle_has_source_changes(agent_uid, latest_batch)
         for path in checklist_paths:
             not_needed_violations.extend(
-                scan_scrutinized_not_needed_items(path, batch_num=latest_batch)
+                scan_scrutinized_not_needed_items(
+                    path,
+                    batch_num=latest_batch,
+                    source_changes_present=source_changes_present,
+                )
             )
 
         mailbox_path = resolve_agent_mailbox_path(agent_uid)

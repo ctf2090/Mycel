@@ -62,6 +62,17 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         )
         return json.loads(proc.stdout)
 
+    def run_git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=self.root,
+            text=True,
+            capture_output=True,
+        )
+        if check and proc.returncode != 0:
+            self.fail(f"git command failed {args}: {proc.stderr or proc.stdout}")
+        return proc
+
     def write_agents_md(self) -> None:
         (self.root / "AGENTS.md").write_text(
             """# Repo Working Agreements
@@ -89,6 +100,13 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 """,
             encoding="utf-8",
         )
+
+    def init_git_repo(self) -> None:
+        self.run_git("init")
+        self.run_git("config", "user.name", "Test User")
+        self.run_git("config", "user.email", "test@example.com")
+        self.run_git("add", ".")
+        self.run_git("commit", "-m", "initial")
 
     def replace_in_file(self, relative_path: str, old: str, new: str) -> None:
         path = self.root / relative_path
@@ -473,6 +491,90 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertTrue(
             (self.root / f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-22.md").exists()
         )
+
+    def test_end_allows_files_changed_summary_not_needed_for_decision_only_cycle(self) -> None:
+        self.write_agents_md()
+        self.init_git_repo()
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        self.set_checklist_state(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
+            "workflow.files-changed-summary",
+            "-",
+            "Include a files-changed summary when source changes land",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("scrutinized_not_needed_violations: 0", proc.stdout)
+
+    def test_end_requires_files_changed_summary_when_cycle_changes_source_files(self) -> None:
+        self.write_agents_md()
+        self.init_git_repo()
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        (self.root / "scripts" / "agent_timestamp.py").write_text(
+            (self.root / "scripts" / "agent_timestamp.py").read_text(encoding="utf-8")
+            + "\n# source change\n",
+            encoding="utf-8",
+        )
+        self.set_checklist_state(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
+            "workflow.files-changed-summary",
+            "-",
+            "Include a files-changed summary when source changes land",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(2, proc.returncode)
+        self.assertIn("scrutinized_not_needed_violations: 1", proc.stdout)
+        self.assertIn("workflow.files-changed-summary", proc.stdout)
+
+    def test_end_allows_files_changed_summary_not_needed_for_docs_only_cycle(self) -> None:
+        self.write_agents_md()
+        (self.root / "docs").mkdir(parents=True, exist_ok=True)
+        (self.root / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        self.init_git_repo()
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        (self.root / "docs" / "guide.md").write_text("# Guide\n\nupdated\n", encoding="utf-8")
+        self.set_checklist_state(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
+            "workflow.files-changed-summary",
+            "-",
+            "Include a files-changed summary when source changes land",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("scrutinized_not_needed_violations: 0", proc.stdout)
 
 
 if __name__ == "__main__":
