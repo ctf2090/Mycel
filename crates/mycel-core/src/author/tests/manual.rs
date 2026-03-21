@@ -72,6 +72,23 @@ fn merge_authoring_requires_manual_curation_for_metadata_removal() {
         ),
         "expected metadata removal manual-curation error, got {error}"
     );
+    let json_summary = error
+        .json_summary()
+        .expect("metadata removal manual curation error should expose json summary");
+    assert_eq!(json_summary["status"], "failed");
+    assert_eq!(json_summary["merge_outcome"], "manual-curation-required");
+    assert_eq!(
+        json_summary["merge_reasons"],
+        json!([
+            "resolved metadata key 'topic' removes primary metadata but v0.1 patch ops cannot express metadata deletion"
+        ])
+    );
+    assert_eq!(
+        json_summary["errors"],
+        json!([
+            "merge resolution is manual-curation-required: resolved metadata key 'topic' removes primary metadata but v0.1 patch ops cannot express metadata deletion"
+        ])
+    );
 
     let _ = fs::remove_dir_all(store_root);
 }
