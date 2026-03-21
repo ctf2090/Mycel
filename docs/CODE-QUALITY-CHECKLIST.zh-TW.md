@@ -257,6 +257,8 @@
   - 檔案大小：超過 `800` 行
   - 函式大小：超過 `100` 行
   - 同一個非 trivial literal：重複 `3+` 次
+- 週期性 GitHub issue refresh：`python3 scripts/report_code_quality_hotspots_issue.py --threshold 20`
+  - 用途：在 `main` 上，當距離上一次 hotspot report issue 記錄的 head commit 已累積至少 `20` commits 時，刷新專用報告 issue
 
 目前已接入 CI 的 `ast-grep` gate：
 

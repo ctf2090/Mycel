@@ -259,6 +259,8 @@ Current CI-backed warning scan:
   - file size: over `800` lines
   - function size: over `100` lines
   - same non-trivial literal: `3+` repeats
+- recurring GitHub issue refresh: `python3 scripts/report_code_quality_hotspots_issue.py --threshold 20`
+  - intended use: on `main`, refresh the dedicated hotspot report issue whenever at least `20` commits have landed since the last reported head commit
 
 Current CI-backed `ast-grep` gates:
 

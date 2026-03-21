@@ -1,0 +1,24 @@
+name: Hotspot Report
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  code-quality-hotspot-issue:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Update hotspot report issue every 20 commits
+        run: python3 scripts/report_code_quality_hotspots_issue.py --threshold 20
