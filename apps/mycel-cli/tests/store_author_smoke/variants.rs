@@ -315,6 +315,22 @@ fn store_merge_authoring_flow_reports_content_variant_choice_as_multi_variant() 
             })),
         "expected structured content variant detail, got {merge_json}"
     );
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_kind"] == "block"
+                    && detail["subject_id"] == "blk:author-smoke-variant-001"
+                    && detail["variant_kind"] == "content"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
+                    && detail["branch_kind"] == "multiple-competing-non-primary-replacements"
+                    && detail["competing_variants"]
+                        .as_array()
+                        .is_some_and(|variants| variants.len() == 2)
+            })),
+        "expected competing content branch kind detail, got {merge_json}"
+    );
     assert_eq!(merge_json["patch_op_count"], 1);
     assert_eq!(
         merge_json["parent_revision_ids"].as_array().map(Vec::len),
@@ -566,6 +582,22 @@ fn store_merge_authoring_flow_reports_metadata_variant_choice_as_multi_variant()
                         .is_some_and(|variants| variants.len() == 1)
             })),
         "expected structured metadata variant detail, got {merge_json}"
+    );
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_kind"] == "metadata-key"
+                    && detail["subject_id"] == "topic"
+                    && detail["variant_kind"] == "metadata"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
+                    && detail["branch_kind"] == "multiple-competing-non-primary-replacements"
+                    && detail["competing_variants"]
+                        .as_array()
+                        .is_some_and(|variants| variants.len() == 2)
+            })),
+        "expected competing metadata branch kind detail, got {merge_json}"
     );
     assert_eq!(merge_json["patch_op_count"], 1);
     assert_eq!(
@@ -2630,6 +2662,18 @@ fn store_merge_authoring_flow_reports_selected_replacement_with_competing_remova
             })),
         "expected mixed selected replacement branch kind detail, got {merge_json}"
     );
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "blk:author-smoke-select-001"
+                    && detail["variant_kind"] == "content"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
+                    && detail["branch_kind"] == "multiple-competing-mixed-non-primary-alternatives"
+            })),
+        "expected mixed competing content branch kind detail, got {merge_json}"
+    );
     assert_eq!(merge_json["patch_op_count"], 1);
 }
 
@@ -2823,6 +2867,18 @@ fn store_merge_authoring_flow_reports_selected_metadata_replacement_with_competi
                         == "adopted-non-primary-replacement-while-competing-removal-remains"
             })),
         "expected mixed selected metadata replacement branch kind detail, got {merge_json}"
+    );
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "topic"
+                    && detail["variant_kind"] == "metadata"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
+                    && detail["branch_kind"] == "multiple-competing-mixed-non-primary-alternatives"
+            })),
+        "expected mixed competing metadata branch kind detail, got {merge_json}"
     );
     assert_eq!(merge_json["patch_op_count"], 1);
 }

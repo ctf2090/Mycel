@@ -220,6 +220,25 @@ fn merge_authoring_reports_multi_variant_when_parents_disagree() {
         content_selection_detail.branch_kind,
         Some(MergeReasonBranchKind::AdoptedNonPrimaryReplacement)
     );
+    let content_competing_detail = summary
+        .merge_reason_details
+        .iter()
+        .find(|detail| {
+            detail.subject_id == "blk:merge-001"
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.variant_kind == MergeReasonVariantKind::Content
+        })
+        .expect("expected structured competing content detail");
+    assert_eq!(
+        content_competing_detail.branch_kind,
+        Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryReplacements)
+    );
+    assert_eq!(
+        content_competing_detail.competing_variants.len(),
+        2,
+        "expected both non-primary content alternatives, got {content_competing_detail:?}"
+    );
 
     let _ = fs::remove_dir_all(store_root);
 }
@@ -343,6 +362,28 @@ fn merge_authoring_reports_multi_variant_when_metadata_parents_disagree() {
     assert_eq!(
         metadata_selection_detail.branch_kind,
         Some(MergeReasonBranchKind::AdoptedNonPrimaryReplacement)
+    );
+    let metadata_competing_detail = summary
+        .merge_reason_details
+        .iter()
+        .find(|detail| {
+            detail.subject_id == "topic"
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.variant_kind == MergeReasonVariantKind::Metadata
+        })
+        .expect("expected structured competing metadata detail");
+    assert_eq!(
+        metadata_competing_detail.branch_kind,
+        Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryReplacements)
+    );
+    assert_eq!(
+        metadata_competing_detail.competing_variants,
+        vec![
+            "\"center\"".to_string(),
+            "\"right\"".to_string(),
+        ],
+        "expected all non-primary metadata alternatives, got {metadata_competing_detail:?}"
     );
     let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
         .expect("generated merge patch should be stored");
@@ -1351,6 +1392,17 @@ fn merge_authoring_reports_selected_replacement_with_competing_removal_as_distin
         }),
         "expected mixed selected replacement detail, got {summary:?}"
     );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-select"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingMixedNonPrimaryAlternatives)
+        }),
+        "expected mixed selected competing content detail, got {summary:?}"
+    );
 
     let _ = fs::remove_dir_all(store_root);
 }
@@ -1522,6 +1574,17 @@ fn merge_authoring_reports_selected_metadata_replacement_with_competing_removal_
                     )
         }),
         "expected mixed selected metadata replacement detail, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "topic"
+                && detail.variant_kind == MergeReasonVariantKind::Metadata
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingMixedNonPrimaryAlternatives)
+        }),
+        "expected mixed selected competing metadata detail, got {summary:?}"
     );
 
     let _ = fs::remove_dir_all(store_root);
