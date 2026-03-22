@@ -1401,12 +1401,248 @@ fn merge_authoring_reports_non_primary_content_removal_as_distinct_branch() {
             detail.subject_id == "blk:merge-content-remove"
                 && detail.variant_kind == MergeReasonVariantKind::Content
                 && detail.reason_kind == MergeReasonKind::SelectedNonPrimaryParentVariant
-                && detail.branch_kind
-                    == Some(
-                        MergeReasonBranchKind::AdoptedNonPrimaryRemovalWhileCompetingReplacementRemains,
-                    )
+                && detail.branch_kind == Some(MergeReasonBranchKind::AdoptedNonPrimaryRemoval)
         }),
         "expected removal-specific content detail, got {summary:?}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_reports_selected_content_removal_with_competing_removals() {
+    let store_root = temp_dir("merge-content-select-removal-with-competing-removals");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-content-select-removal-with-competing-removals".to_string(),
+            title: "Merge Content Select Removal With Competing Removals".to_string(),
+            language: "en".to_string(),
+            timestamp: 34,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-select-removal-with-competing-removals",
+        &document.genesis_revision_id,
+        35,
+        36,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-remove-choice",
+                    "block_type": "paragraph",
+                    "content": "Base",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let unrelated_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-select-removal-with-competing-removals",
+        &document.genesis_revision_id,
+        37,
+        38,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-unrelated",
+                    "block_type": "paragraph",
+                    "content": "Unrelated",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-content-select-removal-with-competing-removals".to_string(),
+            parents: vec![
+                base_revision_id,
+                document.genesis_revision_id.clone(),
+                unrelated_revision_id,
+            ],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-content-select-removal-with-competing-removals".to_string(),
+                blocks: vec![paragraph_block("blk:merge-content-unrelated", "Unrelated")],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 39,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "block 'blk:merge-content-remove-choice' adopted a non-primary parent removal"
+        )),
+        "expected selected content removal reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "block 'blk:merge-content-remove-choice' selected one non-primary removal while other competing non-primary removals remained"
+        )),
+        "expected competing content removal reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-remove-choice"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind == MergeReasonKind::SelectedNonPrimaryParentVariant
+                && detail.branch_kind == Some(MergeReasonBranchKind::AdoptedNonPrimaryRemoval)
+                && detail.competing_variants == vec!["<absent>".to_string()]
+        }),
+        "expected selected content removal detail, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-remove-choice"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryRemovals)
+                && detail.competing_variants == vec!["<absent>".to_string(), "<absent>".to_string()]
+        }),
+        "expected competing content removal detail, got {summary:?}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_reports_kept_primary_content_over_multiple_removals() {
+    let store_root = temp_dir("merge-content-keep-primary-over-multiple-removals");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-content-keep-primary-over-multiple-removals".to_string(),
+            title: "Merge Content Keep Primary Over Multiple Removals".to_string(),
+            language: "en".to_string(),
+            timestamp: 40,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-keep-primary-over-multiple-removals",
+        &document.genesis_revision_id,
+        41,
+        42,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-remove-keep",
+                    "block_type": "paragraph",
+                    "content": "Base",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let unrelated_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-keep-primary-over-multiple-removals",
+        &document.genesis_revision_id,
+        43,
+        44,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-other",
+                    "block_type": "paragraph",
+                    "content": "Other",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-content-keep-primary-over-multiple-removals".to_string(),
+            parents: vec![
+                base_revision_id,
+                document.genesis_revision_id.clone(),
+                unrelated_revision_id,
+            ],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-content-keep-primary-over-multiple-removals".to_string(),
+                blocks: vec![
+                    paragraph_block("blk:merge-content-remove-keep", "Base"),
+                    paragraph_block("blk:merge-content-other", "Other"),
+                ],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 45,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "block 'blk:merge-content-remove-keep' kept the primary parent variant over a competing non-primary removal"
+        )),
+        "expected keep-primary content removal reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "block 'blk:merge-content-remove-keep' kept the primary variant while multiple competing non-primary removals remained"
+        )),
+        "expected competing content removal reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-remove-keep"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind
+                    == MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::KeptPrimaryVariantOverNonPrimaryRemoval)
+                && detail.competing_variants == vec!["<absent>".to_string(), "<absent>".to_string()]
+        }),
+        "expected keep-primary content removal detail, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-remove-keep"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryRemovals)
+                && detail.competing_variants == vec!["<absent>".to_string(), "<absent>".to_string()]
+        }),
+        "expected multiple competing content removals detail, got {summary:?}"
     );
 
     let _ = fs::remove_dir_all(store_root);
@@ -1703,6 +1939,120 @@ fn merge_authoring_reports_metadata_removal_competition_as_distinct_branch() {
                     == Some(MergeReasonBranchKind::KeptPrimaryVariantOverNonPrimaryRemoval)
         }),
         "expected removal-specific metadata detail, got {summary:?}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_reports_kept_primary_metadata_over_multiple_removals() {
+    let store_root = temp_dir("merge-metadata-keep-primary-over-multiple-removals");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-metadata-keep-primary-over-multiple-removals".to_string(),
+            title: "Merge Metadata Keep Primary Over Multiple Removals".to_string(),
+            language: "en".to_string(),
+            timestamp: 54,
+        },
+    )
+    .expect("document should be created");
+
+    let base_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-metadata-keep-primary-over-multiple-removals",
+        &document.genesis_revision_id,
+        55,
+        56,
+        json!([
+            {
+                "op": "set_metadata",
+                "metadata": {
+                    "topic": "base"
+                }
+            }
+        ]),
+    );
+    let unrelated_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-metadata-keep-primary-over-multiple-removals",
+        &document.genesis_revision_id,
+        57,
+        58,
+        json!([
+            {
+                "op": "set_metadata",
+                "metadata": {
+                    "priority": "high"
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-metadata-keep-primary-over-multiple-removals".to_string(),
+            parents: vec![
+                base_revision_id,
+                document.genesis_revision_id.clone(),
+                unrelated_revision_id,
+            ],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-metadata-keep-primary-over-multiple-removals".to_string(),
+                blocks: Vec::new(),
+                metadata: serde_json::Map::from_iter([
+                    ("topic".to_string(), Value::String("base".to_string())),
+                    ("priority".to_string(), Value::String("high".to_string())),
+                ]),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 59,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "metadata key 'topic' kept the primary parent variant over a competing non-primary removal"
+        )),
+        "expected keep-primary metadata removal reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "metadata key 'topic' kept the primary variant while multiple competing non-primary removals remained"
+        )),
+        "expected competing metadata removal reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "topic"
+                && detail.variant_kind == MergeReasonVariantKind::Metadata
+                && detail.reason_kind
+                    == MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::KeptPrimaryVariantOverNonPrimaryRemoval)
+                && detail.competing_variants == vec!["<absent>".to_string(), "<absent>".to_string()]
+        }),
+        "expected keep-primary metadata removal detail, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "topic"
+                && detail.variant_kind == MergeReasonVariantKind::Metadata
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryRemovals)
+                && detail.competing_variants == vec!["<absent>".to_string(), "<absent>".to_string()]
+        }),
+        "expected multiple competing metadata removals detail, got {summary:?}"
     );
 
     let _ = fs::remove_dir_all(store_root);

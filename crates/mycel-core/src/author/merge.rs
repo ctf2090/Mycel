@@ -207,16 +207,20 @@ fn assess_merge_resolution(
             block_content_variant(primary_blocks.get(&block_id).map(|entry| &entry.block))?;
         let resolved_content_variant =
             block_content_variant(resolved_blocks.get(&block_id).map(|entry| &entry.block))?;
-        let alternative_content_variants = parent_states
+        let alternative_content_variants_raw = parent_states
             .iter()
             .skip(1)
             .zip(alternative_block_maps.iter())
             .map(|(_, blocks)| {
                 block_content_variant(blocks.get(&block_id).map(|entry| &entry.block))
             })
-            .collect::<Result<BTreeSet<_>, _>>()?
+            .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .filter(|variant| variant != &primary_content_variant)
+            .collect::<Vec<_>>();
+        let alternative_content_variants = alternative_content_variants_raw
+            .iter()
+            .cloned()
             .collect::<BTreeSet<_>>();
 
         if resolved_content_variant != primary_content_variant
@@ -252,8 +256,8 @@ fn assess_merge_resolution(
                     )),
                     primary_variant: primary_content_variant.clone(),
                     resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: remaining_competing_variants(
-                        &alternative_content_variants,
+                    competing_variants: remaining_competing_variants_raw(
+                        &alternative_content_variants_raw,
                         &resolved_content_variant,
                     ),
                 },
@@ -267,7 +271,11 @@ fn assess_merge_resolution(
                     ),
                 ),
             );
-            if alternative_content_variants.len() > 1 {
+            if has_multiple_competing_variants(
+                &primary_content_variant,
+                &alternative_content_variants_raw,
+                &alternative_content_variants,
+            ) {
                 push_variant_reason(
                     &mut reasons,
                     &mut reason_details,
@@ -283,7 +291,11 @@ fn assess_merge_resolution(
                         )),
                         primary_variant: primary_content_variant.clone(),
                         resolved_variant: resolved_content_variant.clone(),
-                        competing_variants: alternative_content_variants.iter().cloned().collect(),
+                        competing_variants: multiple_competing_variants_for_detail(
+                            &primary_content_variant,
+                            &alternative_content_variants_raw,
+                            &alternative_content_variants,
+                        ),
                     },
                     multiple_competing_after_selected_reason(
                         "block",
@@ -320,7 +332,11 @@ fn assess_merge_resolution(
                     )),
                     primary_variant: primary_content_variant.clone(),
                     resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: alternative_content_variants.iter().cloned().collect(),
+                    competing_variants: multiple_competing_variants_for_detail(
+                        &primary_content_variant,
+                        &alternative_content_variants_raw,
+                        &alternative_content_variants,
+                    ),
                 },
                 kept_primary_reason(
                     "block",
@@ -331,7 +347,11 @@ fn assess_merge_resolution(
                     ),
                 ),
             );
-            if alternative_content_variants.len() > 1 {
+            if has_multiple_competing_variants(
+                &primary_content_variant,
+                &alternative_content_variants_raw,
+                &alternative_content_variants,
+            ) {
                 push_variant_reason(
                     &mut reasons,
                     &mut reason_details,
@@ -347,7 +367,11 @@ fn assess_merge_resolution(
                         )),
                         primary_variant: primary_content_variant.clone(),
                         resolved_variant: resolved_content_variant.clone(),
-                        competing_variants: alternative_content_variants.iter().cloned().collect(),
+                        competing_variants: multiple_competing_variants_for_detail(
+                            &primary_content_variant,
+                            &alternative_content_variants_raw,
+                            &alternative_content_variants,
+                        ),
                     },
                     multiple_competing_after_keeping_primary_reason(
                         "block",
@@ -837,13 +861,17 @@ fn assess_merge_resolution(
     for key in metadata_keys {
         let primary_variant = metadata_variant(primary_state.metadata.get(&key))?;
         let resolved_variant = metadata_variant(resolved_state.metadata.get(&key))?;
-        let alternative_variants = parent_states
+        let alternative_variants_raw = parent_states
             .iter()
             .skip(1)
             .map(|(_, state)| metadata_variant(state.metadata.get(&key)))
-            .collect::<Result<BTreeSet<_>, _>>()?
+            .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .filter(|variant| variant != &primary_variant)
+            .collect::<Vec<_>>();
+        let alternative_variants = alternative_variants_raw
+            .iter()
+            .cloned()
             .collect::<BTreeSet<_>>();
 
         if resolved_variant == "<absent>" && primary_variant != "<absent>" {
@@ -877,8 +905,8 @@ fn assess_merge_resolution(
                     )),
                     primary_variant: primary_variant.clone(),
                     resolved_variant: resolved_variant.clone(),
-                    competing_variants: remaining_competing_variants(
-                        &alternative_variants,
+                    competing_variants: remaining_competing_variants_raw(
+                        &alternative_variants_raw,
                         &resolved_variant,
                     ),
                 },
@@ -892,7 +920,11 @@ fn assess_merge_resolution(
                     ),
                 ),
             );
-            if alternative_variants.len() > 1 {
+            if has_multiple_competing_variants(
+                &primary_variant,
+                &alternative_variants_raw,
+                &alternative_variants,
+            ) {
                 push_variant_reason(
                     &mut reasons,
                     &mut reason_details,
@@ -908,7 +940,11 @@ fn assess_merge_resolution(
                         )),
                         primary_variant: primary_variant.clone(),
                         resolved_variant: resolved_variant.clone(),
-                        competing_variants: alternative_variants.iter().cloned().collect(),
+                        competing_variants: multiple_competing_variants_for_detail(
+                            &primary_variant,
+                            &alternative_variants_raw,
+                            &alternative_variants,
+                        ),
                     },
                     multiple_competing_after_selected_reason(
                         "metadata key",
@@ -934,7 +970,11 @@ fn assess_merge_resolution(
                     )),
                     primary_variant: primary_variant.clone(),
                     resolved_variant: resolved_variant.clone(),
-                    competing_variants: alternative_variants.iter().cloned().collect(),
+                    competing_variants: multiple_competing_variants_for_detail(
+                        &primary_variant,
+                        &alternative_variants_raw,
+                        &alternative_variants,
+                    ),
                 },
                 kept_primary_reason(
                     "metadata key",
@@ -942,7 +982,11 @@ fn assess_merge_resolution(
                     kept_primary_branch_kind(&primary_variant, &alternative_variants),
                 ),
             );
-            if alternative_variants.len() > 1 {
+            if has_multiple_competing_variants(
+                &primary_variant,
+                &alternative_variants_raw,
+                &alternative_variants,
+            ) {
                 push_variant_reason(
                     &mut reasons,
                     &mut reason_details,
@@ -958,7 +1002,11 @@ fn assess_merge_resolution(
                         )),
                         primary_variant: primary_variant.clone(),
                         resolved_variant: resolved_variant.clone(),
-                        competing_variants: alternative_variants.iter().cloned().collect(),
+                        competing_variants: multiple_competing_variants_for_detail(
+                            &primary_variant,
+                            &alternative_variants_raw,
+                            &alternative_variants,
+                        ),
                     },
                     multiple_competing_after_keeping_primary_reason(
                         "metadata key",
@@ -1003,7 +1051,10 @@ fn selected_variant_branch_kind(
     resolved_variant: &str,
     alternatives: &BTreeSet<String>,
 ) -> MergeReasonBranchKind {
-    if primary_variant != "<absent>" && alternatives.contains("<absent>") {
+    if primary_variant != "<absent>"
+        && alternatives.contains("<absent>")
+        && alternatives.iter().any(|variant| variant != "<absent>")
+    {
         if resolved_variant == "<absent>" {
             MergeReasonBranchKind::AdoptedNonPrimaryRemovalWhileCompetingReplacementRemains
         } else {
@@ -1085,6 +1136,52 @@ fn remaining_competing_variants(
         .filter(|variant| variant.as_str() != resolved_variant)
         .cloned()
         .collect()
+}
+
+fn remaining_competing_variants_raw(
+    alternatives: &[String],
+    resolved_variant: &str,
+) -> Vec<String> {
+    let mut skipped_resolved = false;
+    alternatives
+        .iter()
+        .filter_map(|variant| {
+            if !skipped_resolved && variant == resolved_variant {
+                skipped_resolved = true;
+                None
+            } else {
+                Some(variant.clone())
+            }
+        })
+        .collect()
+}
+
+fn has_multiple_competing_variants(
+    primary_variant: &str,
+    alternatives_raw: &[String],
+    alternatives: &BTreeSet<String>,
+) -> bool {
+    alternatives.len() > 1
+        || (primary_variant != "<absent>"
+            && alternatives.len() == 1
+            && alternatives.contains("<absent>")
+            && alternatives_raw.len() > 1)
+}
+
+fn multiple_competing_variants_for_detail(
+    primary_variant: &str,
+    alternatives_raw: &[String],
+    alternatives: &BTreeSet<String>,
+) -> Vec<String> {
+    if primary_variant != "<absent>"
+        && alternatives.len() == 1
+        && alternatives.contains("<absent>")
+        && alternatives_raw.len() > 1
+    {
+        alternatives_raw.to_vec()
+    } else {
+        alternatives.iter().cloned().collect()
+    }
 }
 
 fn selected_non_primary_reason(
