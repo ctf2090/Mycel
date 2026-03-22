@@ -248,7 +248,10 @@ fn assess_merge_resolution(
                     branch_kind: Some(selected_variant_branch_kind(&primary_content_variant)),
                     primary_variant: primary_content_variant.clone(),
                     resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: alternative_content_variants.iter().cloned().collect(),
+                    competing_variants: remaining_competing_variants(
+                        &alternative_content_variants,
+                        &resolved_content_variant,
+                    ),
                 },
                 selected_non_primary_reason(
                     "block",
@@ -392,10 +395,10 @@ fn assess_merge_resolution(
                             branch_kind: None,
                             primary_variant: primary_parent_variant.clone(),
                             resolved_variant: resolved_parent_variant.clone(),
-                            competing_variants: alternative_parent_variants
-                                .iter()
-                                .cloned()
-                                .collect(),
+                            competing_variants: remaining_competing_variants(
+                                &alternative_parent_variants,
+                                &resolved_parent_variant,
+                            ),
                         },
                         format!(
                             "block '{}' selected a non-primary parent placement",
@@ -463,7 +466,10 @@ fn assess_merge_resolution(
                         branch_kind: None,
                         primary_variant: primary_parent_variant.clone(),
                         resolved_variant: resolved_parent_variant.clone(),
-                        competing_variants: alternative_parent_variants.iter().cloned().collect(),
+                        competing_variants: remaining_competing_variants(
+                            &alternative_parent_variants,
+                            &resolved_parent_variant,
+                        ),
                     },
                     format!(
                         "block '{}' selected a non-primary parent placement",
@@ -509,7 +515,10 @@ fn assess_merge_resolution(
                         branch_kind: None,
                         primary_variant: primary_parent_variant.clone(),
                         resolved_variant: resolved_parent_variant.clone(),
-                        competing_variants: alternative_parent_variants.iter().cloned().collect(),
+                        competing_variants: remaining_competing_variants(
+                            &alternative_parent_variants,
+                            &resolved_parent_variant,
+                        ),
                     },
                     format!(
                         "block '{}' selected a non-primary parent placement",
@@ -579,7 +588,10 @@ fn assess_merge_resolution(
                     branch_kind: None,
                     primary_variant: primary_parent_variant.clone(),
                     resolved_variant: resolved_parent_variant.clone(),
-                    competing_variants: alternative_parent_variants.iter().cloned().collect(),
+                    competing_variants: remaining_competing_variants(
+                        &alternative_parent_variants,
+                        &resolved_parent_variant,
+                    ),
                 },
                 format!(
                     "block '{}' selected a non-primary parent placement",
@@ -652,7 +664,10 @@ fn assess_merge_resolution(
                         branch_kind: None,
                         primary_variant: primary_sibling_variant.clone(),
                         resolved_variant: resolved_sibling_variant.clone(),
-                        competing_variants: alternative_sibling_variants.iter().cloned().collect(),
+                        competing_variants: remaining_competing_variants(
+                            &alternative_sibling_variants,
+                            &resolved_sibling_variant,
+                        ),
                     },
                     format!(
                         "block '{}' selected a non-primary sibling placement",
@@ -715,7 +730,10 @@ fn assess_merge_resolution(
                     branch_kind: None,
                     primary_variant: primary_sibling_variant.clone(),
                     resolved_variant: resolved_sibling_variant.clone(),
-                    competing_variants: alternative_sibling_variants.iter().cloned().collect(),
+                    competing_variants: remaining_competing_variants(
+                        &alternative_sibling_variants,
+                        &resolved_sibling_variant,
+                    ),
                 },
                 format!(
                     "block '{}' selected a non-primary sibling placement",
@@ -819,7 +837,10 @@ fn assess_merge_resolution(
                     branch_kind: Some(selected_variant_branch_kind(&primary_variant)),
                     primary_variant: primary_variant.clone(),
                     resolved_variant: resolved_variant.clone(),
-                    competing_variants: alternative_variants.iter().cloned().collect(),
+                    competing_variants: remaining_competing_variants(
+                        &alternative_variants,
+                        &resolved_variant,
+                    ),
                 },
                 selected_non_primary_reason(
                     "metadata key",
@@ -944,6 +965,17 @@ fn multiple_competing_branch_kind(primary_variant: &str) -> MergeReasonBranchKin
     } else {
         MergeReasonBranchKind::MultipleCompetingNonPrimaryReplacements
     }
+}
+
+fn remaining_competing_variants(
+    alternatives: &BTreeSet<String>,
+    resolved_variant: &str,
+) -> Vec<String> {
+    alternatives
+        .iter()
+        .filter(|variant| variant.as_str() != resolved_variant)
+        .cloned()
+        .collect()
 }
 
 fn selected_non_primary_reason(

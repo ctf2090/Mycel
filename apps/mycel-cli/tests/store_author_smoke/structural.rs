@@ -371,7 +371,7 @@ fn store_merge_authoring_flow_reports_nested_parent_choice_as_multi_variant() {
                     && detail["resolved_variant"] == "blk:nested-left"
                     && detail["competing_variants"]
                         .as_array()
-                        .is_some_and(|variants| variants.len() == 2)
+                        .is_some_and(|variants| variants.len() == 1)
             })),
         "expected structured nested parent placement detail, got {merge_json}"
     );

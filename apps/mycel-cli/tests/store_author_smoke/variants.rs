@@ -309,7 +309,7 @@ fn store_merge_authoring_flow_reports_content_variant_choice_as_multi_variant() 
                         .is_some_and(|variant| variant.contains("Right variant"))
                     && detail["competing_variants"]
                         .as_array()
-                        .is_some_and(|variants| variants.len() == 2)
+                        .is_some_and(|variants| variants.len() == 1)
             })),
         "expected structured content variant detail, got {merge_json}"
     );
@@ -561,7 +561,7 @@ fn store_merge_authoring_flow_reports_metadata_variant_choice_as_multi_variant()
                     && detail["resolved_variant"] == "\"right\""
                     && detail["competing_variants"]
                         .as_array()
-                        .is_some_and(|variants| variants.len() == 2)
+                        .is_some_and(|variants| variants.len() == 1)
             })),
         "expected structured metadata variant detail, got {merge_json}"
     );

@@ -206,7 +206,7 @@ fn merge_authoring_reports_multi_variant_when_parents_disagree() {
             .contains("Right variant"),
         "expected resolved variant detail, got {content_selection_detail:?}"
     );
-    assert_eq!(content_selection_detail.competing_variants.len(), 2);
+    assert_eq!(content_selection_detail.competing_variants.len(), 1);
     assert!(
         content_selection_detail
             .competing_variants
@@ -334,10 +334,7 @@ fn merge_authoring_reports_multi_variant_when_metadata_parents_disagree() {
     );
     assert_eq!(metadata_selection_detail.primary_variant, "\"left\"");
     assert_eq!(metadata_selection_detail.resolved_variant, "\"right\"");
-    assert_eq!(
-        metadata_selection_detail.competing_variants,
-        vec!["\"center\"".to_string(), "\"right\"".to_string()]
-    );
+    assert_eq!(metadata_selection_detail.competing_variants, vec!["\"center\"".to_string()]);
     assert_eq!(
         metadata_selection_detail.branch_kind,
         Some(MergeReasonBranchKind::AdoptedNonPrimaryReplacement)
