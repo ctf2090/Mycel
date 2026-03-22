@@ -80,7 +80,8 @@ pub enum MergeReasonVariantKind {
 pub enum MergeReasonKind {
     SelectedNonPrimaryParentVariant,
     KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
-    MultipleCompetingParentVariants,
+    MultipleCompetingAlternativesRemainAfterSelectedVariant,
+    MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
     NoMatchingParentPlacement,
     NoMatchingSiblingPlacement,
 }

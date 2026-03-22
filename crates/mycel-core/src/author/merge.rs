@@ -267,13 +267,14 @@ fn assess_merge_resolution(
                         subject_kind: MergeReasonSubjectKind::Block,
                         subject_id: block_id.clone(),
                         variant_kind: MergeReasonVariantKind::Content,
-                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        reason_kind:
+                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                         branch_kind: Some(multiple_competing_branch_kind(&primary_content_variant)),
                         primary_variant: primary_content_variant.clone(),
                         resolved_variant: resolved_content_variant.clone(),
                         competing_variants: alternative_content_variants.iter().cloned().collect(),
                     },
-                    multiple_competing_reason(
+                    multiple_competing_after_selected_reason(
                         "block",
                         &block_id,
                         multiple_competing_branch_kind(&primary_content_variant),
@@ -318,13 +319,14 @@ fn assess_merge_resolution(
                         subject_kind: MergeReasonSubjectKind::Block,
                         subject_id: block_id.clone(),
                         variant_kind: MergeReasonVariantKind::Content,
-                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        reason_kind:
+                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
                         branch_kind: Some(multiple_competing_branch_kind(&primary_content_variant)),
                         primary_variant: primary_content_variant.clone(),
                         resolved_variant: resolved_content_variant.clone(),
                         competing_variants: alternative_content_variants.iter().cloned().collect(),
                     },
-                    multiple_competing_reason(
+                    multiple_competing_after_keeping_primary_reason(
                         "block",
                         &block_id,
                         multiple_competing_branch_kind(&primary_content_variant),
@@ -413,7 +415,8 @@ fn assess_merge_resolution(
                                 subject_kind: MergeReasonSubjectKind::Block,
                                 subject_id: block_id.clone(),
                                 variant_kind: MergeReasonVariantKind::ParentPlacement,
-                                reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                                reason_kind:
+                                    MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                                 branch_kind: None,
                                 primary_variant: primary_parent_variant.clone(),
                                 resolved_variant: resolved_parent_variant.clone(),
@@ -423,7 +426,7 @@ fn assess_merge_resolution(
                                     .collect(),
                             },
                             format!(
-                                "block '{}' has multiple competing parent placements",
+                                "block '{}' selected a non-primary parent placement while other competing parent placements remained",
                                 block_id
                             ),
                         );
@@ -484,7 +487,8 @@ fn assess_merge_resolution(
                             subject_kind: MergeReasonSubjectKind::Block,
                             subject_id: block_id.clone(),
                             variant_kind: MergeReasonVariantKind::ParentPlacement,
-                            reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                            reason_kind:
+                                MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                             branch_kind: None,
                             primary_variant: primary_parent_variant.clone(),
                             resolved_variant: resolved_parent_variant.clone(),
@@ -494,7 +498,7 @@ fn assess_merge_resolution(
                                 .collect(),
                         },
                         format!(
-                            "block '{}' has multiple competing parent placements",
+                            "block '{}' selected a non-primary parent placement while other competing parent placements remained",
                             block_id
                         ),
                     );
@@ -533,7 +537,8 @@ fn assess_merge_resolution(
                             subject_kind: MergeReasonSubjectKind::Block,
                             subject_id: block_id.clone(),
                             variant_kind: MergeReasonVariantKind::ParentPlacement,
-                            reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                            reason_kind:
+                                MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                             branch_kind: None,
                             primary_variant: primary_parent_variant.clone(),
                             resolved_variant: resolved_parent_variant.clone(),
@@ -543,7 +548,7 @@ fn assess_merge_resolution(
                                 .collect(),
                         },
                         format!(
-                            "block '{}' has multiple competing parent placements",
+                            "block '{}' selected a non-primary parent placement while other competing parent placements remained",
                             block_id
                         ),
                     );
@@ -606,14 +611,15 @@ fn assess_merge_resolution(
                         subject_kind: MergeReasonSubjectKind::Block,
                         subject_id: block_id.clone(),
                         variant_kind: MergeReasonVariantKind::ParentPlacement,
-                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        reason_kind:
+                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                         branch_kind: None,
                         primary_variant: primary_parent_variant.clone(),
                         resolved_variant: resolved_parent_variant.clone(),
                         competing_variants: alternative_parent_variants.iter().cloned().collect(),
                     },
                     format!(
-                        "block '{}' has multiple competing parent placements",
+                        "block '{}' selected a non-primary parent placement while other competing parent placements remained",
                         block_id
                     ),
                 );
@@ -627,14 +633,15 @@ fn assess_merge_resolution(
                     subject_kind: MergeReasonSubjectKind::Block,
                     subject_id: block_id.clone(),
                     variant_kind: MergeReasonVariantKind::ParentPlacement,
-                    reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                    reason_kind:
+                        MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
                     branch_kind: None,
                     primary_variant: primary_parent_variant.clone(),
                     resolved_variant: resolved_parent_variant.clone(),
                     competing_variants: alternative_parent_variants.iter().cloned().collect(),
                 },
                 format!(
-                    "block '{}' has multiple competing parent placements",
+                    "block '{}' kept the primary parent placement while other competing parent placements remained",
                     block_id
                 ),
             );
@@ -682,7 +689,8 @@ fn assess_merge_resolution(
                             subject_kind: MergeReasonSubjectKind::Block,
                             subject_id: block_id.clone(),
                             variant_kind: MergeReasonVariantKind::SiblingPlacement,
-                            reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                            reason_kind:
+                                MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                             branch_kind: None,
                             primary_variant: primary_sibling_variant.clone(),
                             resolved_variant: resolved_sibling_variant.clone(),
@@ -692,7 +700,7 @@ fn assess_merge_resolution(
                                 .collect(),
                         },
                         format!(
-                            "block '{}' has multiple competing sibling placements",
+                            "block '{}' selected a non-primary sibling placement while other competing sibling placements remained",
                             block_id
                         ),
                     );
@@ -748,14 +756,15 @@ fn assess_merge_resolution(
                         subject_kind: MergeReasonSubjectKind::Block,
                         subject_id: block_id.clone(),
                         variant_kind: MergeReasonVariantKind::SiblingPlacement,
-                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        reason_kind:
+                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                         branch_kind: None,
                         primary_variant: primary_sibling_variant.clone(),
                         resolved_variant: resolved_sibling_variant.clone(),
                         competing_variants: alternative_sibling_variants.iter().cloned().collect(),
                     },
                     format!(
-                        "block '{}' has multiple competing sibling placements",
+                        "block '{}' selected a non-primary sibling placement while other competing sibling placements remained",
                         block_id
                     ),
                 );
@@ -771,14 +780,15 @@ fn assess_merge_resolution(
                     subject_kind: MergeReasonSubjectKind::Block,
                     subject_id: block_id.clone(),
                     variant_kind: MergeReasonVariantKind::SiblingPlacement,
-                    reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                    reason_kind:
+                        MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
                     branch_kind: None,
                     primary_variant: primary_sibling_variant.clone(),
                     resolved_variant: resolved_sibling_variant.clone(),
                     competing_variants: alternative_sibling_variants.iter().cloned().collect(),
                 },
                 format!(
-                    "block '{}' has multiple competing sibling placements",
+                    "block '{}' kept the primary sibling placement while other competing sibling placements remained",
                     block_id
                 ),
             );
@@ -856,13 +866,14 @@ fn assess_merge_resolution(
                         subject_kind: MergeReasonSubjectKind::MetadataKey,
                         subject_id: key.clone(),
                         variant_kind: MergeReasonVariantKind::Metadata,
-                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        reason_kind:
+                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
                         branch_kind: Some(multiple_competing_branch_kind(&primary_variant)),
                         primary_variant: primary_variant.clone(),
                         resolved_variant: resolved_variant.clone(),
                         competing_variants: alternative_variants.iter().cloned().collect(),
                     },
-                    multiple_competing_reason(
+                    multiple_competing_after_selected_reason(
                         "metadata key",
                         &key,
                         multiple_competing_branch_kind(&primary_variant),
@@ -899,13 +910,14 @@ fn assess_merge_resolution(
                         subject_kind: MergeReasonSubjectKind::MetadataKey,
                         subject_id: key.clone(),
                         variant_kind: MergeReasonVariantKind::Metadata,
-                        reason_kind: MergeReasonKind::MultipleCompetingParentVariants,
+                        reason_kind:
+                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
                         branch_kind: Some(multiple_competing_branch_kind(&primary_variant)),
                         primary_variant: primary_variant.clone(),
                         resolved_variant: resolved_variant.clone(),
                         competing_variants: alternative_variants.iter().cloned().collect(),
                     },
-                    multiple_competing_reason(
+                    multiple_competing_after_keeping_primary_reason(
                         "metadata key",
                         &key,
                         multiple_competing_branch_kind(&primary_variant),
@@ -1012,19 +1024,39 @@ fn kept_primary_reason(
     }
 }
 
-fn multiple_competing_reason(
+fn multiple_competing_after_selected_reason(
     subject_label: &str,
     subject_id: &str,
     branch_kind: MergeReasonBranchKind,
 ) -> String {
     match branch_kind {
         MergeReasonBranchKind::MultipleCompetingNonPrimaryAdditions => {
-            format!("{subject_label} '{subject_id}' has multiple competing non-primary additions")
+            format!(
+                "{subject_label} '{subject_id}' selected one non-primary addition while other competing non-primary additions remained"
+            )
         }
         MergeReasonBranchKind::MultipleCompetingNonPrimaryReplacements => format!(
-            "{subject_label} '{subject_id}' has multiple competing non-primary replacements"
+            "{subject_label} '{subject_id}' selected one non-primary replacement while other competing non-primary replacements remained"
         ),
         _ => format!("{subject_label} '{subject_id}' has multiple competing parent variants"),
+    }
+}
+
+fn multiple_competing_after_keeping_primary_reason(
+    subject_label: &str,
+    subject_id: &str,
+    branch_kind: MergeReasonBranchKind,
+) -> String {
+    match branch_kind {
+        MergeReasonBranchKind::MultipleCompetingNonPrimaryAdditions => format!(
+            "{subject_label} '{subject_id}' kept the primary variant while multiple competing non-primary additions remained"
+        ),
+        MergeReasonBranchKind::MultipleCompetingNonPrimaryReplacements => format!(
+            "{subject_label} '{subject_id}' kept the primary variant while multiple competing non-primary replacements remained"
+        ),
+        _ => format!(
+            "{subject_label} '{subject_id}' kept the primary variant while multiple competing parent variants remained"
+        ),
     }
 }
 

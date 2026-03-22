@@ -178,7 +178,9 @@ fn merge_authoring_reports_multi_variant_when_parents_disagree() {
         summary
             .merge_reasons
             .iter()
-            .any(|reason| reason.contains("has multiple competing non-primary replacements")),
+            .any(|reason| reason.contains(
+                "selected one non-primary replacement while other competing non-primary replacements remained"
+            )),
         "expected competing-variant reason, got {summary:?}"
     );
     let content_selection_detail = summary
@@ -316,7 +318,7 @@ fn merge_authoring_reports_multi_variant_when_metadata_parents_disagree() {
     );
     assert!(
         summary.merge_reasons.iter().any(|reason| reason
-            .contains("metadata key 'topic' has multiple competing non-primary replacements")),
+            .contains("metadata key 'topic' selected one non-primary replacement while other competing non-primary replacements remained")),
         "expected competing metadata reason, got {summary:?}"
     );
     let metadata_selection_detail = summary
@@ -427,7 +429,7 @@ fn merge_authoring_reports_multi_variant_when_block_is_added_from_non_primary_pa
     );
     assert!(
         !summary.merge_reasons.iter().any(|reason| reason.contains(
-            "block 'blk:merge-content-added' has multiple competing non-primary additions"
+            "block 'blk:merge-content-added' kept the primary variant while multiple competing non-primary additions remained"
         )),
         "did not expect competing content reason with only one alternative, got {summary:?}"
     );
@@ -623,7 +625,7 @@ fn merge_authoring_reports_kept_primary_and_multiple_competing_content_additions
     );
     assert!(
         summary.merge_reasons.iter().any(|reason| reason.contains(
-            "block 'blk:merge-content-added' has multiple competing non-primary additions"
+            "block 'blk:merge-content-added' kept the primary variant while multiple competing non-primary additions remained"
         )),
         "expected competing content reason, got {summary:?}"
     );
@@ -643,7 +645,8 @@ fn merge_authoring_reports_kept_primary_and_multiple_competing_content_additions
         summary.merge_reason_details.iter().any(|detail| {
             detail.subject_id == "blk:merge-content-added"
                 && detail.variant_kind == MergeReasonVariantKind::Content
-                && detail.reason_kind == MergeReasonKind::MultipleCompetingParentVariants
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant
                 && detail.branch_kind
                     == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryAdditions)
                 && detail.competing_variants.len() == 2
@@ -719,7 +722,7 @@ fn merge_authoring_reports_multi_variant_when_metadata_key_is_added_from_non_pri
     );
     assert!(
         !summary.merge_reasons.iter().any(|reason| reason
-            .contains("metadata key 'topic' has multiple competing non-primary additions")),
+            .contains("metadata key 'topic' kept the primary variant while multiple competing non-primary additions remained")),
         "did not expect competing metadata reason with only one alternative, got {summary:?}"
     );
     let detail = summary
@@ -818,7 +821,7 @@ fn merge_authoring_reports_kept_primary_and_multiple_competing_metadata_addition
     );
     assert!(
         summary.merge_reasons.iter().any(|reason| reason
-            .contains("metadata key 'topic' has multiple competing non-primary additions")),
+            .contains("metadata key 'topic' kept the primary variant while multiple competing non-primary additions remained")),
         "expected competing metadata reason, got {summary:?}"
     );
     assert!(
@@ -837,7 +840,8 @@ fn merge_authoring_reports_kept_primary_and_multiple_competing_metadata_addition
         summary.merge_reason_details.iter().any(|detail| {
             detail.subject_id == "topic"
                 && detail.variant_kind == MergeReasonVariantKind::Metadata
-                && detail.reason_kind == MergeReasonKind::MultipleCompetingParentVariants
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant
                 && detail.branch_kind
                     == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryAdditions)
                 && detail.competing_variants.len() == 2

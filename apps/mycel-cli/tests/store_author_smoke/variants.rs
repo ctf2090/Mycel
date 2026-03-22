@@ -290,7 +290,9 @@ fn store_merge_authoring_flow_reports_content_variant_choice_as_multi_variant() 
             .as_array()
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
-                    reason.contains("multiple competing non-primary replacements")
+                    reason.contains(
+                        "selected one non-primary replacement while other competing non-primary replacements remained",
+                    )
                 })
             })),
         "expected competing content variant reason, got {merge_json}"
@@ -542,7 +544,7 @@ fn store_merge_authoring_flow_reports_metadata_variant_choice_as_multi_variant()
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
                     reason.contains(
-                        "metadata key 'topic' has multiple competing non-primary replacements",
+                        "metadata key 'topic' selected one non-primary replacement while other competing non-primary replacements remained",
                     )
                 })
             })),
@@ -693,7 +695,9 @@ fn store_merge_authoring_flow_reports_block_added_from_non_primary_parent_as_mul
             .as_array()
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
-                    reason.contains("block 'blk:author-smoke-variant-001' has multiple competing non-primary additions")
+                    reason.contains(
+                        "block 'blk:author-smoke-variant-001' kept the primary variant while multiple competing non-primary additions remained",
+                    )
                 })
             })),
         "did not expect competing content reason with only one alternative, got {merge_json}"
@@ -1040,7 +1044,7 @@ fn store_merge_authoring_flow_reports_kept_primary_and_multiple_competing_block_
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
                     reason.contains(
-                        "block 'blk:author-smoke-variant-001' has multiple competing non-primary additions",
+                        "block 'blk:author-smoke-variant-001' kept the primary variant while multiple competing non-primary additions remained",
                     )
                 })
             })),
@@ -1067,7 +1071,8 @@ fn store_merge_authoring_flow_reports_kept_primary_and_multiple_competing_block_
             .is_some_and(|details| details.iter().any(|detail| {
                 detail["subject_id"] == "blk:author-smoke-variant-001"
                     && detail["variant_kind"] == "content"
-                    && detail["reason_kind"] == "multiple-competing-parent-variants"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-keeping-primary-variant"
                     && detail["branch_kind"] == "multiple-competing-non-primary-additions"
                     && detail["competing_variants"]
                         .as_array()
@@ -1203,7 +1208,7 @@ fn store_merge_authoring_flow_reports_added_metadata_from_non_primary_parent_as_
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
                     reason.contains(
-                        "metadata key 'topic' has multiple competing non-primary additions",
+                        "metadata key 'topic' kept the primary variant while multiple competing non-primary additions remained",
                     )
                 })
             })),
@@ -1547,7 +1552,7 @@ fn store_merge_authoring_flow_reports_kept_primary_and_multiple_competing_metada
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
                     reason.contains(
-                        "metadata key 'topic' has multiple competing non-primary additions",
+                        "metadata key 'topic' kept the primary variant while multiple competing non-primary additions remained",
                     )
                 })
             })),
@@ -1574,7 +1579,8 @@ fn store_merge_authoring_flow_reports_kept_primary_and_multiple_competing_metada
             .is_some_and(|details| details.iter().any(|detail| {
                 detail["subject_id"] == "topic"
                     && detail["variant_kind"] == "metadata"
-                    && detail["reason_kind"] == "multiple-competing-parent-variants"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-keeping-primary-variant"
                     && detail["branch_kind"] == "multiple-competing-non-primary-additions"
                     && detail["competing_variants"]
                         .as_array()

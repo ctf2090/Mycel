@@ -1380,7 +1380,9 @@ fn merge_authoring_marks_nested_parent_choice_conflicts_as_multi_variant() {
         summary
             .merge_reasons
             .iter()
-            .any(|reason| reason.contains("multiple competing parent placements")),
+            .any(|reason| reason.contains(
+                "selected a non-primary parent placement while other competing parent placements remained"
+            )),
         "expected competing parent placement reason, got {summary:?}"
     );
     let parent_detail = summary
@@ -1577,7 +1579,9 @@ fn merge_authoring_marks_anchor_based_nested_parent_choice_conflicts_as_multi_va
         summary
             .merge_reasons
             .iter()
-            .any(|reason| reason.contains("multiple competing parent placements")),
+            .any(|reason| reason.contains(
+                "selected a non-primary parent placement while other competing parent placements remained"
+            )),
         "expected anchor competing parent placement reason, got {summary:?}"
     );
     let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
@@ -1731,7 +1735,9 @@ fn merge_authoring_marks_multiple_competing_nested_sibling_placements_as_multi_v
         summary
             .merge_reasons
             .iter()
-            .any(|reason| reason.contains("multiple competing sibling placements")),
+            .any(|reason| reason.contains(
+                "selected a non-primary sibling placement while other competing sibling placements remained"
+            )),
         "expected competing sibling placement reason, got {summary:?}"
     );
     let sibling_detail = summary
@@ -2212,7 +2218,9 @@ fn merge_authoring_marks_nested_sibling_choice_through_inserted_sibling_chain_as
         summary
             .merge_reasons
             .iter()
-            .any(|reason| reason.contains("multiple competing sibling placements")),
+            .any(|reason| reason.contains(
+                "selected a non-primary sibling placement while other competing sibling placements remained"
+            )),
         "expected competing nested sibling chain reason, got {summary:?}"
     );
     let patch_value = load_stored_object_value(&store_root, &summary.patch_id)

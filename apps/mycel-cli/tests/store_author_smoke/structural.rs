@@ -355,7 +355,11 @@ fn store_merge_authoring_flow_reports_nested_parent_choice_as_multi_variant() {
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason
                     .as_str()
-                    .is_some_and(|reason| reason.contains("multiple competing parent placements"))
+                    .is_some_and(|reason| {
+                        reason.contains(
+                            "selected a non-primary parent placement while other competing parent placements remained",
+                        )
+                    })
             })),
         "expected competing nested parent placement reason, got {merge_json}"
     );
@@ -763,7 +767,11 @@ fn store_merge_authoring_flow_reports_anchor_nested_parent_choice_as_multi_varia
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason
                     .as_str()
-                    .is_some_and(|reason| reason.contains("multiple competing parent placements"))
+                    .is_some_and(|reason| {
+                        reason.contains(
+                            "selected a non-primary parent placement while other competing parent placements remained",
+                        )
+                    })
             })),
         "expected competing anchor nested parent placement reason, got {merge_json}"
     );
@@ -1067,7 +1075,8 @@ fn store_merge_authoring_flow_marks_nested_sibling_choice_through_inserted_sibli
                 detail["subject_kind"] == "block"
                     && detail["subject_id"] == "blk:nested-child-c"
                     && detail["variant_kind"] == "sibling-placement"
-                    && detail["reason_kind"] == "multiple-competing-parent-variants"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
                     && detail["primary_variant"] == "blk:nested-child-b"
                     && detail["resolved_variant"] == "blk:nested-child-a"
                     && detail["competing_variants"]
