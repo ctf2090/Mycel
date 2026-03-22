@@ -16,7 +16,7 @@ Use these terms consistently:
 
 - `sync doc`: Markdown-only sync. This covers planning/public-summary `.md` files such as `ROADMAP.*`, `IMPLEMENTATION-CHECKLIST.*`, `docs/PROGRESS.md`, and any related README wording.
 - `sync web`: GitHub Pages-only sync. This covers Pages HTML summary surfaces such as `pages/progress.html`, localized progress pages, and non-issue landing-page wording. A `sync web` batch is only complete when every maintained language variant of the touched Pages surface is updated together.
-- `sync issue`: GitHub Issues plus the contributor-entry issue links in GitHub Pages entry pages such as `pages/index.html`, `pages/zh-TW/index.html`, and `pages/zh-CN/index.html`.
+- `sync issue`: GitHub Issues only.
 - `sync plan`: the full sync. This means `sync doc` + `sync web` + `sync issue`. Any multilingual completeness rule that applies to a component sync target also applies to `sync plan`.
 
 ## 1. Scope
@@ -31,7 +31,6 @@ This plan applies to:
 - [`pages/progress.html`](../pages/progress.html)
 - [`pages/zh-TW/progress.html`](../pages/zh-TW/progress.html)
 - [`pages/zh-CN/progress.html`](../pages/zh-CN/progress.html)
-- contributor-entry issue links in [`pages/index.html`](../pages/index.html), [`pages/zh-TW/index.html`](../pages/zh-TW/index.html), and [`pages/zh-CN/index.html`](../pages/zh-CN/index.html)
 - GitHub Issues, especially `ai-ready` task issues
 
 It does not apply to:
@@ -50,15 +49,12 @@ Use this source-of-truth order whenever surfaces disagree:
 4. `docs/PROGRESS.md`
 5. `pages/progress.html`
 6. landing-page summaries or support-page references
-7. landing-page contributor-entry issue links
-
 Interpretation:
 
 - `ROADMAP.md` and `ROADMAP.zh-TW.md` jointly own milestone order, phase boundaries, and build sequence.
 - `IMPLEMENTATION-CHECKLIST.*` owns section-level closure state and concrete implementation gates.
 - GitHub Issues represent executable slices of the remaining gaps.
 - `docs/PROGRESS.md`, `pages/progress.html`, and localized `pages/*/progress.html` summaries are derived surfaces and must not invent project state.
-- contributor-entry issue links in `pages/index.html` and localized landing pages are public contributor-entry summaries and must point at currently valid `ai-ready` work.
 
 ## 3. Surface Roles
 
@@ -277,7 +273,7 @@ If it reports `due`, refresh the reported surfaces:
 - `IMPLEMENTATION-CHECKLIST.zh-TW.md`
 - aligned GitHub Issues
 - Markdown planning surfaces such as `docs/PROGRESS.md` when `sync doc` is due
-- aligned GitHub Issues and landing-page contributor-entry issue links when `sync issue` is due
+- aligned GitHub Issues when `sync issue` is due
 - GitHub Pages HTML summary surfaces such as `pages/progress.html` and non-issue landing-page wording when `sync web` is due
 - maintained localized Pages variants should be checked for both semantic alignment and obvious untranslated UI text when `sync web` is due
 
@@ -306,7 +302,7 @@ For a `sync plan` batch:
 2. ignore archived mailboxes unless a current mailbox explicitly points to an unresolved entry there
 3. run the planning-refresh cadence checker
 4. refresh Markdown planning surfaces such as `ROADMAP.md`, `IMPLEMENTATION-CHECKLIST.*`, `docs/PROGRESS.md`, and related README wording when `sync doc` is due
-5. realign GitHub Issues and landing-page contributor-entry issue links when `sync issue` is due
+5. realign GitHub Issues when `sync issue` is due
 6. update GitHub Pages HTML summary surfaces such as `pages/progress.html` and non-issue landing-page wording when `sync web` is due
 7. ensure the GitHub Pages planning summary matches the refreshed roadmap/checklist/issues state
 
