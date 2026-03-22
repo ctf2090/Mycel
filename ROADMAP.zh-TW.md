@@ -101,7 +101,7 @@
 
 ### Current Status
 
-Phase 1 exit criteria 現在已完全滿足。`IMPLEMENTATION-CHECKLIST.en.md` 中的 Ready-to-Build Gate 仍維持全綠（7/7），而 checklist 現在把這個 gate 保留為已關閉的歷史區塊，並另外追蹤仍在進行中的 post-`M1` 後續工作。
+Phase 1 exit criteria 現在已完全滿足。`IMPLEMENTATION-CHECKLIST.zh-TW.md` 中的 Ready-to-Build Gate 仍維持全綠（7/7），而 checklist 現在把這個 gate 保留為已關閉的歷史區塊，並另外追蹤仍在進行中的 post-`M1` 後續工作。
 
 已完成：
 
@@ -235,7 +235,7 @@ Implementation anchors：
 2. Key files:
    `crates/mycel-core/src/verify.rs`
    `crates/mycel-core/src/protocol.rs`
-   `IMPLEMENTATION-CHECKLIST.en.md`
+   `IMPLEMENTATION-CHECKLIST.zh-TW.md`
    `fixtures/README.md`
 3. Expected next code areas:
    replay 與 `state_hash` logic 很可能會先落在 `crates/mycel-core`
