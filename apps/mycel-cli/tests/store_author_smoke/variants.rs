@@ -1849,10 +1849,14 @@ fn store_merge_authoring_flow_reports_selected_metadata_addition_with_competing_
         "doc:author-smoke-metadata-selected-addition-competing",
         "right",
     );
-    let (_right_ops_dir, right_ops_path) =
-        write_metadata_variant_ops_file("store-merge-metadata-selected-addition-competing-right-ops", "right");
-    let (_center_ops_dir, center_ops_path) =
-        write_metadata_variant_ops_file("store-merge-metadata-selected-addition-competing-center-ops", "center");
+    let (_right_ops_dir, right_ops_path) = write_metadata_variant_ops_file(
+        "store-merge-metadata-selected-addition-competing-right-ops",
+        "right",
+    );
+    let (_center_ops_dir, center_ops_path) = write_metadata_variant_ops_file(
+        "store-merge-metadata-selected-addition-competing-center-ops",
+        "center",
+    );
     let store_root = path_arg(store_dir.path());
     let key_file = path_arg(&key_path);
     let resolved_state_file = path_arg(&resolved_state_path);
@@ -2000,9 +2004,7 @@ fn store_merge_authoring_flow_reports_selected_metadata_addition_with_competing_
             .as_array()
             .is_some_and(|reasons| reasons.iter().any(|reason| {
                 reason.as_str().is_some_and(|reason| {
-                    reason.contains(
-                        "metadata key 'topic' adopted a non-primary parent addition",
-                    )
+                    reason.contains("metadata key 'topic' adopted a non-primary parent addition")
                 })
             })),
         "expected selected metadata addition reason, got {merge_json}"

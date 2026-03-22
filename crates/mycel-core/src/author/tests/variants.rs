@@ -379,10 +379,7 @@ fn merge_authoring_reports_multi_variant_when_metadata_parents_disagree() {
     );
     assert_eq!(
         metadata_competing_detail.competing_variants,
-        vec![
-            "\"center\"".to_string(),
-            "\"right\"".to_string(),
-        ],
+        vec!["\"center\"".to_string(), "\"right\"".to_string(),],
         "expected all non-primary metadata alternatives, got {metadata_competing_detail:?}"
     );
     let patch_value = load_stored_object_value(&store_root, &summary.patch_id)
@@ -974,9 +971,11 @@ fn merge_authoring_reports_selected_metadata_addition_with_competing_additions()
 
     assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
     assert!(
-        summary.merge_reasons.iter().any(|reason| reason.contains(
-            "metadata key 'topic' adopted a non-primary parent addition"
-        )),
+        summary
+            .merge_reasons
+            .iter()
+            .any(|reason| reason
+                .contains("metadata key 'topic' adopted a non-primary parent addition")),
         "expected selected metadata addition reason, got {summary:?}"
     );
     assert!(
