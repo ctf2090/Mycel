@@ -492,6 +492,122 @@ fn merge_authoring_reports_multi_variant_when_block_is_added_from_non_primary_pa
 }
 
 #[test]
+fn merge_authoring_reports_selected_content_addition_with_competing_additions() {
+    let store_root = temp_dir("merge-content-selected-addition-with-competing-additions");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-content-selected-addition-with-competing-additions".to_string(),
+            title: "Merge Content Selected Addition With Competing Additions".to_string(),
+            language: "en".to_string(),
+            timestamp: 24,
+        },
+    )
+    .expect("document should be created");
+
+    let right_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-selected-addition-with-competing-additions",
+        &document.genesis_revision_id,
+        25,
+        26,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-added-choice",
+                    "block_type": "paragraph",
+                    "content": "right",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+    let center_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-content-selected-addition-with-competing-additions",
+        &document.genesis_revision_id,
+        27,
+        28,
+        json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:merge-content-added-choice",
+                    "block_type": "paragraph",
+                    "content": "center",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-content-selected-addition-with-competing-additions".to_string(),
+            parents: vec![
+                document.genesis_revision_id.clone(),
+                right_revision_id,
+                center_revision_id,
+            ],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-content-selected-addition-with-competing-additions".to_string(),
+                blocks: vec![paragraph_block("blk:merge-content-added-choice", "right")],
+                metadata: serde_json::Map::new(),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 29,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "block 'blk:merge-content-added-choice' adopted a non-primary parent addition"
+        )),
+        "expected selected content addition reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "block 'blk:merge-content-added-choice' selected one non-primary addition while other competing non-primary additions remained"
+        )),
+        "expected competing content addition reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-added-choice"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind == MergeReasonKind::SelectedNonPrimaryParentVariant
+                && detail.branch_kind == Some(MergeReasonBranchKind::AdoptedNonPrimaryAddition)
+        }),
+        "expected selected content addition detail, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "blk:merge-content-added-choice"
+                && detail.variant_kind == MergeReasonVariantKind::Content
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryAdditions)
+                && detail.competing_variants.len() == 2
+        }),
+        "expected competing content addition detail, got {summary:?}"
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
 fn merge_authoring_reports_multi_variant_when_block_keeps_primary_absence_over_non_primary_addition(
 ) {
     let store_root = temp_dir("merge-content-keep-primary-absence");
@@ -778,6 +894,117 @@ fn merge_authoring_reports_multi_variant_when_metadata_key_is_added_from_non_pri
     assert_eq!(
         detail.branch_kind,
         Some(MergeReasonBranchKind::AdoptedNonPrimaryAddition)
+    );
+
+    let _ = fs::remove_dir_all(store_root);
+}
+
+#[test]
+fn merge_authoring_reports_selected_metadata_addition_with_competing_additions() {
+    let store_root = temp_dir("merge-metadata-selected-addition-with-competing-additions");
+    let signing_key = signing_key();
+    let document = create_document_in_store(
+        &store_root,
+        &signing_key,
+        &DocumentCreateParams {
+            doc_id: "doc:merge-metadata-selected-addition-with-competing-additions".to_string(),
+            title: "Merge Metadata Selected Addition With Competing Additions".to_string(),
+            language: "en".to_string(),
+            timestamp: 24,
+        },
+    )
+    .expect("document should be created");
+
+    let right_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-metadata-selected-addition-with-competing-additions",
+        &document.genesis_revision_id,
+        25,
+        26,
+        json!([
+            {
+                "op": "set_metadata",
+                "metadata": {
+                    "topic": "right"
+                }
+            }
+        ]),
+    );
+    let center_revision_id = commit_ops_revision(
+        &store_root,
+        &signing_key,
+        "doc:merge-metadata-selected-addition-with-competing-additions",
+        &document.genesis_revision_id,
+        27,
+        28,
+        json!([
+            {
+                "op": "set_metadata",
+                "metadata": {
+                    "topic": "center"
+                }
+            }
+        ]),
+    );
+
+    let summary = create_merge_revision_in_store(
+        &store_root,
+        &signing_key,
+        &MergeRevisionCreateParams {
+            doc_id: "doc:merge-metadata-selected-addition-with-competing-additions".to_string(),
+            parents: vec![
+                document.genesis_revision_id.clone(),
+                right_revision_id,
+                center_revision_id,
+            ],
+            resolved_state: crate::replay::DocumentState {
+                doc_id: "doc:merge-metadata-selected-addition-with-competing-additions".to_string(),
+                blocks: Vec::new(),
+                metadata: serde_json::Map::from_iter([(
+                    "topic".to_string(),
+                    Value::String("right".to_string()),
+                )]),
+            },
+            merge_strategy: "semantic-block-merge".to_string(),
+            timestamp: 29,
+        },
+    )
+    .expect("merge revision should be created");
+
+    assert_eq!(summary.merge_outcome, MergeOutcome::MultiVariant);
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "metadata key 'topic' adopted a non-primary parent addition"
+        )),
+        "expected selected metadata addition reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reasons.iter().any(|reason| reason.contains(
+            "metadata key 'topic' selected one non-primary addition while other competing non-primary additions remained"
+        )),
+        "expected competing metadata addition reason, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "topic"
+                && detail.variant_kind == MergeReasonVariantKind::Metadata
+                && detail.reason_kind == MergeReasonKind::SelectedNonPrimaryParentVariant
+                && detail.branch_kind == Some(MergeReasonBranchKind::AdoptedNonPrimaryAddition)
+        }),
+        "expected selected metadata addition detail, got {summary:?}"
+    );
+    assert!(
+        summary.merge_reason_details.iter().any(|detail| {
+            detail.subject_id == "topic"
+                && detail.variant_kind == MergeReasonVariantKind::Metadata
+                && detail.reason_kind
+                    == MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant
+                && detail.branch_kind
+                    == Some(MergeReasonBranchKind::MultipleCompetingNonPrimaryAdditions)
+                && detail.competing_variants.len() == 2
+        }),
+        "expected competing metadata addition detail, got {summary:?}"
     );
 
     let _ = fs::remove_dir_all(store_root);
