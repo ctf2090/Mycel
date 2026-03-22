@@ -99,8 +99,23 @@ def short_head(rev: str) -> str:
         return rev[:7]
 
 
+def revision_exists(rev: str) -> bool:
+    if not rev:
+        return False
+    proc = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{rev}^{{commit}}"],
+        cwd=ROOT_DIR,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
 def commits_since(base_rev: str, head_rev: str) -> int:
     if not base_rev:
+        return 10**9
+    if not revision_exists(base_rev):
         return 10**9
     return int(git_output("rev-list", "--count", f"{base_rev}..{head_rev}"))
 

@@ -28,6 +28,14 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         body = "<!-- hotspot-report-head: abc123 -->"
         self.assertEqual("abc123", report.extract_marker(body, report.HEAD_MARKER))
 
+    def test_commits_since_returns_large_distance_when_base_revision_is_missing(self) -> None:
+        original_revision_exists = report.revision_exists
+        try:
+            report.revision_exists = lambda rev: False
+            self.assertEqual(10**9, report.commits_since("deadbeef", "abc123def456"))
+        finally:
+            report.revision_exists = original_revision_exists
+
     def test_ranked_candidates_keeps_top_n(self) -> None:
         scan = "\n".join(
             [
