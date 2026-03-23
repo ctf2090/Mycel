@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-view-announce-want-before-manifest",
+    "description": "Seed injects VIEW_ANNOUNCE and then WANT before MANIFEST/HEADS so the reader rejects the transcript for missing head context",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-view-announce-want-before-manifest-test"
+        }
+    ],
+    "expected_outcomes": [
+        "view-announce-want-before-manifest-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "view-announce-want-before-manifest"
+    },
+    "notes": [
+        "Simulator adds view-sync capability to HELLO, injects VIEW_ANNOUNCE, then injects WANT before MANIFEST or HEADS establish sync roots.",
+        "The transcript should fail on the standard prior-MANIFEST-or-HEADS rule, proving that VIEW_ANNOUNCE alone does not unlock WANT."
+    ]
+}

@@ -1892,6 +1892,9 @@ fn inject_session_fault(
         "snapshot-want-before-manifest" => {
             inject_snapshot_want_before_manifest_fault(transcript, signing_key)
         }
+        "view-announce-want-before-manifest" => {
+            inject_view_announce_want_before_manifest_fault(transcript, signing_key)
+        }
         "view-announce-before-hello" => {
             inject_view_announce_before_hello_fault(transcript, signing_key)
         }
@@ -2051,6 +2054,67 @@ fn inject_snapshot_want_before_manifest_fault(
         }),
     )?;
     transcript.messages.insert(hello_index + 1, snapshot_offer);
+    transcript.messages.insert(hello_index + 2, want);
+    Ok(())
+}
+
+fn inject_view_announce_want_before_manifest_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| {
+            "transcript is missing HELLO for view-announce-want-before-manifest injection"
+                .to_owned()
+        })?;
+    let hello_payload = transcript.messages[hello_index]
+        .get_mut("payload")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| {
+            "HELLO message is missing object payload for view-announce-want-before-manifest injection"
+                .to_owned()
+        })?;
+    let capabilities = hello_payload
+        .entry("capabilities".to_owned())
+        .or_insert_with(|| Value::Array(Vec::new()));
+    let capability_list = capabilities.as_array_mut().ok_or_else(|| {
+        "HELLO payload field 'capabilities' is not an array for view-announce-want-before-manifest injection"
+            .to_owned()
+    })?;
+    if !capability_list
+        .iter()
+        .any(|value| value.as_str() == Some("view-sync"))
+    {
+        capability_list.push(Value::String("view-sync".to_owned()));
+    }
+    resign_wire_message(&mut transcript.messages[hello_index], signing_key)?;
+
+    let view_announce = signed_sim_wire_message(
+        signing_key,
+        &transcript.peer.node_id,
+        "VIEW_ANNOUNCE",
+        "msg:peer-sync-fault-view-announce-0001",
+        json!({
+            "view_id": "view:peer-sync-fault-placeholder",
+            "maintainer": signer_id(signing_key),
+            "documents": {
+                "doc:peer-sync-fault-placeholder": "rev:peer-sync-fault-placeholder"
+            }
+        }),
+    )?;
+    let want = signed_sim_wire_message(
+        signing_key,
+        &transcript.peer.node_id,
+        "WANT",
+        "msg:peer-sync-fault-want-0003",
+        json!({
+            "objects": ["view:peer-sync-fault-placeholder"]
+        }),
+    )?;
+    transcript.messages.insert(hello_index + 1, view_announce);
     transcript.messages.insert(hello_index + 2, want);
     Ok(())
 }

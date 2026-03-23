@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-view-announce-want-before-manifest",
+    "description": "A reader should fail sync when the seed emits WANT for an announced view before MANIFEST or HEADS establishes accepted sync roots.",
+    "category": "negative",
+    "topology": "sim/topologies/session-view-announce-want-before-manifest.example.json",
+    "fixture_set": "fixtures/object-sets/session-view-announce-want-before-manifest",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "view-announce-want-before-manifest-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "view-announce-want-before-manifest-rejected",
+            "description": "Reader rejects WANT because VIEW_ANNOUNCE does not establish sync roots without MANIFEST or HEADS.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the missing-head-context violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a prior-head-context negative interop case specific to governance-view sync.",
+        "The harness mutates HELLO to advertise view-sync so the fault fails on missing head context instead of capability gating."
+    ]
+}
