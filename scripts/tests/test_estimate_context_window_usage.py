@@ -199,6 +199,24 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
         self.assertIn("Raw estimate before calibration: 71,200", proc.stdout)
         self.assertIn("additive calibration (+85,000 tokens) from fixed delta", proc.stdout)
 
+    def test_named_calibration_shortcut_applies_doc_bootstrap_sample(self) -> None:
+        spec = {
+            "context_window": 258000,
+            "current_input_tokens": 70000,
+            "last_output_tokens": 1200,
+        }
+
+        proc = self.run_cli(
+            "--calibration-shortcut",
+            "doc-bootstrap",
+            "-",
+            stdin_text=json.dumps(spec),
+        )
+
+        self.assertIn("108,200 / 258,000 tokens", proc.stdout)
+        self.assertIn("Raw estimate before calibration: 71,200", proc.stdout)
+        self.assertIn("additive calibration (+37,000 tokens) from fixed delta", proc.stdout)
+
     def test_additive_delta_calibration_is_supported_in_json_spec(self) -> None:
         spec = {
             "context_window": 10000,

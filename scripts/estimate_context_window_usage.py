@@ -14,6 +14,10 @@ class ContextUsageError(Exception):
 
 
 CALIBRATION_SHORTCUTS: dict[str, dict[str, int | str]] = {
+    "doc-bootstrap": {
+        "mode": "additive",
+        "delta_tokens": 37000,
+    },
     "doc-sync-plan": {
         "mode": "additive",
         "delta_tokens": 85000,
