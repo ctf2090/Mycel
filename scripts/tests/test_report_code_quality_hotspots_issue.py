@@ -151,10 +151,44 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         )
         recorded: list[list[str]] = []
         original_run_cmd = report.run_cmd
+        original_repo_labels = report.repo_labels
         try:
+            report.repo_labels = lambda current_args: {"code-quality-hotspot"}
             report.run_cmd = lambda cmd, *, input_text=None: recorded.append(list(cmd)) or "created"
             report.create_issue(args, "body")
         finally:
+            report.repo_labels = original_repo_labels
+            report.run_cmd = original_run_cmd
+        self.assertEqual(
+            [
+                "gh",
+                "issue",
+                "create",
+                "--title",
+                report.DEFAULT_TITLE,
+                "--body-file",
+                "-",
+                "--label",
+                "code-quality-hotspot",
+            ],
+            recorded[0],
+        )
+
+    def test_create_issue_skips_missing_labels(self) -> None:
+        args = report.parse_args.__globals__["argparse"].Namespace(
+            repo=None,
+            title=report.DEFAULT_TITLE,
+            labels=["code-quality-hotspot", "missing-label"],
+        )
+        recorded: list[list[str]] = []
+        original_run_cmd = report.run_cmd
+        original_repo_labels = report.repo_labels
+        try:
+            report.repo_labels = lambda current_args: {"code-quality-hotspot"}
+            report.run_cmd = lambda cmd, *, input_text=None: recorded.append(list(cmd)) or "created"
+            report.create_issue(args, "body")
+        finally:
+            report.repo_labels = original_repo_labels
             report.run_cmd = original_run_cmd
         self.assertEqual(
             [

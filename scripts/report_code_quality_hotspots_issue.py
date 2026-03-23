@@ -246,7 +246,12 @@ def create_issue(args: argparse.Namespace, body: str) -> None:
     cmd = ["gh", "issue", "create", "--title", args.title, "--body-file", "-"]
     if args.repo:
         cmd.extend(["--repo", args.repo])
-    for label in args.labels or DEFAULT_LABELS:
+    available_labels = repo_labels(args)
+    requested_labels = args.labels or list(DEFAULT_LABELS)
+    for label in requested_labels:
+        if label not in available_labels:
+            print(f"warning: skipping missing label {label!r}", file=sys.stderr)
+            continue
         cmd.extend(["--label", label])
     result = run_cmd(cmd, input_text=body)
     print(result, end="")
@@ -299,6 +304,25 @@ def main() -> int:
     close_matching_open_issues(args, matches)
     create_issue(args, body)
     return 0
+
+
+def repo_labels(args: argparse.Namespace) -> set[str]:
+    cmd = ["gh", "label", "list", "--limit", "200", "--json", "name"]
+    if args.repo:
+        cmd.extend(["--repo", args.repo])
+    raw = run_cmd(cmd)
+    try:
+        import json
+
+        payload = json.loads(raw)
+    except Exception as exc:  # pragma: no cover
+        raise SystemExit(f"failed to parse gh label list output: {exc}") from exc
+    labels: set[str] = set()
+    for entry in payload:
+        name = entry.get("name")
+        if isinstance(name, str) and name:
+            labels.add(name)
+    return labels
 
 
 if __name__ == "__main__":
