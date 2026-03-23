@@ -93,15 +93,19 @@ pub enum MergeReasonBranchKind {
     AdoptedNonPrimaryReplacement,
     AdoptedNonPrimaryRemoval,
     AdoptedNonPrimaryReplacementWhileCompetingRemovalRemains,
+    AdoptedNonPrimaryReplacementWhileCompetingReplacementsAndRemovalRemain,
     AdoptedNonPrimaryRemovalWhileCompetingReplacementRemains,
+    AdoptedNonPrimaryRemovalWhileCompetingReplacementAndRemovalsRemain,
     KeptPrimaryAbsenceOverNonPrimaryAddition,
     KeptPrimaryVariantOverNonPrimaryReplacement,
     KeptPrimaryVariantOverNonPrimaryRemoval,
     KeptPrimaryVariantOverMixedNonPrimaryAlternatives,
+    KeptPrimaryVariantOverMultipleCompetingNonPrimaryReplacementsAndRemovals,
     MultipleCompetingNonPrimaryAdditions,
     MultipleCompetingNonPrimaryReplacements,
     MultipleCompetingNonPrimaryRemovals,
     MultipleCompetingMixedNonPrimaryAlternatives,
+    MultipleCompetingNonPrimaryReplacementsAndRemovals,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
