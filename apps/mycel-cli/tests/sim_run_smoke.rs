@@ -819,6 +819,70 @@ fn sim_run_rejects_manifest_before_hello() {
 }
 
 #[test]
+fn sim_run_rejects_heads_before_hello() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/session-heads-before-hello.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    let outcomes = summary["matched_expected_outcomes"]
+        .as_array()
+        .expect("matched_expected_outcomes should be an array");
+    assert!(
+        outcomes
+            .iter()
+            .any(|entry| entry == "heads-before-hello-rejected"),
+        "expected heads-before-hello outcome, stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let report = load_report(&summary);
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
+    assert!(
+        failures.iter().any(
+            |entry| entry["description"].as_str().is_some_and(|description| {
+                description.contains("wire HEADS requires prior HELLO from 'node:peer-seed'")
+            })
+        ),
+        "expected prior-HELLO HEADS error in report failures, report: {report}"
+    );
+    let reader = report["peers"]
+        .as_array()
+        .expect("peers should be an array")
+        .iter()
+        .find(|peer| peer["node_id"] == "node:peer-reader-a")
+        .expect("expected reader peer in report");
+    assert!(
+        reader["verified_object_ids"]
+            .as_array()
+            .is_some_and(|verified| verified.is_empty()),
+        "expected no verified objects after prior-HELLO rejection, report: {report}"
+    );
+    assert!(
+        reader["notes"]
+            .as_array()
+            .is_some_and(|notes| notes.iter().any(|note| {
+                note.as_str()
+                    .is_some_and(|text| text.contains("session fault"))
+            })),
+        "expected reader notes to mention the injected session fault, report: {report}"
+    );
+}
+
+#[test]
 fn sim_run_rejects_want_before_hello() {
     let _guard = sim_run_lock();
     let output = run_sim(&[

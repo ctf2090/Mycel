@@ -1881,6 +1881,7 @@ fn inject_session_fault(
 ) -> Result<(), String> {
     match session_fault {
         "duplicate-hello" => inject_duplicate_hello_fault(transcript, signing_key),
+        "heads-before-hello" => inject_heads_before_hello_fault(transcript, signing_key),
         "manifest-before-hello" => inject_manifest_before_hello_fault(transcript),
         "messages-after-bye" => inject_messages_after_bye_fault(transcript, signing_key),
         "object-before-manifest" => inject_object_before_manifest_fault(transcript),
@@ -1957,6 +1958,31 @@ fn inject_manifest_before_hello_fault(
         })?;
     let manifest = transcript.messages.remove(manifest_index);
     transcript.messages.insert(hello_index, manifest);
+    Ok(())
+}
+
+fn inject_heads_before_hello_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| "transcript is missing HELLO for heads-before-hello injection".to_owned())?;
+    let heads = signed_sim_wire_message(
+        signing_key,
+        &transcript.peer.node_id,
+        "HEADS",
+        "msg:peer-sync-fault-heads-0000",
+        json!({
+            "documents": {
+                "doc:peer-sync-fault-placeholder": ["rev:peer-sync-fault-placeholder"]
+            },
+            "replace": true
+        }),
+    )?;
+    transcript.messages.insert(hello_index, heads);
     Ok(())
 }
 

@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-heads-before-hello",
+    "description": "Seed injects HEADS before HELLO so the reader rejects the transcript for missing session establishment",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-heads-before-hello-test"
+        }
+    ],
+    "expected_outcomes": [
+        "heads-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "heads-before-hello"
+    },
+    "notes": [
+        "Simulator injects HEADS ahead of the normal HELLO, before the seed establishes the wire session.",
+        "The transcript should fail on the standard prior-HELLO wire-session rule before any object verification or store writes happen."
+    ]
+}

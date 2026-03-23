@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-heads-before-hello",
+    "description": "A reader should fail sync when the seed emits HEADS before establishing the session with HELLO.",
+    "category": "negative",
+    "topology": "sim/topologies/session-heads-before-hello.example.json",
+    "fixture_set": "fixtures/object-sets/session-heads-before-hello",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "heads-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "heads-before-hello-rejected",
+            "description": "Reader rejects HEADS because the seed did not establish the session with HELLO first.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the session-establishment violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a session-establishment negative interop case for HEADS sequencing.",
+        "The seed still uses the normal peer-store transcript generator, but the harness injects HEADS before HELLO."
+    ]
+}
