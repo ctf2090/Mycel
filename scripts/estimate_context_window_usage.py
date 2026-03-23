@@ -13,6 +13,15 @@ class ContextUsageError(Exception):
     pass
 
 
+CALIBRATION_SHORTCUTS: dict[str, dict[str, int | str]] = {
+    "doc-sync-plan": {
+        "mode": "additive",
+        "estimated_tokens": 37000,
+        "observed_tokens": 122000,
+    }
+}
+
+
 @dataclass(frozen=True)
 class UsageEstimate:
     used_tokens: int
@@ -102,6 +111,11 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="observed token count from a prior comparable round for CLI calibration",
     )
+    parser.add_argument(
+        "--calibration-shortcut",
+        choices=tuple(sorted(CALIBRATION_SHORTCUTS)),
+        help="apply a named calibration sample without repeating raw token values",
+    )
     return parser.parse_args()
 
 
@@ -155,9 +169,22 @@ def inject_cli_calibration(payload: dict[str, object], args: argparse.Namespace)
     estimated = args.calibrate_estimated_tokens
     observed = args.calibrate_observed_tokens
     mode = args.calibration_mode
+    shortcut = args.calibration_shortcut
 
-    if estimated is None and observed is None and mode is None:
+    if shortcut is not None and any(value is not None for value in (estimated, observed, mode)):
+        raise ContextUsageError(
+            "use either --calibration-shortcut or the explicit CLI calibration flags, not both"
+        )
+    if shortcut is None and estimated is None and observed is None and mode is None:
         return payload
+    if "calibration" in payload:
+        raise ContextUsageError(
+            "spec already contains calibration; use either JSON calibration or CLI calibration"
+        )
+    if shortcut is not None:
+        updated = dict(payload)
+        updated["calibration"] = dict(CALIBRATION_SHORTCUTS[shortcut])
+        return updated
     if estimated is None or observed is None or mode is None:
         raise ContextUsageError(
             "CLI calibration requires --calibration-mode, --calibrate-estimated-tokens, "
@@ -165,10 +192,6 @@ def inject_cli_calibration(payload: dict[str, object], args: argparse.Namespace)
         )
     if estimated <= 0 or observed <= 0:
         raise ContextUsageError("CLI calibration token values must be positive integers")
-    if "calibration" in payload:
-        raise ContextUsageError(
-            "spec already contains calibration; use either JSON calibration or CLI calibration"
-        )
 
     updated = dict(payload)
     updated["calibration"] = {

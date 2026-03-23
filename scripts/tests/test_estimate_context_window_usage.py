@@ -181,6 +181,24 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
         self.assertIn("3,700 / 10,000 tokens", proc.stdout)
         self.assertIn("additive calibration (+2,500 tokens)", proc.stdout)
 
+    def test_named_calibration_shortcut_applies_doc_sync_plan_sample(self) -> None:
+        spec = {
+            "context_window": 258000,
+            "current_input_tokens": 70000,
+            "last_output_tokens": 1200,
+        }
+
+        proc = self.run_cli(
+            "--calibration-shortcut",
+            "doc-sync-plan",
+            "-",
+            stdin_text=json.dumps(spec),
+        )
+
+        self.assertIn("156,200 / 258,000 tokens", proc.stdout)
+        self.assertIn("Raw estimate before calibration: 71,200", proc.stdout)
+        self.assertIn("additive calibration (+85,000 tokens)", proc.stdout)
+
     def test_rejects_partial_cli_calibration_arguments(self) -> None:
         spec = {
             "context_window": 1000,
@@ -199,6 +217,29 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
 
         self.assertEqual(1, proc.returncode)
         self.assertIn("CLI calibration requires", proc.stderr)
+
+    def test_rejects_mixing_named_shortcut_with_explicit_cli_calibration(self) -> None:
+        spec = {
+            "context_window": 1000,
+            "current_input_tokens": 100,
+        }
+
+        proc = self.run_cli(
+            "--calibration-shortcut",
+            "doc-sync-plan",
+            "--calibration-mode",
+            "additive",
+            "--calibrate-estimated-tokens",
+            "300",
+            "--calibrate-observed-tokens",
+            "2800",
+            "-",
+            stdin_text=json.dumps(spec),
+            check=False,
+        )
+
+        self.assertEqual(1, proc.returncode)
+        self.assertIn("use either --calibration-shortcut or the explicit CLI calibration flags", proc.stderr)
 
 
 if __name__ == "__main__":
