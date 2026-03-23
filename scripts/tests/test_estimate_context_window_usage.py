@@ -160,6 +160,46 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
         self.assertEqual(1, proc.returncode)
         self.assertIn("calibration mode must be 'additive' or 'multiplicative'", proc.stderr)
 
+    def test_cli_calibration_shortcut_applies_without_json_calibration_block(self) -> None:
+        spec = {
+            "context_window": 10000,
+            "current_input_tokens": 900,
+            "last_output_tokens": 300,
+        }
+
+        proc = self.run_cli(
+            "--calibration-mode",
+            "additive",
+            "--calibrate-estimated-tokens",
+            "300",
+            "--calibrate-observed-tokens",
+            "2800",
+            "-",
+            stdin_text=json.dumps(spec),
+        )
+
+        self.assertIn("3,700 / 10,000 tokens", proc.stdout)
+        self.assertIn("additive calibration (+2,500 tokens)", proc.stdout)
+
+    def test_rejects_partial_cli_calibration_arguments(self) -> None:
+        spec = {
+            "context_window": 1000,
+            "current_input_tokens": 100,
+        }
+
+        proc = self.run_cli(
+            "--calibration-mode",
+            "additive",
+            "--calibrate-observed-tokens",
+            "2800",
+            "-",
+            stdin_text=json.dumps(spec),
+            check=False,
+        )
+
+        self.assertEqual(1, proc.returncode)
+        self.assertIn("CLI calibration requires", proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

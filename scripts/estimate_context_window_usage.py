@@ -87,6 +87,21 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="emit machine-readable JSON instead of a text summary",
     )
+    parser.add_argument(
+        "--calibration-mode",
+        choices=("additive", "multiplicative"),
+        help="apply a calibration sample without embedding a calibration object in the JSON spec",
+    )
+    parser.add_argument(
+        "--calibrate-estimated-tokens",
+        type=int,
+        help="estimated token count from a prior comparable round for CLI calibration",
+    )
+    parser.add_argument(
+        "--calibrate-observed-tokens",
+        type=int,
+        help="observed token count from a prior comparable round for CLI calibration",
+    )
     return parser.parse_args()
 
 
@@ -134,6 +149,34 @@ def validate_thresholds(args: argparse.Namespace) -> None:
         raise ContextUsageError("rotate threshold must be greater than 0 and at most 100")
     if args.rotate_threshold <= args.warn_threshold:
         raise ContextUsageError("rotate threshold must be greater than warn threshold")
+
+
+def inject_cli_calibration(payload: dict[str, object], args: argparse.Namespace) -> dict[str, object]:
+    estimated = args.calibrate_estimated_tokens
+    observed = args.calibrate_observed_tokens
+    mode = args.calibration_mode
+
+    if estimated is None and observed is None and mode is None:
+        return payload
+    if estimated is None or observed is None or mode is None:
+        raise ContextUsageError(
+            "CLI calibration requires --calibration-mode, --calibrate-estimated-tokens, "
+            "and --calibrate-observed-tokens together"
+        )
+    if estimated <= 0 or observed <= 0:
+        raise ContextUsageError("CLI calibration token values must be positive integers")
+    if "calibration" in payload:
+        raise ContextUsageError(
+            "spec already contains calibration; use either JSON calibration or CLI calibration"
+        )
+
+    updated = dict(payload)
+    updated["calibration"] = {
+        "mode": mode,
+        "estimated_tokens": estimated,
+        "observed_tokens": observed,
+    }
+    return updated
 
 
 def apply_calibration(raw_used_tokens: int, payload: dict[str, object]) -> tuple[int, str | None]:
@@ -265,7 +308,7 @@ def render_json(estimate: UsageEstimate) -> str:
 def main() -> int:
     args = parse_args()
     try:
-        spec = load_spec(args.spec_path)
+        spec = inject_cli_calibration(load_spec(args.spec_path), args)
         estimate = build_estimate(spec, args)
     except ContextUsageError as exc:
         print(f"error: {exc}", file=sys.stderr)
