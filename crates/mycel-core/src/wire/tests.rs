@@ -918,6 +918,56 @@ fn wire_session_rejects_manifest_before_hello() {
 }
 
 #[test]
+fn wire_session_accepts_heads_before_manifest_and_unlocks_want() {
+    let signing_key = signing_key();
+    let sender_key = sender_public_key(&signing_key);
+    let mut session = WireSession::default();
+    session
+        .register_known_peer("node:alpha", &sender_key)
+        .expect("known peer should register");
+    let patch_object = signed_patch_object_message(&signing_key, "node:alpha", "rev:genesis-null");
+    let patch_id = patch_object["payload"]["object_id"]
+        .as_str()
+        .expect("signed patch OBJECT should include object_id")
+        .to_owned();
+    let revision_object =
+        signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
+    let revision_id = revision_object["payload"]["object_id"]
+        .as_str()
+        .expect("signed revision OBJECT should include object_id")
+        .to_owned();
+    let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
+    let heads = signed_heads_message(
+        &signing_key,
+        "node:alpha",
+        json!({
+            "doc:test": [revision_id.clone()]
+        }),
+        true,
+    );
+    let want = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
+
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
+    session
+        .verify_incoming(&heads)
+        .expect("HEADS should verify before MANIFEST");
+    session
+        .verify_incoming(&want)
+        .expect("WANT should verify after HEADS establishes sync roots");
+
+    let state = session
+        .peer_session("node:alpha")
+        .expect("peer session should exist");
+    assert!(state
+        .advertised_document_heads
+        .get("doc:test")
+        .is_some_and(|revisions| revisions.contains(&revision_id)));
+    assert!(state.pending_object_ids.contains(&revision_id));
+}
+
+#[test]
 fn wire_session_records_manifest_heads() {
     let signing_key = signing_key();
     let sender_key = sender_public_key(&signing_key);
