@@ -1611,6 +1611,69 @@ fn sync_pull_json_rejects_unreachable_want_revision() {
 }
 
 #[test]
+fn sync_pull_json_rejects_unreachable_want_object() {
+    let signing_key = signing_key();
+    let sender = "node:alpha";
+    let transcript_dir = create_temp_dir("sync-pull-unreachable-want-object");
+    let transcript_path = transcript_dir
+        .path()
+        .join("unreachable-want-object-transcript.json");
+    let store_root = create_temp_dir("sync-pull-unreachable-want-object-store");
+    write_transcript(
+        &transcript_path,
+        &json!({
+            "peer": {
+                "node_id": sender,
+                "public_key": sender_public_key(&signing_key)
+            },
+            "messages": [
+                signed_hello_message(&signing_key, sender),
+                signed_manifest_message(&signing_key, sender, "rev:test"),
+                signed_want_message(&signing_key, sender, &["patch:test"])
+            ]
+        }),
+    );
+
+    let output = run_mycel(&[
+        "sync",
+        "pull",
+        &path_arg(&transcript_path),
+        "--into",
+        &path_arg(store_root.path()),
+        "--json",
+    ]);
+
+    assert!(
+        !output.status.success(),
+        "expected failure, stdout: {}, stderr: {}",
+        stdout_text(&output),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let json = assert_json_status(&output, "failed");
+    assert_eq!(json["verified_message_count"], 2);
+    assert_eq!(json["object_message_count"], 0);
+    assert_eq!(json["written_object_count"], 0);
+    assert!(
+        json["errors"]
+            .as_array()
+            .is_some_and(|errors| errors.iter().any(|error| {
+                error.as_str().is_some_and(|message| {
+                    message.contains(
+                        "wire WANT object 'patch:test' is not reachable from accepted sync roots for 'node:alpha'",
+                    )
+                })
+            })),
+        "expected unreachable-WANT-object error, stdout: {}",
+        stdout_text(&output)
+    );
+    assert!(!store_root
+        .path()
+        .join("indexes")
+        .join("manifest.json")
+        .exists());
+}
+
+#[test]
 fn sync_pull_json_rejects_unrequested_object_before_manifest_or_heads() {
     let signing_key = signing_key();
     let sender = "node:alpha";
