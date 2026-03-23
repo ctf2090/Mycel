@@ -1,4 +1,7 @@
 use super::*;
+use serde_json::Value;
+
+use crate::common::stdout_text;
 
 #[test]
 fn store_authoring_flow_creates_document_patch_and_revision() {
@@ -334,6 +337,253 @@ fn store_merge_authoring_flow_creates_merge_patch_and_revision() {
     );
     assert_eq!(
         index_json["object_ids_by_type"]["revision"]
+            .as_array()
+            .map(Vec::len),
+        Some(4)
+    );
+}
+
+#[test]
+fn store_rebuild_recovers_merge_authored_revision_after_index_loss() {
+    let store_dir = create_temp_dir("store-rebuild-merge-authored-root");
+    let (_key_dir, key_path) = write_signing_key_file("store-rebuild-merge-authored-key");
+    let (_ops_dir, ops_path) = write_ops_file("store-rebuild-merge-authored-ops");
+    let (_resolved_dir, resolved_state_path) =
+        write_resolved_state_file("store-rebuild-merge-authored-state");
+    let store_root = path_arg(store_dir.path());
+    let key_file = path_arg(&key_path);
+    let ops_file = path_arg(&ops_path);
+    let resolved_state_file = path_arg(&resolved_state_path);
+
+    let init = run_mycel(&["store", "init", &store_root, "--json"]);
+    assert_success(&init);
+
+    let document = run_mycel(&[
+        "store",
+        "create-document",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke",
+        "--title",
+        "Author Smoke Rebuild Merge",
+        "--language",
+        "en",
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "30",
+        "--json",
+    ]);
+    assert_success(&document);
+    let document_json = assert_json_status(&document, "ok");
+    let genesis_revision_id = document_json["genesis_revision_id"]
+        .as_str()
+        .expect("genesis revision should be string")
+        .to_string();
+
+    let primary_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke",
+        "--base-revision",
+        &genesis_revision_id,
+        "--ops",
+        &ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "31",
+        "--json",
+    ]);
+    assert_success(&primary_patch);
+    let primary_patch_json = assert_json_status(&primary_patch, "ok");
+    let primary_patch_id = primary_patch_json["patch_id"]
+        .as_str()
+        .expect("patch_id should be string")
+        .to_string();
+
+    let primary_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke",
+        "--parent",
+        &genesis_revision_id,
+        "--patch",
+        &primary_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "32",
+        "--json",
+    ]);
+    assert_success(&primary_revision);
+    let primary_revision_json = assert_json_status(&primary_revision, "ok");
+    let primary_revision_id = primary_revision_json["revision_id"]
+        .as_str()
+        .expect("revision_id should be string")
+        .to_string();
+
+    let side_ops_dir = create_temp_dir("store-rebuild-merge-authored-side-ops");
+    let side_ops_path = side_ops_dir.path().join("ops.json");
+    fs::write(
+        &side_ops_path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": "blk:author-smoke-merge-002",
+                    "block_type": "paragraph",
+                    "content": "Merged side branch",
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]))
+        .expect("side ops JSON should serialize"),
+    )
+    .expect("side ops JSON should write");
+    let side_ops_file = path_arg(&side_ops_path);
+
+    let side_patch = run_mycel(&[
+        "store",
+        "create-patch",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke",
+        "--base-revision",
+        &genesis_revision_id,
+        "--ops",
+        &side_ops_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "33",
+        "--json",
+    ]);
+    assert_success(&side_patch);
+    let side_patch_json = assert_json_status(&side_patch, "ok");
+    let side_patch_id = side_patch_json["patch_id"]
+        .as_str()
+        .expect("side patch_id should be string")
+        .to_string();
+
+    let side_revision = run_mycel(&[
+        "store",
+        "commit-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke",
+        "--parent",
+        &genesis_revision_id,
+        "--patch",
+        &side_patch_id,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "34",
+        "--json",
+    ]);
+    assert_success(&side_revision);
+    let side_revision_json = assert_json_status(&side_revision, "ok");
+    let side_revision_id = side_revision_json["revision_id"]
+        .as_str()
+        .expect("side revision_id should be string")
+        .to_string();
+
+    let merge = run_mycel(&[
+        "store",
+        "create-merge-revision",
+        &store_root,
+        "--doc-id",
+        "doc:author-smoke",
+        "--parent",
+        &primary_revision_id,
+        "--parent",
+        &side_revision_id,
+        "--resolved-state",
+        &resolved_state_file,
+        "--signing-key",
+        &key_file,
+        "--timestamp",
+        "35",
+        "--json",
+    ]);
+    assert_success(&merge);
+    let merge_json = assert_json_status(&merge, "ok");
+    let merge_revision_id = merge_json["revision_id"]
+        .as_str()
+        .expect("merge revision_id should be string")
+        .to_string();
+    assert_eq!(merge_json["merge_outcome"], "multi-variant");
+
+    let indexes_dir = store_dir.path().join("indexes");
+    fs::remove_dir_all(&indexes_dir).expect("indexes directory should be removable");
+    assert!(
+        !indexes_dir.exists(),
+        "expected indexes directory to be removed before rebuild"
+    );
+
+    let rebuild = run_mycel(&["store", "rebuild", &store_root, "--json"]);
+    assert_success(&rebuild);
+    let rebuild_json = assert_json_status(&rebuild, "ok");
+    assert_eq!(rebuild_json["stored_object_count"], 8);
+    assert_eq!(rebuild_json["verified_object_count"], 8);
+    assert!(
+        rebuild_json["doc_revisions"]["doc:author-smoke"]
+            .as_array()
+            .is_some_and(|values| values
+                .iter()
+                .any(|value| value == &json!(merge_revision_id))),
+        "expected rebuilt doc revision index to include merge-authored revision, stdout: {}",
+        stdout_text(&rebuild)
+    );
+    assert_eq!(
+        rebuild_json["doc_revisions"]["doc:author-smoke"]
+            .as_array()
+            .map(Vec::len),
+        Some(4)
+    );
+    assert_eq!(
+        rebuild_json["revision_parents"]
+            .as_object()
+            .map(|entries| entries.len()),
+        Some(4)
+    );
+    assert_eq!(
+        rebuild_json["author_patches"]
+            .as_object()
+            .map(|entries| entries.len()),
+        Some(1)
+    );
+
+    let manifest_path = indexes_dir.join("manifest.json");
+    assert!(
+        manifest_path.exists(),
+        "expected rebuild to recreate manifest"
+    );
+    let manifest: Value =
+        serde_json::from_str(&fs::read_to_string(&manifest_path).expect("manifest should read"))
+            .expect("manifest should parse");
+    assert!(
+        manifest["doc_revisions"]["doc:author-smoke"]
+            .as_array()
+            .is_some_and(|values| values
+                .iter()
+                .any(|value| value == &json!(merge_revision_id))),
+        "expected persisted manifest to include merge-authored revision"
+    );
+    assert_eq!(
+        manifest["object_ids_by_type"]["patch"]
+            .as_array()
+            .map(Vec::len),
+        Some(3)
+    );
+    assert_eq!(
+        manifest["object_ids_by_type"]["revision"]
             .as_array()
             .map(Vec::len),
         Some(4)
