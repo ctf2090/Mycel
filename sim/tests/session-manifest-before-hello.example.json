@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-manifest-before-hello",
+    "description": "A reader should fail sync when the seed emits MANIFEST before establishing the session with HELLO.",
+    "category": "negative",
+    "topology": "sim/topologies/session-manifest-before-hello.example.json",
+    "fixture_set": "fixtures/object-sets/session-manifest-before-hello",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "manifest-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "manifest-before-hello-rejected",
+            "description": "Reader rejects MANIFEST because the seed did not establish the session with HELLO first.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the session-establishment violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a session-establishment negative interop case for MANIFEST sequencing.",
+        "The seed still uses the normal peer-store transcript generator, but the harness injects MANIFEST before HELLO."
+    ]
+}

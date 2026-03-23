@@ -20,8 +20,14 @@
   Reference JSON: `sim/tests/snapshot-sync-without-capability.example.json`
 - `session-messages-after-bye`: reject the remaining sync transcript after the seed closes the session with an early `BYE`
   Reference JSON: `sim/tests/session-messages-after-bye.example.json`
+- `session-manifest-before-hello`: reject a sync transcript that emits `MANIFEST` before the seed establishes the session with `HELLO`
+  Reference JSON: `sim/tests/session-manifest-before-hello.example.json`
+- `session-duplicate-hello`: reject a sync transcript that emits `HELLO` twice in one wire session
+  Reference JSON: `sim/tests/session-duplicate-hello.example.json`
 - `session-want-before-hello`: reject a sync transcript that emits `WANT` before the seed establishes the session with `HELLO`
   Reference JSON: `sim/tests/session-want-before-hello.example.json`
+- `session-want-before-manifest`: reject a sync transcript that emits `WANT` after `HELLO` but before `MANIFEST` or `HEADS` establishes accepted sync roots
+  Reference JSON: `sim/tests/session-want-before-manifest.example.json`
 - `session-object-before-manifest`: reject a sync transcript that emits `OBJECT` immediately after `HELLO`, before any `WANT` request or accepted sync roots exist
   Reference JSON: `sim/tests/session-object-before-manifest.example.json`
 

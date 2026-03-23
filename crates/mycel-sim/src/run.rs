@@ -1881,6 +1881,7 @@ fn inject_session_fault(
 ) -> Result<(), String> {
     match session_fault {
         "duplicate-hello" => inject_duplicate_hello_fault(transcript, signing_key),
+        "manifest-before-hello" => inject_manifest_before_hello_fault(transcript),
         "messages-after-bye" => inject_messages_after_bye_fault(transcript, signing_key),
         "object-before-manifest" => inject_object_before_manifest_fault(transcript),
         "want-before-manifest" => inject_want_before_manifest_fault(transcript, signing_key),
@@ -1934,6 +1935,28 @@ fn inject_messages_after_bye_fault(
         }),
     )?;
     transcript.messages.insert(hello_index + 1, bye);
+    Ok(())
+}
+
+fn inject_manifest_before_hello_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| {
+            "transcript is missing HELLO for manifest-before-hello injection".to_owned()
+        })?;
+    let manifest_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("MANIFEST"))
+        .ok_or_else(|| {
+            "transcript is missing MANIFEST for manifest-before-hello injection".to_owned()
+        })?;
+    let manifest = transcript.messages.remove(manifest_index);
+    transcript.messages.insert(hello_index, manifest);
     Ok(())
 }
 
