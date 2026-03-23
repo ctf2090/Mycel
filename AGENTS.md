@@ -2,9 +2,9 @@
 
 ## Git workflow
 - Current repo convention: the shared integration branch is `origin/main`.
-- Push each chat agent's own commits to `origin/main` after every code change, even when multiple chats are working in parallel. <!-- item-id: git.push-after-own-change -->
+- Push each chat agent's own commits to `origin/main` after every code change, even when multiple chats are working in parallel. Push only the explicit commit(s) created by that agent's work item; do not push the local branch name directly with commands such as `git push origin main`. Preferred form: `git push origin <agent-commit>:main` after confirming `<agent-commit>` is the exact commit to land. <!-- item-id: git.push-after-own-change -->
 - Commit and push must run serially; only push after the commit has completed successfully, and do not run commit/push in parallel.
-- If `git push origin main` is rejected because `origin/main` moved, run `git fetch origin`, `git rebase origin/main`, resolve any conflicts, and retry the push; do not force-push to bypass other chats' commits.
+- If the commit-specific push is rejected because `origin/main` moved, run `git fetch origin`, `git rebase origin/main`, resolve any conflicts, determine the new rebased commit for this chat's work, and retry with `git push origin <rebased-agent-commit>:main`; do not force-push to bypass other chats' commits.
 - During rebase conflicts, preserve user changes first, then already-pushed `origin/main` changes from other chats, and then re-apply this chat's work on top; if the conflict cannot be resolved confidently, stop and ask the user instead of guessing.
 - Use `scripts/check-plan-refresh.sh` to manage planning cadence: `sync doc` is due after 10 commits, `sync issue` is due after 10 commits, and `sync web` is due after 20 commits.
 - The `doc` role owns `scripts/check-plan-refresh.sh` and must run it after each completed work item while preparing next items; if it reports `due`, include the due planning surfaces in the next items. `coding` and `delivery` agents must not run it.
