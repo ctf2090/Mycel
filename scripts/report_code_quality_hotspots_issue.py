@@ -242,21 +242,25 @@ def categorized_hotspots(scan_text: str, top_n: int) -> OrderedDict[str, list[st
             continue
         if candidate.file_over_threshold:
             grouped["file-size"].append(
-                f"- {candidate.path} (rank {candidate.rank}, score={candidate.score}, {candidate.file_lines} lines)"
+                f"{len(grouped['file-size']) + 1}. {candidate.path} "
+                f"(rank {candidate.rank}, score={candidate.score}, {candidate.file_lines} lines)"
             )
         if candidate.function_count > 0:
             grouped["function-size"].append(
-                f"- {candidate.path} (rank {candidate.rank}, score={candidate.score}, "
+                f"{len(grouped['function-size']) + 1}. {candidate.path} "
+                f"(rank {candidate.rank}, score={candidate.score}, "
                 f"{candidate.function_count} long functions: {candidate.function_note})"
             )
         if candidate.literal_count > 0:
             grouped["literal-repeat"].append(
-                f"- {candidate.path} (rank {candidate.rank}, score={candidate.score}, "
+                f"{len(grouped['literal-repeat']) + 1}. {candidate.path} "
+                f"(rank {candidate.rank}, score={candidate.score}, "
                 f"{candidate.literal_count} repeated literals: {candidate.literal_note})"
             )
         if candidate.numeric_count > 0:
             grouped["numeric-literal-repeat"].append(
-                f"- {candidate.path} (rank {candidate.rank}, score={candidate.score}, "
+                f"{len(grouped['numeric-literal-repeat']) + 1}. {candidate.path} "
+                f"(rank {candidate.rank}, score={candidate.score}, "
                 f"{candidate.numeric_count} numeric literal repeats: {candidate.numeric_note})"
             )
     return grouped
@@ -282,7 +286,7 @@ def build_issue_body(*, head_rev: str, threshold: int, scan_text: str, top_n: in
                     if entries
                     else f"_No top-{top_n} ranked hotspot candidates matched this category._"
                 ),
-                *(entries or ["- None in the current top-ranked hotspot set."]),
+                *(entries or ["1. None in the current top-ranked hotspot set."]),
                 "",
             ]
         )

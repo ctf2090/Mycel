@@ -70,19 +70,19 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         )
         grouped = report.categorized_hotspots(scan, 5)
         self.assertEqual(
-            ["- crates/a.rs (rank 1, score=10, 900 lines)"],
+            ["1. crates/a.rs (rank 1, score=10, 900 lines)"],
             grouped["file-size"],
         )
         self.assertEqual(
-            ["- crates/a.rs (rank 1, score=10, 1 long functions: f@L1=120)"],
+            ["1. crates/a.rs (rank 1, score=10, 1 long functions: f@L1=120)"],
             grouped["function-size"],
         )
         self.assertEqual(
-            ["- crates/b.rs (rank 2, score=8, 1 repeated literals: L9 x3)"],
+            ["1. crates/b.rs (rank 2, score=8, 1 repeated literals: L9 x3)"],
             grouped["literal-repeat"],
         )
         self.assertEqual(
-            ["- crates/b.rs (rank 2, score=8, 1 numeric literal repeats: 7@L10 x4)"],
+            ["1. crates/b.rs (rank 2, score=8, 1 numeric literal repeats: 7@L10 x4)"],
             grouped["numeric-literal-repeat"],
         )
 
@@ -112,7 +112,7 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         self.assertIn("Code Quality Hotspots (`abc123d`)", body)
         self.assertIn("Refresh threshold: `20` commits", body)
         self.assertIn("--title 'Code Quality Hotspots'", body)
-        self.assertIn("- crates/a.rs (rank 1, score=10, 900 lines)", body)
+        self.assertIn("1. crates/a.rs (rank 1, score=10, 900 lines)", body)
 
     def test_close_matching_open_issues_closes_only_open_matches(self) -> None:
         args = report.parse_args.__globals__["argparse"].Namespace(repo=None, title=report.DEFAULT_TITLE)
