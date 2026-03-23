@@ -45,15 +45,15 @@
         <div class="eyebrow">Visual progress summary</div>
         <h1>Roadmap order and implementation status in one view.</h1>
         <p class="lead">
-          Mycel is still in the narrow first-client lane. The immediate goal is to finish the last
-          shared-core closure work by closing the remaining <code>M2</code> replay/store fixture and
-          reporting-alignment follow-up left after the richer mixed content/metadata competing-branch
-          classification and multi-document rebuild-after-index-loss proof landed, while keeping
-          <code>M4</code> narrow around the remaining session/capability/error-path interop proof now
-          that the current production replication sub-proofs are landed.
+          Mycel is still in the narrow first-client lane. <code>M2</code> replay/storage/rebuild is
+          now closed at the current narrow scope after the richer mixed content/metadata
+          competing-branch classification, the multi-document rebuild-after-index-loss proof, and
+          the richer metadata multi-variant rebuild/reporting proof all landed, so the active lane
+          now centers on broader <code>M3</code> governance persistence and the remaining
+          <code>M4</code> session/capability/error-path interop proof.
         </p>
         <ol class="lane-list">
-          <li>Finish <code>M2</code> replay, rebuild, merge-authoring, and narrow write-path closure, with the remaining focus now narrowed to final replay/store fixture closure and any last merge-authoring reporting follow-up after the richer mixed competing-branch classification and multi-document rebuild-after-index-loss proof landed.</li>
+          <li>Keep <code>M2</code> closed at the current narrow replay/storage/rebuild scope now that the richer mixed content/metadata competing-branch rebuild/reporting proof is landed.</li>
           <li>Expand <code>M3</code> reader-plus-governance workflows carefully on top of accepted-head inspection, render, clearer available-profile and profile-error feedback, editor-admission-aware profile base, bounded viewer score surfaces, initial governance inspect/list/publish surfaces, and persisted governance relationship summaries.</li>
           <li>Keep <code>M4</code> narrow while peer-store sync proof grows toward the remaining session/capability/error-path interop closure.</li>
         </ol>
@@ -63,8 +63,9 @@
         <h2>Milestone Timeline</h2>
         <p>
           The roadmap is sequential: each later phase assumes the earlier one is already stable.
-          Right now, the center of gravity is the closure of <code>M2</code>, the careful expansion
-          of <code>M3</code>, and the remaining <code>M4</code> interop proof.
+          Right now, the center of gravity is keeping <code>M2</code> closed at its current narrow
+          scope, the careful expansion of <code>M3</code>, and the remaining <code>M4</code>
+          interop proof.
         </p>
         <div class="milestones">
           <article class="card">
@@ -80,12 +81,12 @@
           <article class="card">
             <div class="stage">Minimal</div>
             <h3>M2</h3>
-            <div class="status partial">Substantially underway</div>
+            <div class="status mostly-done">Closed at current narrow scope</div>
             <ul>
               <li>Replay and <code>state_hash</code></li>
               <li>Store rebuild, indexes, ancestry-aware render/store verification, and multi-document index-loss rebuild proof</li>
               <li>Narrow write-path closure</li>
-              <li>Conservative merge authoring with broader structural coverage, newer manual-curation smoke proof, clearer metadata merge boundaries, richer mixed content/metadata competing-branch detail, and the remaining replay/store plus reporting follow-up</li>
+              <li>Conservative merge authoring with broader structural coverage, newer manual-curation smoke proof, clearer metadata merge boundaries, richer mixed content/metadata competing-branch detail, and no remaining narrow-scope closure gaps</li>
             </ul>
           </article>
           <article class="card">
@@ -204,7 +205,7 @@
               <td data-label="Area">10. Merge Generation</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay verification and a conservative local merge-authoring profile exist, including structural move/reorder, new-parent reparenting, simple composed parent-chain coverage, a broader nested structural matrix, richer direct/anchor-based placement reasons, clearer metadata competing-branch boundaries, and richer mixed content/metadata competing-branch detail; the remaining <code>M2</code> work is now narrower replay/store fixture closure and reporting/doc alignment.</td>
+              <td data-label="Current read">Replay verification and a conservative local merge-authoring profile exist, including structural move/reorder, new-parent reparenting, simple composed parent-chain coverage, a broader nested structural matrix, richer direct/anchor-based placement reasons, clearer metadata competing-branch boundaries, and richer mixed content/metadata competing-branch detail; the current narrow <code>M2</code> closure is now landed, so future follow-up can stay outside active <code>M2</code> debt.</td>
             </tr>
             <tr>
               <td data-label="Area">11. CLI or API Surface</td>

@@ -45,14 +45,14 @@
         <div class="eyebrow">公开进度摘要</div>
         <h1>用一页看懂 Roadmap 顺序和 implementation 状态。</h1>
         <p class="lead">
-          Mycel 目前仍处在窄版 first-client lane。眼前目标是先收掉最后一批 shared-core closure，也就是在
-          richer mixed content/metadata competing-branch classification 与多文档 index-loss 后 rebuild
-          proof 都已落地后，补齐 <code>M2</code> 剩余的 replay/store fixture 与 reporting/doc alignment
-          follow-up，再让 <code>M4</code> 保持窄范围，聚焦在当前 production replication 子证明都已落地之后，
-          剩余的 session/capability/error-path interop proof。
+          Mycel 目前仍处在窄版 first-client lane。`M2` 在当前窄版 replay/storage/rebuild 范围内已经完成收口，
+          因为 richer mixed content/metadata competing-branch classification、多文档 index-loss 后
+          rebuild proof，以及 richer metadata multi-variant rebuild/reporting proof 都已落地；因此现在的
+          active lane 转向更广的 <code>M3</code> governance persistence，以及剩余的
+          <code>M4</code> session/capability/error-path interop proof。
         </p>
         <ol class="lane-list">
-          <li>完成 <code>M2</code> 的 replay、rebuild、merge-authoring 和 narrow write-path closure；在 richer mixed competing-branch classification 与多文档 index-loss 后 rebuild proof 落地后，当前剩余焦点已收窄到最后一批 replay/store fixture closure 与 merge-authoring reporting follow-up。</li>
+          <li>维持 <code>M2</code> 在当前窄版 replay/storage/rebuild 范围内的已关闭状态，并以 richer mixed content/metadata competing-branch rebuild/reporting proof 作为基线。</li>
           <li>在 accepted-head inspect/render、更清楚的 available-profile 和 profile-error feedback、editor-admission-aware profile base、bounded viewer score surfaces、初始 governance inspect/list/publish surfaces，以及 persisted governance relationship summaries 之上，谨慎扩展 <code>M3</code> 的 reader-plus-governance workflows。</li>
           <li>让 <code>M4</code> 保持窄范围，把 peer-store sync proof 往剩余的 session/capability/error-path interop closure 收敛。</li>
         </ol>
@@ -61,8 +61,9 @@
       <section class="panel section-panel">
         <h2>里程碑时间线</h2>
         <p>
-          这份 roadmap 是串行推进的：后面的 phase 都默认前面的 phase 已经稳定。现在的重心是
-          <code>M2</code> 的收尾、<code>M3</code> 的谨慎扩展，以及剩余的 <code>M4</code> 互操作 proof。
+          这份 roadmap 是串行推进的：后面的 phase 都默认前面的 phase 已经稳定。现在的重心是维持
+          <code>M2</code> 在当前窄版范围内的已关闭状态、<code>M3</code> 的谨慎扩展，以及剩余的
+          <code>M4</code> 互操作 proof。
         </p>
         <div class="milestones">
           <article class="card">
@@ -78,12 +79,12 @@
           <article class="card">
             <div class="stage">最小核心</div>
             <h3>M2</h3>
-            <div class="status partial">已大幅展开</div>
+            <div class="status mostly-done">已在当前窄版范围内关闭</div>
             <ul>
               <li>Replay 和 <code>state_hash</code></li>
               <li>Store rebuild、indexes、带 ancestry-aware 的 render/store verification，以及多文档 index-loss 后 rebuild proof</li>
               <li>Narrow write-path closure</li>
-              <li>带更广 structural coverage、较新 manual-curation smoke proof、更清楚 metadata merge 边界、更完整 mixed content/metadata competing-branch 细节，以及剩余 replay/store 与 reporting follow-up 的 conservative merge authoring</li>
+              <li>带更广 structural coverage、较新 manual-curation smoke proof、更清楚 metadata merge 边界、更完整 mixed content/metadata competing-branch 细节，且在当前窄版范围内已无剩余收口缺口的 conservative merge authoring</li>
             </ul>
           </article>
           <article class="card">
@@ -201,7 +202,7 @@
               <td data-label="Area">10. Merge Generation</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2</td>
-              <td data-label="Current read">Replay verification 与保守型 local merge-authoring profile 已存在，涵盖 structural move/reorder、新 parent reparenting、简单 composed parent-chain coverage、更广的 nested structural matrix、更细的 direct/anchor-based placement reasons、更清楚的 metadata competing-branch 边界，以及 richer mixed content/metadata competing-branch 细节；剩余的 <code>M2</code> 工作现在已收窄到 replay/store fixture closure 与 reporting/doc alignment。</td>
+              <td data-label="Current read">Replay verification 与保守型 local merge-authoring profile 已存在，涵盖 structural move/reorder、新 parent reparenting、简单 composed parent-chain coverage、更广的 nested structural matrix、更细的 direct/anchor-based placement reasons、更清楚的 metadata competing-branch 边界，以及 richer mixed content/metadata competing-branch 细节；当前窄版 <code>M2</code> 收口已经完成，因此后续工作可以留在 active <code>M2</code> 债务之外。</td>
             </tr>
             <tr>
               <td data-label="Area">11. CLI or API Surface</td>
