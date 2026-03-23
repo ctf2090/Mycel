@@ -41,6 +41,8 @@ struct StoreFixtureInfo {
 
 struct RelatedGovernanceFixtureInfo {
     store_dir: common::TempDir,
+    profile_a_id: String,
+    profile_b_id: String,
     view_a1_id: String,
     view_a2_id: String,
     view_b1_id: String,
@@ -217,6 +219,8 @@ fn build_store_with_related_views() -> RelatedGovernanceFixtureInfo {
         .as_str()
         .expect("view b1 id should exist")
         .to_string();
+    let profile_a_id = profile_id(&policy_a);
+    let profile_b_id = profile_id(&policy_b);
 
     fs::write(
         source_dir.path().join("view-a1.json"),
@@ -245,6 +249,8 @@ fn build_store_with_related_views() -> RelatedGovernanceFixtureInfo {
 
     RelatedGovernanceFixtureInfo {
         store_dir,
+        profile_a_id,
+        profile_b_id,
         view_a1_id,
         view_a2_id,
         view_b1_id,
@@ -721,6 +727,12 @@ fn store_index_governance_only_json_prunes_non_governance_sections() {
         Some(1)
     );
     assert_eq!(
+        json["current_governance"]
+            .as_object()
+            .map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(
         json["profile_heads"].as_object().map(|values| values.len()),
         Some(1)
     );
@@ -745,6 +757,14 @@ fn store_index_governance_only_json_prunes_non_governance_sections() {
     assert_eq!(
         json["view_governance"][0]["document_view_ids"]["doc:index"],
         json!([fixture.view_id])
+    );
+    assert_eq!(
+        json["current_governance"][fixture.profile_id.as_str()]["current_view_id"],
+        json!(fixture.view_id.clone())
+    );
+    assert_eq!(
+        json["current_governance"][fixture.profile_id.as_str()]["documents"]["doc:index"],
+        json!(fixture.revision_id)
     );
 }
 
@@ -798,6 +818,25 @@ fn store_index_governance_only_json_embeds_related_view_context_per_record() {
         json["view_governance"][0]["current_profile_document_view_ids"]["doc:beta"],
         json!(fixture.view_a1_id)
     );
+    assert_eq!(
+        json["current_governance"]
+            .as_object()
+            .map(|values| values.len()),
+        Some(1)
+    );
+    assert_eq!(
+        json["current_governance"][fixture.profile_a_id.as_str()]["current_view_id"],
+        json!(fixture.view_a2_id)
+    );
+    assert_eq!(
+        json["current_governance"][fixture.profile_a_id.as_str()]["current_documents"]["doc:beta"]
+            ["view_id"],
+        json!(fixture.view_a1_id)
+    );
+    assert!(
+        json["current_governance"][fixture.profile_b_id.as_str()].is_null(),
+        "view-id scoped governance summary should not include unrelated profile, json: {json}"
+    );
 }
 
 #[test]
@@ -845,6 +884,14 @@ fn store_index_governance_only_text_reports_related_view_context() {
             "  current profile document view: doc:alpha -> {}",
             fixture.view_a2_id
         )),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("current governance profiles: 1"),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains(&format!("  current view id: {}", fixture.view_a2_id)),
         "stdout: {stdout}"
     );
 }

@@ -2,8 +2,9 @@ use std::path::PathBuf;
 
 use clap::Args;
 use mycel_core::store::{
-    ingest_store_from_path, load_store_index_manifest, rebuild_store_from_path, StoreIndexManifest,
-    StoreIngestSummary, StoreRebuildSummary, ViewGovernanceRecord,
+    ingest_store_from_path, load_store_index_manifest, rebuild_store_from_path,
+    CurrentGovernanceProfileRecord, StoreIndexManifest, StoreIngestSummary, StoreRebuildSummary,
+    ViewGovernanceRecord,
 };
 use serde::Serialize;
 
@@ -73,6 +74,24 @@ struct StoreIndexGovernanceRecordSummary {
 }
 
 #[derive(Debug, Clone, Serialize)]
+struct StoreIndexCurrentGovernanceDocumentSummary {
+    view_id: String,
+    revision_id: String,
+    maintainer: String,
+    timestamp: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct StoreIndexCurrentGovernanceSummary {
+    current_view_id: String,
+    maintainer: String,
+    timestamp: u64,
+    documents: std::collections::BTreeMap<String, String>,
+    current_documents:
+        std::collections::BTreeMap<String, StoreIndexCurrentGovernanceDocumentSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct StoreIndexQuerySummary {
     store_root: PathBuf,
     manifest_path: PathBuf,
@@ -86,6 +105,7 @@ struct StoreIndexQuerySummary {
     maintainer_views: std::collections::BTreeMap<String, Vec<String>>,
     profile_views: std::collections::BTreeMap<String, Vec<String>>,
     document_views: std::collections::BTreeMap<String, Vec<String>>,
+    current_governance: std::collections::BTreeMap<String, StoreIndexCurrentGovernanceSummary>,
     profile_heads:
         std::collections::BTreeMap<String, std::collections::BTreeMap<String, Vec<String>>>,
     filters: StoreIndexQueryFilters,
@@ -106,6 +126,7 @@ struct StoreIndexCountsSummary {
     maintainer_view_index_count: usize,
     profile_view_index_count: usize,
     document_view_index_count: usize,
+    current_governance_profile_count: usize,
     profile_head_index_count: usize,
     filters: StoreIndexQueryFilters,
     projection: Option<String>,
@@ -475,6 +496,47 @@ fn summarize_view_governance(
         .collect()
 }
 
+fn summarize_current_governance(
+    current_governance: &std::collections::BTreeMap<String, CurrentGovernanceProfileRecord>,
+    view_governance: &[ViewGovernanceRecord],
+) -> std::collections::BTreeMap<String, StoreIndexCurrentGovernanceSummary> {
+    let allowed_profiles = view_governance
+        .iter()
+        .map(|record| record.profile_id.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+
+    current_governance
+        .iter()
+        .filter(|(profile_id, _)| allowed_profiles.contains(*profile_id))
+        .map(|(profile_id, current)| {
+            (
+                profile_id.clone(),
+                StoreIndexCurrentGovernanceSummary {
+                    current_view_id: current.current_view_id.clone(),
+                    maintainer: current.maintainer.clone(),
+                    timestamp: current.timestamp,
+                    documents: current.documents.clone(),
+                    current_documents: current
+                        .current_documents
+                        .iter()
+                        .map(|(doc_id, current_document)| {
+                            (
+                                doc_id.clone(),
+                                StoreIndexCurrentGovernanceDocumentSummary {
+                                    view_id: current_document.view_id.clone(),
+                                    revision_id: current_document.revision_id.clone(),
+                                    maintainer: current_document.maintainer.clone(),
+                                    timestamp: current_document.timestamp,
+                                },
+                            )
+                        })
+                        .collect(),
+                },
+            )
+        })
+        .collect()
+}
+
 fn filtered_doc_revisions(
     manifest: &StoreIndexManifest,
     doc_id: &Option<String>,
@@ -503,6 +565,7 @@ fn apply_projection(
             summary.maintainer_views.clear();
             summary.profile_views.clear();
             summary.document_views.clear();
+            summary.current_governance.clear();
             summary.profile_heads.clear();
             summary.projection = Some("doc-only".to_string());
         }
@@ -515,6 +578,7 @@ fn apply_projection(
             summary.maintainer_views.clear();
             summary.profile_views.clear();
             summary.document_views.clear();
+            summary.current_governance.clear();
             summary.projection = Some("head-only".to_string());
         }
         Some(StoreIndexProjection::Governance) => {
@@ -532,6 +596,7 @@ fn apply_projection(
             summary.maintainer_views.clear();
             summary.profile_views.clear();
             summary.document_views.clear();
+            summary.current_governance.clear();
             summary.profile_heads.clear();
             summary.projection = Some("patches-only".to_string());
         }
@@ -543,6 +608,7 @@ fn apply_projection(
             summary.maintainer_views.clear();
             summary.profile_views.clear();
             summary.document_views.clear();
+            summary.current_governance.clear();
             summary.profile_heads.clear();
             summary.projection = Some("parents-only".to_string());
         }
@@ -569,6 +635,7 @@ fn is_store_index_query_empty(summary: &StoreIndexQuerySummary) -> bool {
             && summary.maintainer_views.is_empty()
             && summary.profile_views.is_empty()
             && summary.document_views.is_empty()
+            && summary.current_governance.is_empty()
             && summary.profile_heads.is_empty();
     }
 
@@ -599,6 +666,7 @@ fn is_store_index_query_empty(summary: &StoreIndexQuerySummary) -> bool {
             || !summary.maintainer_views.is_empty()
             || !summary.profile_views.is_empty()
             || !summary.document_views.is_empty()
+            || !summary.current_governance.is_empty()
             || !summary.profile_heads.is_empty())
     {
         has_match = true;
@@ -643,6 +711,8 @@ fn build_store_index_query_summary(
         &filters.doc_id,
         &filters.revision_id,
     );
+    let current_governance =
+        summarize_current_governance(&manifest.current_governance, &filtered_view_governance);
     let view_governance = summarize_view_governance(&manifest, filtered_view_governance);
     let revision_ids = selected_revision_ids(&doc_revisions, &filters.revision_id);
     let revision_parents = filtered_revision_parents(&manifest, &revision_ids);
@@ -660,6 +730,7 @@ fn build_store_index_query_summary(
         maintainer_views,
         profile_views,
         document_views,
+        current_governance,
         profile_heads,
         filters,
         projection: None,
@@ -687,6 +758,10 @@ fn print_store_index_text(summary: &StoreIndexQuerySummary) -> i32 {
     );
     println!("profile view indexes: {}", summary.profile_views.len());
     println!("document view indexes: {}", summary.document_views.len());
+    println!(
+        "current governance profiles: {}",
+        summary.current_governance.len()
+    );
     println!("profile head indexes: {}", summary.profile_heads.len());
     if let Some(doc_id) = &summary.filters.doc_id {
         println!("filter doc_id: {doc_id}");
@@ -746,6 +821,24 @@ fn print_store_index_text(summary: &StoreIndexQuerySummary) -> i32 {
                 }
             }
         }
+        for (profile_id, current) in &summary.current_governance {
+            println!("current governance profile: {profile_id}");
+            println!("  current view id: {}", current.current_view_id);
+            println!("  maintainer: {}", current.maintainer);
+            println!("  timestamp: {}", current.timestamp);
+            for (doc_id, revision_id) in &current.documents {
+                println!("  document: {doc_id} -> {revision_id}");
+            }
+            for (doc_id, current_document) in &current.current_documents {
+                println!(
+                    "  current document: {doc_id} view={} revision={} maintainer={} timestamp={}",
+                    current_document.view_id,
+                    current_document.revision_id,
+                    current_document.maintainer,
+                    current_document.timestamp
+                );
+            }
+        }
     }
     println!("store index: {}", summary.status);
     if summary.status == "ok" {
@@ -787,6 +880,7 @@ fn build_store_index_counts_summary(summary: &StoreIndexQuerySummary) -> StoreIn
         maintainer_view_index_count: summary.maintainer_views.len(),
         profile_view_index_count: summary.profile_views.len(),
         document_view_index_count: summary.document_views.len(),
+        current_governance_profile_count: summary.current_governance.len(),
         profile_head_index_count: summary.profile_heads.len(),
         filters: summary.filters.clone(),
         projection: summary.projection.clone(),
@@ -847,6 +941,10 @@ fn print_store_index_counts_text(summary: &StoreIndexCountsSummary) -> i32 {
     println!(
         "document view indexes: {}",
         summary.document_view_index_count
+    );
+    println!(
+        "current governance profiles: {}",
+        summary.current_governance_profile_count
     );
     println!("profile head indexes: {}", summary.profile_head_index_count);
     if let Some(doc_id) = &summary.filters.doc_id {
