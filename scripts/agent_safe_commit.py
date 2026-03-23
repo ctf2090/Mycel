@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--name", required=True, help="git user.name override for the commit")
     parser.add_argument("--email", required=True, help="git user.email override for the commit")
+    parser.add_argument("--agent-id", required=True, help="Agent-Id trailer value for the commit")
     parser.add_argument("-m", "--message", required=True, help="commit message")
     parser.add_argument(
         "--allow-empty",
@@ -108,6 +109,7 @@ def staged_paths() -> list[str]:
 
 
 def create_commit(args: argparse.Namespace, allowed_paths: list[str]) -> str:
+    commit_message = args.message.rstrip() + f"\n\nAgent-Id: {args.agent_id}\n"
     commit_args = [
         "-c",
         f"user.name={args.name}",
@@ -118,7 +120,7 @@ def create_commit(args: argparse.Namespace, allowed_paths: list[str]) -> str:
     ]
     if args.allow_empty:
         commit_args.append("--allow-empty")
-    commit_args.extend(["-m", args.message])
+    commit_args.extend(["-m", commit_message])
     proc = run_git(*commit_args)
     return proc.stdout.strip()
 

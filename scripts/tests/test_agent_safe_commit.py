@@ -57,6 +57,8 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             "gpt-5:doc-1",
             "--email",
             "agent@example.invalid",
+            "--agent-id",
+            "agt_test1234",
             "--message",
             "docs: add docs",
             "docs.md",
@@ -71,6 +73,14 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             text=True,
         )
         self.assertEqual(["docs.md"], [line for line in show.stdout.splitlines() if line.strip()])
+        body = subprocess.run(
+            ["git", "log", "-1", "--format=%B"],
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("Agent-Id: agt_test1234", body.stdout)
 
     def test_rejects_extra_preexisting_staged_paths(self) -> None:
         doc = self.root / "docs.md"
@@ -85,6 +95,8 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             "gpt-5:doc-1",
             "--email",
             "agent@example.invalid",
+            "--agent-id",
+            "agt_test1234",
             "--message",
             "docs: add docs",
             "docs.md",
@@ -100,6 +112,8 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             "gpt-5:doc-1",
             "--email",
             "agent@example.invalid",
+            "--agent-id",
+            "agt_test1234",
             "--message",
             "docs: add docs",
             "missing.md",
@@ -108,3 +122,21 @@ class AgentSafeCommitCliTest(unittest.TestCase):
 
         self.assertEqual(1, proc.returncode)
         self.assertIn("cannot stage missing paths: missing.md", proc.stderr)
+
+    def test_requires_agent_id_argument(self) -> None:
+        doc = self.root / "docs.md"
+        doc.write_text("doc\n", encoding="utf-8")
+
+        proc = self.run_cli(
+            "--name",
+            "gpt-5:doc-1",
+            "--email",
+            "agent@example.invalid",
+            "--message",
+            "docs: add docs",
+            "docs.md",
+            check=False,
+        )
+
+        self.assertEqual(2, proc.returncode)
+        self.assertIn("--agent-id", proc.stderr)
