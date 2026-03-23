@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mycel_core::store::load_store_index_manifest;
+use mycel_core::store::{inspect_current_governance, load_store_index_manifest};
 use serde::Serialize;
 
 use crate::{emit_error_line, CliError};
 
-use super::shared::find_view_record;
 use super::ViewCurrentCliArgs;
 
 #[derive(Debug, Clone, Serialize)]
@@ -168,102 +167,33 @@ pub(super) fn handle(args: ViewCurrentCliArgs) -> Result<i32, CliError> {
         }
     };
 
-    let Some(profile_current_view_id) = manifest.latest_profile_views.get(&profile_id).cloned()
-    else {
-        summary.push_error(format!(
-            "profile '{}' was not found in persisted current governance state",
-            profile_id
-        ));
-        return if json {
-            print_view_current_json(&summary)
-        } else {
-            Ok(print_view_current_text(&summary))
-        };
-    };
-    summary.profile_current_view_id = Some(profile_current_view_id.clone());
-    summary.current_profile_document_view_ids = manifest
-        .latest_document_profile_views
-        .get(&profile_id)
-        .cloned()
-        .unwrap_or_default();
-
-    let selected_view_id = if let Some(doc_id) = &doc_id {
-        let Some(current_view_id) = summary
-            .current_profile_document_view_ids
-            .get(doc_id)
-            .cloned()
-        else {
-            summary.push_error(format!(
-                "document '{}' was not found in persisted current governance state for profile '{}'",
-                doc_id, profile_id
-            ));
-            return if json {
-                print_view_current_json(&summary)
-            } else {
-                Ok(print_view_current_text(&summary))
-            };
-        };
-        current_view_id
-    } else {
-        profile_current_view_id
-    };
-
-    let Some(record) = find_view_record(&manifest, &selected_view_id) else {
-        summary.push_error(format!(
-            "current governance view '{}' is missing from persisted governance indexes",
-            selected_view_id
-        ));
-        return if json {
-            print_view_current_json(&summary)
-        } else {
-            Ok(print_view_current_text(&summary))
-        };
-    };
-
-    summary.current_view_id = Some(record.view_id.clone());
-    summary.maintainer = Some(record.maintainer.clone());
-    summary.timestamp = Some(record.timestamp);
-    summary.documents = record.documents.clone();
-    if let Some(doc_id) = &doc_id {
-        summary.current_document_revision_id = record.documents.get(doc_id).cloned();
+    match inspect_current_governance(&manifest, &profile_id, doc_id.as_deref()) {
+        Ok(current) => {
+            summary.current_view_id = Some(current.current_view_id);
+            summary.profile_current_view_id = Some(current.profile_current_view_id);
+            summary.maintainer = Some(current.maintainer);
+            summary.timestamp = Some(current.timestamp);
+            summary.current_document_revision_id = current.current_document_revision_id;
+            summary.documents = current.documents;
+            summary.current_profile_document_view_ids = current.current_profile_document_view_ids;
+            summary.current_documents = current
+                .current_documents
+                .into_iter()
+                .map(|current| ViewCurrentDocumentSummary {
+                    doc_id: current.doc_id,
+                    current_view_id: current.current_view_id,
+                    current_revision_id: current.current_revision_id,
+                    maintainer: current.maintainer,
+                    timestamp: current.timestamp,
+                })
+                .collect();
+        }
+        Err(error) => {
+            summary.push_error(error.to_string());
+        }
     }
-    let mut current_documents = Vec::new();
-    for (current_doc_id, current_view_id) in &summary.current_profile_document_view_ids {
-        let Some(current_record) = find_view_record(&manifest, current_view_id) else {
-            summary.push_error(format!(
-                "current governance view '{}' for document '{}' is missing from persisted governance indexes",
-                current_view_id, current_doc_id
-            ));
-            return if json {
-                print_view_current_json(&summary)
-            } else {
-                Ok(print_view_current_text(&summary))
-            };
-        };
-        let Some(current_revision_id) = current_record.documents.get(current_doc_id).cloned()
-        else {
-            summary.push_error(format!(
-                "current governance view '{}' does not carry document '{}'",
-                current_view_id, current_doc_id
-            ));
-            return if json {
-                print_view_current_json(&summary)
-            } else {
-                Ok(print_view_current_text(&summary))
-            };
-        };
-        current_documents.push(ViewCurrentDocumentSummary {
-            doc_id: current_doc_id.clone(),
-            current_view_id: current_view_id.clone(),
-            current_revision_id,
-            maintainer: current_record.maintainer,
-            timestamp: current_record.timestamp,
-        });
-    }
-    current_documents.sort_by(|left, right| left.doc_id.cmp(&right.doc_id));
-    summary.current_documents = current_documents;
     summary.notes.push(
-        "current governance state is read from persisted latest-view indexes instead of replaying all stored views"
+        "current governance state is read from persisted governance summaries instead of replaying all stored views"
             .to_string(),
     );
     if doc_id.is_some() {

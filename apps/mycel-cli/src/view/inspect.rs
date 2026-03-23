@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mycel_core::store::load_store_index_manifest;
+use mycel_core::store::{inspect_governance_view, load_store_index_manifest};
 use serde::Serialize;
 
 use crate::{emit_error_line, CliError};
 
-use super::shared::{find_view_record, related_document_view_ids};
 use super::ViewInspectCliArgs;
 
 #[derive(Debug, Clone, Serialize)]
@@ -173,47 +172,24 @@ pub(super) fn handle(args: ViewInspectCliArgs) -> Result<i32, CliError> {
             };
         }
     };
-    let Some(record) = find_view_record(&manifest, &view_id) else {
-        summary.push_error(format!(
-            "view '{}' was not found in persisted governance indexes",
-            view_id
-        ));
-        return if json {
-            print_view_inspect_json(&summary)
-        } else {
-            Ok(print_view_inspect_text(&summary))
-        };
-    };
-
-    summary.maintainer = Some(record.maintainer.clone());
-    summary.profile_id = Some(record.profile_id.clone());
-    summary.timestamp = Some(record.timestamp);
-    summary.current_profile_view_id = manifest
-        .latest_profile_views
-        .get(&record.profile_id)
-        .cloned();
-    summary.current_profile_document_view_ids = manifest
-        .latest_document_profile_views
-        .get(&record.profile_id)
-        .cloned()
-        .unwrap_or_default();
-    summary.documents = record.documents.clone();
-    summary.profile_heads = manifest
-        .profile_heads
-        .get(&record.profile_id)
-        .cloned()
-        .unwrap_or_default();
-    summary.maintainer_view_ids = manifest
-        .maintainer_views
-        .get(&record.maintainer)
-        .cloned()
-        .unwrap_or_default();
-    summary.profile_view_ids = manifest
-        .profile_views
-        .get(&record.profile_id)
-        .cloned()
-        .unwrap_or_default();
-    summary.document_view_ids = related_document_view_ids(&manifest, &record.documents);
+    match inspect_governance_view(&manifest, &view_id) {
+        Ok(inspection) => {
+            summary.maintainer = Some(inspection.maintainer);
+            summary.profile_id = Some(inspection.profile_id);
+            summary.timestamp = Some(inspection.timestamp);
+            summary.current_profile_view_id = inspection.current_profile_view_id;
+            summary.current_profile_document_view_ids =
+                inspection.current_profile_document_view_ids;
+            summary.documents = inspection.documents;
+            summary.profile_heads = inspection.profile_heads;
+            summary.maintainer_view_ids = inspection.maintainer_view_ids;
+            summary.profile_view_ids = inspection.profile_view_ids;
+            summary.document_view_ids = inspection.document_view_ids;
+        }
+        Err(error) => {
+            summary.push_error(error.to_string());
+        }
+    }
     summary.notes.push(
         "governance inspection is separate from reader-facing accepted-head workflows".to_string(),
     );
@@ -222,7 +198,7 @@ pub(super) fn handle(args: ViewInspectCliArgs) -> Result<i32, CliError> {
             .to_string(),
     );
     summary.notes.push(
-        "current profile governance state comes from persisted governance timestamps and latest-view indexes"
+        "current profile governance state comes from persisted governance summaries and latest-view indexes"
             .to_string(),
     );
 

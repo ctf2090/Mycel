@@ -29,6 +29,63 @@ pub struct ViewGovernanceRecord {
     pub documents: BTreeMap<String, String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CurrentGovernanceDocumentRecord {
+    pub view_id: String,
+    pub revision_id: String,
+    pub maintainer: String,
+    #[serde(default)]
+    pub timestamp: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CurrentGovernanceProfileRecord {
+    pub current_view_id: String,
+    pub maintainer: String,
+    #[serde(default)]
+    pub timestamp: u64,
+    pub documents: BTreeMap<String, String>,
+    #[serde(default)]
+    pub current_documents: BTreeMap<String, CurrentGovernanceDocumentRecord>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct GovernanceCurrentDocumentSummary {
+    pub doc_id: String,
+    pub current_view_id: String,
+    pub current_revision_id: String,
+    pub maintainer: String,
+    pub timestamp: u64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct GovernanceCurrentSummary {
+    pub profile_id: String,
+    pub current_view_id: String,
+    pub profile_current_view_id: String,
+    pub maintainer: String,
+    pub timestamp: u64,
+    pub current_document_revision_id: Option<String>,
+    pub documents: BTreeMap<String, String>,
+    pub current_profile_document_view_ids: BTreeMap<String, String>,
+    pub current_documents: Vec<GovernanceCurrentDocumentSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct GovernanceInspectSummary {
+    pub view_id: String,
+    pub maintainer: String,
+    pub profile_id: String,
+    pub timestamp: u64,
+    pub current_profile_view_id: Option<String>,
+    pub current_profile_document_view_ids: BTreeMap<String, String>,
+    pub documents: BTreeMap<String, String>,
+    pub profile_heads: BTreeMap<String, Vec<String>>,
+    pub maintainer_view_ids: Vec<String>,
+    pub profile_view_ids: Vec<String>,
+    pub document_view_ids: BTreeMap<String, Vec<String>>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LocalStorePolicy {
     pub version: String,
@@ -67,6 +124,8 @@ pub struct StoreIndexManifest {
     pub latest_profile_views: BTreeMap<String, String>,
     #[serde(default)]
     pub latest_document_profile_views: BTreeMap<String, BTreeMap<String, String>>,
+    #[serde(default)]
+    pub current_governance: BTreeMap<String, CurrentGovernanceProfileRecord>,
     pub profile_heads: BTreeMap<String, BTreeMap<String, Vec<String>>>,
     #[serde(default)]
     pub doc_heads: BTreeMap<String, Vec<String>>,
@@ -108,6 +167,7 @@ pub struct StoreRebuildSummary {
     pub document_views: BTreeMap<String, Vec<String>>,
     pub latest_profile_views: BTreeMap<String, String>,
     pub latest_document_profile_views: BTreeMap<String, BTreeMap<String, String>>,
+    pub current_governance: BTreeMap<String, CurrentGovernanceProfileRecord>,
     pub profile_heads: BTreeMap<String, BTreeMap<String, Vec<String>>>,
     pub doc_heads: BTreeMap<String, Vec<String>>,
     pub index_manifest_path: Option<PathBuf>,
@@ -186,6 +246,7 @@ impl StoreRebuildSummary {
             document_views: BTreeMap::new(),
             latest_profile_views: BTreeMap::new(),
             latest_document_profile_views: BTreeMap::new(),
+            current_governance: BTreeMap::new(),
             profile_heads: BTreeMap::new(),
             doc_heads: BTreeMap::new(),
             index_manifest_path: None,
@@ -312,6 +373,11 @@ pub fn rebuild_store_from_path(target: &Path) -> Result<StoreRebuildSummary, Sto
         build_latest_governance_state(&summary.view_governance);
     summary.latest_profile_views = latest_profile_views;
     summary.latest_document_profile_views = latest_document_profile_views;
+    summary.current_governance = build_current_governance_profiles(
+        &summary.view_governance,
+        &summary.latest_profile_views,
+        &summary.latest_document_profile_views,
+    );
 
     let all_parent_ids: BTreeSet<String> = summary
         .revision_parents
@@ -455,6 +521,7 @@ pub fn initialize_store_root(store_root: &Path) -> Result<StoreInitSummary, Stor
         document_views: BTreeMap::new(),
         latest_profile_views: BTreeMap::new(),
         latest_document_profile_views: BTreeMap::new(),
+        current_governance: BTreeMap::new(),
         profile_heads: BTreeMap::new(),
         doc_heads: BTreeMap::new(),
     };
@@ -1170,6 +1237,80 @@ fn build_latest_governance_state(
     (latest_profile_views, latest_document_profile_views)
 }
 
+fn find_view_record<'a>(
+    records: &'a [ViewGovernanceRecord],
+    view_id: &str,
+) -> Option<&'a ViewGovernanceRecord> {
+    records.iter().find(|record| record.view_id == view_id)
+}
+
+fn related_document_view_ids(
+    manifest: &StoreIndexManifest,
+    documents: &BTreeMap<String, String>,
+) -> BTreeMap<String, Vec<String>> {
+    documents
+        .keys()
+        .filter_map(|doc_id| {
+            manifest
+                .document_views
+                .get(doc_id)
+                .cloned()
+                .map(|view_ids| (doc_id.clone(), view_ids))
+        })
+        .collect()
+}
+
+fn build_current_governance_profiles(
+    view_governance: &[ViewGovernanceRecord],
+    latest_profile_views: &BTreeMap<String, String>,
+    latest_document_profile_views: &BTreeMap<String, BTreeMap<String, String>>,
+) -> BTreeMap<String, CurrentGovernanceProfileRecord> {
+    let mut profiles = BTreeMap::new();
+
+    for (profile_id, current_view_id) in latest_profile_views {
+        let Some(current_record) = find_view_record(view_governance, current_view_id) else {
+            continue;
+        };
+
+        let mut current_documents = BTreeMap::new();
+        for (doc_id, current_document_view_id) in latest_document_profile_views
+            .get(profile_id)
+            .into_iter()
+            .flat_map(|documents| documents.iter())
+        {
+            let Some(document_record) = find_view_record(view_governance, current_document_view_id)
+            else {
+                continue;
+            };
+            let Some(revision_id) = document_record.documents.get(doc_id) else {
+                continue;
+            };
+            current_documents.insert(
+                doc_id.clone(),
+                CurrentGovernanceDocumentRecord {
+                    view_id: current_document_view_id.clone(),
+                    revision_id: revision_id.clone(),
+                    maintainer: document_record.maintainer.clone(),
+                    timestamp: document_record.timestamp,
+                },
+            );
+        }
+
+        profiles.insert(
+            profile_id.clone(),
+            CurrentGovernanceProfileRecord {
+                current_view_id: current_view_id.clone(),
+                maintainer: current_record.maintainer.clone(),
+                timestamp: current_record.timestamp,
+                documents: current_record.documents.clone(),
+                current_documents,
+            },
+        );
+    }
+
+    profiles
+}
+
 impl StoreIndexManifest {
     fn from_rebuild_summary(summary: &StoreRebuildSummary) -> Self {
         let mut object_ids_by_type = BTreeMap::<String, Vec<String>>::new();
@@ -1194,6 +1335,7 @@ impl StoreIndexManifest {
             document_views: summary.document_views.clone(),
             latest_profile_views: summary.latest_profile_views.clone(),
             latest_document_profile_views: summary.latest_document_profile_views.clone(),
+            current_governance: summary.current_governance.clone(),
             profile_heads: summary.profile_heads.clone(),
             doc_heads: summary.doc_heads.clone(),
         }
@@ -1231,6 +1373,120 @@ pub fn load_store_index_manifest(
             "failed to parse store index manifest {}: {error}",
             manifest_path.display()
         ))
+    })
+}
+
+pub fn inspect_governance_view(
+    manifest: &StoreIndexManifest,
+    view_id: &str,
+) -> Result<GovernanceInspectSummary, StoreRebuildError> {
+    let record = find_view_record(&manifest.view_governance, view_id).ok_or_else(|| {
+        StoreRebuildError::new(format!(
+            "view '{}' was not found in persisted governance indexes",
+            view_id
+        ))
+    })?;
+
+    Ok(GovernanceInspectSummary {
+        view_id: record.view_id.clone(),
+        maintainer: record.maintainer.clone(),
+        profile_id: record.profile_id.clone(),
+        timestamp: record.timestamp,
+        current_profile_view_id: manifest
+            .latest_profile_views
+            .get(&record.profile_id)
+            .cloned(),
+        current_profile_document_view_ids: manifest
+            .latest_document_profile_views
+            .get(&record.profile_id)
+            .cloned()
+            .unwrap_or_default(),
+        documents: record.documents.clone(),
+        profile_heads: manifest
+            .profile_heads
+            .get(&record.profile_id)
+            .cloned()
+            .unwrap_or_default(),
+        maintainer_view_ids: manifest
+            .maintainer_views
+            .get(&record.maintainer)
+            .cloned()
+            .unwrap_or_default(),
+        profile_view_ids: manifest
+            .profile_views
+            .get(&record.profile_id)
+            .cloned()
+            .unwrap_or_default(),
+        document_view_ids: related_document_view_ids(manifest, &record.documents),
+    })
+}
+
+pub fn inspect_current_governance(
+    manifest: &StoreIndexManifest,
+    profile_id: &str,
+    doc_id: Option<&str>,
+) -> Result<GovernanceCurrentSummary, StoreRebuildError> {
+    let current_profile = manifest.current_governance.get(profile_id).ok_or_else(|| {
+        StoreRebuildError::new(format!(
+            "profile '{}' was not found in persisted current governance state",
+            profile_id
+        ))
+    })?;
+
+    let current_profile_document_view_ids = current_profile
+        .current_documents
+        .iter()
+        .map(|(doc_id, current)| (doc_id.clone(), current.view_id.clone()))
+        .collect::<BTreeMap<_, _>>();
+
+    let current_view_id = match doc_id {
+        Some(doc_id) => current_profile
+            .current_documents
+            .get(doc_id)
+            .map(|current| current.view_id.clone())
+            .ok_or_else(|| {
+                StoreRebuildError::new(format!(
+                    "document '{}' was not found in persisted current governance state for profile '{}'",
+                    doc_id, profile_id
+                ))
+            })?,
+        None => current_profile.current_view_id.clone(),
+    };
+
+    let selected_record = find_view_record(&manifest.view_governance, &current_view_id)
+        .ok_or_else(|| {
+            StoreRebuildError::new(format!(
+                "current governance view '{}' is missing from persisted governance indexes",
+                current_view_id
+            ))
+        })?;
+
+    let current_document_revision_id =
+        doc_id.and_then(|doc_id| selected_record.documents.get(doc_id).cloned());
+
+    let mut current_documents = current_profile
+        .current_documents
+        .iter()
+        .map(|(doc_id, current)| GovernanceCurrentDocumentSummary {
+            doc_id: doc_id.clone(),
+            current_view_id: current.view_id.clone(),
+            current_revision_id: current.revision_id.clone(),
+            maintainer: current.maintainer.clone(),
+            timestamp: current.timestamp,
+        })
+        .collect::<Vec<_>>();
+    current_documents.sort_by(|left, right| left.doc_id.cmp(&right.doc_id));
+
+    Ok(GovernanceCurrentSummary {
+        profile_id: profile_id.to_string(),
+        current_view_id,
+        profile_current_view_id: current_profile.current_view_id.clone(),
+        maintainer: selected_record.maintainer.clone(),
+        timestamp: selected_record.timestamp,
+        current_document_revision_id,
+        documents: selected_record.documents.clone(),
+        current_profile_document_view_ids,
+        current_documents,
     })
 }
 
@@ -1325,10 +1581,10 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::{
-        ingest_store_from_path, initialize_store_root, load_local_store_policy,
-        load_store_index_manifest, load_store_object_index, load_stored_object_value,
-        local_store_policy_path, persist_local_store_policy, rebuild_store_from_path,
-        LocalStorePolicy,
+        ingest_store_from_path, initialize_store_root, inspect_current_governance,
+        inspect_governance_view, load_local_store_policy, load_store_index_manifest,
+        load_store_object_index, load_stored_object_value, local_store_policy_path,
+        persist_local_store_policy, rebuild_store_from_path, LocalStorePolicy, StoreIndexManifest,
     };
     use crate::canonical::{prefixed_canonical_hash, signed_payload_bytes};
     use crate::protocol::recompute_object_id;
@@ -1524,7 +1780,27 @@ mod tests {
         assert_eq!(summary.document_views.len(), 1);
         assert_eq!(summary.latest_profile_views.len(), 1);
         assert_eq!(summary.latest_document_profile_views.len(), 1);
+        assert_eq!(summary.current_governance.len(), 1);
         assert_eq!(summary.profile_heads.len(), 1);
+
+        let profile_id = summary.view_governance[0].profile_id.clone();
+        let current = inspect_current_governance(
+            &StoreIndexManifest::from_rebuild_summary(&summary),
+            &profile_id,
+            Some("doc:test"),
+        )
+        .expect("current governance should inspect");
+        assert_eq!(
+            current.current_document_revision_id.as_deref(),
+            Some(revision["revision_id"].as_str().unwrap())
+        );
+
+        let inspection = inspect_governance_view(
+            &StoreIndexManifest::from_rebuild_summary(&summary),
+            view["view_id"].as_str().unwrap(),
+        )
+        .expect("view governance should inspect");
+        assert_eq!(inspection.documents.get("doc:test"), Some(&revision_id));
 
         let _ = fs::remove_dir_all(dir);
     }
