@@ -63,6 +63,83 @@ class CheckCodeQualityHotspotsCliTest(unittest.TestCase):
         self.assertIn("1. score=", proc.stdout)
         self.assertIn("crates/big.rs", proc.stdout)
 
+    def test_reports_repeated_numeric_literals(self) -> None:
+        rust_file = self.root / "crates" / "numeric.rs"
+        rust_file.write_text(
+            "\n".join(
+                [
+                    "fn uses_magic_numbers() {",
+                    "    let _timeout_a = 30;",
+                    "    let _timeout_b = 30;",
+                    "    let _timeout_c = 30;",
+                    "    let _ok = 1;",
+                    "}",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli(
+            "--numeric-repeats",
+            "3",
+            "crates",
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("[numeric-literal-repeat] crates/numeric.rs:2", proc.stdout)
+        self.assertIn("numeric literals=1 [30@L2 x3]", proc.stdout)
+
+    def test_ignores_common_small_numeric_literals(self) -> None:
+        py_file = self.root / "apps" / "common_values.py"
+        py_file.write_text(
+            "\n".join(
+                [
+                    "def uses_common_values():",
+                    "    first = 1",
+                    "    second = 1",
+                    "    third = 1",
+                    "    return 0",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli(
+            "--numeric-repeats",
+            "3",
+            "apps",
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("No code-quality hotspots found", proc.stdout)
+
+    def test_ignores_rust_numbers_inside_strings_and_comments(self) -> None:
+        rust_file = self.root / "crates" / "stringy.rs"
+        rust_file.write_text(
+            "\n".join(
+                [
+                    'fn avoids_false_positives() {',
+                    '    let _message = "30 should stay text";',
+                    "    let _real = 30;",
+                    "    let _commented = 1; // 30 in a comment should not count",
+                    "}",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli(
+            "--numeric-repeats",
+            "2",
+            "crates",
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("No code-quality hotspots found", proc.stdout)
+
     def test_supports_github_warning_and_fail_on_findings(self) -> None:
         py_file = self.root / "apps" / "warn.py"
         py_file.write_text(
