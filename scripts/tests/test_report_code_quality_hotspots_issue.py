@@ -86,6 +86,25 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
             grouped["numeric-literal-repeat"],
         )
 
+    def test_file_hotspots_renders_ranked_file_summary_list(self) -> None:
+        scan = "\n".join(
+            [
+                "Code-quality hotspot warnings...",
+                "Summary: 2 file-size, 1 function-size, 1 literal-repeat, 1 numeric-literal-repeat",
+                "",
+                "Ranked split candidates:",
+                "1. score=10 crates/a.rs | file 900 lines; long functions=1 [f@L1=120]; repeated literals=0 [none]; numeric literals=0 [none]",
+                "2. score=8 crates/b.rs | file 850 lines (under file threshold); long functions=0 [none]; repeated literals=1 [L9 x3]; numeric literals=1 [7@L10 x4]",
+            ]
+        )
+        self.assertEqual(
+            [
+                "1. crates/a.rs (rank 1, score=10; file lines=900; long functions=1; repeated literals=0; numeric literal repeats=0)",
+                "2. crates/b.rs (rank 2, score=8; file lines=850; long functions=0; repeated literals=1; numeric literal repeats=1)",
+            ],
+            report.file_hotspots(scan, 5),
+        )
+
     def test_build_issue_body_includes_hidden_markers(self) -> None:
         scan = "\n".join(
             [
@@ -105,6 +124,7 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         self.assertIn("<!-- hotspot-report-head: abc123def456 -->", body)
         self.assertIn("<!-- hotspot-report-threshold: 20 -->", body)
         self.assertIn("Hotspots by category", body)
+        self.assertIn("Hotspots by files", body)
         self.assertIn("### `file-size`", body)
         self.assertIn("### `function-size`", body)
         self.assertIn("## Snapshot", body)
@@ -113,6 +133,10 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
         self.assertIn("Refresh threshold: `20` commits", body)
         self.assertIn("--title 'Code Quality Hotspots'", body)
         self.assertIn("1. crates/a.rs (rank 1, score=10, 900 lines)", body)
+        self.assertIn(
+            "1. crates/a.rs (rank 1, score=10; file lines=900; long functions=1; repeated literals=0; numeric literal repeats=0)",
+            body,
+        )
         self.assertNotIn("From the top 5 ranked hotspot candidates.", body)
 
     def test_close_matching_open_issues_closes_only_open_matches(self) -> None:

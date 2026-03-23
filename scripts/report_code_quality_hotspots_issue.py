@@ -266,6 +266,23 @@ def categorized_hotspots(scan_text: str, top_n: int) -> OrderedDict[str, list[st
     return grouped
 
 
+def file_hotspots(scan_text: str, top_n: int) -> list[str]:
+    entries: list[str] = []
+    for line in ranked_candidates(scan_text, top_n):
+        candidate = parse_ranked_candidate(line)
+        if candidate is None:
+            continue
+        entries.append(
+            f"{len(entries) + 1}. {candidate.path} "
+            f"(rank {candidate.rank}, score={candidate.score}; "
+            f"file lines={candidate.file_lines}; "
+            f"long functions={candidate.function_count}; "
+            f"repeated literals={candidate.literal_count}; "
+            f"numeric literal repeats={candidate.numeric_count})"
+        )
+    return entries
+
+
 def summary_line(scan_text: str) -> str:
     for line in scan_text.splitlines():
         if line.startswith("Summary: "):
@@ -276,6 +293,7 @@ def summary_line(scan_text: str) -> str:
 def build_issue_body(*, head_rev: str, threshold: int, scan_text: str, top_n: int) -> str:
     short = short_head(head_rev)
     grouped = categorized_hotspots(scan_text, top_n)
+    file_entries = file_hotspots(scan_text, top_n)
     grouped_sections: list[str] = []
     for category, entries in grouped.items():
         grouped_sections.extend(
@@ -298,6 +316,8 @@ def build_issue_body(*, head_rev: str, threshold: int, scan_text: str, top_n: in
             "",
             "## Hotspots by category",
             *grouped_sections,
+            "## Hotspots by files",
+            *(file_entries or ["1. None in the current top-ranked hotspot set."]),
             "",
             "## Manual refresh",
             "```bash",
