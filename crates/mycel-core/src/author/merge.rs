@@ -203,198 +203,19 @@ fn assess_merge_resolution(
         .collect::<BTreeSet<_>>();
 
     for block_id in block_ids {
+        saw_multi_variant |= assess_block_content_variants(
+            &block_id,
+            &primary_blocks,
+            &resolved_blocks,
+            &alternative_block_maps,
+            &mut reasons,
+            &mut reason_details,
+        )?;
+
         let primary_content_variant =
             block_content_variant(primary_blocks.get(&block_id).map(|entry| &entry.block))?;
         let resolved_content_variant =
             block_content_variant(resolved_blocks.get(&block_id).map(|entry| &entry.block))?;
-        let alternative_content_variants_raw = parent_states
-            .iter()
-            .skip(1)
-            .zip(alternative_block_maps.iter())
-            .map(|(_, blocks)| {
-                block_content_variant(blocks.get(&block_id).map(|entry| &entry.block))
-            })
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .filter(|variant| variant != &primary_content_variant)
-            .collect::<Vec<_>>();
-        let alternative_content_variants = alternative_content_variants_raw
-            .iter()
-            .cloned()
-            .collect::<BTreeSet<_>>();
-
-        if resolved_content_variant != primary_content_variant
-            && !alternative_content_variants.contains(&resolved_content_variant)
-        {
-            push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
-                MergeReasonDetail {
-                    subject_kind: MergeReasonSubjectKind::Block,
-                    subject_id: block_id.clone(),
-                    variant_kind: MergeReasonVariantKind::Content,
-                    reason_kind: MergeReasonKind::NoMatchingParentVariant,
-                    branch_kind: None,
-                    primary_variant: primary_content_variant.clone(),
-                    resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: multiple_competing_variants_for_detail(
-                        &alternative_content_variants_raw,
-                    ),
-                },
-                format!(
-                    "resolved block '{}' does not match any parent variant",
-                    block_id
-                ),
-            );
-        } else if resolved_content_variant != primary_content_variant
-            && alternative_content_variants.contains(&resolved_content_variant)
-            && (primary_content_variant != "<absent>"
-                || !block_is_structural_parent(
-                    &block_id,
-                    &primary_blocks,
-                    &resolved_blocks,
-                    &alternative_block_maps,
-                ))
-        {
-            saw_multi_variant = true;
-            push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
-                MergeReasonDetail {
-                    subject_kind: MergeReasonSubjectKind::Block,
-                    subject_id: block_id.clone(),
-                    variant_kind: MergeReasonVariantKind::Content,
-                    reason_kind: MergeReasonKind::SelectedNonPrimaryParentVariant,
-                    branch_kind: Some(selected_variant_branch_kind(
-                        &primary_content_variant,
-                        &resolved_content_variant,
-                        &alternative_content_variants,
-                        &alternative_content_variants_raw,
-                    )),
-                    primary_variant: primary_content_variant.clone(),
-                    resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: remaining_competing_variants_raw(
-                        &alternative_content_variants_raw,
-                        &resolved_content_variant,
-                    ),
-                },
-                selected_non_primary_reason(
-                    "block",
-                    &block_id,
-                    selected_variant_branch_kind(
-                        &primary_content_variant,
-                        &resolved_content_variant,
-                        &alternative_content_variants,
-                        &alternative_content_variants_raw,
-                    ),
-                ),
-            );
-            if has_multiple_competing_variants(&alternative_content_variants_raw) {
-                push_variant_reason(
-                    &mut reasons,
-                    &mut reason_details,
-                    MergeReasonDetail {
-                        subject_kind: MergeReasonSubjectKind::Block,
-                        subject_id: block_id.clone(),
-                        variant_kind: MergeReasonVariantKind::Content,
-                        reason_kind:
-                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
-                        branch_kind: Some(multiple_competing_branch_kind(
-                            &primary_content_variant,
-                            &alternative_content_variants,
-                            &alternative_content_variants_raw,
-                        )),
-                        primary_variant: primary_content_variant.clone(),
-                        resolved_variant: resolved_content_variant.clone(),
-                        competing_variants: multiple_competing_variants_for_detail(
-                            &alternative_content_variants_raw,
-                        ),
-                    },
-                    multiple_competing_after_selected_reason(
-                        "block",
-                        &block_id,
-                        multiple_competing_branch_kind(
-                            &primary_content_variant,
-                            &alternative_content_variants,
-                            &alternative_content_variants_raw,
-                        ),
-                    ),
-                );
-            }
-        } else if !alternative_content_variants.is_empty()
-            && (primary_content_variant != "<absent>"
-                || !block_is_structural_parent(
-                    &block_id,
-                    &primary_blocks,
-                    &resolved_blocks,
-                    &alternative_block_maps,
-                ))
-        {
-            saw_multi_variant = true;
-            push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
-                MergeReasonDetail {
-                    subject_kind: MergeReasonSubjectKind::Block,
-                    subject_id: block_id.clone(),
-                    variant_kind: MergeReasonVariantKind::Content,
-                    reason_kind:
-                        MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
-                    branch_kind: Some(kept_primary_branch_kind(
-                        &primary_content_variant,
-                        &alternative_content_variants,
-                        &alternative_content_variants_raw,
-                    )),
-                    primary_variant: primary_content_variant.clone(),
-                    resolved_variant: resolved_content_variant.clone(),
-                    competing_variants: multiple_competing_variants_for_detail(
-                        &alternative_content_variants_raw,
-                    ),
-                },
-                kept_primary_reason(
-                    "block",
-                    &block_id,
-                    kept_primary_branch_kind(
-                        &primary_content_variant,
-                        &alternative_content_variants,
-                        &alternative_content_variants_raw,
-                    ),
-                ),
-            );
-            if has_multiple_competing_variants(&alternative_content_variants_raw) {
-                push_variant_reason(
-                    &mut reasons,
-                    &mut reason_details,
-                    MergeReasonDetail {
-                        subject_kind: MergeReasonSubjectKind::Block,
-                        subject_id: block_id.clone(),
-                        variant_kind: MergeReasonVariantKind::Content,
-                        reason_kind:
-                            MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
-                        branch_kind: Some(multiple_competing_branch_kind(
-                            &primary_content_variant,
-                            &alternative_content_variants,
-                            &alternative_content_variants_raw,
-                        )),
-                        primary_variant: primary_content_variant.clone(),
-                        resolved_variant: resolved_content_variant.clone(),
-                        competing_variants: multiple_competing_variants_for_detail(
-                            &alternative_content_variants_raw,
-                        ),
-                    },
-                    multiple_competing_after_keeping_primary_reason(
-                        "block",
-                        &block_id,
-                        multiple_competing_branch_kind(
-                            &primary_content_variant,
-                            &alternative_content_variants,
-                            &alternative_content_variants_raw,
-                        ),
-                    ),
-                );
-            }
-        }
-
         if primary_content_variant == "<absent>" || resolved_content_variant == "<absent>" {
             continue;
         }
@@ -855,6 +676,193 @@ fn assess_merge_resolution(
         }
     }
 
+    saw_multi_variant |= assess_metadata_variants(
+        primary_state,
+        parent_states,
+        resolved_state,
+        &mut reasons,
+        &mut reason_details,
+    )?;
+
+    Ok(MergeAssessment {
+        outcome: merge_outcome_from_reasons(&reasons, saw_multi_variant),
+        reasons,
+        reason_details,
+    })
+}
+
+fn assess_block_content_variants(
+    block_id: &str,
+    primary_blocks: &HashMap<String, BlockPlacement>,
+    resolved_blocks: &HashMap<String, BlockPlacement>,
+    alternative_block_maps: &[HashMap<String, BlockPlacement>],
+    reasons: &mut Vec<String>,
+    reason_details: &mut Vec<MergeReasonDetail>,
+) -> Result<bool, StoreRebuildError> {
+    let primary_content_variant =
+        block_content_variant(primary_blocks.get(block_id).map(|entry| &entry.block))?;
+    let resolved_content_variant =
+        block_content_variant(resolved_blocks.get(block_id).map(|entry| &entry.block))?;
+    let alternative_content_variants_raw = alternative_block_maps
+        .iter()
+        .map(|blocks| block_content_variant(blocks.get(block_id).map(|entry| &entry.block)))
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|variant| variant != &primary_content_variant)
+        .collect::<Vec<_>>();
+    let alternative_content_variants = alternative_content_variants_raw
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let structural_parent = block_is_structural_parent(
+        block_id,
+        primary_blocks,
+        resolved_blocks,
+        alternative_block_maps,
+    );
+    let mut saw_multi_variant = false;
+
+    if resolved_content_variant != primary_content_variant
+        && !alternative_content_variants.contains(&resolved_content_variant)
+    {
+        push_variant_reason(
+            reasons,
+            reason_details,
+            MergeReasonDetail {
+                subject_kind: MergeReasonSubjectKind::Block,
+                subject_id: block_id.to_string(),
+                variant_kind: MergeReasonVariantKind::Content,
+                reason_kind: MergeReasonKind::NoMatchingParentVariant,
+                branch_kind: None,
+                primary_variant: primary_content_variant.clone(),
+                resolved_variant: resolved_content_variant.clone(),
+                competing_variants: multiple_competing_variants_for_detail(
+                    &alternative_content_variants_raw,
+                ),
+            },
+            format!(
+                "resolved block '{}' does not match any parent variant",
+                block_id
+            ),
+        );
+    } else if resolved_content_variant != primary_content_variant
+        && alternative_content_variants.contains(&resolved_content_variant)
+        && (primary_content_variant != "<absent>" || !structural_parent)
+    {
+        saw_multi_variant = true;
+        let branch_kind = selected_variant_branch_kind(
+            &primary_content_variant,
+            &resolved_content_variant,
+            &alternative_content_variants,
+            &alternative_content_variants_raw,
+        );
+        push_variant_reason(
+            reasons,
+            reason_details,
+            MergeReasonDetail {
+                subject_kind: MergeReasonSubjectKind::Block,
+                subject_id: block_id.to_string(),
+                variant_kind: MergeReasonVariantKind::Content,
+                reason_kind: MergeReasonKind::SelectedNonPrimaryParentVariant,
+                branch_kind: Some(branch_kind),
+                primary_variant: primary_content_variant.clone(),
+                resolved_variant: resolved_content_variant.clone(),
+                competing_variants: remaining_competing_variants_raw(
+                    &alternative_content_variants_raw,
+                    &resolved_content_variant,
+                ),
+            },
+            selected_non_primary_reason("block", block_id, branch_kind),
+        );
+        if has_multiple_competing_variants(&alternative_content_variants_raw) {
+            let branch_kind = multiple_competing_branch_kind(
+                &primary_content_variant,
+                &alternative_content_variants,
+                &alternative_content_variants_raw,
+            );
+            push_variant_reason(
+                reasons,
+                reason_details,
+                MergeReasonDetail {
+                    subject_kind: MergeReasonSubjectKind::Block,
+                    subject_id: block_id.to_string(),
+                    variant_kind: MergeReasonVariantKind::Content,
+                    reason_kind:
+                        MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
+                    branch_kind: Some(branch_kind),
+                    primary_variant: primary_content_variant.clone(),
+                    resolved_variant: resolved_content_variant.clone(),
+                    competing_variants: multiple_competing_variants_for_detail(
+                        &alternative_content_variants_raw,
+                    ),
+                },
+                multiple_competing_after_selected_reason("block", block_id, branch_kind),
+            );
+        }
+    } else if !alternative_content_variants.is_empty()
+        && (primary_content_variant != "<absent>" || !structural_parent)
+    {
+        saw_multi_variant = true;
+        let branch_kind = kept_primary_branch_kind(
+            &primary_content_variant,
+            &alternative_content_variants,
+            &alternative_content_variants_raw,
+        );
+        push_variant_reason(
+            reasons,
+            reason_details,
+            MergeReasonDetail {
+                subject_kind: MergeReasonSubjectKind::Block,
+                subject_id: block_id.to_string(),
+                variant_kind: MergeReasonVariantKind::Content,
+                reason_kind:
+                    MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
+                branch_kind: Some(branch_kind),
+                primary_variant: primary_content_variant.clone(),
+                resolved_variant: resolved_content_variant.clone(),
+                competing_variants: multiple_competing_variants_for_detail(
+                    &alternative_content_variants_raw,
+                ),
+            },
+            kept_primary_reason("block", block_id, branch_kind),
+        );
+        if has_multiple_competing_variants(&alternative_content_variants_raw) {
+            let branch_kind = multiple_competing_branch_kind(
+                &primary_content_variant,
+                &alternative_content_variants,
+                &alternative_content_variants_raw,
+            );
+            push_variant_reason(
+                reasons,
+                reason_details,
+                MergeReasonDetail {
+                    subject_kind: MergeReasonSubjectKind::Block,
+                    subject_id: block_id.to_string(),
+                    variant_kind: MergeReasonVariantKind::Content,
+                    reason_kind:
+                        MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
+                    branch_kind: Some(branch_kind),
+                    primary_variant: primary_content_variant.clone(),
+                    resolved_variant: resolved_content_variant.clone(),
+                    competing_variants: multiple_competing_variants_for_detail(
+                        &alternative_content_variants_raw,
+                    ),
+                },
+                multiple_competing_after_keeping_primary_reason("block", block_id, branch_kind),
+            );
+        }
+    }
+
+    Ok(saw_multi_variant)
+}
+
+fn assess_metadata_variants(
+    primary_state: &DocumentState,
+    parent_states: &[(String, DocumentState)],
+    resolved_state: &DocumentState,
+    reasons: &mut Vec<String>,
+    reason_details: &mut Vec<MergeReasonDetail>,
+) -> Result<bool, StoreRebuildError> {
     let metadata_keys = primary_state
         .metadata
         .keys()
@@ -867,6 +875,7 @@ fn assess_merge_resolution(
         )
         .chain(resolved_state.metadata.keys().cloned())
         .collect::<BTreeSet<_>>();
+    let mut saw_multi_variant = false;
 
     for key in metadata_keys {
         let primary_variant = metadata_variant(primary_state.metadata.get(&key))?;
@@ -886,8 +895,8 @@ fn assess_merge_resolution(
 
         if resolved_variant == "<absent>" && primary_variant != "<absent>" {
             push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
+                reasons,
+                reason_details,
                 MergeReasonDetail {
                     subject_kind: MergeReasonSubjectKind::MetadataKey,
                     subject_id: key.clone(),
@@ -909,8 +918,8 @@ fn assess_merge_resolution(
             && !alternative_variants.contains(&resolved_variant)
         {
             push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
+                reasons,
+                reason_details,
                 MergeReasonDetail {
                     subject_kind: MergeReasonSubjectKind::MetadataKey,
                     subject_id: key.clone(),
@@ -932,20 +941,21 @@ fn assess_merge_resolution(
             && alternative_variants.contains(&resolved_variant)
         {
             saw_multi_variant = true;
+            let branch_kind = selected_variant_branch_kind(
+                &primary_variant,
+                &resolved_variant,
+                &alternative_variants,
+                &alternative_variants_raw,
+            );
             push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
+                reasons,
+                reason_details,
                 MergeReasonDetail {
                     subject_kind: MergeReasonSubjectKind::MetadataKey,
                     subject_id: key.clone(),
                     variant_kind: MergeReasonVariantKind::Metadata,
                     reason_kind: MergeReasonKind::SelectedNonPrimaryParentVariant,
-                    branch_kind: Some(selected_variant_branch_kind(
-                        &primary_variant,
-                        &resolved_variant,
-                        &alternative_variants,
-                        &alternative_variants_raw,
-                    )),
+                    branch_kind: Some(branch_kind),
                     primary_variant: primary_variant.clone(),
                     resolved_variant: resolved_variant.clone(),
                     competing_variants: remaining_competing_variants_raw(
@@ -953,96 +963,74 @@ fn assess_merge_resolution(
                         &resolved_variant,
                     ),
                 },
-                selected_non_primary_reason(
-                    "metadata key",
-                    &key,
-                    selected_variant_branch_kind(
-                        &primary_variant,
-                        &resolved_variant,
-                        &alternative_variants,
-                        &alternative_variants_raw,
-                    ),
-                ),
+                selected_non_primary_reason("metadata key", &key, branch_kind),
             );
             if has_multiple_competing_variants(&alternative_variants_raw) {
+                let branch_kind = multiple_competing_branch_kind(
+                    &primary_variant,
+                    &alternative_variants,
+                    &alternative_variants_raw,
+                );
                 push_variant_reason(
-                    &mut reasons,
-                    &mut reason_details,
+                    reasons,
+                    reason_details,
                     MergeReasonDetail {
                         subject_kind: MergeReasonSubjectKind::MetadataKey,
                         subject_id: key.clone(),
                         variant_kind: MergeReasonVariantKind::Metadata,
                         reason_kind:
                             MergeReasonKind::MultipleCompetingAlternativesRemainAfterSelectedVariant,
-                        branch_kind: Some(multiple_competing_branch_kind(
-                            &primary_variant,
-                            &alternative_variants,
-                            &alternative_variants_raw,
-                        )),
+                        branch_kind: Some(branch_kind),
                         primary_variant: primary_variant.clone(),
                         resolved_variant: resolved_variant.clone(),
                         competing_variants: multiple_competing_variants_for_detail(
                             &alternative_variants_raw,
                         ),
                     },
-                    multiple_competing_after_selected_reason(
-                        "metadata key",
-                        &key,
-                        multiple_competing_branch_kind(
-                            &primary_variant,
-                            &alternative_variants,
-                            &alternative_variants_raw,
-                        ),
-                    ),
+                    multiple_competing_after_selected_reason("metadata key", &key, branch_kind),
                 );
             }
         } else if !alternative_variants.is_empty() {
             saw_multi_variant = true;
+            let branch_kind = kept_primary_branch_kind(
+                &primary_variant,
+                &alternative_variants,
+                &alternative_variants_raw,
+            );
             push_variant_reason(
-                &mut reasons,
-                &mut reason_details,
+                reasons,
+                reason_details,
                 MergeReasonDetail {
                     subject_kind: MergeReasonSubjectKind::MetadataKey,
                     subject_id: key.clone(),
                     variant_kind: MergeReasonVariantKind::Metadata,
                     reason_kind:
                         MergeReasonKind::KeptPrimaryParentVariantOverCompetingNonPrimaryAlternative,
-                    branch_kind: Some(kept_primary_branch_kind(
-                        &primary_variant,
-                        &alternative_variants,
-                        &alternative_variants_raw,
-                    )),
+                    branch_kind: Some(branch_kind),
                     primary_variant: primary_variant.clone(),
                     resolved_variant: resolved_variant.clone(),
                     competing_variants: multiple_competing_variants_for_detail(
                         &alternative_variants_raw,
                     ),
                 },
-                kept_primary_reason(
-                    "metadata key",
-                    &key,
-                    kept_primary_branch_kind(
-                        &primary_variant,
-                        &alternative_variants,
-                        &alternative_variants_raw,
-                    ),
-                ),
+                kept_primary_reason("metadata key", &key, branch_kind),
             );
             if has_multiple_competing_variants(&alternative_variants_raw) {
+                let branch_kind = multiple_competing_branch_kind(
+                    &primary_variant,
+                    &alternative_variants,
+                    &alternative_variants_raw,
+                );
                 push_variant_reason(
-                    &mut reasons,
-                    &mut reason_details,
+                    reasons,
+                    reason_details,
                     MergeReasonDetail {
                         subject_kind: MergeReasonSubjectKind::MetadataKey,
                         subject_id: key.clone(),
                         variant_kind: MergeReasonVariantKind::Metadata,
                         reason_kind:
                             MergeReasonKind::MultipleCompetingAlternativesRemainAfterKeepingPrimaryVariant,
-                        branch_kind: Some(multiple_competing_branch_kind(
-                            &primary_variant,
-                            &alternative_variants,
-                            &alternative_variants_raw,
-                        )),
+                        branch_kind: Some(branch_kind),
                         primary_variant: primary_variant.clone(),
                         resolved_variant: resolved_variant.clone(),
                         competing_variants: multiple_competing_variants_for_detail(
@@ -1052,18 +1040,18 @@ fn assess_merge_resolution(
                     multiple_competing_after_keeping_primary_reason(
                         "metadata key",
                         &key,
-                        multiple_competing_branch_kind(
-                            &primary_variant,
-                            &alternative_variants,
-                            &alternative_variants_raw,
-                        ),
+                        branch_kind,
                     ),
                 );
             }
         }
     }
 
-    let outcome = if reasons.iter().any(|reason| {
+    Ok(saw_multi_variant)
+}
+
+fn merge_outcome_from_reasons(reasons: &[String], saw_multi_variant: bool) -> MergeOutcome {
+    if reasons.iter().any(|reason| {
         reason.contains("does not match any parent")
             || reason.contains("cannot express metadata deletion")
     }) {
@@ -1072,13 +1060,7 @@ fn assess_merge_resolution(
         MergeOutcome::MultiVariant
     } else {
         MergeOutcome::AutoMerged
-    };
-
-    Ok(MergeAssessment {
-        outcome,
-        reasons,
-        reason_details,
-    })
+    }
 }
 
 fn push_variant_reason(
