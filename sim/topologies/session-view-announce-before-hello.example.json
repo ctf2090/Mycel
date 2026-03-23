@@ -1,0 +1,31 @@
+{
+    "$schema": "./topology.schema.json",
+    "topology_id": "session-view-announce-before-hello",
+    "description": "Seed emits VIEW_ANNOUNCE before HELLO so the reader rejects the transcript as a session-establishment violation",
+    "fixture_set": "fixtures/object-sets/session-view-announce-before-hello",
+    "execution_mode": "single-process",
+    "peers": [
+        {
+            "node_id": "node:peer-seed",
+            "role": "seed",
+            "bootstrap_peers": [],
+            "endpoint": "local:peer-seed"
+        },
+        {
+            "node_id": "node:peer-reader-a",
+            "role": "reader",
+            "bootstrap_peers": [
+                "node:peer-seed"
+            ],
+            "endpoint": "local:peer-reader-a"
+        }
+    ],
+    "expected_outcomes": [
+        "view-announce-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "notes": [
+        "Session-level negative interop proof for VIEW_ANNOUNCE arriving before HELLO establishes the wire session.",
+        "The simulator injects the fault into an otherwise normal peer-store-generated transcript."
+    ]
+}

@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-view-announce-before-hello",
+    "description": "Seed injects VIEW_ANNOUNCE before HELLO so the reader rejects the transcript for missing session establishment",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-view-announce-before-hello-test"
+        }
+    ],
+    "expected_outcomes": [
+        "view-announce-before-hello-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "view-announce-before-hello"
+    },
+    "notes": [
+        "Simulator injects VIEW_ANNOUNCE ahead of the normal HELLO, before the seed establishes the wire session.",
+        "The transcript should fail on the standard prior-HELLO wire-session rule before capability or governance-view processing matters."
+    ]
+}

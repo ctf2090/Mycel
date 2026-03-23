@@ -24,6 +24,8 @@
   Reference JSON: `sim/tests/session-bye-before-hello.example.json`
 - `session-snapshot-offer-before-hello`: reject a sync transcript that emits `SNAPSHOT_OFFER` before the seed establishes the session with `HELLO`
   Reference JSON: `sim/tests/session-snapshot-offer-before-hello.example.json`
+- `session-view-announce-before-hello`: reject a sync transcript that emits `VIEW_ANNOUNCE` before the seed establishes the session with `HELLO`
+  Reference JSON: `sim/tests/session-view-announce-before-hello.example.json`
 - `session-heads-before-hello`: reject a sync transcript that emits `HEADS` before the seed establishes the session with `HELLO`
   Reference JSON: `sim/tests/session-heads-before-hello.example.json`
 - `session-manifest-before-hello`: reject a sync transcript that emits `MANIFEST` before the seed establishes the session with `HELLO`
