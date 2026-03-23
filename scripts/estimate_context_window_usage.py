@@ -16,7 +16,7 @@ class ContextUsageError(Exception):
 CALIBRATION_SHORTCUTS: dict[str, dict[str, int | str]] = {
     "doc-bootstrap": {
         "mode": "additive",
-        "delta_tokens": 37000,
+        "delta_tokens": 36000,
     },
     "doc-sync-plan": {
         "mode": "additive",
@@ -299,12 +299,12 @@ def build_estimate(payload: dict[str, object], args: argparse.Namespace) -> Usag
 
 
 def render_text(estimate: UsageEstimate) -> str:
+    def format_tokens_k(value: int) -> str:
+        return f"{round(value / 1000):,}K"
+
     lines = [
         "Context usage estimate",
-        (
-            f"- Estimated active context: {estimate.used_tokens:,} / "
-            f"{estimate.context_window:,} tokens"
-        ),
+        f"- 估計 token 使用量：{format_tokens_k(estimate.used_tokens)} / {format_tokens_k(estimate.context_window)}。",
     ]
     if estimate.calibration_summary is not None:
         lines.append(f"- Raw estimate before calibration: {estimate.raw_used_tokens:,}")

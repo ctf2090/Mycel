@@ -45,7 +45,7 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
 
         proc = self.run_cli("-", stdin_text=json.dumps(spec))
 
-        self.assertIn("71,200 / 258,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：71K / 258K。", proc.stdout)
         self.assertIn("Percent used: 27.6% (72.4% left)", proc.stdout)
         self.assertIn("Status: ok", proc.stdout)
         self.assertIn("Source: snapshot", proc.stdout)
@@ -62,7 +62,7 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
 
         proc = self.run_cli("--warn-threshold", "60", "--rotate-threshold", "80", "-", stdin_text=json.dumps(spec))
 
-        self.assertIn("620 / 1,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：1K / 1K。", proc.stdout)
         self.assertIn("Status: prepare_handoff", proc.stdout)
         self.assertIn("Prepare a handoff note now", proc.stdout)
 
@@ -95,7 +95,7 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
 
         proc = self.run_cli("-", stdin_text=json.dumps(spec))
 
-        self.assertIn("3,700 / 10,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：4K / 10K。", proc.stdout)
         self.assertIn("Raw estimate before calibration: 1,200", proc.stdout)
         self.assertIn("additive calibration (+2,500 tokens)", proc.stdout)
 
@@ -178,7 +178,7 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
             stdin_text=json.dumps(spec),
         )
 
-        self.assertIn("3,700 / 10,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：4K / 10K。", proc.stdout)
         self.assertIn("additive calibration (+2,500 tokens)", proc.stdout)
 
     def test_named_calibration_shortcut_applies_doc_sync_plan_sample(self) -> None:
@@ -195,7 +195,7 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
             stdin_text=json.dumps(spec),
         )
 
-        self.assertIn("156,200 / 258,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：156K / 258K。", proc.stdout)
         self.assertIn("Raw estimate before calibration: 71,200", proc.stdout)
         self.assertIn("additive calibration (+85,000 tokens) from fixed delta", proc.stdout)
 
@@ -213,9 +213,9 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
             stdin_text=json.dumps(spec),
         )
 
-        self.assertIn("108,200 / 258,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：107K / 258K。", proc.stdout)
         self.assertIn("Raw estimate before calibration: 71,200", proc.stdout)
-        self.assertIn("additive calibration (+37,000 tokens) from fixed delta", proc.stdout)
+        self.assertIn("additive calibration (+36,000 tokens) from fixed delta", proc.stdout)
 
     def test_additive_delta_calibration_is_supported_in_json_spec(self) -> None:
         spec = {
@@ -230,7 +230,7 @@ class EstimateContextWindowUsageCliTest(unittest.TestCase):
 
         proc = self.run_cli("-", stdin_text=json.dumps(spec))
 
-        self.assertIn("86,200 / 10,000 tokens", proc.stdout)
+        self.assertIn("估計 token 使用量：86K / 10K。", proc.stdout)
         self.assertIn("Raw estimate before calibration: 1,200", proc.stdout)
         self.assertIn("additive calibration (+85,000 tokens) from fixed delta", proc.stdout)
 
