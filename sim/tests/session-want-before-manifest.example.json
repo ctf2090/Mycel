@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-want-before-manifest",
+    "description": "A reader should fail sync when the seed emits WANT before MANIFEST or HEADS establishes accepted sync roots.",
+    "category": "negative",
+    "topology": "sim/topologies/session-want-before-manifest.example.json",
+    "fixture_set": "fixtures/object-sets/session-want-before-manifest",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "want-before-manifest-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "want-before-manifest-rejected",
+            "description": "Reader rejects WANT because the seed did not establish sync roots with MANIFEST or HEADS first.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the missing-head-context violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a missing-head-context negative interop case after HELLO has succeeded.",
+        "The seed still uses the normal peer-store transcript generator, but the harness injects WANT before MANIFEST or HEADS."
+    ]
+}

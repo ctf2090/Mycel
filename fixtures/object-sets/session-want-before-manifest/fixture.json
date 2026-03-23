@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-want-before-manifest",
+    "description": "Seed injects WANT after HELLO but before MANIFEST/HEADS so the reader rejects the transcript for missing head context",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-want-before-manifest-test"
+        }
+    ],
+    "expected_outcomes": [
+        "want-before-manifest-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "want-before-manifest"
+    },
+    "notes": [
+        "Simulator injects WANT immediately after HELLO, before MANIFEST or incremental HEADS establish accepted sync roots.",
+        "The transcript should fail on the standard prior-MANIFEST-or-HEADS rule before any object verification or store writes happen."
+    ]
+}
