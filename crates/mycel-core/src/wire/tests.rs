@@ -1103,6 +1103,41 @@ fn wire_session_accepts_snapshot_offer_with_snapshot_capability_and_unlocks_want
 }
 
 #[test]
+fn wire_session_snapshot_offer_before_manifest_still_requires_head_context_for_want() {
+    let signing_key = signing_key();
+    let sender_key = sender_public_key(&signing_key);
+    let mut session = WireSession::default();
+    session
+        .register_known_peer("node:alpha", &sender_key)
+        .expect("known peer should register");
+    let hello = signed_hello_message_with_capabilities(
+        &signing_key,
+        "node:alpha",
+        "node:alpha",
+        json!(["patch-sync", "snapshot-sync"]),
+    );
+    let snapshot_offer =
+        signed_snapshot_offer_message(&signing_key, "node:alpha", "snap:test-offer");
+    let want = signed_want_message(&signing_key, "node:alpha", &["snap:test-offer"]);
+
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
+    session
+        .verify_incoming(&snapshot_offer)
+        .expect("SNAPSHOT_OFFER should verify before MANIFEST");
+    let error = session.verify_incoming(&want).unwrap_err();
+
+    assert_eq!(
+        error,
+        "wire WANT requires prior MANIFEST or HEADS from 'node:alpha'"
+    );
+    assert!(session
+        .peer_session("node:alpha")
+        .is_some_and(|state| state.reachable_object_ids.contains("snap:test-offer")));
+}
+
+#[test]
 fn wire_session_rejects_view_announce_without_view_capability() {
     let signing_key = signing_key();
     let sender_key = sender_public_key(&signing_key);
@@ -1167,6 +1202,41 @@ fn wire_session_accepts_view_announce_with_view_capability_and_unlocks_want() {
         .expect("peer session should exist");
     assert!(state.reachable_object_ids.contains("view:test-announce"));
     assert!(state.pending_object_ids.contains("view:test-announce"));
+}
+
+#[test]
+fn wire_session_view_announce_before_manifest_still_requires_head_context_for_want() {
+    let signing_key = signing_key();
+    let sender_key = sender_public_key(&signing_key);
+    let mut session = WireSession::default();
+    session
+        .register_known_peer("node:alpha", &sender_key)
+        .expect("known peer should register");
+    let hello = signed_hello_message_with_capabilities(
+        &signing_key,
+        "node:alpha",
+        "node:alpha",
+        json!(["patch-sync", "view-sync"]),
+    );
+    let view_announce =
+        signed_view_announce_message(&signing_key, "node:alpha", "view:test-announce");
+    let want = signed_want_message(&signing_key, "node:alpha", &["view:test-announce"]);
+
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
+    session
+        .verify_incoming(&view_announce)
+        .expect("VIEW_ANNOUNCE should verify before MANIFEST");
+    let error = session.verify_incoming(&want).unwrap_err();
+
+    assert_eq!(
+        error,
+        "wire WANT requires prior MANIFEST or HEADS from 'node:alpha'"
+    );
+    assert!(session
+        .peer_session("node:alpha")
+        .is_some_and(|state| state.reachable_object_ids.contains("view:test-announce")));
 }
 
 #[test]
