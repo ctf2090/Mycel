@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_TITLE = "Code Quality Hotspots"
 LEGACY_TITLES = ("[Report] Code Quality Hotspots",)
-DEFAULT_LABELS = ("documentation",)
+DEFAULT_LABELS = ("code-quality-hotspot",)
 HEAD_MARKER = "hotspot-report-head"
 THRESHOLD_MARKER = "hotspot-report-threshold"
 SCANNER_CMD = ("python3", "scripts/check_code_quality_hotspots.py", "apps", "crates", "scripts")

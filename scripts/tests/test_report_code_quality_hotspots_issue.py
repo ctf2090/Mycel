@@ -143,6 +143,34 @@ class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
             report.create_issue = original_create_issue
         self.assertEqual([("close", [12]), ("create", "body")], events)
 
+    def test_create_issue_uses_code_quality_hotspot_default_label(self) -> None:
+        args = report.parse_args.__globals__["argparse"].Namespace(
+            repo=None,
+            title=report.DEFAULT_TITLE,
+            labels=None,
+        )
+        recorded: list[list[str]] = []
+        original_run_cmd = report.run_cmd
+        try:
+            report.run_cmd = lambda cmd, *, input_text=None: recorded.append(list(cmd)) or "created"
+            report.create_issue(args, "body")
+        finally:
+            report.run_cmd = original_run_cmd
+        self.assertEqual(
+            [
+                "gh",
+                "issue",
+                "create",
+                "--title",
+                report.DEFAULT_TITLE,
+                "--body-file",
+                "-",
+                "--label",
+                "code-quality-hotspot",
+            ],
+            recorded[0],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

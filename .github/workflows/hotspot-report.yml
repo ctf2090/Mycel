@@ -24,4 +24,4 @@ jobs:
           fetch-depth: 21
 
       - name: Update hotspot report issue every 20 commits
-        run: python3 scripts/report_code_quality_hotspots_issue.py --threshold 20 --top 8 --title "Code Quality Hotspots"
+        run: python3 scripts/report_code_quality_hotspots_issue.py --threshold 20 --top 8 --title "Code Quality Hotspots" --label code-quality-hotspot
