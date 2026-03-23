@@ -372,6 +372,211 @@ fn store_rebuild_store_root_persists_index_manifest() {
 }
 
 #[test]
+fn store_rebuild_store_root_recovers_multi_document_indexes_after_index_loss() {
+    let source_dir = create_temp_dir("store-rebuild-multi-doc-source");
+    let store_dir = create_temp_dir("store-rebuild-multi-doc-root");
+
+    let patch_a = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:multi-a",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 1u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:multi-a-001",
+                        "block_type": "paragraph",
+                        "content": "Doc A",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let patch_a_id = patch_a["patch_id"]
+        .as_str()
+        .expect("patch A id should exist")
+        .to_string();
+    fs::write(
+        source_dir.path().join("patch-a.json"),
+        serde_json::to_string_pretty(&patch_a).expect("patch A should serialize"),
+    )
+    .expect("patch A should write");
+
+    let patch_b = signed_object(
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "doc_id": "doc:multi-b",
+            "base_revision": "rev:genesis-null",
+            "timestamp": 2u64,
+            "ops": [
+                {
+                    "op": "insert_block",
+                    "new_block": {
+                        "block_id": "blk:multi-b-001",
+                        "block_type": "paragraph",
+                        "content": "Doc B",
+                        "attrs": {},
+                        "children": []
+                    }
+                }
+            ]
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    );
+    let patch_b_id = patch_b["patch_id"]
+        .as_str()
+        .expect("patch B id should exist")
+        .to_string();
+    fs::write(
+        source_dir.path().join("patch-b.json"),
+        serde_json::to_string_pretty(&patch_b).expect("patch B should serialize"),
+    )
+    .expect("patch B should write");
+
+    let state_a = json!({
+        "doc_id": "doc:multi-a",
+        "blocks": [
+            {
+                "block_id": "blk:multi-a-001",
+                "block_type": "paragraph",
+                "content": "Doc A",
+                "attrs": {},
+                "children": []
+            }
+        ]
+    });
+    let revision_a = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:multi-a",
+            "parents": [],
+            "patches": [patch_a_id],
+            "state_hash": prefixed_hash_for_test(&state_a, "hash"),
+            "timestamp": 3u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    let revision_a_id = revision_a["revision_id"]
+        .as_str()
+        .expect("revision A id should exist")
+        .to_string();
+    fs::write(
+        source_dir.path().join("revision-a.json"),
+        serde_json::to_string_pretty(&revision_a).expect("revision A should serialize"),
+    )
+    .expect("revision A should write");
+
+    let state_b = json!({
+        "doc_id": "doc:multi-b",
+        "blocks": [
+            {
+                "block_id": "blk:multi-b-001",
+                "block_type": "paragraph",
+                "content": "Doc B",
+                "attrs": {},
+                "children": []
+            }
+        ]
+    });
+    let revision_b = signed_object(
+        json!({
+            "type": "revision",
+            "version": "mycel/0.1",
+            "doc_id": "doc:multi-b",
+            "parents": [],
+            "patches": [patch_b_id],
+            "state_hash": prefixed_hash_for_test(&state_b, "hash"),
+            "timestamp": 4u64
+        }),
+        "author",
+        "revision_id",
+        "rev",
+    );
+    let revision_b_id = revision_b["revision_id"]
+        .as_str()
+        .expect("revision B id should exist")
+        .to_string();
+    fs::write(
+        source_dir.path().join("revision-b.json"),
+        serde_json::to_string_pretty(&revision_b).expect("revision B should serialize"),
+    )
+    .expect("revision B should write");
+
+    let ingest = run_mycel(&[
+        "store",
+        "ingest",
+        &path_arg(source_dir.path()),
+        "--into",
+        &path_arg(store_dir.path()),
+        "--json",
+    ]);
+    assert_success(&ingest);
+
+    let indexes_dir = store_dir.path().join("indexes");
+    fs::remove_dir_all(&indexes_dir).expect("indexes directory should be removable");
+    assert!(
+        !indexes_dir.exists(),
+        "expected indexes directory to be removed before rebuild"
+    );
+
+    let rebuild = run_mycel(&["store", "rebuild", &path_arg(store_dir.path()), "--json"]);
+    assert_success(&rebuild);
+    let rebuild_json = assert_json_status(&rebuild, "ok");
+    assert_eq!(rebuild_json["stored_object_count"], 4);
+    assert!(
+        rebuild_json["doc_revisions"]["doc:multi-a"]
+            .as_array()
+            .is_some_and(|values| values.iter().any(|value| value == &json!(revision_a_id))),
+        "expected doc:multi-a revision index after rebuild, stdout: {}",
+        stdout_text(&rebuild)
+    );
+    assert!(
+        rebuild_json["doc_revisions"]["doc:multi-b"]
+            .as_array()
+            .is_some_and(|values| values.iter().any(|value| value == &json!(revision_b_id))),
+        "expected doc:multi-b revision index after rebuild, stdout: {}",
+        stdout_text(&rebuild)
+    );
+
+    let manifest_path = indexes_dir.join("manifest.json");
+    assert!(
+        manifest_path.exists(),
+        "expected rebuild to recreate persisted manifest, stdout: {}",
+        stdout_text(&rebuild)
+    );
+    let manifest: Value =
+        serde_json::from_str(&fs::read_to_string(&manifest_path).expect("manifest should read"))
+            .expect("manifest should parse");
+    assert_eq!(manifest["stored_object_count"], 4);
+    assert!(
+        manifest["doc_revisions"]["doc:multi-a"]
+            .as_array()
+            .is_some_and(|values| values.iter().any(|value| value == &json!(revision_a_id))),
+        "expected manifest doc:multi-a revision index"
+    );
+    assert!(
+        manifest["doc_revisions"]["doc:multi-b"]
+            .as_array()
+            .is_some_and(|values| values.iter().any(|value| value == &json!(revision_b_id))),
+        "expected manifest doc:multi-b revision index"
+    );
+}
+
+#[test]
 fn store_rebuild_json_fails_for_duplicate_declared_object_ids() {
     let dir = create_temp_dir("store-rebuild-duplicate-ids");
     let patch = signed_object(
