@@ -99,6 +99,24 @@ class UpdateDevSetupStatusCliTest(unittest.TestCase):
         self.assertIn("- Full validation status: failed", content)
         self.assertIn("- full check: validation step failed: fmt", content)
 
+    def test_rejects_output_path_outside_agent_local(self) -> None:
+        self.write_checker(
+            textwrap.dedent(
+                """\
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cat <<'EOF'
+                {"status":"passed","mode":"quick","repo_root":"TEMP_ROOT","checks":[{"kind":"command","name":"cargo","status":"found","detail":"cargo 1.94.0"}]}
+                EOF
+                """
+            ).replace("TEMP_ROOT", str(self.root))
+        )
+
+        proc = self.run_cli("--output", "../dev-setup-status.md", check=False)
+
+        self.assertEqual(2, proc.returncode)
+        self.assertIn("output path must live under .agent-local/", proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

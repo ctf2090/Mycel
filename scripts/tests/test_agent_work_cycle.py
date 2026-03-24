@@ -1,7 +1,9 @@
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -74,6 +76,15 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         if check and proc.returncode != 0:
             self.fail(f"git command failed {args}: {proc.stderr or proc.stdout}")
         return proc
+
+    def load_work_cycle_module(self):
+        sys.path.insert(0, str(self.root / "scripts"))
+        spec = importlib.util.spec_from_file_location("agent_work_cycle_under_test", self.root / "scripts" / "agent_work_cycle.py")
+        if spec is None or spec.loader is None:
+            self.fail("failed to load agent_work_cycle.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
     def write_agents_md(self) -> None:
         (self.root / "AGENTS.md").write_text(
@@ -501,6 +512,20 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("mailbox_gc_deleted: 1", proc.stdout)
         self.assertIn(".agent-local/mailboxes/agt_orphan.md (4 days)", proc.stdout)
         self.assertFalse((self.root / ".agent-local/mailboxes/agt_orphan.md").exists())
+
+    def test_resolve_agent_mailbox_path_rejects_mailbox_outside_mailbox_directory(self) -> None:
+        module = self.load_work_cycle_module()
+        module.run_registry = lambda command, agent_ref, scope=None: {  # type: ignore[assignment]
+            "agents": [{"mailbox": "../escaped-mailbox.md"}]
+        }
+
+        with self.assertRaises(module.WorkCycleError) as exc_info:
+            module.resolve_agent_mailbox_path("agt_bad")
+
+        self.assertIn(
+            "has mailbox outside .agent-local/mailboxes/: ../escaped-mailbox.md",
+            str(exc_info.exception),
+        )
 
     def test_end_auto_prunes_older_agent_workcycle_checklists(self) -> None:
         agent_uid = self.prepare_second_batch(role="coding")

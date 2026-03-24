@@ -14,6 +14,7 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parent.parent
 CHECK_DEV_ENV = ROOT_DIR / "scripts" / "check-dev-env.sh"
 DEFAULT_OUTPUT = ROOT_DIR / ".agent-local" / "dev-setup-status.md"
+AGENT_LOCAL_DIR = (ROOT_DIR / ".agent-local").resolve()
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 
 
@@ -177,11 +178,23 @@ def write_status_file(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def resolve_output_path(path_value: str) -> Path:
+    candidate = Path(path_value)
+    if not candidate.is_absolute():
+        candidate = ROOT_DIR / candidate
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(AGENT_LOCAL_DIR)
+    except ValueError as exc:
+        raise DevSetupStatusError("output path must live under .agent-local/") from exc
+    return resolved
+
+
 def main() -> int:
     args = parse_args()
-    output_path = Path(args.output)
 
     try:
+        output_path = resolve_output_path(args.output)
         quick = run_check(full=False)
         full = run_check(full=True) if quick.get("status") == "passed" else None
         content = render_markdown(actor=args.actor, quick=quick, full=full)

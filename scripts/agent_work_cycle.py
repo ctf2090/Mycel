@@ -28,6 +28,8 @@ from item_id_checklist_mark import ItemIdChecklistMarkError, update_checklist_it
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+AGENT_LOCAL_DIR = (ROOT_DIR / ".agent-local").resolve()
+MAILBOX_DIR = (AGENT_LOCAL_DIR / "mailboxes").resolve()
 REGISTRY_SCRIPT = ROOT_DIR / "scripts" / "agent_registry.py"
 AGENTS_PATH = ROOT_DIR / "AGENTS.md"
 SHARED_FALLBACK_MAILBOX_LIMIT_BYTES = 1024
@@ -157,7 +159,14 @@ def resolve_agent_mailbox_path(agent_ref: str) -> Path:
     mailbox_rel = agents[0].get("mailbox")
     if not isinstance(mailbox_rel, str) or not mailbox_rel.strip():
         raise WorkCycleError(f"agent {agent_ref} is missing mailbox information")
-    return ROOT_DIR / mailbox_rel
+    mailbox_path = (ROOT_DIR / mailbox_rel).resolve()
+    try:
+        mailbox_path.relative_to(MAILBOX_DIR)
+    except ValueError as exc:
+        raise WorkCycleError(
+            f"agent {agent_ref} has mailbox outside .agent-local/mailboxes/: {mailbox_rel}"
+        ) from exc
+    return mailbox_path
 
 
 def resolve_agent_role(agent_ref: str) -> str:
