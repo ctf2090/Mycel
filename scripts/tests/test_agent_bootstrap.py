@@ -276,6 +276,13 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("review the latest same-role handoff from coding-7", proc.stdout)
         self.assertIn("restore-sync-gap", proc.stdout)
         self.assertIn("re-run the sync proof after wiring the stored root fixture", proc.stdout)
+        bootstrap_checklists = list(self.root.glob(".agent-local/agents/*/checklists/AGENTS-bootstrap-checklist.md"))
+        self.assertEqual(1, len(bootstrap_checklists))
+        checklist_text = bootstrap_checklists[0].read_text(encoding="utf-8")
+        self.assertIn("## Latest Same-Role Handoff Review", checklist_text)
+        self.assertIn("Reviewed agent: `coding-7`", checklist_text)
+        self.assertIn("Handoff scope: `restore-sync-gap`", checklist_text)
+        self.assertIn("re-run the sync proof after wiring the stored root fixture", checklist_text)
 
 
 if __name__ == "__main__":

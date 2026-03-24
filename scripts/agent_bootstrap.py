@@ -123,6 +123,13 @@ def load_registry() -> dict[str, Any]:
         raise BootstrapError("invalid registry JSON after bootstrap claim") from exc
 
 
+def resolve_repo_path(path_value: str) -> Path:
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = ROOT_DIR / path
+    return path
+
+
 def parse_key_value_lines(output: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for line in output.splitlines():
@@ -338,6 +345,46 @@ def handoff_review_action(role: str, same_role_handoff: dict[str, Any] | None) -
     return f"review the latest same-role handoff from {display_id} for scope {scope} before choosing the first work item"
 
 
+def persist_same_role_handoff_review(bootstrap_checklist_path: Path, same_role_handoff: dict[str, Any] | None) -> bool:
+    if same_role_handoff is None or not bootstrap_checklist_path.exists():
+        return False
+    handoff = same_role_handoff.get("handoff")
+    if not isinstance(handoff, dict):
+        return False
+    display_id = same_role_handoff.get("display_id") or same_role_handoff.get("agent_uid") or "unknown"
+    scope = handoff.get("scope") or "unknown"
+    date_text = handoff.get("date") or "unknown"
+    source_agent = handoff.get("source_agent") or "unknown"
+    next_steps = handoff.get("next_suggested_step")
+    next_steps_list = [step for step in next_steps if isinstance(step, str) and step.strip()] if isinstance(next_steps, list) else []
+
+    marker = "## Latest Same-Role Handoff Review"
+    original = bootstrap_checklist_path.read_text(encoding="utf-8")
+    trimmed = original.rstrip()
+    if marker in trimmed:
+        trimmed = trimmed.split(marker, 1)[0].rstrip()
+
+    lines = [
+        trimmed,
+        "",
+        marker,
+        "",
+        f"- Reviewed agent: `{display_id}`",
+        f"- Handoff source agent: `{source_agent}`",
+        f"- Handoff date: `{date_text}`",
+        f"- Handoff scope: `{scope}`",
+    ]
+    if next_steps_list:
+        lines.append("- Handoff next suggested step:")
+        for step in next_steps_list:
+            lines.append(f"  - {step}")
+    else:
+        lines.append("- Handoff next suggested step:")
+        lines.append("  - none recorded")
+    bootstrap_checklist_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
+
+
 def build_result(args: argparse.Namespace) -> dict[str, Any]:
     claim_payload = run_registry_json(
         "claim", args.role, "--scope", args.scope, "--assigned-by", args.assigned_by, "--model-id", args.model_id
@@ -363,6 +410,13 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
     handoff_action = handoff_review_action(role, same_role_handoff)
     if handoff_action is not None:
         next_actions.append(handoff_action)
+    bootstrap_output = start_payload.get("bootstrap_output")
+    persisted_handoff_review = False
+    if isinstance(bootstrap_output, str) and bootstrap_output.strip():
+        persisted_handoff_review = persist_same_role_handoff_review(
+            resolve_repo_path(bootstrap_output),
+            same_role_handoff,
+        )
 
     result: dict[str, Any] = {
         "agent_uid": agent_uid,
@@ -390,6 +444,7 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "deferred_reads": deferred_reads_for_role(role),
         "next_actions": next_actions,
         "latest_same_role_handoff": same_role_handoff,
+        "latest_same_role_handoff_persisted": persisted_handoff_review,
         "claimed_agent_label": f"{claim_payload.get('display_id')} ({agent_uid}/{args.model_id})",
     }
     return result
