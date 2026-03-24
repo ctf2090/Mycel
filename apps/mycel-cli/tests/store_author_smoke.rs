@@ -215,6 +215,34 @@ fn write_content_variant_resolved_state_file(
     (dir, path)
 }
 
+fn write_single_block_resolved_state_file(
+    prefix: &str,
+    doc_id: &str,
+    block_id: &str,
+    content: &str,
+) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("resolved-state.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!({
+            "doc_id": doc_id,
+            "blocks": [
+                {
+                    "block_id": block_id,
+                    "block_type": "paragraph",
+                    "content": content,
+                    "attrs": {},
+                    "children": []
+                }
+            ]
+        }))
+        .expect("single block resolved state JSON should serialize"),
+    )
+    .expect("single block resolved state JSON should write");
+    (dir, path)
+}
+
 fn write_content_entries_resolved_state_for_doc_file(
     prefix: &str,
     doc_id: &str,
@@ -679,6 +707,33 @@ impl StoreAuthoringFlow {
         assert_success(&merge);
         assert_json_status(&merge, "ok").clone()
     }
+}
+
+fn write_insert_block_ops_file(
+    prefix: &str,
+    block_id: &str,
+    content: &str,
+) -> (common::TempDir, PathBuf) {
+    let dir = create_temp_dir(prefix);
+    let path = dir.path().join("ops.json");
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "op": "insert_block",
+                "new_block": {
+                    "block_id": block_id,
+                    "block_type": "paragraph",
+                    "content": content,
+                    "attrs": {},
+                    "children": []
+                }
+            }
+        ]))
+        .expect("insert block ops JSON should serialize"),
+    )
+    .expect("insert block ops JSON should write");
+    (dir, path)
 }
 
 fn write_nested_parent_manual_resolved_state_file(prefix: &str) -> (common::TempDir, PathBuf) {

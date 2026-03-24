@@ -65,6 +65,80 @@ fn assert_content_variant_merge_reasons(merge_json: &serde_json::Value) {
     );
 }
 
+fn assert_duplicate_non_primary_content_replacement_reasons(merge_json: &serde_json::Value) {
+    assert_eq!(merge_json["merge_outcome"], "multi-variant");
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "blk:author-smoke-variant-001"
+                    && detail["variant_kind"] == "content"
+                    && detail["reason_kind"] == "selected-non-primary-parent-variant"
+                    && detail["competing_variants"]
+                        .as_array()
+                        .is_some_and(|variants| {
+                            variants.len() == 1
+                                && variants.iter().all(|variant| {
+                                    variant.as_str().is_some_and(|variant| {
+                                        variant.contains("\"content\":\"right\"")
+                                    })
+                                })
+                        })
+            })),
+        "expected selected duplicate content replacement detail, got {merge_json}"
+    );
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "blk:author-smoke-variant-001"
+                    && detail["variant_kind"] == "content"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
+                    && detail["branch_kind"] == "multiple-competing-non-primary-replacements"
+                    && detail["competing_variants"]
+                        .as_array()
+                        .is_some_and(|variants| {
+                            variants.len() == 2
+                                && variants.iter().all(|variant| {
+                                    variant.as_str().is_some_and(|variant| {
+                                        variant.contains("\"content\":\"right\"")
+                                    })
+                                })
+                        })
+            })),
+        "expected duplicate competing content replacements detail, got {merge_json}"
+    );
+}
+
+fn assert_duplicate_non_primary_metadata_replacement_reasons(merge_json: &serde_json::Value) {
+    assert_eq!(merge_json["merge_outcome"], "multi-variant");
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "topic"
+                    && detail["variant_kind"] == "metadata"
+                    && detail["reason_kind"] == "selected-non-primary-parent-variant"
+                    && detail["competing_variants"] == json!(["\"right\""])
+            })),
+        "expected selected duplicate metadata replacement detail, got {merge_json}"
+    );
+    assert!(
+        merge_json["merge_reason_details"]
+            .as_array()
+            .is_some_and(|details| details.iter().any(|detail| {
+                detail["subject_id"] == "topic"
+                    && detail["variant_kind"] == "metadata"
+                    && detail["reason_kind"]
+                        == "multiple-competing-alternatives-remain-after-selected-variant"
+                    && detail["branch_kind"] == "multiple-competing-non-primary-replacements"
+                    && detail["competing_variants"] == json!(["\"right\"", "\"right\""])
+            })),
+        "expected duplicate competing metadata replacements detail, got {merge_json}"
+    );
+}
+
 #[test]
 fn store_merge_authoring_flow_reports_content_variant_choice_as_multi_variant() {
     let flow = StoreAuthoringFlow::new(
@@ -228,11 +302,15 @@ fn store_merge_authoring_flow_reports_metadata_variant_choice_as_multi_variant()
 
 #[test]
 fn store_merge_authoring_flow_preserves_duplicate_non_primary_content_replacements() {
-    let store_dir = create_temp_dir("store-merge-content-duplicate-non-primary-root");
-    let (_key_dir, key_path) =
-        write_signing_key_file("store-merge-content-duplicate-non-primary-key");
-    let (_resolved_dir, resolved_state_path) = write_content_variant_resolved_state_file(
+    let flow = StoreAuthoringFlow::new(
+        "store-merge-content-duplicate-non-primary-root",
+        "store-merge-content-duplicate-non-primary-key",
+    );
+    let doc_id = "doc:author-smoke-content-variant";
+    let (_resolved_dir, resolved_state_path) = write_single_block_resolved_state_file(
         "store-merge-content-duplicate-non-primary-state",
+        doc_id,
+        "blk:author-smoke-variant-001",
         "right",
     );
     let (_left_ops_dir, left_ops_path) = write_content_variant_ops_file(
@@ -247,307 +325,45 @@ fn store_merge_authoring_flow_preserves_duplicate_non_primary_content_replacemen
         "store-merge-content-duplicate-non-primary-center-ops",
         "right",
     );
-    let store_root = path_arg(store_dir.path());
-    let key_file = path_arg(&key_path);
     let resolved_state_file = path_arg(&resolved_state_path);
     let left_ops_file = path_arg(&left_ops_path);
     let right_ops_file = path_arg(&right_ops_path);
     let center_ops_file = path_arg(&center_ops_path);
 
-    let init = run_mycel(&["store", "init", &store_root, "--json"]);
-    assert_success(&init);
-
-    let document = run_mycel(&[
-        "store",
-        "create-document",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--title",
-        "Author Smoke Content Variant",
-        "--language",
-        "en",
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "48",
-        "--json",
-    ]);
-    assert_success(&document);
-    let genesis_revision_id = assert_json_status(&document, "ok")["genesis_revision_id"]
-        .as_str()
-        .expect("genesis revision should be string")
-        .to_string();
-
-    let base_ops_dir = create_temp_dir("store-merge-content-duplicate-non-primary-base-ops");
-    let base_ops_path = base_ops_dir.path().join("ops.json");
-    fs::write(
-        &base_ops_path,
-        serde_json::to_string_pretty(&json!([
-            {
-                "op": "insert_block",
-                "new_block": {
-                    "block_id": "blk:author-smoke-variant-001",
-                    "block_type": "paragraph",
-                    "content": "Base",
-                    "attrs": {},
-                    "children": []
-                }
-            }
-        ]))
-        .expect("duplicate content base ops JSON should serialize"),
-    )
-    .expect("duplicate content base ops JSON should write");
+    let genesis_revision_id =
+        flow.create_document(doc_id, "Author Smoke Content Variant", "en", "48");
+    let (_base_ops_dir, base_ops_path) = write_insert_block_ops_file(
+        "store-merge-content-duplicate-non-primary-base-ops",
+        "blk:author-smoke-variant-001",
+        "Base",
+    );
     let base_ops_file = path_arg(&base_ops_path);
 
-    let base_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--base-revision",
-        &genesis_revision_id,
-        "--ops",
-        &base_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "49",
-        "--json",
-    ]);
-    assert_success(&base_patch);
-    let base_patch_id = assert_json_status(&base_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("base patch_id should be string")
-        .to_string();
-
-    let base_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--parent",
-        &genesis_revision_id,
-        "--patch",
-        &base_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "50",
-        "--json",
-    ]);
-    assert_success(&base_revision);
-    let base_revision_id = assert_json_status(&base_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("base revision_id should be string")
-        .to_string();
-
-    let left_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--base-revision",
-        &base_revision_id,
-        "--ops",
-        &left_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "51",
-        "--json",
-    ]);
-    assert_success(&left_patch);
-    let left_patch_id = assert_json_status(&left_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("left patch_id should be string")
-        .to_string();
-
-    let left_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--parent",
-        &base_revision_id,
-        "--patch",
-        &left_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "52",
-        "--json",
-    ]);
-    assert_success(&left_revision);
-    let left_revision_id = assert_json_status(&left_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("left revision_id should be string")
-        .to_string();
-
-    let right_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--base-revision",
-        &left_revision_id,
-        "--ops",
-        &right_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "53",
-        "--json",
-    ]);
-    assert_success(&right_patch);
-    let right_patch_id = assert_json_status(&right_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("right patch_id should be string")
-        .to_string();
-
-    let right_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--parent",
-        &left_revision_id,
-        "--patch",
-        &right_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "54",
-        "--json",
-    ]);
-    assert_success(&right_revision);
-    let right_revision_id = assert_json_status(&right_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("right revision_id should be string")
-        .to_string();
-
-    let center_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--base-revision",
-        &left_revision_id,
-        "--ops",
-        &center_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "55",
-        "--json",
-    ]);
-    assert_success(&center_patch);
-    let center_patch_id = assert_json_status(&center_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("center patch_id should be string")
-        .to_string();
-
-    let center_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--parent",
-        &left_revision_id,
-        "--patch",
-        &center_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "56",
-        "--json",
-    ]);
-    assert_success(&center_revision);
-    let center_revision_id = assert_json_status(&center_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("center revision_id should be string")
-        .to_string();
-
-    let merge = run_mycel(&[
-        "store",
-        "create-merge-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-content-variant",
-        "--parent",
-        &left_revision_id,
-        "--parent",
-        &right_revision_id,
-        "--parent",
-        &center_revision_id,
-        "--resolved-state",
+    let base_patch_id = flow.create_patch(doc_id, &genesis_revision_id, &base_ops_file, "49");
+    let base_revision_id = flow.commit_revision(doc_id, &genesis_revision_id, &base_patch_id, "50");
+    let left_patch_id = flow.create_patch(doc_id, &base_revision_id, &left_ops_file, "51");
+    let left_revision_id = flow.commit_revision(doc_id, &base_revision_id, &left_patch_id, "52");
+    let right_patch_id = flow.create_patch(doc_id, &left_revision_id, &right_ops_file, "53");
+    let right_revision_id = flow.commit_revision(doc_id, &left_revision_id, &right_patch_id, "54");
+    let center_patch_id = flow.create_patch(doc_id, &left_revision_id, &center_ops_file, "55");
+    let center_revision_id =
+        flow.commit_revision(doc_id, &left_revision_id, &center_patch_id, "56");
+    let merge_json = flow.create_merge_revision(
+        doc_id,
+        &[&left_revision_id, &right_revision_id, &center_revision_id],
         &resolved_state_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
         "57",
-        "--json",
-    ]);
-    assert_success(&merge);
-    let merge_json = assert_json_status(&merge, "ok");
-    assert_eq!(merge_json["merge_outcome"], "multi-variant");
-    assert!(
-        merge_json["merge_reason_details"]
-            .as_array()
-            .is_some_and(|details| details.iter().any(|detail| {
-                detail["subject_id"] == "blk:author-smoke-variant-001"
-                    && detail["variant_kind"] == "content"
-                    && detail["reason_kind"] == "selected-non-primary-parent-variant"
-                    && detail["competing_variants"]
-                        .as_array()
-                        .is_some_and(|variants| {
-                            variants.len() == 1
-                                && variants.iter().all(|variant| {
-                                    variant.as_str().is_some_and(|variant| {
-                                        variant.contains("\"content\":\"right\"")
-                                    })
-                                })
-                        })
-            })),
-        "expected selected duplicate content replacement detail, got {merge_json}"
     );
-    assert!(
-        merge_json["merge_reason_details"]
-            .as_array()
-            .is_some_and(|details| details.iter().any(|detail| {
-                detail["subject_id"] == "blk:author-smoke-variant-001"
-                    && detail["variant_kind"] == "content"
-                    && detail["reason_kind"]
-                        == "multiple-competing-alternatives-remain-after-selected-variant"
-                    && detail["branch_kind"] == "multiple-competing-non-primary-replacements"
-                    && detail["competing_variants"]
-                        .as_array()
-                        .is_some_and(|variants| {
-                            variants.len() == 2
-                                && variants.iter().all(|variant| {
-                                    variant.as_str().is_some_and(|variant| {
-                                        variant.contains("\"content\":\"right\"")
-                                    })
-                                })
-                        })
-            })),
-        "expected duplicate competing content replacements detail, got {merge_json}"
-    );
+    assert_duplicate_non_primary_content_replacement_reasons(&merge_json);
 }
 
 #[test]
 fn store_merge_authoring_flow_preserves_duplicate_non_primary_metadata_replacements() {
-    let store_dir = create_temp_dir("store-merge-metadata-duplicate-non-primary-root");
-    let (_key_dir, key_path) =
-        write_signing_key_file("store-merge-metadata-duplicate-non-primary-key");
+    let flow = StoreAuthoringFlow::new(
+        "store-merge-metadata-duplicate-non-primary-root",
+        "store-merge-metadata-duplicate-non-primary-key",
+    );
+    let doc_id = "doc:author-smoke-metadata-variant";
     let (_resolved_dir, resolved_state_path) = write_metadata_variant_resolved_state_file(
         "store-merge-metadata-duplicate-non-primary-state",
         "right",
@@ -564,217 +380,28 @@ fn store_merge_authoring_flow_preserves_duplicate_non_primary_metadata_replaceme
         "store-merge-metadata-duplicate-non-primary-center-ops",
         "right",
     );
-    let store_root = path_arg(store_dir.path());
-    let key_file = path_arg(&key_path);
     let resolved_state_file = path_arg(&resolved_state_path);
     let left_ops_file = path_arg(&left_ops_path);
     let right_ops_file = path_arg(&right_ops_path);
     let center_ops_file = path_arg(&center_ops_path);
 
-    let init = run_mycel(&["store", "init", &store_root, "--json"]);
-    assert_success(&init);
-
-    let document = run_mycel(&[
-        "store",
-        "create-document",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--title",
-        "Author Smoke Metadata Variant",
-        "--language",
-        "en",
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "56",
-        "--json",
-    ]);
-    assert_success(&document);
-    let genesis_revision_id = assert_json_status(&document, "ok")["genesis_revision_id"]
-        .as_str()
-        .expect("genesis revision should be string")
-        .to_string();
-
-    let left_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--base-revision",
-        &genesis_revision_id,
-        "--ops",
-        &left_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "57",
-        "--json",
-    ]);
-    assert_success(&left_patch);
-    let left_patch_id = assert_json_status(&left_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("left patch_id should be string")
-        .to_string();
-
-    let left_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--parent",
-        &genesis_revision_id,
-        "--patch",
-        &left_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "58",
-        "--json",
-    ]);
-    assert_success(&left_revision);
-    let left_revision_id = assert_json_status(&left_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("left revision_id should be string")
-        .to_string();
-
-    let right_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--base-revision",
-        &genesis_revision_id,
-        "--ops",
-        &right_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "59",
-        "--json",
-    ]);
-    assert_success(&right_patch);
-    let right_patch_id = assert_json_status(&right_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("right patch_id should be string")
-        .to_string();
-
-    let right_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--parent",
-        &genesis_revision_id,
-        "--patch",
-        &right_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "60",
-        "--json",
-    ]);
-    assert_success(&right_revision);
-    let right_revision_id = assert_json_status(&right_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("right revision_id should be string")
-        .to_string();
-
-    let center_patch = run_mycel(&[
-        "store",
-        "create-patch",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--base-revision",
-        &genesis_revision_id,
-        "--ops",
-        &center_ops_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "61",
-        "--json",
-    ]);
-    assert_success(&center_patch);
-    let center_patch_id = assert_json_status(&center_patch, "ok")["patch_id"]
-        .as_str()
-        .expect("center patch_id should be string")
-        .to_string();
-
-    let center_revision = run_mycel(&[
-        "store",
-        "commit-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--parent",
-        &genesis_revision_id,
-        "--patch",
-        &center_patch_id,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
-        "62",
-        "--json",
-    ]);
-    assert_success(&center_revision);
-    let center_revision_id = assert_json_status(&center_revision, "ok")["revision_id"]
-        .as_str()
-        .expect("center revision_id should be string")
-        .to_string();
-
-    let merge = run_mycel(&[
-        "store",
-        "create-merge-revision",
-        &store_root,
-        "--doc-id",
-        "doc:author-smoke-metadata-variant",
-        "--parent",
-        &left_revision_id,
-        "--parent",
-        &right_revision_id,
-        "--parent",
-        &center_revision_id,
-        "--resolved-state",
+    let genesis_revision_id =
+        flow.create_document(doc_id, "Author Smoke Metadata Variant", "en", "56");
+    let left_patch_id = flow.create_patch(doc_id, &genesis_revision_id, &left_ops_file, "57");
+    let left_revision_id = flow.commit_revision(doc_id, &genesis_revision_id, &left_patch_id, "58");
+    let right_patch_id = flow.create_patch(doc_id, &genesis_revision_id, &right_ops_file, "59");
+    let right_revision_id =
+        flow.commit_revision(doc_id, &genesis_revision_id, &right_patch_id, "60");
+    let center_patch_id = flow.create_patch(doc_id, &genesis_revision_id, &center_ops_file, "61");
+    let center_revision_id =
+        flow.commit_revision(doc_id, &genesis_revision_id, &center_patch_id, "62");
+    let merge_json = flow.create_merge_revision(
+        doc_id,
+        &[&left_revision_id, &right_revision_id, &center_revision_id],
         &resolved_state_file,
-        "--signing-key",
-        &key_file,
-        "--timestamp",
         "63",
-        "--json",
-    ]);
-    assert_success(&merge);
-    let merge_json = assert_json_status(&merge, "ok");
-    assert_eq!(merge_json["merge_outcome"], "multi-variant");
-    assert!(
-        merge_json["merge_reason_details"]
-            .as_array()
-            .is_some_and(|details| details.iter().any(|detail| {
-                detail["subject_id"] == "topic"
-                    && detail["variant_kind"] == "metadata"
-                    && detail["reason_kind"] == "selected-non-primary-parent-variant"
-                    && detail["competing_variants"] == json!(["\"right\""])
-            })),
-        "expected selected duplicate metadata replacement detail, got {merge_json}"
     );
-    assert!(
-        merge_json["merge_reason_details"]
-            .as_array()
-            .is_some_and(|details| details.iter().any(|detail| {
-                detail["subject_id"] == "topic"
-                    && detail["variant_kind"] == "metadata"
-                    && detail["reason_kind"]
-                        == "multiple-competing-alternatives-remain-after-selected-variant"
-                    && detail["branch_kind"] == "multiple-competing-non-primary-replacements"
-                    && detail["competing_variants"] == json!(["\"right\"", "\"right\""])
-            })),
-        "expected duplicate competing metadata replacements detail, got {merge_json}"
-    );
+    assert_duplicate_non_primary_metadata_replacement_reasons(&merge_json);
 }
 
 #[test]
