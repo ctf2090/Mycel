@@ -129,6 +129,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual("work-continuation", payload["template"])
         self.assertEqual(1, payload["superseded_count"])
         self.assertIn("## Work Continuation Handoff", mailbox)
+        self.assertIn("- Source role: coding", mailbox)
         self.assertIn("- Scope: new-scope", mailbox)
         self.assertIn("  - new state", mailbox)
         self.assertEqual(1, mailbox.count("- Status: open"))
@@ -221,6 +222,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual("open", payload["status"])
         self.assertIn("## Doc Continuation Note", mailbox)
         self.assertIn("- Source agent: doc-9", mailbox)
+        self.assertIn("- Source role: doc", mailbox)
         self.assertIn("  - refresh is due for doc, issue, and web", mailbox)
         self.assertIn("  - scripts/check-plan-refresh.sh", mailbox)
 
@@ -258,6 +260,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual("open", payload["status"])
         self.assertIn("## Delivery Continuation Note", mailbox)
         self.assertIn("- Source agent: delivery-2", mailbox)
+        self.assertIn("- Source role: delivery", mailbox)
         self.assertIn("  - latest completed CI is failing in pages lint", mailbox)
         self.assertIn("  - awaiting log retention confirmation", mailbox)
 
@@ -308,6 +311,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual(2, mailbox.count("- Status: open"))
         self.assertIn("## Work Continuation Handoff", mailbox)
         self.assertIn("## Planning Sync Handoff", mailbox)
+        self.assertIn("- Source role: coding", mailbox)
 
     def test_create_planning_sync_supersedes_existing_open_cross_role_entry_only(self) -> None:
         self.write_registry(

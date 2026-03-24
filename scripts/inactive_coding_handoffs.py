@@ -20,6 +20,7 @@ TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 STATUS_PATTERN = re.compile(r"^- Status:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 DATE_FIELD_PATTERN = re.compile(r"^- Date:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SOURCE_AGENT_PATTERN = re.compile(r"^- Source agent:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+SOURCE_ROLE_PATTERN = re.compile(r"^- Source role:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SCOPE_PATTERN = re.compile(r"^- Scope:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 NEXT_STEP_PATTERN = re.compile(r"^- Next suggested step:\s*(.*?)(?=^-\s|\Z)", re.MULTILINE | re.DOTALL)
 
@@ -153,6 +154,7 @@ def extract_open_handoff(path: Path) -> dict[str, Any] | None:
         date_text = match_group(DATE_FIELD_PATTERN, section.body)
         parsed_date = parse_taipei_date(date_text)
         source_agent = match_group(SOURCE_AGENT_PATTERN, section.body)
+        source_role = match_group(SOURCE_ROLE_PATTERN, section.body)
         scope = match_group(SCOPE_PATTERN, section.body)
         next_step_match = NEXT_STEP_PATTERN.search(section.body)
         next_step_lines = normalize_multiline_field(
@@ -163,6 +165,7 @@ def extract_open_handoff(path: Path) -> dict[str, Any] | None:
             "status": status,
             "date": date_text,
             "source_agent": source_agent,
+            "source_role": source_role,
             "scope": scope,
             "next_suggested_step": next_step_lines,
         }

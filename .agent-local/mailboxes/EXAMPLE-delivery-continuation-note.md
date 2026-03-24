@@ -3,6 +3,7 @@
 - Status: open
 - Date: 2026-03-14 14:00 UTC+8
 - Source agent: delivery-1
+- Source role: delivery
 - Scope: ci-flake-triage
 - Current state:
   - latest completed CI is failing in `pages-lint`

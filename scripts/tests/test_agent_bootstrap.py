@@ -225,6 +225,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
 - Status: open
 - Date: 2026-03-24 12:10 UTC+8
 - Source agent: coding-7
+- Source role: coding
 - Scope: restore-sync-gap
 - Next suggested step:
   - re-run the sync proof after wiring the stored root fixture
@@ -283,6 +284,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
         checklist_text = bootstrap_checklists[0].read_text(encoding="utf-8")
         self.assertIn("## Latest Same-Role Handoff Review", checklist_text)
         self.assertIn("Reviewed agent: `coding-7`", checklist_text)
+        self.assertIn("Handoff source role: `coding`", checklist_text)
         self.assertIn("Handoff scope: `restore-sync-gap`", checklist_text)
         self.assertIn("re-run the sync proof after wiring the stored root fixture", checklist_text)
 

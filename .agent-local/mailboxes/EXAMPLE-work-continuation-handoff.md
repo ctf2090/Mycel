@@ -9,6 +9,7 @@ Do not treat it as a live agent mailbox.
 - Status: open
 - Date: 2026-03-12 22:30 UTC+8
 - Source agent: coding-2
+- Source role: coding
 - Scope: peer-store sync simulator follow-up
 - Files changed:
   - crates/mycel-sim/src/run.rs

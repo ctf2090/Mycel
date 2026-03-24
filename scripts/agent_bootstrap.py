@@ -48,6 +48,7 @@ STATUS_PATTERN = re.compile(r"^- Status:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 DATE_FIELD_PATTERN = re.compile(r"^- Date:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SCOPE_PATTERN = re.compile(r"^- Scope:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SOURCE_AGENT_PATTERN = re.compile(r"^- Source agent:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+SOURCE_ROLE_PATTERN = re.compile(r"^- Source role:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 NEXT_STEP_PATTERN = re.compile(r"^- Next suggested step:\s*(.*?)(?=^-\s|\Z)", re.MULTILINE | re.DOTALL)
 
 
@@ -242,6 +243,7 @@ def extract_latest_open_handoff(mailbox_path: Path, *, role: str) -> dict[str, A
             "date": date_text,
             "scope": match_group(SCOPE_PATTERN, section.body),
             "source_agent": match_group(SOURCE_AGENT_PATTERN, section.body),
+            "source_role": match_group(SOURCE_ROLE_PATTERN, section.body),
             "next_suggested_step": next_steps,
         }
         sort_key = (
@@ -361,6 +363,7 @@ def persist_same_role_handoff_review(bootstrap_checklist_path: Path, same_role_h
     scope = handoff.get("scope") or "unknown"
     date_text = handoff.get("date") or "unknown"
     source_agent = handoff.get("source_agent") or "unknown"
+    source_role = handoff.get("source_role") or same_role_handoff.get("role") or "unknown"
     next_steps = handoff.get("next_suggested_step")
     next_steps_list = [step for step in next_steps if isinstance(step, str) and step.strip()] if isinstance(next_steps, list) else []
 
@@ -377,6 +380,7 @@ def persist_same_role_handoff_review(bootstrap_checklist_path: Path, same_role_h
         "",
         f"- Reviewed agent: `{display_id}`",
         f"- Handoff source agent: `{source_agent}`",
+        f"- Handoff source role: `{source_role}`",
         f"- Handoff date: `{date_text}`",
         f"- Handoff scope: `{scope}`",
     ]

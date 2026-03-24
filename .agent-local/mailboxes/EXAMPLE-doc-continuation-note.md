@@ -9,6 +9,7 @@ Do not treat it as a live agent mailbox.
 - Status: open
 - Date: 2026-03-13 17:18 UTC+8
 - Source agent: doc-3
+- Source role: doc
 - Scope: repo-rg-scan
 - Current state:
   - Completed a repo-wide `rg --files` scan and shallow directory scan for `/workspaces/Mycel`.

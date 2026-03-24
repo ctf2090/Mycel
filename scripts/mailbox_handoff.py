@@ -164,7 +164,7 @@ def line_block(label: str, value: str) -> list[str]:
     return [f"- {label}: {value}"]
 
 
-def render_work_continuation(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+def render_work_continuation(*, date_text: str, source_agent: str, source_role: str, args: argparse.Namespace) -> str:
     behavior = normalize_items(args.behavior_change, default="none")
     current_state = normalize_items(args.current_state)
     next_step = normalize_items(args.next_step)
@@ -179,6 +179,7 @@ def render_work_continuation(*, date_text: str, source_agent: str, args: argpars
         "- Status: open",
         f"- Date: {date_text}",
         f"- Source agent: {source_agent}",
+        f"- Source role: {source_role}",
         f"- Scope: {args.scope}",
         *list_block("Files changed", args.files_changed),
         *list_block("Behavior change", behavior, default=None),
@@ -194,13 +195,14 @@ def render_work_continuation(*, date_text: str, source_agent: str, args: argpars
     return "\n".join(lines)
 
 
-def render_planning_sync(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+def render_planning_sync(*, date_text: str, source_agent: str, source_role: str, args: argparse.Namespace) -> str:
     lines = [
         "## Planning Sync Handoff",
         "",
         "- Status: open",
         f"- Date: {date_text}",
         f"- Source agent: {source_agent}",
+        f"- Source role: {source_role}",
         f"- Scope: {args.scope}",
         *list_block("Files changed", args.files_changed),
         *list_block("Planning impact", args.planning_impact),
@@ -212,7 +214,7 @@ def render_planning_sync(*, date_text: str, source_agent: str, args: argparse.Na
     return "\n".join(lines)
 
 
-def render_doc_continuation(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+def render_doc_continuation(*, date_text: str, source_agent: str, source_role: str, args: argparse.Namespace) -> str:
     current_state = normalize_items(args.current_state)
     next_step = normalize_items(args.next_step)
     if not current_state:
@@ -226,6 +228,7 @@ def render_doc_continuation(*, date_text: str, source_agent: str, args: argparse
         "- Status: open",
         f"- Date: {date_text}",
         f"- Source agent: {source_agent}",
+        f"- Source role: {source_role}",
         f"- Scope: {args.scope}",
         *list_block("Current state", current_state, default=None),
         *list_block("Evidence", args.evidence),
@@ -237,7 +240,7 @@ def render_doc_continuation(*, date_text: str, source_agent: str, args: argparse
     return "\n".join(lines)
 
 
-def render_delivery_continuation(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+def render_delivery_continuation(*, date_text: str, source_agent: str, source_role: str, args: argparse.Namespace) -> str:
     current_state = normalize_items(args.current_state)
     next_step = normalize_items(args.next_step)
     if not current_state:
@@ -251,6 +254,7 @@ def render_delivery_continuation(*, date_text: str, source_agent: str, args: arg
         "- Status: open",
         f"- Date: {date_text}",
         f"- Source agent: {source_agent}",
+        f"- Source role: {source_role}",
         f"- Scope: {args.scope}",
         *list_block("Current state", current_state, default=None),
         *list_block("Evidence", args.evidence),
@@ -263,7 +267,7 @@ def render_delivery_continuation(*, date_text: str, source_agent: str, args: arg
     return "\n".join(lines)
 
 
-def render_planning_resolution(*, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+def render_planning_resolution(*, date_text: str, source_agent: str, source_role: str, args: argparse.Namespace) -> str:
     source_handoffs = normalize_items(args.source_handoff)
     if not source_handoffs:
         raise MailboxHandoffError("planning-resolution requires at least one --source-handoff")
@@ -289,17 +293,17 @@ def render_planning_resolution(*, date_text: str, source_agent: str, args: argpa
     return "\n".join(lines)
 
 
-def render_entry(template: str, *, date_text: str, source_agent: str, args: argparse.Namespace) -> str:
+def render_entry(template: str, *, date_text: str, source_agent: str, source_role: str, args: argparse.Namespace) -> str:
     if template == "work-continuation":
-        return render_work_continuation(date_text=date_text, source_agent=source_agent, args=args)
+        return render_work_continuation(date_text=date_text, source_agent=source_agent, source_role=source_role, args=args)
     if template == "planning-sync":
-        return render_planning_sync(date_text=date_text, source_agent=source_agent, args=args)
+        return render_planning_sync(date_text=date_text, source_agent=source_agent, source_role=source_role, args=args)
     if template == "doc-continuation":
-        return render_doc_continuation(date_text=date_text, source_agent=source_agent, args=args)
+        return render_doc_continuation(date_text=date_text, source_agent=source_agent, source_role=source_role, args=args)
     if template == "delivery-continuation":
-        return render_delivery_continuation(date_text=date_text, source_agent=source_agent, args=args)
+        return render_delivery_continuation(date_text=date_text, source_agent=source_agent, source_role=source_role, args=args)
     if template == "planning-resolution":
-        return render_planning_resolution(date_text=date_text, source_agent=source_agent, args=args)
+        return render_planning_resolution(date_text=date_text, source_agent=source_agent, source_role=source_role, args=args)
     raise MailboxHandoffError(f"unsupported template: {template}")
 
 
@@ -372,13 +376,22 @@ def resolve_mailbox(agent_ref: str) -> tuple[str, str, Path]:
 def create_entry(args: argparse.Namespace) -> dict[str, object]:
     try:
         agent_uid, display_id, mailbox_path = resolve_mailbox(args.agent_ref)
+        registry = load_registry(allow_missing=False)
+        entry = resolve_agent_entry(registry, args.agent_ref)
     except RegistryError as exc:
         raise MailboxHandoffError(str(exc)) from exc
 
     template = TEMPLATES[args.template]
     source_agent = args.source_agent.strip() if args.source_agent else display_id
+    source_role = require_non_empty_str(entry, "role", agent_uid)
     date_text = human_timestamp()
-    entry_text = render_entry(template.kind, date_text=date_text, source_agent=source_agent, args=args)
+    entry_text = render_entry(
+        template.kind,
+        date_text=date_text,
+        source_agent=source_agent,
+        source_role=source_role,
+        args=args,
+    )
 
     if mailbox_path.exists():
         existing_content = mailbox_path.read_text(encoding="utf-8")
@@ -406,6 +419,7 @@ def create_entry(args: argparse.Namespace) -> dict[str, object]:
         "status": template.status,
         "date": date_text,
         "source_agent": source_agent,
+        "source_role": source_role,
         "superseded_count": superseded_count,
     }
 
@@ -424,6 +438,7 @@ def emit_result(result: dict[str, object], *, as_json: bool) -> None:
         "status",
         "date",
         "source_agent",
+        "source_role",
         "superseded_count",
     ]:
         print(f"{key}: {result[key]}")
