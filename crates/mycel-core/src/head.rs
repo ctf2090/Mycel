@@ -400,6 +400,14 @@ struct ViewerGatingSummary {
     viewer_gating: Option<&'static str>,
 }
 
+struct SelectedHeadRenderContext {
+    selected_head: String,
+    object_index: HashMap<String, Value>,
+    revision_value: Value,
+    replay_note: String,
+    replay_error_context: &'static str,
+}
+
 fn default_true() -> bool {
     true
 }
@@ -526,67 +534,14 @@ pub fn render_head_from_store_path(
 ) -> HeadRenderSummary {
     let inspect_summary =
         inspect_heads_from_store_path(input_path, store_root, doc_id, requested_profile_id);
-    let mut summary = HeadRenderSummary::new(&inspect_summary.input_path, Some(store_root), doc_id);
-    summary.profile_id = inspect_summary.profile_id.clone();
-    summary.available_profile_ids = inspect_summary.available_profile_ids.clone();
-    summary.effective_selection_time = inspect_summary.effective_selection_time;
-    summary.selected_head = inspect_summary.selected_head.clone();
-    summary.notes = inspect_summary.notes.clone();
-
-    if !inspect_summary.is_ok() {
-        summary.status = "failed".to_string();
-        summary.errors = inspect_summary.errors.clone();
-        return summary;
-    }
-
-    let Some(selected_head) = &inspect_summary.selected_head else {
-        summary.push_error("accepted-head inspection did not select a head");
+    let mut summary =
+        render_summary_from_inspect_summary(&inspect_summary, Some(store_root), doc_id);
+    let Some(context) =
+        build_store_render_context(store_root, doc_id, &inspect_summary, &mut summary)
+    else {
         return summary;
     };
-
-    let object_index = match load_doc_replay_objects_from_store(store_root, doc_id) {
-        Ok(index) => index,
-        Err(error) => {
-            summary.push_error(format!(
-                "failed to load store objects for doc '{doc_id}': {error}"
-            ));
-            return summary;
-        }
-    };
-    let revision_value = match load_stored_object_value(store_root, selected_head) {
-        Ok(value) => value,
-        Err(error) => {
-            summary.push_error(format!(
-                "failed to load selected head '{selected_head}': {error}"
-            ));
-            return summary;
-        }
-    };
-    if let Err(error) =
-        verify_selected_head_for_render(selected_head, &revision_value, &object_index)
-    {
-        summary.push_error(error);
-        return summary;
-    }
-    let replay = match replay_revision_from_index(&revision_value, &object_index) {
-        Ok(replay) => replay,
-        Err(error) => {
-            summary.push_error(format!(
-                "failed to replay selected head '{selected_head}': {error}"
-            ));
-            return summary;
-        }
-    };
-
-    summary.recomputed_state_hash = Some(replay.recomputed_state_hash);
-    summary.rendered_blocks = summarize_rendered_blocks(&replay.state);
-    summary.rendered_block_count = summary.rendered_blocks.len();
-    summary.rendered_text = render_document_text(&replay.state);
-    summary.notes.push(format!(
-        "rendered accepted head '{}' from store-backed replay",
-        selected_head
-    ));
-
+    finalize_render_summary(&mut summary, context);
     summary
 }
 
@@ -596,24 +551,7 @@ pub fn render_head_from_path(
     requested_profile_id: Option<&str>,
 ) -> HeadRenderSummary {
     let inspect_summary = inspect_heads_from_path(input_path, doc_id, requested_profile_id);
-    let mut summary = HeadRenderSummary::new(&inspect_summary.input_path, None, doc_id);
-    summary.profile_id = inspect_summary.profile_id.clone();
-    summary.available_profile_ids = inspect_summary.available_profile_ids.clone();
-    summary.effective_selection_time = inspect_summary.effective_selection_time;
-    summary.selected_head = inspect_summary.selected_head.clone();
-    summary.notes = inspect_summary.notes.clone();
-
-    if !inspect_summary.is_ok() {
-        summary.status = "failed".to_string();
-        summary.errors = inspect_summary.errors.clone();
-        return summary;
-    }
-
-    let Some(selected_head) = &inspect_summary.selected_head else {
-        summary.push_error("accepted-head inspection did not select a head");
-        return summary;
-    };
-
+    let mut summary = render_summary_from_inspect_summary(&inspect_summary, None, doc_id);
     let (resolved_input_path, input) = match load_head_inspect_input(input_path, doc_id) {
         Ok(loaded) => loaded,
         Err(inspect_failure) => {
@@ -624,34 +562,137 @@ pub fn render_head_from_path(
     };
     summary.input_path = resolved_input_path;
 
+    let Some(context) = build_bundle_render_context(input, &inspect_summary, &mut summary) else {
+        return summary;
+    };
+    finalize_render_summary(&mut summary, context);
+    summary
+}
+
+fn render_summary_from_inspect_summary(
+    inspect_summary: &HeadInspectSummary,
+    store_root: Option<&Path>,
+    doc_id: &str,
+) -> HeadRenderSummary {
+    let mut summary = HeadRenderSummary::new(&inspect_summary.input_path, store_root, doc_id);
+    summary.profile_id = inspect_summary.profile_id.clone();
+    summary.available_profile_ids = inspect_summary.available_profile_ids.clone();
+    summary.effective_selection_time = inspect_summary.effective_selection_time;
+    summary.selected_head = inspect_summary.selected_head.clone();
+    summary.notes = inspect_summary.notes.clone();
+
+    if !inspect_summary.is_ok() {
+        summary.status = "failed".to_string();
+        summary.errors = inspect_summary.errors.clone();
+    }
+
+    summary
+}
+
+fn selected_head_for_render(
+    inspect_summary: &HeadInspectSummary,
+    summary: &mut HeadRenderSummary,
+) -> Option<String> {
+    if !inspect_summary.is_ok() {
+        return None;
+    }
+
+    let Some(selected_head) = &inspect_summary.selected_head else {
+        summary.push_error("accepted-head inspection did not select a head");
+        return None;
+    };
+
+    Some(selected_head.clone())
+}
+
+fn build_store_render_context(
+    store_root: &Path,
+    doc_id: &str,
+    inspect_summary: &HeadInspectSummary,
+    summary: &mut HeadRenderSummary,
+) -> Option<SelectedHeadRenderContext> {
+    let selected_head = selected_head_for_render(inspect_summary, summary)?;
+    let object_index = match load_doc_replay_objects_from_store(store_root, doc_id) {
+        Ok(index) => index,
+        Err(error) => {
+            summary.push_error(format!(
+                "failed to load store objects for doc '{doc_id}': {error}"
+            ));
+            return None;
+        }
+    };
+    let revision_value = match load_stored_object_value(store_root, &selected_head) {
+        Ok(value) => value,
+        Err(error) => {
+            summary.push_error(format!(
+                "failed to load selected head '{selected_head}': {error}"
+            ));
+            return None;
+        }
+    };
+
+    Some(SelectedHeadRenderContext {
+        selected_head: selected_head.clone(),
+        object_index,
+        revision_value,
+        replay_note: format!(
+            "rendered accepted head '{}' from store-backed replay",
+            selected_head
+        ),
+        replay_error_context: "failed to replay selected head",
+    })
+}
+
+fn build_bundle_render_context(
+    input: HeadInspectInput,
+    inspect_summary: &HeadInspectSummary,
+    summary: &mut HeadRenderSummary,
+) -> Option<SelectedHeadRenderContext> {
+    let selected_head = selected_head_for_render(inspect_summary, summary)?;
     let object_index = match build_bundle_object_index(&input.revisions, &input.objects) {
         Ok(index) => index,
         Err(error) => {
             summary.push_error(error);
-            return summary;
+            return None;
         }
     };
-    let Some(revision_value) = object_index.get(selected_head) else {
+    let Some(revision_value) = object_index.get(&selected_head).cloned() else {
         summary.push_error(format!(
             "selected head '{}' is not available in the bundle replay object set",
             selected_head
         ));
-        return summary;
+        return None;
     };
-    if let Err(error) =
-        verify_selected_head_for_render(selected_head, revision_value, &object_index)
-    {
+
+    Some(SelectedHeadRenderContext {
+        selected_head: selected_head.clone(),
+        object_index,
+        revision_value,
+        replay_note: format!(
+            "rendered accepted head '{}' from bundle-backed replay objects",
+            selected_head
+        ),
+        replay_error_context: "failed to replay selected head from bundle objects",
+    })
+}
+
+fn finalize_render_summary(summary: &mut HeadRenderSummary, context: SelectedHeadRenderContext) {
+    if let Err(error) = verify_selected_head_for_render(
+        &context.selected_head,
+        &context.revision_value,
+        &context.object_index,
+    ) {
         summary.push_error(error);
-        return summary;
+        return;
     }
-    let replay = match replay_revision_from_index(revision_value, &object_index) {
+    let replay = match replay_revision_from_index(&context.revision_value, &context.object_index) {
         Ok(replay) => replay,
         Err(error) => {
             summary.push_error(format!(
-                "failed to replay selected head '{}' from bundle objects: {error}",
-                selected_head
+                "{} '{}': {error}",
+                context.replay_error_context, context.selected_head
             ));
-            return summary;
+            return;
         }
     };
 
@@ -659,12 +700,7 @@ pub fn render_head_from_path(
     summary.rendered_blocks = summarize_rendered_blocks(&replay.state);
     summary.rendered_block_count = summary.rendered_blocks.len();
     summary.rendered_text = render_document_text(&replay.state);
-    summary.notes.push(format!(
-        "rendered accepted head '{}' from bundle-backed replay objects",
-        selected_head
-    ));
-
-    summary
+    summary.notes.push(context.replay_note);
 }
 
 fn verify_selected_head_for_render(
