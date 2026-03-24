@@ -794,14 +794,10 @@ impl ReportListSummary {
 
 fn parse_step_range(value: &str) -> Result<(u64, u64), String> {
     let Some((start, end)) = value.split_once(':') else {
-        return Err(format!("invalid value for --step-range: {value}"));
+        return Err(step_range_error(value));
     };
-    let start = start
-        .parse::<u64>()
-        .map_err(|_| format!("invalid value for --step-range: {value}"))?;
-    let end = end
-        .parse::<u64>()
-        .map_err(|_| format!("invalid value for --step-range: {value}"))?;
+    let start = start.parse::<u64>().map_err(|_| step_range_error(value))?;
+    let end = end.parse::<u64>().map_err(|_| step_range_error(value))?;
     if start > end {
         return Err(format!(
             "invalid value for --step-range: {value} (start must be <= end)"
@@ -840,6 +836,10 @@ fn unexpected_extra(extra: &[String], context: &str) -> Option<String> {
         .map(|arg| format!("unexpected {context} argument: {arg}"))
 }
 
+fn step_range_error(value: &str) -> String {
+    format!("invalid value for --step-range: {value}")
+}
+
 struct ReportDiffArgs {
     left: PathBuf,
     right: PathBuf,
@@ -851,125 +851,135 @@ struct ReportDiffArgs {
     fail_on_diff: bool,
 }
 
+fn handle_report_diff(args: ReportDiffCliArgs) -> Result<i32, CliError> {
+    if let Some(message) = unexpected_extra(&args.extra, "report diff") {
+        return Err(CliError::usage(message));
+    }
+
+    report_diff(ReportDiffArgs {
+        left: PathBuf::from(args.left),
+        right: PathBuf::from(args.right),
+        json: args.json,
+        events: args.events,
+        event_align: args.event_align,
+        fields: args.fields,
+        ignore_fields: args.ignore_fields,
+        fail_on_diff: args.fail_on_diff,
+    })
+}
+
+fn report_inspect_mode(args: &ReportInspectCliArgs) -> ReportInspectMode {
+    if args.full {
+        ReportInspectMode::Full
+    } else if args.failures {
+        ReportInspectMode::Failures
+    } else if args.events {
+        ReportInspectMode::Events
+    } else {
+        ReportInspectMode::Summary
+    }
+}
+
+fn report_inspect_filters(
+    args: ReportInspectCliArgs,
+) -> Result<(PathBuf, bool, ReportInspectMode, ReportInspectFilters), CliError> {
+    let mode = report_inspect_mode(&args);
+    let Some(target) = args.target else {
+        return Err(CliError::usage("missing report inspect target"));
+    };
+
+    let filters = ReportInspectFilters {
+        phase: args.phase,
+        action: args.action,
+        outcome: args.outcome,
+        step: args.step,
+        step_range: args.step_range,
+        first: args.first,
+        last: args.last,
+        node: args.node,
+    };
+    let mode = if matches!(mode, ReportInspectMode::Summary)
+        && (filters.phase.is_some()
+            || filters.action.is_some()
+            || filters.outcome.is_some()
+            || filters.step.is_some()
+            || filters.step_range.is_some()
+            || filters.first.is_some()
+            || filters.last.is_some()
+            || filters.node.is_some())
+    {
+        ReportInspectMode::Events
+    } else {
+        mode
+    };
+
+    Ok((PathBuf::from(target), args.json, mode, filters))
+}
+
+fn handle_report_inspect(args: ReportInspectCliArgs) -> Result<i32, CliError> {
+    if let Some(message) = unexpected_extra(&args.extra, "report inspect") {
+        return Err(CliError::usage(message));
+    }
+
+    let (target, json, mode, filters) = report_inspect_filters(args)?;
+    report_inspect(target, json, mode, &filters)
+}
+
+fn handle_report_list(args: ReportListCliArgs) -> Result<i32, CliError> {
+    if let Some(message) = unexpected_extra(&args.extra, "report list") {
+        return Err(CliError::usage(message));
+    }
+
+    let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
+    report_list(
+        PathBuf::from(target),
+        args.json,
+        args.path_only,
+        args.result,
+        args.validation_status,
+    )
+}
+
+fn handle_report_latest(args: ReportLatestCliArgs) -> Result<i32, CliError> {
+    if let Some(message) = unexpected_extra(&args.extra, "report latest") {
+        return Err(CliError::usage(message));
+    }
+
+    let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
+    report_latest(
+        PathBuf::from(target),
+        args.json,
+        args.full,
+        args.path_only,
+        args.result,
+        args.validation_status,
+    )
+}
+
+fn handle_report_stats(args: ReportStatsCliArgs) -> Result<i32, CliError> {
+    if let Some(message) = unexpected_extra(&args.extra, "report stats") {
+        return Err(CliError::usage(message));
+    }
+
+    let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
+    report_stats(
+        PathBuf::from(target),
+        args.json,
+        args.counts_only,
+        args.full_latest,
+        args.path_only_latest,
+        args.result,
+        args.validation_status,
+    )
+}
+
 pub(crate) fn handle_report_command(command: ReportCliArgs) -> Result<i32, CliError> {
     match command.command {
-        Some(ReportSubcommand::Diff(args)) => {
-            if let Some(message) = unexpected_extra(&args.extra, "report diff") {
-                return Err(CliError::usage(message));
-            }
-
-            report_diff(ReportDiffArgs {
-                left: PathBuf::from(args.left),
-                right: PathBuf::from(args.right),
-                json: args.json,
-                events: args.events,
-                event_align: args.event_align,
-                fields: args.fields,
-                ignore_fields: args.ignore_fields,
-                fail_on_diff: args.fail_on_diff,
-            })
-        }
-        Some(ReportSubcommand::Inspect(args)) => {
-            if let Some(message) = unexpected_extra(&args.extra, "report inspect") {
-                return Err(CliError::usage(message));
-            }
-
-            let mut mode = ReportInspectMode::Summary;
-            if args.events {
-                mode = ReportInspectMode::Events;
-            }
-            if args.failures {
-                mode = ReportInspectMode::Failures;
-            }
-            if args.full {
-                mode = ReportInspectMode::Full;
-            }
-
-            let phase = args.phase;
-            let action = args.action;
-            let outcome = args.outcome;
-            let step = args.step;
-            let step_range = args.step_range;
-            let first = args.first;
-            let last = args.last;
-            let node = args.node;
-
-            let Some(target) = args.target else {
-                return Err(CliError::usage("missing report inspect target"));
-            };
-
-            let filters = ReportInspectFilters {
-                phase,
-                action,
-                outcome,
-                step,
-                step_range,
-                first,
-                last,
-                node,
-            };
-            let mode = if matches!(mode, ReportInspectMode::Summary)
-                && (filters.phase.is_some()
-                    || filters.action.is_some()
-                    || filters.outcome.is_some()
-                    || filters.step.is_some()
-                    || filters.step_range.is_some()
-                    || filters.first.is_some()
-                    || filters.last.is_some()
-                    || filters.node.is_some())
-            {
-                ReportInspectMode::Events
-            } else {
-                mode
-            };
-
-            report_inspect(PathBuf::from(target), args.json, mode, &filters)
-        }
-        Some(ReportSubcommand::List(args)) => {
-            if let Some(message) = unexpected_extra(&args.extra, "report list") {
-                return Err(CliError::usage(message));
-            }
-
-            let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_list(
-                PathBuf::from(target),
-                args.json,
-                args.path_only,
-                args.result,
-                args.validation_status,
-            )
-        }
-        Some(ReportSubcommand::Latest(args)) => {
-            if let Some(message) = unexpected_extra(&args.extra, "report latest") {
-                return Err(CliError::usage(message));
-            }
-
-            let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_latest(
-                PathBuf::from(target),
-                args.json,
-                args.full,
-                args.path_only,
-                args.result,
-                args.validation_status,
-            )
-        }
-        Some(ReportSubcommand::Stats(args)) => {
-            if let Some(message) = unexpected_extra(&args.extra, "report stats") {
-                return Err(CliError::usage(message));
-            }
-
-            let target = args.target.unwrap_or_else(|| "sim/reports".to_owned());
-            report_stats(
-                PathBuf::from(target),
-                args.json,
-                args.counts_only,
-                args.full_latest,
-                args.path_only_latest,
-                args.result,
-                args.validation_status,
-            )
-        }
+        Some(ReportSubcommand::Diff(args)) => handle_report_diff(args),
+        Some(ReportSubcommand::Inspect(args)) => handle_report_inspect(args),
+        Some(ReportSubcommand::List(args)) => handle_report_list(args),
+        Some(ReportSubcommand::Latest(args)) => handle_report_latest(args),
+        Some(ReportSubcommand::Stats(args)) => handle_report_stats(args),
         Some(ReportSubcommand::External(args)) => {
             let other = args.first().map(String::as_str).unwrap_or("<unknown>");
             Err(CliError::usage(format!(
