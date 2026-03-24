@@ -49,13 +49,18 @@ Recommended transfer actor:
 
 ## 2. Organization Setup
 
-- [ ] Create the `MycelLayer` organization instead of converting the existing
-      personal account.
-- [ ] Set the initial organization owners.
-- [ ] Configure basic organization profile metadata:
+Current state:
+
+- `MycelLayer` already exists, so this section is now about verifying and
+  refining org configuration before transfer instead of creating the org.
+
+Remaining setup:
+
+- [ ] Confirm that the initial organization owners are set as intended.
+- [ ] Configure or re-check the basic organization profile metadata:
       description, avatar, URL, and public profile copy.
-- [ ] Decide the default repository permissions for organization members.
-- [ ] Decide whether only organization owners can delete or transfer
+- [ ] Confirm the default repository permissions for organization members.
+- [ ] Confirm whether only organization owners can delete or transfer
       repositories.
 - [ ] Create the initial teams if we want team-based ownership immediately
       after transfer.
@@ -223,12 +228,14 @@ git fetch origin
 ## 9. Pages And Public Surface Follow-Up
 
 - [ ] Re-verify GitHub Pages build and deployment.
-- [ ] Re-verify the live public URL.
+- [ ] Re-verify the live public URL, especially if the default Pages host moves
+      from `ctf2090.github.io` to `mycellayer.github.io`.
 - [ ] Update README, homepage, badges, and docs links if they still point to
       `ctf2090/Mycel`.
 - [ ] Update any share cards or public screenshots that show the old owner.
 - [ ] Run [`docs/OUTWARD-RELEASE-CHECKLIST.md`](./OUTWARD-RELEASE-CHECKLIST.md)
-      after public-surface edits.
+      after public-surface edits, because its current Pages checks still assume
+      the pre-transfer host and may need a synchronized follow-up update.
 
 ## 10. Workflow And Automation Follow-Up
 
@@ -277,7 +284,7 @@ git fetch origin
 
 Use this order unless a narrower migration plan is required:
 
-1. create and configure the organization
+1. confirm the existing `MycelLayer` organization configuration and owners
 2. inventory current repository settings and public surfaces
 3. decide access, team, and Pages handling
 4. freeze non-essential repo setting changes
