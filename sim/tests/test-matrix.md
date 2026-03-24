@@ -146,7 +146,7 @@ Product-layer-only note:
 
 | Simulator case | Product-layer counterpart | Coverage status |
 |---|---|---|
-| `four-reader-multi-doc` | no dedicated `apps/mycel-cli/tests` four-reader multi-document counterpart yet | simulator-only topology proof |
+| `four-reader-multi-doc` | `sync_peer_store_json_converges_four_readers_on_same_multi_doc_state` | both layers |
 
 ## Production Replication
 

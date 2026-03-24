@@ -1796,6 +1796,145 @@ fn sync_peer_store_json_converges_two_empty_readers_on_same_store_state() {
 }
 
 #[test]
+fn sync_peer_store_json_converges_four_readers_on_same_multi_doc_state() {
+    let signing_key = signing_key();
+    let sender = "node:alpha";
+    let remote_store = create_temp_dir("sync-peer-store-four-reader-remote");
+    let reader_a_store = create_temp_dir("sync-peer-store-four-reader-a");
+    let reader_b_store = create_temp_dir("sync-peer-store-four-reader-b");
+    let reader_c_store = create_temp_dir("sync-peer-store-four-reader-c");
+    let reader_d_store = create_temp_dir("sync-peer-store-four-reader-d");
+    let signing_key_path = remote_store.path().join("peer.key");
+
+    let alpha_patch =
+        signed_patch_object_message_for_doc(&signing_key, sender, "doc:alpha", "rev:genesis-null");
+    let alpha_patch_id = alpha_patch["payload"]["object_id"]
+        .as_str()
+        .expect("alpha patch object id should exist")
+        .to_string();
+    let alpha_revision = signed_revision_object_message_for_doc(
+        &signing_key,
+        sender,
+        "doc:alpha",
+        &[],
+        &[&alpha_patch_id],
+    );
+    let alpha_revision_id = alpha_revision["payload"]["object_id"]
+        .as_str()
+        .expect("alpha revision object id should exist")
+        .to_string();
+
+    let beta_patch =
+        signed_patch_object_message_for_doc(&signing_key, sender, "doc:beta", "rev:genesis-null");
+    let beta_patch_id = beta_patch["payload"]["object_id"]
+        .as_str()
+        .expect("beta patch object id should exist")
+        .to_string();
+    let beta_revision = signed_revision_object_message_for_doc(
+        &signing_key,
+        sender,
+        "doc:beta",
+        &[],
+        &[&beta_patch_id],
+    );
+    let beta_revision_id = beta_revision["payload"]["object_id"]
+        .as_str()
+        .expect("beta revision object id should exist")
+        .to_string();
+
+    for body in [
+        &alpha_patch["payload"]["body"],
+        &alpha_revision["payload"]["body"],
+        &beta_patch["payload"]["body"],
+        &beta_revision["payload"]["body"],
+    ] {
+        write_object_value_to_store(remote_store.path(), body)
+            .expect("object should write to remote store");
+    }
+    write_signing_key(&signing_key_path, &signing_key);
+
+    let reader_paths = [
+        reader_a_store.path(),
+        reader_b_store.path(),
+        reader_c_store.path(),
+        reader_d_store.path(),
+    ];
+    let outputs = reader_paths
+        .iter()
+        .map(|store_root| {
+            run_mycel(&[
+                "sync",
+                "peer-store",
+                "--from",
+                &path_arg(remote_store.path()),
+                "--into",
+                &path_arg(store_root),
+                "--peer-node-id",
+                sender,
+                "--signing-key",
+                &path_arg(&signing_key_path),
+                "--json",
+            ])
+        })
+        .collect::<Vec<_>>();
+
+    for output in &outputs {
+        assert_success(output);
+        let json = assert_json_status(output, "ok");
+        assert_eq!(json["peer_node_id"], sender);
+        assert_eq!(json["written_object_count"], 4);
+    }
+
+    let remote_manifest_path = remote_store.path().join("indexes").join("manifest.json");
+    let remote_manifest: Value = serde_json::from_str(
+        &fs::read_to_string(&remote_manifest_path).expect("remote manifest should read"),
+    )
+    .expect("remote manifest should parse");
+
+    let reader_manifests = reader_paths
+        .iter()
+        .map(|store_root| {
+            let manifest_path = store_root.join("indexes").join("manifest.json");
+            serde_json::from_str::<Value>(
+                &fs::read_to_string(&manifest_path).expect("reader manifest should read"),
+            )
+            .expect("reader manifest should parse")
+        })
+        .collect::<Vec<_>>();
+
+    for manifest in &reader_manifests {
+        assert_eq!(manifest["stored_object_count"], 4);
+        assert_eq!(manifest["doc_revisions"], remote_manifest["doc_revisions"]);
+        assert_eq!(
+            manifest["object_ids_by_type"],
+            remote_manifest["object_ids_by_type"]
+        );
+        assert!(
+            manifest["doc_revisions"]["doc:alpha"]
+                .as_array()
+                .is_some_and(|values| values
+                    .iter()
+                    .any(|value| value == &json!(alpha_revision_id))),
+            "expected doc:alpha revision in manifest: {manifest}"
+        );
+        assert!(
+            manifest["doc_revisions"]["doc:beta"]
+                .as_array()
+                .is_some_and(|values| values.iter().any(|value| value == &json!(beta_revision_id))),
+            "expected doc:beta revision in manifest: {manifest}"
+        );
+    }
+
+    for window in reader_manifests.windows(2) {
+        assert_eq!(window[0]["doc_revisions"], window[1]["doc_revisions"]);
+        assert_eq!(
+            window[0]["object_ids_by_type"],
+            window[1]["object_ids_by_type"]
+        );
+    }
+}
+
+#[test]
 fn sync_pull_text_reports_verification_failure_without_storing_objects() {
     let signing_key = signing_key();
     let sender = "node:alpha";
