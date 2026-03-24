@@ -48,14 +48,15 @@
           Mycel 目前仍在窄版 first-client 主線上。`M2` 在目前窄版 replay/storage/rebuild 範圍內已完成收口，
           因為 richer mixed content/metadata competing-branch classification、多文件 index-loss 後
           rebuild proof，以及 richer metadata multi-variant rebuild/reporting proof 都已落地；因此現在的
-          active lane 轉為更廣的 <code>M3</code> governance persistence，以及剩餘的
+          active lane 轉為更廣的 <code>M3</code> governance persistence、更完整的 governance
+          tooling、reader-facing profile ergonomics，以及最後的獨立 dual-role 收尾，再加上剩餘的
           <code>M4</code> session/capability/error-path interop proof；而
           <code>HEADS</code> 先於 <code>MANIFEST</code> 建立 sync roots，以及
           <code>HEADS replace=true</code> 後 stale root/dependency rejection 也都已補上 proof。
         </p>
         <ol class="lane-list">
           <li>維持 <code>M2</code> 在目前窄版 replay/storage/rebuild 範圍內的已關閉狀態，並以 richer mixed content/metadata competing-branch rebuild/reporting proof 作為基線。</li>
-          <li>在 accepted-head inspect/render、更清楚的 available-profile 與 profile-error feedback、editor-admission-aware profile base、bounded viewer score surfaces、初始 governance inspect/list/publish/current surfaces，以及 persisted governance relationship 與 current-governance summaries 之上，謹慎擴張 <code>M3</code> 的 reader-plus-governance 工作流程。</li>
+          <li>在 accepted-head inspect/render、更清楚的 available-profile 與 profile-error feedback、editor-admission-aware profile base、bounded viewer score surfaces、初始 governance inspect/list/publish/current surfaces，以及 persisted governance relationship 與 current-governance summaries 之上，謹慎擴張 <code>M3</code> 的 reader-plus-governance 工作流程，同時把更廣的 governance persistence、更完整的 governance tooling、超出目前初步打磨的 profile ergonomics，以及最後的獨立 dual-role 收尾明確保留下來。</li>
           <li>讓 <code>M4</code> 維持窄版範圍；現在 sender-validation、<code>HEADS</code> 先於 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 後的 stale root/dependency rejection、explicit <code>ERROR</code>-only、unreachable <code>WANT</code> 與 messages-after-<code>BYE</code> faults 也都已有 proof，接下來把 peer-store sync proof 往剩餘的 session/capability/error-path interop closure 收斂。</li>
         </ol>
       </header>
@@ -103,6 +104,7 @@
               <li>Persisted governance reverse indexes</li>
               <li>在 <code>view inspect</code> / <code>view list</code> 裡可見的 persisted governance relationship summaries</li>
               <li>在 <code>view current</code> 裡提供的 per-document current-governance summaries</li>
+              <li>剩餘工作：更廣的 governance persistence、更完整的 governance tooling、超出目前初步打磨的 profile ergonomics，以及最後的獨立 dual-role 收尾</li>
             </ul>
           </article>
           <article class="card">
@@ -202,7 +204,7 @@
               <td data-label="Area">9. Views and Head Selection</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M3</td>
-              <td data-label="Current read">Deterministic selector core、具名 fixed-profile selection、較清楚的 available-profile summaries 與 profile-error feedback、分開的 editor/view admission-aware inspect/render flows、bounded viewer score channels、在 <code>view inspect</code> / <code>view list</code> 裡可見的 persisted governance relationship summaries，以及在 <code>view current</code> 裡提供的 per-document current-governance summaries 都已存在；更廣的 governance persistence 與最後的 independent dual-role role-assignment closure 仍待完成。</td>
+              <td data-label="Current read">Deterministic selector core、具名 fixed-profile selection、較清楚的 available-profile summaries 與 profile-error feedback、分開的 editor/view admission-aware inspect/render flows、bounded viewer score channels、在 <code>view inspect</code> / <code>view list</code> 裡可見的 persisted governance relationship summaries，以及在 <code>view current</code> 裡提供的 per-document current-governance summaries 都已存在；更廣的 governance persistence、更完整的 governance tooling、超出目前初步打磨的 profile ergonomics，以及最後的 independent dual-role role-assignment closure 仍待完成。</td>
             </tr>
             <tr>
               <td data-label="Area">10. Merge Generation</td>

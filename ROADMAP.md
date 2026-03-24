@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; `M2` replay/storage/rebuild closure is now landed at the current narrow scope, so the active lane now centers on `M3` / `M4` while broader governance persistence and the remaining peer interop session/capability/error-path proof stay open after the current production replication sub-items were completed, the first permanent messages-after-BYE session proof landed, `HEADS`-before-`MANIFEST` sync-root setup and stale root/dependency rejection after `HEADS replace=true` landed, unknown-sender and HELLO sender-identity mismatch rejection plus explicit `ERROR`-only and unreachable `WANT` fault proofs landed, and per-document current-governance summaries were added to the current M3 baseline
+Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; `M2` replay/storage/rebuild closure is now landed at the current narrow scope, so the active lane now centers on `M3` / `M4` while broader governance persistence, richer governance tooling, reader-facing profile ergonomics, final independent dual-role closure, and the remaining peer interop session/capability/error-path proof stay open after the current production replication sub-items were completed, the first permanent messages-after-BYE session proof landed, `HEADS`-before-`MANIFEST` sync-root setup and stale root/dependency rejection after `HEADS replace=true` landed, unknown-sender and HELLO sender-identity mismatch rejection plus explicit `ERROR`-only and unreachable `WANT` fault proofs landed, and per-document current-governance summaries were added to the current M3 baseline
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -39,14 +39,14 @@ The repository does not yet have:
 The current lane is:
 
 1. keep `M2` closed at the current narrow replay/storage/rebuild scope now that the richer mixed content/metadata competing-branch rebuild-and-reporting proof is landed
-2. expand `M3` reader-plus-governance workflows without reopening the closed minimal-client gate
+2. expand `M3` reader-plus-governance workflows without reopening the closed minimal-client gate while keeping broader governance persistence, richer governance tooling, reader-facing profile ergonomics, and final independent dual-role closure explicit
 3. advance `M4` from peer-store proof toward the remaining peer-interop session/capability/error-path coverage now that the currently tracked production replication sub-items are proved and the current negative-proof baseline includes permanent messages-after-BYE rejection, `HEADS`-before-`MANIFEST` sync-root setup, stale root/dependency rejection after `HEADS replace=true`, sender-validation faults, explicit `ERROR`-only failure, and unreachable `WANT` rejection
 
 ### Next
 
 After the narrow core is stable, the next lane is:
 
-1. broader `M3` governance persistence and reader-plus-governance follow-up on top of the current `view inspect` / `view list` / `view publish`, persisted-relationship summaries, and per-document current-governance summary baseline
+1. broader `M3` governance persistence, richer governance tooling, reader-facing profile ergonomics, and final independent dual-role closure on top of the current `view inspect` / `view list` / `view publish`, persisted-relationship summaries, and per-document current-governance summary baseline
 2. the remaining `M4` session, capability, and error-path interop proof beyond the current positive-path and optional-message set
 3. reader-facing text reconstruction and presentation refinements only after the current governance and interop baselines are more stable
 
@@ -273,7 +273,7 @@ Goal: add a usable reader-oriented client layer with deterministic accepted-head
 
 ### Current Status
 
-Early partial progress, now with accepted-head rendering, named fixed-profile selection, clearer available-profile discovery and profile-error feedback, editor-admission-aware inspect/render behavior, distinct human/debug text output modes for `head inspect` / `head render`, bounded viewer score surfaces in head inspection, persisted governance relationship summaries exposed through both `view inspect` and `view list`, and per-document current-governance summaries in `view current` on top of the deterministic selector path; `M3` still remains open for broader governance persistence, reader-facing profile ergonomics beyond this initial polish, and final independent dual-role role-assignment closure.
+Early partial progress, now with accepted-head rendering, named fixed-profile selection, clearer available-profile discovery and profile-error feedback, editor-admission-aware inspect/render behavior, distinct human/debug text output modes for `head inspect` / `head render`, bounded viewer score surfaces in head inspection, persisted governance relationship summaries exposed through both `view inspect` and `view list`, and per-document current-governance summaries in `view current` on top of the deterministic selector path; `M3` still remains open for broader governance persistence, richer governance tooling beyond the current inspect/list/publish base, reader-facing profile ergonomics beyond this initial polish, and final independent dual-role role-assignment closure.
 
 Already in progress or partially implemented:
 
@@ -318,7 +318,7 @@ Completion gate:
 
 Current read:
 
-Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, clearer available-profile discovery and profile-error feedback, editor-admission-aware named-profile and store-backed flows, bounded viewer score surfaces in head inspection, persisted governance relationship summaries exposed through `view inspect` and `view list`, and per-document current-governance summaries exposed through `view current`; broader governance persistence, reader-facing profile ergonomics beyond this initial polish, and final independent dual-role role-assignment closure remain.
+Early partial progress, now with accepted-head render support from persisted stores and explicit replay bundles, clearer available-profile discovery and profile-error feedback, editor-admission-aware named-profile and store-backed flows, bounded viewer score surfaces in head inspection, persisted governance relationship summaries exposed through `view inspect` and `view list`, and per-document current-governance summaries exposed through `view current`; broader governance persistence, richer governance tooling beyond the current inspect/list/publish base, reader-facing profile ergonomics beyond this initial polish, and final independent dual-role role-assignment closure remain.
 
 Already visible in the repo:
 
@@ -342,7 +342,7 @@ Main remaining gaps:
 2. stronger dedicated governance inspection and publication surfaces beyond the initial `view` workflow
 3. reader-facing profile ergonomics beyond the minimal named fixed-profile surface
 4. governance-state tooling that can later align with wire/sync transport
-5. final independent editor-maintainer / view-maintainer role-assignment closure for mixed-role and shared-key cases, plus any broader governance persistence we would need before moving beyond the current head-inspect-local viewer signal surface
+5. final independent editor-maintainer / view-maintainer role-assignment closure for mixed-role and shared-key cases, plus any broader governance persistence or governance-tooling follow-up we would need before moving beyond the current head-inspect-local viewer signal surface
 
 Implementation anchors:
 
@@ -498,7 +498,7 @@ These priorities apply across all phases:
 
 The highest-value near-term work is:
 
-1. keep expanding `M3` with narrow governance-persistence and reader-plus-governance follow-up slices without reopening the closed minimal-client gate
+1. keep expanding `M3` with narrow governance-persistence, governance-tooling, profile-ergonomics, and dual-role follow-up slices without reopening the closed minimal-client gate
 2. keep strengthening `M4` with additional deterministic session, capability, and error-path interop proofs now that the currently tracked production replication sub-items are landed
 3. continue strengthening interop fixtures and negative tests as each remaining rule or follow-up slice lands
 4. preserve the now-closed `M2` proof surface while future follow-up work lands around it

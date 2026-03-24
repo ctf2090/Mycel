@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-狀態：整體進度已有明顯推進；implementation checklist 已拆成已關閉的 `M1` minimal-client gate 與持續追蹤中的 post-`M1` 後續清單。`M2` 在目前窄版 replay/storage/rebuild 範圍內已完成收口，因此現在的主線更明確地轉到 `M3` / `M4`；目前仍未完成的重點是更完整的治理狀態持久化，以及 `M4` 尚未補齊的 peer interop session/capability/error-path proof；原先規劃的 production replication 子項則都已補上，也已新增常設的 messages-after-BYE session proof、`HEADS` 先於 `MANIFEST` 的 sync-root setup、`HEADS replace=true` 後 stale root/dependency rejection、unknown-sender 與 HELLO sender-identity mismatch rejection、explicit `ERROR`-only 與 unreachable `WANT` fault proofs，同時也把 per-document current-governance summaries 納入目前的 `M3` 基線
+狀態：整體進度已有明顯推進；implementation checklist 已拆成已關閉的 `M1` minimal-client gate 與持續追蹤中的 post-`M1` 後續清單。`M2` 在目前窄版 replay/storage/rebuild 範圍內已完成收口，因此現在的主線更明確地轉到 `M3` / `M4`；目前仍未完成的重點是更完整的治理狀態持久化、更完整的治理工具面、reader-facing profile ergonomics、最後的獨立 dual-role 收尾，以及 `M4` 尚未補齊的 peer interop session/capability/error-path proof；原先規劃的 production replication 子項則都已補上，也已新增常設的 messages-after-BYE session proof、`HEADS` 先於 `MANIFEST` 的 sync-root setup、`HEADS replace=true` 後 stale root/dependency rejection、unknown-sender 與 HELLO sender-identity mismatch rejection、explicit `ERROR`-only 與 unreachable `WANT` fault proofs，同時也把 per-document current-governance summaries 納入目前的 `M3` 基線
 
 這份 roadmap 將目前 README 的優先順序、implementation checklist，以及 design-note 的 planning 指引，整理成 repo 層級的實作推進順序。
 
@@ -39,14 +39,14 @@
 目前主線是：
 
 1. 維持 `M2` 在目前窄版 replay/storage/rebuild 範圍內的已關閉狀態，並以已落地的 richer mixed content/metadata competing-branch rebuild/reporting proof 作為基線
-2. 擴展 `M3` 的 reader-plus-governance 工作流程，但不要重新打開已經關閉的 minimal-client gate
+2. 擴展 `M3` 的 reader-plus-governance 工作流程，但不要重新打開已經關閉的 minimal-client gate，同時把更廣的 governance persistence、更完整的 governance tooling、reader-facing profile ergonomics，以及最後的獨立 dual-role 收尾明確保留下來
 3. 在目前規劃中的 production replication 子項都已補齊，且目前負向 proof 基線已包含常設的 messages-after-BYE rejection、`HEADS` 先於 `MANIFEST` 的 sync-root setup、`HEADS replace=true` 後的 stale root/dependency rejection、sender-validation faults、explicit `ERROR`-only failure，以及 unreachable `WANT` rejection 後，讓 `M4` 從 peer-store proof 繼續往剩餘的 peer interop session/capability/error-path coverage 推進
 
 ### 下一步
 
 等窄版 core 穩定後，下一條主線會是：
 
-1. 在目前 `view inspect` / `view list` / `view publish`、persisted relationship summaries，以及 per-document current-governance summaries 的 baseline 之上，補上更廣的 `M3` governance persistence 與 reader-plus-governance 後續工作
+1. 在目前 `view inspect` / `view list` / `view publish`、persisted relationship summaries，以及 per-document current-governance summaries 的 baseline 之上，補上更廣的 `M3` governance persistence、更完整的 governance tooling、reader-facing profile ergonomics，以及最後的獨立 dual-role 收尾
 2. 補上超出目前 positive-path 與 optional-message proof set 的剩餘 `M4` session、capability 與 error-path interop proof
 3. 等目前的 governance 與 interop baseline 更穩定後，再補 reader-facing 的 text reconstruction 與 presentation 打磨
 
@@ -273,7 +273,7 @@ Implementation anchors：
 
 ### Current Status
 
-屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection、更清楚的可用 profile 探索與 profile 錯誤回饋、具備 editor-admission 感知的 inspect/render behavior、`head inspect` / `head render` 的 `human` / `debug` 文字輸出模式、head inspection 裡的 bounded viewer score surfaces、透過 `view inspect` 與 `view list` 曝露的 persisted governance relationship summaries，以及透過 `view current` 提供的 per-document current-governance summaries；`M3` 仍未完成，主要剩下更廣泛的 governance persistence、超出這一輪初步打磨的 reader-facing profile ergonomics，以及最後的獨立 dual-role 角色指派收尾。
+屬早期 partial progress，現在已在 deterministic selector path 之上具備 accepted-head rendering、具名 fixed-profile selection、更清楚的可用 profile 探索與 profile 錯誤回饋、具備 editor-admission 感知的 inspect/render behavior、`head inspect` / `head render` 的 `human` / `debug` 文字輸出模式、head inspection 裡的 bounded viewer score surfaces、透過 `view inspect` 與 `view list` 曝露的 persisted governance relationship summaries，以及透過 `view current` 提供的 per-document current-governance summaries；`M3` 仍未完成，主要剩下更廣泛的 governance persistence、超出目前 inspect/list/publish base 的 governance tooling、超出這一輪初步打磨的 reader-facing profile ergonomics，以及最後的獨立 dual-role 角色指派收尾。
 
 已在進行中或部分完成：
 
@@ -297,7 +297,7 @@ Implementation anchors：
 2. 超出目前初始 filtered / sorted / projected `view` inspection / listing / publication workflow 的專用 governance surfaces
 3. 超出這一輪初步打磨的最小具名 fixed-profile surface 的 reader-facing profile ergonomics
 4. 後續可與 wire / sync 對齊的 governance-state tooling
-5. mixed-role 與 shared-key case 的最終 editor-maintainer / view-maintainer 獨立角色指派收尾，以及之後若要超出目前 head-inspect-local bundle surface，還需要哪些更廣泛的 governance persistence 決策
+5. mixed-role 與 shared-key case 的最終 editor-maintainer / view-maintainer 獨立角色指派收尾，以及之後若要超出目前 head-inspect-local bundle surface，還需要哪些更廣泛的 governance persistence 或 governance-tooling 決策
 
 Implementation anchors：
 
