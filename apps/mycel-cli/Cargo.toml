@@ -11,7 +11,7 @@ name = "mycel"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 ed25519-dalek = "2.1"
 mycel-core = { path = "../../crates/mycel-core" }
 mycel-sim = { path = "../../crates/mycel-sim" }
@@ -20,8 +20,8 @@ serde_json = "1.0"
 thiserror = "2.0"
 
 [dev-dependencies]
-assert_cmd = "2.0"
+assert_cmd = "2.2"
 base64 = "0.22"
 predicates = "3.1"
 sha2 = "0.10"
-tempfile = "3.13"
+tempfile = "3.27"
