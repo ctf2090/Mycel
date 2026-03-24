@@ -1,0 +1,27 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-stale-snapshot-want-after-heads-replace",
+    "description": "Seed publishes a snapshot, then replace=true HEADS withdraws the old root set before the seed asks for the stale snapshot again",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-stale-snapshot-want-after-heads-replace-test"
+        }
+    ],
+    "expected_outcomes": [
+        "stale-snapshot-want-after-heads-replace-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "stale-snapshot-want-after-heads-replace",
+        "publish_seed_snapshot": true,
+        "seed_extra_revisions": 1
+    },
+    "notes": [
+        "Simulator uses a snapshot-capable seed so the normal transcript advertises a snapshot via SNAPSHOT_OFFER before the fault is injected.",
+        "The injected replace=true HEADS should withdraw the old root set so a later WANT for the stale snapshot object is rejected as unreachable from accepted sync roots."
+    ]
+}

@@ -48,6 +48,8 @@
   Reference JSON: `sim/tests/session-stale-root-object-after-heads-replace.example.json`
 - `session-stale-dependency-object-after-heads-replace`: reject a withdrawn dependency `OBJECT` after `HEADS replace=true` clears the pending request set for the old root set
   Reference JSON: `sim/tests/session-stale-dependency-object-after-heads-replace.example.json`
+- `session-stale-snapshot-want-after-heads-replace`: reject a stale snapshot `WANT` after `HEADS replace=true` withdraws the old root set that previously made the snapshot reachable
+  Reference JSON: `sim/tests/session-stale-snapshot-want-after-heads-replace.example.json`
 
 ## Recovery
 

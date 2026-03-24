@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-stale-snapshot-want-after-heads-replace",
+    "description": "A reader should fail sync when the seed replaces advertised heads and then requests a snapshot that was only reachable from the withdrawn root set.",
+    "category": "negative",
+    "topology": "sim/topologies/session-stale-snapshot-want-after-heads-replace.example.json",
+    "fixture_set": "fixtures/object-sets/session-stale-snapshot-want-after-heads-replace",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "stale-snapshot-want-after-heads-replace-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "stale-snapshot-want-after-heads-replace-rejected",
+            "description": "Reader rejects WANT because replace=true withdrew the old sync roots before the stale snapshot object was requested again.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not keep writing sync state after the withdrawn-root snapshot WANT violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a post-HELLO root-set replacement fault on the snapshot-assisted optional-message path.",
+        "The harness keeps the normal snapshot-capable peer-store transcript but injects a replacing HEADS plus a stale snapshot WANT before BYE."
+    ]
+}
