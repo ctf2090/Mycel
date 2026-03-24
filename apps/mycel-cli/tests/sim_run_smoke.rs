@@ -612,6 +612,41 @@ fn sim_run_replays_view_sync_into_reader_store() {
 }
 
 #[test]
+fn sim_run_replays_resync_idempotency_into_reader_store() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/resync-idempotency.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "pass");
+    let outcomes = summary["matched_expected_outcomes"]
+        .as_array()
+        .expect("matched_expected_outcomes should be an array");
+    assert!(
+        outcomes
+            .iter()
+            .any(|entry| entry == "resync-idempotent"),
+        "expected resync-idempotent outcome, stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let report = load_report(&summary);
+    assert_eq!(report["result"], "pass");
+    let validation = validate_generated_report(&summary);
+    assert_eq!(validation["report_count"], 1);
+}
+
+#[test]
 fn sim_run_rejects_view_announce_without_advertised_capability() {
     let _guard = sim_run_lock();
     let output = run_sim(&[
