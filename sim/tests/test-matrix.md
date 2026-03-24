@@ -72,6 +72,7 @@ families below.
 | `session-snapshot-want-before-manifest` | `sync_pull_json_snapshot_offer_before_manifest_does_not_unlock_want` | both layers |
 | `session-view-announce-want-before-manifest` | `sync_pull_json_view_announce_before_manifest_does_not_unlock_want` | both layers |
 | `session-object-before-manifest` | `sync_pull_json_rejects_unrequested_object_before_manifest_or_heads` | both layers |
+| `reject-hash-mismatch` | `sync_pull_json_rejects_invalid_object_hash_without_storing_objects` | both layers |
 | `reject-signature-mismatch` | `sync_pull_json_rejects_invalid_wire_signature_without_storing_objects` | both layers |
 
 Product-layer-only note:
