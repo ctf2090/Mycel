@@ -25,6 +25,7 @@ As of 2026-03-24, the repository already uses:
 - `.github/dependabot.yml`
 - vulnerability alerts
 - automated security fixes
+- GitHub code scanning default setup
 - the `MycelLayer/Mycel` organization-owned repository
 
 The main gaps worth addressing first are:
@@ -34,7 +35,6 @@ The main gaps worth addressing first are:
 - admin enforcement is still off for the branch protection
 - delete-branch-on-merge is still off
 - auto-merge remains disabled
-- code scanning is still not configured
 
 ## 1. Strengthen Branch Governance
 
@@ -112,16 +112,16 @@ Main tradeoff:
 
 - maintainers will need to triage additional automated pull requests
 
-## 4. Add Code Scanning Only With A Deliberate Workflow Choice
+## 4. Evaluate Code Scanning After Enabling Default Setup
 
-Code scanning is now the main remaining GitHub-native security feature that is
-still unset.
+Code scanning is now enabled through GitHub's default CodeQL setup, so the next
+question is how much follow-up tuning it actually needs.
 
 Current repo fit on 2026-03-24:
 
-- GitHub's repository default-setup API reports `state: not-configured` and
-  detects `actions`, `python`, and `rust` as eligible CodeQL languages for
-  this repository
+- GitHub's repository default-setup API now reports `state: configured`
+- enabling default setup triggered the first `CodeQL Setup` Actions run on
+  commit `665bf09`
 - the repository does not currently carry a dedicated CodeQL workflow under
   `.github/workflows/`
 - existing CI already covers formatting, Clippy, compile, tests, ast-grep, and
@@ -133,19 +133,20 @@ Current repo fit on 2026-03-24:
 
 Recommended scope:
 
-- choose a lightweight first pass instead of enabling the broadest possible
-  default without review
-- use GitHub code scanning only if we want persistent SARIF-backed findings in
-  the Security tab rather than relying solely on existing CI and `ast-grep`
-- prefer a single clear initial path, such as GitHub's default CodeQL setup,
-  before layering on more languages or custom packs
+- keep default setup as the first pass until the initial alerts and run cost are
+  visible
+- use GitHub code scanning for persistent SARIF-backed findings in the Security
+  tab while keeping existing CI and `ast-grep` as separate checks
+- switch to advanced setup only if the first wave of results shows a real need
+  for tighter event/path control, custom packs, or more explicit workflow
+  ownership
 
 Why now:
 
-- the lower-friction security switches are already on, so code scanning is the
-  next meaningful GitHub-native visibility upgrade
-- this is the first remaining item that adds new analysis coverage rather than
-  just governance or routing changes
+- the lower-friction security switches are already on, and the repository has
+  now crossed the line from planning code scanning to operating it
+- this is now an evaluation-and-tuning step rather than a feature-adoption
+  placeholder
 
 Main tradeoff:
 
@@ -154,26 +155,23 @@ Main tradeoff:
 
 Practical decision options:
 
-- enable default CodeQL setup now as the smallest repo-native next step
-- keep code scanning out of scope for now if the team wants to avoid more
-  Actions runtime and security-alert triage this quarter
+- keep default setup running and review the first alert batch before changing
+  anything
 - move to advanced setup only if default setup proves too noisy, misses needed
   customization, or needs tighter event/path control than the UI-managed
   defaults provide
+- disable code scanning later only if the first runs show that the analysis cost
+  or alert quality is materially worse than expected
 
 Current recommendation:
 
-- enable GitHub's default CodeQL setup first if we want to continue the GitHub
-  security-adoption track soon
-- keep the initial language set aligned with GitHub's detected `actions`,
-  `python`, and `rust` coverage unless the first runs show a clear reason to
-  narrow it
-- treat advanced setup as a second-step escalation, not the starting point,
-  because this repository already has a stable CI baseline and does not yet
-  show a strong need for a hand-maintained CodeQL workflow
-- if the team decides against more scan time or alert queue overhead right now,
-  explicitly leave code scanning deferred and rely on the existing CI plus
-  `ast-grep` checks instead of leaving the decision ambiguous
+- keep GitHub's default CodeQL setup in place through the first successful scan
+  cycle
+- review the first alert batch and runtime overhead before deciding whether to
+  keep default setup as-is or graduate to advanced setup
+- treat advanced setup as a second-step escalation, not the default starting
+  point, because this repository already has a stable CI baseline and still
+  does not show a strong need for a hand-maintained CodeQL workflow
 
 ## 5. Revisit Auto-Merge After The Merge Gate Exists
 
@@ -243,7 +241,7 @@ If we want the smallest practical rollout, use this sequence:
 1. strengthen `main` governance, including the rulesets vs classic-branch-protection decision
 2. refine `CODEOWNERS` and decide whether code owner reviews should be required
 3. keep tuning Dependabot and the newly enabled security features
-4. decide whether to add code scanning
+4. review the first CodeQL runs and decide whether default setup needs tuning
 5. optionally enable auto-merge
 
 This sequence keeps the change surface small while improving safety and review
@@ -260,7 +258,7 @@ Concrete next implementation tasks for a future work item:
 - record which maintainers can bypass rulesets, if any
 - decide whether Dependabot should stay on grouped low-churn updates or narrow
   further
-- decide whether GitHub code scanning should use default CodeQL setup now or
-  stay explicitly out of scope until scan-time and triage budget increase
+- review the first GitHub code scanning runs and decide whether default CodeQL
+  setup should stay as-is or move to advanced setup
 - decide whether GitHub Projects should mirror the existing multi-agent workflow
   or stay out of scope
