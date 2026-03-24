@@ -13,7 +13,7 @@
 | Simulator case | Product-layer counterpart | Coverage status |
 |---|---|---|
 | `first-sync-empty-reader` | `sync_peer_store_json_runs_first_time_sync_into_local_store` | both layers |
-| `three-peer-consistency` | no dedicated `apps/mycel-cli/tests` multi-reader counterpart yet | simulator-only topology proof |
+| `three-peer-consistency` | `sync_peer_store_json_converges_two_empty_readers_on_same_store_state` | both layers |
 | `incremental-sync` | `sync_pull_json_replays_incremental_transcript_into_existing_store` | both layers |
 
 ## Negative

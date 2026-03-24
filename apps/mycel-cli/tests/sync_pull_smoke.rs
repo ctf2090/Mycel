@@ -1697,6 +1697,105 @@ fn sync_peer_store_json_converges_partial_and_empty_local_stores() {
 }
 
 #[test]
+fn sync_peer_store_json_converges_two_empty_readers_on_same_store_state() {
+    let signing_key = signing_key();
+    let sender = "node:alpha";
+    let remote_store = create_temp_dir("sync-peer-store-three-peer-remote");
+    let reader_a_store = create_temp_dir("sync-peer-store-three-peer-reader-a");
+    let reader_b_store = create_temp_dir("sync-peer-store-three-peer-reader-b");
+    let signing_key_path = remote_store.path().join("peer.key");
+
+    let patch_object = signed_patch_object_message(&signing_key, sender, "rev:genesis-null");
+    let patch_id = patch_object["payload"]["object_id"]
+        .as_str()
+        .expect("patch object id should exist")
+        .to_string();
+    let revision_object = signed_revision_object_message(&signing_key, sender, &[], &[&patch_id]);
+    let revision_id = revision_object["payload"]["object_id"]
+        .as_str()
+        .expect("revision object id should exist")
+        .to_string();
+
+    write_object_value_to_store(remote_store.path(), &patch_object["payload"]["body"])
+        .expect("patch should write to remote store");
+    write_object_value_to_store(remote_store.path(), &revision_object["payload"]["body"])
+        .expect("revision should write to remote store");
+    write_signing_key(&signing_key_path, &signing_key);
+
+    let reader_a_output = run_mycel(&[
+        "sync",
+        "peer-store",
+        "--from",
+        &path_arg(remote_store.path()),
+        "--into",
+        &path_arg(reader_a_store.path()),
+        "--peer-node-id",
+        sender,
+        "--signing-key",
+        &path_arg(&signing_key_path),
+        "--json",
+    ]);
+    let reader_b_output = run_mycel(&[
+        "sync",
+        "peer-store",
+        "--from",
+        &path_arg(remote_store.path()),
+        "--into",
+        &path_arg(reader_b_store.path()),
+        "--peer-node-id",
+        sender,
+        "--signing-key",
+        &path_arg(&signing_key_path),
+        "--json",
+    ]);
+
+    assert_success(&reader_a_output);
+    assert_success(&reader_b_output);
+
+    let reader_a_json = assert_json_status(&reader_a_output, "ok");
+    let reader_b_json = assert_json_status(&reader_b_output, "ok");
+    assert_eq!(reader_a_json["peer_node_id"], sender);
+    assert_eq!(reader_b_json["peer_node_id"], sender);
+    assert_eq!(reader_a_json["written_object_count"], 2);
+    assert_eq!(reader_b_json["written_object_count"], 2);
+
+    let remote_manifest_path = remote_store.path().join("indexes").join("manifest.json");
+    let remote_manifest: Value = serde_json::from_str(
+        &fs::read_to_string(&remote_manifest_path).expect("remote manifest should read"),
+    )
+    .expect("remote manifest should parse");
+    let reader_a_manifest_path = reader_a_store.path().join("indexes").join("manifest.json");
+    let reader_a_manifest: Value = serde_json::from_str(
+        &fs::read_to_string(&reader_a_manifest_path).expect("reader A manifest should read"),
+    )
+    .expect("reader A manifest should parse");
+    let reader_b_manifest_path = reader_b_store.path().join("indexes").join("manifest.json");
+    let reader_b_manifest: Value = serde_json::from_str(
+        &fs::read_to_string(&reader_b_manifest_path).expect("reader B manifest should read"),
+    )
+    .expect("reader B manifest should parse");
+
+    assert_eq!(reader_a_manifest["stored_object_count"], 2);
+    assert_eq!(reader_b_manifest["stored_object_count"], 2);
+    assert_eq!(
+        reader_a_manifest["doc_revisions"],
+        reader_b_manifest["doc_revisions"]
+    );
+    assert_eq!(
+        reader_a_manifest["object_ids_by_type"],
+        reader_b_manifest["object_ids_by_type"]
+    );
+    assert_eq!(
+        reader_a_manifest["doc_revisions"],
+        remote_manifest["doc_revisions"]
+    );
+    assert_eq!(
+        reader_a_manifest["doc_revisions"]["doc:test"][0],
+        revision_id
+    );
+}
+
+#[test]
 fn sync_pull_text_reports_verification_failure_without_storing_objects() {
     let signing_key = signing_key();
     let sender = "node:alpha";
