@@ -122,6 +122,10 @@ Current repo fit on 2026-03-24:
 - GitHub's repository default-setup API now reports `state: configured`
 - enabling default setup triggered the first `CodeQL Setup` Actions run on
   commit `665bf09`
+- the first `CodeQL Setup` run completed successfully across `actions`,
+  `python`, and `rust`
+- the first alert batch stayed small and focused: three open
+  `actions/missing-workflow-permissions` warnings in `.github/workflows/ci.yml`
 - the repository does not currently carry a dedicated CodeQL workflow under
   `.github/workflows/`
 - existing CI already covers formatting, Clippy, compile, tests, ast-grep, and
@@ -167,6 +171,8 @@ Current recommendation:
 
 - keep GitHub's default CodeQL setup in place through the first successful scan
   cycle
+- treat the current three `actions/missing-workflow-permissions` alerts as a
+  workflow-hardening follow-up, not as a signal that advanced setup is needed
 - review the first alert batch and runtime overhead before deciding whether to
   keep default setup as-is or graduate to advanced setup
 - treat advanced setup as a second-step escalation, not the default starting
@@ -258,6 +264,8 @@ Concrete next implementation tasks for a future work item:
 - record which maintainers can bypass rulesets, if any
 - decide whether Dependabot should stay on grouped low-churn updates or narrow
   further
+- add explicit least-privilege `permissions` blocks to `.github/workflows/ci.yml`
+  so the first CodeQL workflow findings close cleanly
 - review the first GitHub code scanning runs and decide whether default CodeQL
   setup should stay as-is or move to advanced setup
 - decide whether GitHub Projects should mirror the existing multi-agent workflow
