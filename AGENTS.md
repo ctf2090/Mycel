@@ -85,6 +85,7 @@
 - In the final answer, when a work cycle has been closed with `scripts/agent_work_cycle.py end`, place the exact emitted `After work` timestamp line immediately before the next-stage options section. <!-- item-id: workflow.final-after-work-line-before-next-items -->
 - After completing a piece of work, end with a short evaluation of valuable next-stage work and, by default, offer multiple concrete options for the user to choose from. <!-- item-id: workflow.next-stage-options -->
   - If the user has not already assigned the next concrete task, `coding` should include a default option to review `ROADMAP.md` and identify the highest-value next coding work. <!-- item-id: workflow.next-stage-roadmap-review-default -->
+  - If the user has not already assigned the next concrete task, `coding` should also include a default option to review the latest CQH issue and identify high-value work items. <!-- item-id: workflow.next-stage-cqh-review-default -->
   - In final next-stage recommendations, put the highest-value option first and mark it as `(最有價值)`. <!-- item-id: workflow.next-stage-highest-value-first -->
   - When suggesting next-stage work or options, use numeric item indexes (`1. 2. 3.`), not dot bullets. <!-- item-id: workflow.next-stage-numbered-options -->
   - When a next-stage option maps to a roadmap milestone, phase, or named track, include that roadmap location so the user can see where it fits in the plan. <!-- item-id: workflow.next-stage-roadmap-location -->
