@@ -98,17 +98,6 @@ fn signed_hello_message_with_capabilities(
     value
 }
 
-fn signed_hello_message_with_node_id(
-    signing_key: &SigningKey,
-    sender: &str,
-    payload_node_id: &str,
-) -> Value {
-    let mut value = signed_hello_message(signing_key, sender);
-    value["payload"]["node_id"] = Value::String(payload_node_id.to_string());
-    value["sig"] = Value::String(sign_wire_value(signing_key, &value));
-    value
-}
-
 fn signed_manifest_message(signing_key: &SigningKey, sender: &str, revision_id: &str) -> Value {
     signed_manifest_message_with_capabilities(
         signing_key,
@@ -462,24 +451,6 @@ fn signed_bye_message(signing_key: &SigningKey, sender: &str) -> Value {
         "from": sender,
         "payload": {
             "reason": "done"
-        },
-        "sig": "sig:placeholder"
-    });
-    value["sig"] = Value::String(sign_wire_value(signing_key, &value));
-    value
-}
-
-fn signed_error_message(signing_key: &SigningKey, sender: &str, in_reply_to: &str) -> Value {
-    let mut value = json!({
-        "type": "ERROR",
-        "version": "mycel-wire/0.1",
-        "msg_id": "msg:error-cli-sync-001",
-        "timestamp": "2026-03-08T20:02:10+08:00",
-        "from": sender,
-        "payload": {
-            "in_reply_to": in_reply_to,
-            "code": "ERR_UNKNOWN",
-            "detail": "simulated error"
         },
         "sig": "sig:placeholder"
     });
