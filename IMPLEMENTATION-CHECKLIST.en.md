@@ -1,6 +1,6 @@
 # Mycel v0.1 Implementation Checklist
 
-Status: `M1` minimal-client gate closed and retained below as a completed checklist; a post-`M1` follow-up checklist now tracks the still-open `M3` / `M4` work while preserving the now-closed current narrow-scope `M2` follow-up section as a completed record, `M3` now explicitly treated as broader governance persistence and reader/governance follow-up beyond the current reverse-index, relationship summaries, current-governance summaries, and inspect/list/publish baseline, and `M4` now focused on the broader session/capability/error-path interop coverage that remains after the currently tracked production replication sub-items, `HEADS`-before-`MANIFEST` sync-root setup, stale root/dependency rejection after `HEADS replace=true`, sender-validation faults, explicit `ERROR`-only failure proof, and unreachable `WANT` fault proofs landed
+Status: `M1` minimal-client gate closed and retained below as a completed checklist; a post-`M1` follow-up checklist now tracks the still-open `M3` / `M4` work while preserving the now-closed current narrow-scope `M2` follow-up section as a completed record, `M3` now explicitly treated as broader governance persistence and reader/governance follow-up beyond the current reverse-index, relationship summaries, current-governance summaries, and inspect/list/publish baseline, and `M4` now focused on the broader session/capability/error-path interop coverage that remains after the currently tracked production replication sub-items, `HEADS`-before-`MANIFEST` sync-root setup, stale root/dependency and stale snapshot `WANT` rejection after `HEADS replace=true`, sender-validation faults, explicit `ERROR`-only failure proof, and unreachable `WANT` fault proofs landed
 
 This checklist translates the v0.1 spec into an implementation-oriented build plan for a minimal interoperable client.
 
@@ -227,7 +227,7 @@ Use this section as the active implementation checklist for the still-open post-
   - [x] Re-sync idempotency: running sync twice when the reader is already current produces zero new stored objects, no errors, and stable accepted heads.
   - [x] Depth-N incremental catchup: a reader at revision depth 1 catches up to a seed at depth ≥ 3 in a single HEADS/WANT pass, verifying that only the delta is fetched.
   - [x] Partial-doc selective sync: a reader requests only a subset of the seed's documents, ends with a stable partial store, and accepted heads are correct for the requested subset only (PROTOCOL §8 states partial replication is supported).
-- [ ] Expand session, capability, and error-path interop coverage past the current positive-path, optional-message, `HEADS`-before-`MANIFEST`, stale-root/dependency-after-`HEADS replace=true`, sender-validation, explicit `ERROR`-only, reachability, and messages-after-BYE proof set.
+- [ ] Expand session, capability, and error-path interop coverage past the current positive-path, optional-message, `HEADS`-before-`MANIFEST`, stale-root/dependency and stale snapshot `WANT` rejection after `HEADS replace=true`, sender-validation, explicit `ERROR`-only, reachability, and messages-after-BYE proof set.
 
 ## 17. Cross-Surface Closure Rules
 
