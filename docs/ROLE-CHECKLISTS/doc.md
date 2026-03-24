@@ -13,6 +13,7 @@ Suggested per-agent copy path:
 ## New chat bootstrap
 
 - Confirm the registry state and active peers before taking documentation or planning scope. <!-- item-id: doc.startup.registry-state -->
+- Review the latest open same-role handoff when one exists and include it in the bootstrap next-work items. <!-- item-id: doc.startup.review-same-role-handoff -->
 
 ## Work Cycle Workflow
 

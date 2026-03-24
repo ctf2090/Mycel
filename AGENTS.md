@@ -64,6 +64,7 @@
   - If the user has already assigned a role or clearly asked the agent to read `AGENTS.md`, complete the repo-standard bootstrap flow immediately instead of asking for confirmation to start bootstrap. <!-- item-id: bootstrap.no-confirm-after-role-read -->
   - If the user did not assign a role for the new chat, use the registry tool to auto-claim a role, then tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.claim-auto -->
   - A new chat should claim a fresh agent for itself, even when the role matches an older inactive agent. Only use `resume-check` or `recover` when the same returning chat is resuming its own existing `agent_uid`. <!-- item-id: bootstrap.claim-fresh-agent-for-new-chat -->
+  - At the end of bootstrap, read the latest open same-role handoff from another agent when one exists, review it, and include that review as one of the bootstrap next-work items. <!-- item-id: bootstrap.review-latest-same-role-handoff -->
   - The registry tool generates the agent's bootstrap checklist template at `.agent-local/agents/<agent_uid>/checklists/AGENTS-bootstrap-checklist.md` if it does not exist yet.
 
 ## Work Cycle Workflow

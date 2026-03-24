@@ -212,6 +212,71 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertNotIn("mailbox_link:", proc.stdout)
         self.assertNotIn("fast_path_steps:", proc.stdout)
 
+    def test_bootstrap_appends_latest_same_role_handoff_review_to_next_actions(self) -> None:
+        mailbox_dir = self.root / ".agent-local" / "mailboxes"
+        mailbox_dir.mkdir(parents=True, exist_ok=True)
+        (mailbox_dir / "agt_prev.md").write_text(
+            """# Mailbox for agt_prev
+
+## Work Continuation Handoff
+
+- Status: open
+- Date: 2026-03-24 12:10 UTC+8
+- Source agent: coding-7
+- Scope: restore-sync-gap
+- Next suggested step:
+  - re-run the sync proof after wiring the stored root fixture
+""",
+            encoding="utf-8",
+        )
+        (self.root / ".agent-local" / "agents.json").write_text(
+            json.dumps(
+                {
+                    "version": 2,
+                    "updated_at": "2026-03-24T12:12:00+0800",
+                    "agent_count": 1,
+                    "agents": [
+                        {
+                            "agent_uid": "agt_prev",
+                            "role": "coding",
+                            "current_display_id": None,
+                            "display_history": [
+                                {
+                                    "display_id": "coding-7",
+                                    "assigned_at": "2026-03-24T11:00:00+0800",
+                                    "released_at": "2026-03-24T12:12:00+0800",
+                                    "released_reason": "finished",
+                                }
+                            ],
+                            "assigned_by": "user",
+                            "assigned_at": "2026-03-24T11:00:00+0800",
+                            "confirmed_by_agent": True,
+                            "confirmed_at": "2026-03-24T11:00:10+0800",
+                            "last_touched_at": "2026-03-24T12:12:00+0800",
+                            "inactive_at": "2026-03-24T12:12:00+0800",
+                            "paused_at": None,
+                            "status": "inactive",
+                            "scope": "restore-sync-gap",
+                            "files": [],
+                            "mailbox": ".agent-local/mailboxes/agt_prev.md",
+                            "recovery_of": None,
+                            "superseded_by": None,
+                        }
+                    ],
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli("coding", "--scope", "resume-scan", "--model-id", "test-model", "--concise")
+
+        self.assertIn("next_actions:", proc.stdout)
+        self.assertIn("review the latest same-role handoff from coding-7", proc.stdout)
+        self.assertIn("restore-sync-gap", proc.stdout)
+        self.assertIn("re-run the sync proof after wiring the stored root fixture", proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

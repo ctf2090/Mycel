@@ -14,6 +14,7 @@ Suggested per-agent copy path:
 
 - Confirm the registry state and active peers before taking CI or process scope. <!-- item-id: delivery.startup.registry-state -->
 - Check the latest completed CI result for the previous push before starting the next delivery slice. <!-- item-id: delivery.startup.check-latest-ci -->
+- Review the latest open same-role handoff when one exists and include it in the bootstrap next-work items. <!-- item-id: delivery.startup.review-same-role-handoff -->
 
 ## Work Cycle Workflow
 

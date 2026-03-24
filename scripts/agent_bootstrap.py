@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +37,25 @@ DEFERRED_READS_BY_ROLE = {
         "planning-sync mailbox scans and scripts/check-plan-refresh.sh until the doc work item actually starts",
     ],
 }
+ROLE_HANDOFF_HEADINGS = {
+    "coding": "Work Continuation Handoff",
+    "delivery": "Delivery Continuation Note",
+    "doc": "Doc Continuation Note",
+}
+TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
+DATE_PATTERN = "%Y-%m-%d %H:%M UTC+8"
+STATUS_PATTERN = re.compile(r"^- Status:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+DATE_FIELD_PATTERN = re.compile(r"^- Date:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+SCOPE_PATTERN = re.compile(r"^- Scope:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+SOURCE_AGENT_PATTERN = re.compile(r"^- Source agent:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+NEXT_STEP_PATTERN = re.compile(r"^- Next suggested step:\s*(.*?)(?=^-\s|\Z)", re.MULTILINE | re.DOTALL)
+
+
+class Section:
+    def __init__(self, heading: str, body: str, order: int) -> None:
+        self.heading = heading
+        self.body = body
+        self.order = order
 
 
 class BootstrapError(Exception):
@@ -93,6 +114,15 @@ def run_registry_json(*args: str) -> dict[str, Any]:
     return run_json_command([sys.executable, str(REGISTRY_SCRIPT), *args, "--json"])
 
 
+def load_registry() -> dict[str, Any]:
+    try:
+        return json.loads((ROOT_DIR / ".agent-local" / "agents.json").read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise BootstrapError("missing registry file after bootstrap claim") from exc
+    except json.JSONDecodeError as exc:
+        raise BootstrapError("invalid registry JSON after bootstrap claim") from exc
+
+
 def parse_key_value_lines(output: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for line in output.splitlines():
@@ -108,6 +138,158 @@ def find_timestamp_line(output: str) -> str | None:
         if line.startswith("[") and "] " in line:
             return line
     return None
+
+
+def current_or_last_display_id(entry: dict[str, Any]) -> str | None:
+    current = entry.get("current_display_id")
+    if isinstance(current, str) and current.strip():
+        return current
+    history = entry.get("display_history")
+    if not isinstance(history, list):
+        return None
+    for record in reversed(history):
+        if not isinstance(record, dict):
+            continue
+        display_id = record.get("display_id")
+        if isinstance(display_id, str) and display_id.strip():
+            return display_id
+    return None
+
+
+def resolve_mailbox_path(mailbox_value: str) -> Path:
+    path = Path(mailbox_value)
+    if not path.is_absolute():
+        path = ROOT_DIR / path
+    return path
+
+
+def section_chunks(text: str) -> list[Section]:
+    sections: list[Section] = []
+    current_heading = ""
+    current_lines: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("## "):
+            if current_heading or current_lines:
+                sections.append(Section(current_heading, "\n".join(current_lines).strip(), len(sections)))
+            current_heading = line[3:].strip()
+            current_lines = []
+            continue
+        current_lines.append(line)
+    if current_heading or current_lines:
+        sections.append(Section(current_heading, "\n".join(current_lines).strip(), len(sections)))
+    return sections
+
+
+def match_group(pattern: re.Pattern[str], text: str) -> str | None:
+    match = pattern.search(text)
+    if match is None:
+        return None
+    value = match.group(1).strip()
+    return value or None
+
+
+def parse_taipei_date(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        parsed = datetime.strptime(value, DATE_PATTERN)
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=TAIPEI_TIMEZONE)
+
+
+def normalize_multiline_field(value: str | None) -> list[str]:
+    if value is None:
+        return []
+    lines: list[str] = []
+    for raw_line in value.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("- "):
+            lines.append(line[2:].strip())
+        else:
+            lines.append(line)
+    return lines
+
+
+def extract_latest_open_handoff(mailbox_path: Path, *, role: str) -> dict[str, Any] | None:
+    heading = ROLE_HANDOFF_HEADINGS.get(role)
+    if heading is None or not mailbox_path.exists():
+        return None
+    text = mailbox_path.read_text(encoding="utf-8")
+    candidates: list[tuple[tuple[int, int], dict[str, Any]]] = []
+    for section in section_chunks(text):
+        if section.heading != heading:
+            continue
+        status = match_group(STATUS_PATTERN, section.body)
+        if status is None or status.lower() != "open":
+            continue
+        date_text = match_group(DATE_FIELD_PATTERN, section.body)
+        parsed_date = parse_taipei_date(date_text)
+        next_step_match = NEXT_STEP_PATTERN.search(section.body)
+        next_steps = normalize_multiline_field(next_step_match.group(1).strip() if next_step_match else None)
+        record = {
+            "heading": section.heading,
+            "status": status,
+            "date": date_text,
+            "scope": match_group(SCOPE_PATTERN, section.body),
+            "source_agent": match_group(SOURCE_AGENT_PATTERN, section.body),
+            "next_suggested_step": next_steps,
+        }
+        sort_key = (
+            int(parsed_date.timestamp()) if parsed_date is not None else -1,
+            section.order,
+        )
+        candidates.append((sort_key, record))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return candidates[0][1]
+
+
+def latest_same_role_handoff(registry: dict[str, Any], *, role: str, current_agent_uid: str) -> dict[str, Any] | None:
+    agents = registry.get("agents")
+    if not isinstance(agents, list):
+        return None
+    candidates: list[tuple[tuple[int, str, str], dict[str, Any]]] = []
+    for entry in agents:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("role") != role:
+            continue
+        agent_uid = entry.get("agent_uid")
+        if not isinstance(agent_uid, str) or not agent_uid.strip() or agent_uid == current_agent_uid:
+            continue
+        mailbox_value = entry.get("mailbox")
+        if not isinstance(mailbox_value, str) or not mailbox_value.strip():
+            continue
+        handoff = extract_latest_open_handoff(resolve_mailbox_path(mailbox_value), role=role)
+        if handoff is None:
+            continue
+        display_id = current_or_last_display_id(entry) or agent_uid
+        date_text = handoff.get("date")
+        parsed_date = parse_taipei_date(date_text if isinstance(date_text, str) else None)
+        sort_key = (
+            int(parsed_date.timestamp()) if parsed_date is not None else -1,
+            str(entry.get("last_touched_at") or entry.get("inactive_at") or ""),
+            agent_uid,
+        )
+        candidates.append(
+            (
+                sort_key,
+                {
+                    "agent_uid": agent_uid,
+                    "display_id": display_id,
+                    "mailbox": mailbox_value,
+                    "handoff": handoff,
+                },
+            )
+        )
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return candidates[0][1]
 
 
 def fast_path_steps_for_role(role: str) -> list[str]:
@@ -141,6 +323,21 @@ def next_actions_for_role(role: str) -> list[str]:
     return []
 
 
+def handoff_review_action(role: str, same_role_handoff: dict[str, Any] | None) -> str | None:
+    if same_role_handoff is None:
+        return None
+    display_id = same_role_handoff.get("display_id") or same_role_handoff.get("agent_uid") or "same-role agent"
+    handoff = same_role_handoff.get("handoff")
+    if not isinstance(handoff, dict):
+        return None
+    scope = handoff.get("scope") or "the latest same-role scope"
+    next_steps = handoff.get("next_suggested_step")
+    next_step = next_steps[0] if isinstance(next_steps, list) and next_steps else None
+    if isinstance(next_step, str) and next_step.strip():
+        return f"review the latest same-role handoff from {display_id} for scope {scope} and consider this follow-up first: {next_step.strip()}"
+    return f"review the latest same-role handoff from {display_id} for scope {scope} before choosing the first work item"
+
+
 def build_result(args: argparse.Namespace) -> dict[str, Any]:
     claim_payload = run_registry_json(
         "claim", args.role, "--scope", args.scope, "--assigned-by", args.assigned_by, "--model-id", args.model_id
@@ -156,9 +353,16 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
     begin_fields = parse_key_value_lines(begin_output)
     before_work_line = find_timestamp_line(begin_output)
     repo_status = run_command(["git", "status", "-sb"]).splitlines()
+    registry = load_registry()
     role = claim_payload.get("role")
     if not isinstance(role, str) or not role.strip():
         raise BootstrapError("claim did not return role")
+
+    same_role_handoff = latest_same_role_handoff(registry, role=role, current_agent_uid=agent_uid)
+    next_actions = next_actions_for_role(role)
+    handoff_action = handoff_review_action(role, same_role_handoff)
+    if handoff_action is not None:
+        next_actions.append(handoff_action)
 
     result: dict[str, Any] = {
         "agent_uid": agent_uid,
@@ -184,7 +388,8 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "startup_mode": "fresh-chat-fast-path",
         "fast_path_steps": fast_path_steps_for_role(role),
         "deferred_reads": deferred_reads_for_role(role),
-        "next_actions": next_actions_for_role(role),
+        "next_actions": next_actions,
+        "latest_same_role_handoff": same_role_handoff,
         "claimed_agent_label": f"{claim_payload.get('display_id')} ({agent_uid}/{args.model_id})",
     }
     return result
