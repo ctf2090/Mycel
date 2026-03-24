@@ -15,7 +15,7 @@ use mycel_core::author::{
     RevisionCommitParams,
 };
 use mycel_core::canonical::{signed_payload_bytes, wire_envelope_signed_payload_bytes};
-use mycel_core::protocol::{parse_json_strict, recompute_object_id};
+use mycel_core::protocol::{parse_json_strict, recompute_object_id, recompute_object_identity};
 use mycel_core::replay::replay_revision_from_index;
 use mycel_core::store::{
     load_store_index_manifest, load_store_object_index, write_object_value_to_store,
@@ -1897,6 +1897,9 @@ fn inject_session_fault(
         "unrequested-root-object-after-manifest" => {
             inject_unrequested_root_object_after_manifest_fault(transcript)
         }
+        "unrequested-dependency-object-after-root-object" => {
+            inject_unrequested_dependency_object_after_root_object_fault(transcript, signing_key)
+        }
         "snapshot-offer-before-hello" => {
             inject_snapshot_offer_before_hello_fault(transcript, signing_key)
         }
@@ -2830,6 +2833,42 @@ fn inject_unrequested_root_object_after_manifest_fault(
     Ok(())
 }
 
+fn inject_unrequested_dependency_object_after_root_object_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let first_object_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("OBJECT"))
+        .ok_or_else(|| {
+            "transcript is missing first OBJECT for unrequested-dependency-object-after-root-object injection"
+                .to_owned()
+        })?;
+    let root_object = transcript
+        .messages
+        .get(first_object_index)
+        .ok_or_else(|| {
+            "root OBJECT missing at computed index for unrequested-dependency-object-after-root-object injection"
+                .to_owned()
+        })?;
+    let base_revision = root_object
+        .get("payload")
+        .and_then(Value::as_object)
+        .and_then(|payload| payload.get("object_id"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            "root OBJECT is missing payload.object_id for unrequested-dependency-object-after-root-object injection"
+                .to_owned()
+        })?;
+    let dependency_object =
+        signed_sim_patch_object_message(signing_key, &transcript.peer.node_id, base_revision)?;
+    transcript
+        .messages
+        .insert(first_object_index + 1, dependency_object);
+    Ok(())
+}
+
 fn inject_object_before_manifest_fault(
     transcript: &mut mycel_core::sync::SyncPullTranscript,
 ) -> Result<(), String> {
@@ -2871,6 +2910,53 @@ fn signed_sim_wire_message(
     });
     resign_wire_message(&mut value, signing_key)?;
     Ok(value)
+}
+
+fn signed_sim_patch_object_message(
+    signing_key: &ed25519_dalek::SigningKey,
+    sender: &str,
+    base_revision: &str,
+) -> Result<Value, String> {
+    let author = signer_id(signing_key);
+    let mut body = json!({
+        "type": "patch",
+        "version": "mycel/0.1",
+        "patch_id": "patch:placeholder",
+        "doc_id": "doc:test",
+        "base_revision": base_revision,
+        "author": author,
+        "timestamp": 3u64,
+        "ops": [],
+        "signature": "sig:placeholder"
+    });
+    let patch_id = recompute_object_id(&body, "patch_id", "patch")
+        .map_err(|err| format!("failed to recompute patch object id: {err}"))?;
+    body["patch_id"] = Value::String(patch_id);
+
+    let payload = signed_payload_bytes(&body)
+        .map_err(|err| format!("failed to canonicalize patch body: {err}"))?;
+    let signature = signing_key.sign(&payload);
+    body["signature"] = Value::String(format!(
+        "sig:ed25519:{}",
+        base64::engine::general_purpose::STANDARD.encode(signature.to_bytes())
+    ));
+
+    let identity = recompute_object_identity(&body, "patch_id", "patch")
+        .map_err(|err| format!("failed to recompute signed patch identity: {err}"))?;
+    signed_sim_wire_message(
+        signing_key,
+        sender,
+        "OBJECT",
+        "msg:peer-sync-fault-object-patch-0006",
+        json!({
+            "object_id": identity.object_id,
+            "object_type": "patch",
+            "encoding": "json",
+            "hash_alg": "sha256",
+            "hash": identity.hash,
+            "body": body
+        }),
+    )
 }
 
 fn fixture_requested_doc_ids(fixture: &Fixture) -> Option<Vec<String>> {

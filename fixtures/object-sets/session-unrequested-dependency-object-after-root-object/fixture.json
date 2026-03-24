@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-unrequested-dependency-object-after-root-object",
+    "description": "Seed injects a dependency OBJECT before WANT requests it, immediately after the requested root OBJECT",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-unrequested-dependency-object-after-root-object-test"
+        }
+    ],
+    "expected_outcomes": [
+        "unrequested-dependency-object-after-root-object-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "unrequested-dependency-object-after-root-object"
+    },
+    "notes": [
+        "Simulator moves the dependency OBJECT to immediately follow the requested root OBJECT, before any WANT establishes a pending request for the dependency.",
+        "The transcript should fail on the standard unrequested-OBJECT rule before any store writes happen."
+    ]
+}

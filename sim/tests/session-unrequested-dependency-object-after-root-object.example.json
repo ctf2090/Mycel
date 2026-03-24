@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-unrequested-dependency-object-after-root-object",
+    "description": "A reader should fail sync when the seed emits a dependency OBJECT immediately after the requested root OBJECT but before a WANT requests that dependency.",
+    "category": "negative",
+    "topology": "sim/topologies/session-unrequested-dependency-object-after-root-object.example.json",
+    "fixture_set": "fixtures/object-sets/session-unrequested-dependency-object-after-root-object",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "unrequested-dependency-object-after-root-object-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "unrequested-dependency-object-after-root-object-rejected",
+            "description": "Reader rejects OBJECT because the dependency object arrived before any WANT requested it.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the unrequested dependency OBJECT violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with a post-root pending-request negative interop case for dependency objects.",
+        "The seed still uses the normal peer-store transcript generator, but the harness moves the dependency OBJECT to immediately follow the root OBJECT."
+    ]
+}
