@@ -540,54 +540,60 @@ fn initial_missing_remote_object_ids(
     )
 }
 
-fn push_requested_object_messages(
-    messages: &mut Vec<Value>,
-    peer_signing_key: &SigningKey,
-    peer: &SyncPeer,
-    remote_object_index: &HashMap<String, Value>,
-    peer_store_root: &Path,
-    known_local_ids: &mut BTreeSet<String>,
-    mut next_batch: Vec<String>,
-    sequence: &mut usize,
-) -> Result<(), StoreRebuildError> {
-    while !next_batch.is_empty() {
-        messages.push(signed_want_message(
-            peer_signing_key,
-            &peer.node_id,
-            next_wire_msg_id(sequence, "want"),
-            &next_batch,
-        )?);
+struct SyncTranscriptMessagePusher<'a> {
+    messages: &'a mut Vec<Value>,
+    peer_signing_key: &'a SigningKey,
+    peer: &'a SyncPeer,
+    remote_object_index: &'a HashMap<String, Value>,
+    peer_store_root: &'a Path,
+    sequence: &'a mut usize,
+}
 
-        let mut newly_reachable = BTreeSet::new();
-        for object_id in &next_batch {
-            let body = require_remote_object(remote_object_index, object_id, || {
-                format!(
-                    "peer store {} is missing advertised object '{}'",
-                    peer_store_root.display(),
-                    object_id
-                )
-            })?;
-            messages.push(signed_object_message(
-                peer_signing_key,
-                &peer.node_id,
-                next_wire_msg_id(sequence, "object"),
-                body,
+impl<'a> SyncTranscriptMessagePusher<'a> {
+    fn push_requested_object_messages(
+        &mut self,
+        known_local_ids: &mut BTreeSet<String>,
+        mut next_batch: Vec<String>,
+    ) -> Result<(), StoreRebuildError> {
+        while !next_batch.is_empty() {
+            self.messages.push(signed_want_message(
+                self.peer_signing_key,
+                &self.peer.node_id,
+                next_wire_msg_id(self.sequence, "want"),
+                &next_batch,
             )?);
-            known_local_ids.insert(object_id.clone());
-            newly_reachable.extend(discover_reachable_object_ids_from_value(body).map_err(
-                |error| {
-                    StoreRebuildError::new(format!(
-                        "failed to discover reachable IDs for '{}': {error}",
+
+            let mut newly_reachable = BTreeSet::new();
+            for object_id in &next_batch {
+                let body = require_remote_object(self.remote_object_index, object_id, || {
+                    format!(
+                        "peer store {} is missing advertised object '{}'",
+                        self.peer_store_root.display(),
                         object_id
-                    ))
-                },
-            )?);
+                    )
+                })?;
+                self.messages.push(signed_object_message(
+                    self.peer_signing_key,
+                    &self.peer.node_id,
+                    next_wire_msg_id(self.sequence, "object"),
+                    body,
+                )?);
+                known_local_ids.insert(object_id.clone());
+                newly_reachable.extend(discover_reachable_object_ids_from_value(body).map_err(
+                    |error| {
+                        StoreRebuildError::new(format!(
+                            "failed to discover reachable IDs for '{}': {error}",
+                            object_id
+                        ))
+                    },
+                )?);
+            }
+
+            next_batch = missing_object_ids(newly_reachable, known_local_ids);
         }
 
-        next_batch = missing_object_ids(newly_reachable, known_local_ids);
+        Ok(())
     }
-
-    Ok(())
 }
 
 fn generate_sync_pull_transcript_filtered(
@@ -659,16 +665,15 @@ fn generate_sync_pull_transcript_filtered(
         &remote_view_ids,
         &known_local_ids,
     );
-    push_requested_object_messages(
-        &mut messages,
+    SyncTranscriptMessagePusher {
+        messages: &mut messages,
         peer_signing_key,
         peer,
-        &remote_object_index,
+        remote_object_index: &remote_object_index,
         peer_store_root,
-        &mut known_local_ids,
-        next_batch,
-        &mut sequence,
-    )?;
+        sequence: &mut sequence,
+    }
+    .push_requested_object_messages(&mut known_local_ids, next_batch)?;
 
     messages.push(signed_bye_message(peer_signing_key, &peer.node_id)?);
 
