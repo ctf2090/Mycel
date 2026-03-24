@@ -1432,9 +1432,8 @@ fn sim_run_rejects_stale_object_want_after_heads_replace() {
     assert!(
         failures.iter().any(
             |entry| entry["description"].as_str().is_some_and(|description| {
-                description.contains(
-                    "is not reachable from accepted sync roots for 'node:peer-seed'",
-                )
+                description
+                    .contains("is not reachable from accepted sync roots for 'node:peer-seed'")
             })
         ),
         "expected stale-root WANT error in report failures, report: {report}"
