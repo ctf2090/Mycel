@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use base64::Engine;
-use serde_json::json;
+use serde_json::{json, Value};
 
 mod common;
 
@@ -531,6 +531,154 @@ fn write_nested_parent_anchor_choice_resolved_state_file(
     )
     .expect("nested parent anchor choice resolved state JSON should write");
     (dir, path)
+}
+
+struct StoreAuthoringFlow {
+    _store_dir: common::TempDir,
+    _key_dir: common::TempDir,
+    store_root: String,
+    key_file: String,
+}
+
+impl StoreAuthoringFlow {
+    fn new(store_prefix: &str, key_prefix: &str) -> Self {
+        let store_dir = create_temp_dir(store_prefix);
+        let (_key_dir, key_path) = write_signing_key_file(key_prefix);
+        let store_root = path_arg(store_dir.path());
+        let key_file = path_arg(&key_path);
+
+        let init = run_mycel(&["store", "init", &store_root, "--json"]);
+        assert_success(&init);
+
+        Self {
+            _store_dir: store_dir,
+            _key_dir,
+            store_root,
+            key_file,
+        }
+    }
+
+    fn create_document(
+        &self,
+        doc_id: &str,
+        title: &str,
+        language: &str,
+        timestamp: &str,
+    ) -> String {
+        let document = run_mycel(&[
+            "store",
+            "create-document",
+            &self.store_root,
+            "--doc-id",
+            doc_id,
+            "--title",
+            title,
+            "--language",
+            language,
+            "--signing-key",
+            &self.key_file,
+            "--timestamp",
+            timestamp,
+            "--json",
+        ]);
+        assert_success(&document);
+        assert_json_status(&document, "ok")["genesis_revision_id"]
+            .as_str()
+            .expect("genesis revision should be string")
+            .to_string()
+    }
+
+    fn create_patch(
+        &self,
+        doc_id: &str,
+        base_revision_id: &str,
+        ops_file: &str,
+        timestamp: &str,
+    ) -> String {
+        let patch = run_mycel(&[
+            "store",
+            "create-patch",
+            &self.store_root,
+            "--doc-id",
+            doc_id,
+            "--base-revision",
+            base_revision_id,
+            "--ops",
+            ops_file,
+            "--signing-key",
+            &self.key_file,
+            "--timestamp",
+            timestamp,
+            "--json",
+        ]);
+        assert_success(&patch);
+        assert_json_status(&patch, "ok")["patch_id"]
+            .as_str()
+            .expect("patch_id should be string")
+            .to_string()
+    }
+
+    fn commit_revision(
+        &self,
+        doc_id: &str,
+        parent_revision_id: &str,
+        patch_id: &str,
+        timestamp: &str,
+    ) -> String {
+        let revision = run_mycel(&[
+            "store",
+            "commit-revision",
+            &self.store_root,
+            "--doc-id",
+            doc_id,
+            "--parent",
+            parent_revision_id,
+            "--patch",
+            patch_id,
+            "--signing-key",
+            &self.key_file,
+            "--timestamp",
+            timestamp,
+            "--json",
+        ]);
+        assert_success(&revision);
+        assert_json_status(&revision, "ok")["revision_id"]
+            .as_str()
+            .expect("revision_id should be string")
+            .to_string()
+    }
+
+    fn create_merge_revision(
+        &self,
+        doc_id: &str,
+        parent_revision_ids: &[&str],
+        resolved_state_file: &str,
+        timestamp: &str,
+    ) -> Value {
+        let mut args = vec![
+            "store",
+            "create-merge-revision",
+            &self.store_root,
+            "--doc-id",
+            doc_id,
+        ];
+        for parent in parent_revision_ids {
+            args.extend(["--parent", parent]);
+        }
+        args.extend([
+            "--resolved-state",
+            resolved_state_file,
+            "--signing-key",
+            &self.key_file,
+            "--timestamp",
+            timestamp,
+            "--json",
+        ]);
+
+        let merge = run_mycel(&args);
+        assert_success(&merge);
+        assert_json_status(&merge, "ok").clone()
+    }
 }
 
 fn write_nested_parent_manual_resolved_state_file(prefix: &str) -> (common::TempDir, PathBuf) {
