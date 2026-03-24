@@ -59,6 +59,8 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             "agent@example.invalid",
             "--agent-id",
             "agt_test1234",
+            "--model-id",
+            "gpt-5-codex",
             "--message",
             "docs: add docs",
             "docs.md",
@@ -81,6 +83,7 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             text=True,
         )
         self.assertIn("Agent-Id: agt_test1234", body.stdout)
+        self.assertIn("Model-Id: gpt-5-codex", body.stdout)
 
     def test_rejects_extra_preexisting_staged_paths(self) -> None:
         doc = self.root / "docs.md"
@@ -97,6 +100,8 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             "agent@example.invalid",
             "--agent-id",
             "agt_test1234",
+            "--model-id",
+            "gpt-5-codex",
             "--message",
             "docs: add docs",
             "docs.md",
@@ -114,6 +119,8 @@ class AgentSafeCommitCliTest(unittest.TestCase):
             "agent@example.invalid",
             "--agent-id",
             "agt_test1234",
+            "--model-id",
+            "gpt-5-codex",
             "--message",
             "docs: add docs",
             "missing.md",
@@ -140,3 +147,23 @@ class AgentSafeCommitCliTest(unittest.TestCase):
 
         self.assertEqual(2, proc.returncode)
         self.assertIn("--agent-id", proc.stderr)
+
+    def test_requires_model_id_argument(self) -> None:
+        doc = self.root / "docs.md"
+        doc.write_text("doc\n", encoding="utf-8")
+
+        proc = self.run_cli(
+            "--name",
+            "gpt-5:doc-1",
+            "--email",
+            "agent@example.invalid",
+            "--agent-id",
+            "agt_test1234",
+            "--message",
+            "docs: add docs",
+            "docs.md",
+            check=False,
+        )
+
+        self.assertEqual(2, proc.returncode)
+        self.assertIn("--model-id", proc.stderr)
