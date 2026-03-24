@@ -385,6 +385,21 @@ struct ViewerHeadScore {
     challenge_freeze_pressure: u64,
 }
 
+struct LoadedHeadInspectContext {
+    selected_profile_id: String,
+    profile: HeadInspectProfile,
+    revision_values: Vec<Value>,
+    view_values: Vec<Value>,
+    viewer_signals: Vec<HeadInspectViewerSignal>,
+    critical_violations: Vec<HeadInspectCriticalViolation>,
+}
+
+struct ViewerGatingSummary {
+    review_delayed_revision_ids: BTreeSet<String>,
+    frozen_revision_ids: BTreeSet<String>,
+    viewer_gating: Option<&'static str>,
+}
+
 fn default_true() -> bool {
     true
 }
@@ -710,12 +725,175 @@ fn inspect_heads_from_loaded_input(
 ) -> HeadInspectSummary {
     let mut summary = HeadInspectSummary::new(&resolved_input_path, doc_id);
     summary.available_profile_ids = collect_available_profile_ids(&input.profiles);
+    let Some(context) = load_head_inspect_context(
+        input,
+        doc_id,
+        requested_profile_id,
+        store_root,
+        &mut summary,
+    ) else {
+        return summary;
+    };
+    populate_head_inspect_profile_metadata(&mut summary, &context);
+
+    let verified_revisions = collect_verified_revisions(
+        &context.revision_values,
+        doc_id,
+        context.profile.effective_selection_time,
+        &mut summary,
+    );
+    let verified_views = collect_verified_views(
+        &context.view_values,
+        &context.profile,
+        context.profile.effective_selection_time,
+        &mut summary,
+    );
+
+    summary.verified_revision_count = verified_revisions.len();
+    summary.verified_view_count = verified_views.len();
+    summary.viewer_signal_count = context.viewer_signals.len();
+    summary.push_trace(
+        "verified_inputs",
+        format!(
+            "verified_revisions={} verified_views={} viewer_signals={}",
+            summary.verified_revision_count,
+            summary.verified_view_count,
+            summary.viewer_signal_count
+        ),
+    );
+    populate_critical_violation_summary(&mut summary, &context);
+
+    if !summary.errors.is_empty() {
+        return summary;
+    }
+
+    let structural_heads = compute_eligible_heads(&verified_revisions);
+    let (eligible_heads, editor_candidate_summaries, editor_trace) =
+        apply_editor_admission(&structural_heads, &context.profile.editor_admission);
+    summary.editor_candidates = editor_candidate_summaries;
+    summary.push_trace(
+        "eligible_heads",
+        format!("count={}", structural_heads.len()),
+    );
+    for entry in editor_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
+    if eligible_heads.is_empty() {
+        summary.push_error("NO_ELIGIBLE_HEAD");
+        return summary;
+    }
+
+    let (effective_weights, effective_weight_summaries, weight_trace) = compute_effective_weights(
+        &verified_views,
+        &context.critical_violations,
+        summary
+            .selector_epoch
+            .expect("selector epoch should be set"),
+        &context.profile,
+    );
+    summary.effective_weights = effective_weight_summaries;
+    for entry in weight_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
+
+    let (support_map, support_summaries, support_trace) = latest_support_by_maintainer(
+        &verified_views,
+        doc_id,
+        &eligible_heads,
+        summary
+            .selector_epoch
+            .expect("selector epoch should be set"),
+        &context.profile,
+        &effective_weights,
+    );
+    summary.maintainer_support = support_summaries;
+    for entry in support_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
+
+    let (viewer_head_scores, viewer_signal_summaries, viewer_score_channels, viewer_trace) =
+        compute_viewer_score_channels(
+            &context.viewer_signals,
+            &eligible_heads,
+            &context.profile,
+            context.profile.effective_selection_time,
+        );
+    summary.viewer_signals = viewer_signal_summaries;
+    summary.viewer_score_channels = viewer_score_channels;
+    for entry in viewer_trace {
+        summary.push_trace(entry.step, entry.detail);
+    }
+
+    populate_eligible_head_summaries(
+        &mut summary,
+        &eligible_heads,
+        &support_map,
+        &viewer_head_scores,
+    );
+    let viewer_gating_summary = summarize_viewer_gating(&mut summary);
+    summary.push_trace(
+        "selector_scores",
+        format!(
+            "head_count={} max_selector_score={} supported_head_count={}",
+            summary.eligible_heads.len(),
+            summary
+                .eligible_heads
+                .iter()
+                .map(|head| head.selector_score)
+                .max()
+                .unwrap_or(0),
+            summary
+                .eligible_heads
+                .iter()
+                .filter(|head| head.supporter_count > 0)
+                .count()
+        ),
+    );
+    record_viewer_gating_trace(&mut summary, &viewer_gating_summary);
+
+    let Some(selected) = select_head_from_eligible_summaries(&summary, &viewer_gating_summary)
+    else {
+        summary.push_error("NO_ACTIVE_HEAD_AFTER_VIEWER_REVIEW_OR_FREEZE");
+        summary.status =
+            blocked_status_for_viewer_gating(viewer_gating_summary.viewer_gating).to_string();
+        return summary;
+    };
+
+    summary.selected_head = Some(selected.revision_id.clone());
+    summary.status =
+        success_status_for_viewer_gating(viewer_gating_summary.viewer_gating).to_string();
+    summary.tie_break_reason = Some(selection_tie_break_reason(
+        selected.selector_score > 0,
+        viewer_gating_summary.viewer_gating,
+    ));
+    summary.push_trace(
+        "selected_head",
+        format!(
+            "selected={} tie_break_reason={}",
+            selected.revision_id,
+            summary
+                .tie_break_reason
+                .as_deref()
+                .expect("tie break reason should be set")
+        ),
+    );
+
+    summary
+}
+
+fn load_head_inspect_context(
+    input: HeadInspectInput,
+    doc_id: &str,
+    requested_profile_id: Option<&str>,
+    store_root: Option<&Path>,
+    summary: &mut HeadInspectSummary,
+) -> Option<LoadedHeadInspectContext> {
     let (selected_profile_id, profile) =
         match resolve_head_inspect_profile(&input, requested_profile_id) {
             Ok(selected) => selected,
             Err(message) => {
                 summary.push_error(message);
-                return summary;
+                return None;
             }
         };
     let HeadInspectInput {
@@ -739,154 +917,96 @@ fn inspect_heads_from_loaded_input(
                 }
                 Err(message) => {
                     summary.push_error(message);
-                    return summary;
+                    return None;
                 }
             }
         }
         None => (revisions, views),
     };
 
-    summary.profile_id = Some(selected_profile_id.clone());
-    summary.effective_selection_time = Some(profile.effective_selection_time);
+    Some(LoadedHeadInspectContext {
+        selected_profile_id,
+        profile,
+        revision_values,
+        view_values,
+        viewer_signals,
+        critical_violations,
+    })
+}
+
+fn populate_head_inspect_profile_metadata(
+    summary: &mut HeadInspectSummary,
+    context: &LoadedHeadInspectContext,
+) {
+    summary.profile_id = Some(context.selected_profile_id.clone());
+    summary.effective_selection_time = Some(context.profile.effective_selection_time);
     summary.notes.push(format!(
         "selected reader profile '{}' with policy_hash={}",
-        selected_profile_id, profile.policy_hash
+        context.selected_profile_id, context.profile.policy_hash
     ));
     summary.selector_epoch = Some(selector_epoch(
-        profile.effective_selection_time,
-        profile.epoch_seconds,
-        profile.epoch_zero_timestamp,
+        context.profile.effective_selection_time,
+        context.profile.epoch_seconds,
+        context.profile.epoch_zero_timestamp,
     ));
     summary.push_trace(
         "selector_epoch",
         format!(
             "effective_selection_time={} epoch_seconds={} epoch_zero_timestamp={} selector_epoch={}",
-            profile.effective_selection_time,
-            profile.epoch_seconds,
-            profile.epoch_zero_timestamp,
+            context.profile.effective_selection_time,
+            context.profile.epoch_seconds,
+            context.profile.epoch_zero_timestamp,
             summary.selector_epoch.expect("selector epoch should be set")
         ),
     );
     summary.notes.push(
         "minimal selector mode: critical violations are bundle-provided fixture evidence; external dispute / penalty objects are not implemented yet".to_string(),
     );
+}
 
-    let verified_revisions = collect_verified_revisions(
-        &revision_values,
-        doc_id,
-        profile.effective_selection_time,
-        &mut summary,
-    );
-    let verified_views = collect_verified_views(
-        &view_values,
-        &profile,
-        profile.effective_selection_time,
-        &mut summary,
-    );
-
-    summary.verified_revision_count = verified_revisions.len();
-    summary.verified_view_count = verified_views.len();
-    summary.viewer_signal_count = viewer_signals.len();
-    summary.push_trace(
-        "verified_inputs",
-        format!(
-            "verified_revisions={} verified_views={} viewer_signals={}",
-            summary.verified_revision_count,
-            summary.verified_view_count,
-            summary.viewer_signal_count
-        ),
-    );
+fn populate_critical_violation_summary(
+    summary: &mut HeadInspectSummary,
+    context: &LoadedHeadInspectContext,
+) {
     summary.push_trace(
         "critical_violations",
-        if critical_violations.is_empty() {
+        if context.critical_violations.is_empty() {
             "count=0 affected_maintainers=0".to_string()
         } else {
-            let affected_maintainers = critical_violations
+            let affected_maintainers = context
+                .critical_violations
                 .iter()
                 .map(|violation| violation.maintainer.clone())
                 .collect::<BTreeSet<_>>()
                 .len();
             format!(
                 "count={} affected_maintainers={affected_maintainers}",
-                critical_violations.len()
+                context.critical_violations.len()
             )
         },
     );
-    summary.critical_violations = critical_violations
+    summary.critical_violations = context
+        .critical_violations
         .iter()
         .map(|violation| CriticalViolationSummary {
             maintainer: violation.maintainer.clone(),
             timestamp: violation.timestamp,
             selector_epoch: selector_epoch_for_view(
                 violation.timestamp,
-                profile.epoch_seconds,
-                profile.epoch_zero_timestamp,
+                context.profile.epoch_seconds,
+                context.profile.epoch_zero_timestamp,
             ),
             reason: violation.reason.clone(),
         })
         .collect();
+}
 
-    if !summary.errors.is_empty() {
-        return summary;
-    }
-
-    let structural_heads = compute_eligible_heads(&verified_revisions);
-    let (eligible_heads, editor_candidate_summaries, editor_trace) =
-        apply_editor_admission(&structural_heads, &profile.editor_admission);
-    summary.editor_candidates = editor_candidate_summaries;
-    summary.push_trace(
-        "eligible_heads",
-        format!("count={}", structural_heads.len()),
-    );
-    for entry in editor_trace {
-        summary.push_trace(entry.step, entry.detail);
-    }
-    if eligible_heads.is_empty() {
-        summary.push_error("NO_ELIGIBLE_HEAD");
-        return summary;
-    }
-
-    let (effective_weights, effective_weight_summaries, weight_trace) = compute_effective_weights(
-        &verified_views,
-        &critical_violations,
-        summary
-            .selector_epoch
-            .expect("selector epoch should be set"),
-        &profile,
-    );
-    summary.effective_weights = effective_weight_summaries;
-    for entry in weight_trace {
-        summary.push_trace(entry.step, entry.detail);
-    }
-
-    let (support_map, support_summaries, support_trace) = latest_support_by_maintainer(
-        &verified_views,
-        doc_id,
-        &eligible_heads,
-        summary
-            .selector_epoch
-            .expect("selector epoch should be set"),
-        &profile,
-        &effective_weights,
-    );
-    summary.maintainer_support = support_summaries;
-    for entry in support_trace {
-        summary.push_trace(entry.step, entry.detail);
-    }
-
-    let (viewer_head_scores, viewer_signal_summaries, viewer_score_channels, viewer_trace) =
-        compute_viewer_score_channels(
-            &viewer_signals,
-            &eligible_heads,
-            &profile,
-            profile.effective_selection_time,
-        );
-    summary.viewer_signals = viewer_signal_summaries;
-    summary.viewer_score_channels = viewer_score_channels;
-    for entry in viewer_trace {
-        summary.push_trace(entry.step, entry.detail);
-    }
-
+fn populate_eligible_head_summaries(
+    summary: &mut HeadInspectSummary,
+    eligible_heads: &[VerifiedRevision],
+    support_map: &HashMap<String, MaintainerSupport>,
+    viewer_head_scores: &HashMap<String, ViewerHeadScore>,
+) {
     let mut eligible_summaries = eligible_heads
         .iter()
         .map(|revision| {
@@ -948,6 +1068,9 @@ fn inspect_heads_from_loaded_input(
             channel.selector_score = head.selector_score;
         }
     }
+}
+
+fn summarize_viewer_gating(summary: &mut HeadInspectSummary) -> ViewerGatingSummary {
     let review_delayed_revision_ids = summary
         .viewer_score_channels
         .iter()
@@ -980,40 +1103,42 @@ fn inspect_heads_from_loaded_input(
             "temporary freeze blocks candidate activation for: {frozen_list}"
         ));
     }
-    summary.push_trace(
-        "selector_scores",
-        format!(
-            "head_count={} max_selector_score={} supported_head_count={}",
-            summary.eligible_heads.len(),
-            summary
-                .eligible_heads
-                .iter()
-                .map(|head| head.selector_score)
-                .max()
-                .unwrap_or(0),
-            summary
-                .eligible_heads
-                .iter()
-                .filter(|head| head.supporter_count > 0)
-                .count()
+
+    ViewerGatingSummary {
+        viewer_gating: viewer_selection_gating(
+            !review_delayed_revision_ids.is_empty(),
+            !frozen_revision_ids.is_empty(),
         ),
-    );
-    if !review_delayed_revision_ids.is_empty() {
-        let active_candidate_count = summary
-            .eligible_heads
-            .iter()
-            .filter(|head| {
-                !review_delayed_revision_ids.contains(head.revision_id.as_str())
-                    && !frozen_revision_ids.contains(head.revision_id.as_str())
-            })
-            .count();
+        review_delayed_revision_ids,
+        frozen_revision_ids,
+    }
+}
+
+fn record_viewer_gating_trace(
+    summary: &mut HeadInspectSummary,
+    viewer_gating_summary: &ViewerGatingSummary,
+) {
+    let active_candidate_count = summary
+        .eligible_heads
+        .iter()
+        .filter(|head| {
+            !viewer_gating_summary
+                .review_delayed_revision_ids
+                .contains(head.revision_id.as_str())
+                && !viewer_gating_summary
+                    .frozen_revision_ids
+                    .contains(head.revision_id.as_str())
+        })
+        .count();
+    if !viewer_gating_summary.review_delayed_revision_ids.is_empty() {
         summary.push_trace(
             "viewer_review",
             format!(
                 "delayed_candidates={} active_candidates={} delayed_revision_ids={}",
-                review_delayed_revision_ids.len(),
+                viewer_gating_summary.review_delayed_revision_ids.len(),
                 active_candidate_count,
-                review_delayed_revision_ids
+                viewer_gating_summary
+                    .review_delayed_revision_ids
                     .iter()
                     .cloned()
                     .collect::<Vec<_>>()
@@ -1021,22 +1146,15 @@ fn inspect_heads_from_loaded_input(
             ),
         );
     }
-    if !frozen_revision_ids.is_empty() {
-        let active_candidate_count = summary
-            .eligible_heads
-            .iter()
-            .filter(|head| {
-                !review_delayed_revision_ids.contains(head.revision_id.as_str())
-                    && !frozen_revision_ids.contains(head.revision_id.as_str())
-            })
-            .count();
+    if !viewer_gating_summary.frozen_revision_ids.is_empty() {
         summary.push_trace(
             "viewer_freeze",
             format!(
                 "blocked_candidates={} active_candidates={} blocked_revision_ids={}",
-                frozen_revision_ids.len(),
+                viewer_gating_summary.frozen_revision_ids.len(),
                 active_candidate_count,
-                frozen_revision_ids
+                viewer_gating_summary
+                    .frozen_revision_ids
                     .iter()
                     .cloned()
                     .collect::<Vec<_>>()
@@ -1044,49 +1162,30 @@ fn inspect_heads_from_loaded_input(
             ),
         );
     }
+}
 
-    let viewer_gating = viewer_selection_gating(
-        !review_delayed_revision_ids.is_empty(),
-        !frozen_revision_ids.is_empty(),
-    );
-    let selectable_heads = summary
+fn select_head_from_eligible_summaries(
+    summary: &HeadInspectSummary,
+    viewer_gating_summary: &ViewerGatingSummary,
+) -> Option<EligibleHeadSummary> {
+    summary
         .eligible_heads
         .iter()
         .filter(|head| {
-            !review_delayed_revision_ids.contains(head.revision_id.as_str())
-                && !frozen_revision_ids.contains(head.revision_id.as_str())
+            !viewer_gating_summary
+                .review_delayed_revision_ids
+                .contains(head.revision_id.as_str())
+                && !viewer_gating_summary
+                    .frozen_revision_ids
+                    .contains(head.revision_id.as_str())
         })
-        .collect::<Vec<_>>();
-    let Some(selected) = selectable_heads.into_iter().max_by(|left, right| {
-        left.selector_score
-            .cmp(&right.selector_score)
-            .then(left.revision_timestamp.cmp(&right.revision_timestamp))
-            .then_with(|| right.revision_id.cmp(&left.revision_id))
-    }) else {
-        summary.push_error("NO_ACTIVE_HEAD_AFTER_VIEWER_REVIEW_OR_FREEZE");
-        summary.status = blocked_status_for_viewer_gating(viewer_gating).to_string();
-        return summary;
-    };
-
-    summary.selected_head = Some(selected.revision_id.clone());
-    summary.status = success_status_for_viewer_gating(viewer_gating).to_string();
-    summary.tie_break_reason = Some(selection_tie_break_reason(
-        selected.selector_score > 0,
-        viewer_gating,
-    ));
-    summary.push_trace(
-        "selected_head",
-        format!(
-            "selected={} tie_break_reason={}",
-            selected.revision_id,
-            summary
-                .tie_break_reason
-                .as_deref()
-                .expect("tie break reason should be set")
-        ),
-    );
-
-    summary
+        .max_by(|left, right| {
+            left.selector_score
+                .cmp(&right.selector_score)
+                .then(left.revision_timestamp.cmp(&right.revision_timestamp))
+                .then_with(|| right.revision_id.cmp(&left.revision_id))
+        })
+        .cloned()
 }
 
 fn load_store_backed_selector_objects(
