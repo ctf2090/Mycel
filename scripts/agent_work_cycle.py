@@ -276,6 +276,13 @@ def is_source_path(path: str) -> bool:
 
 
 def cycle_has_source_changes(agent_uid: str, batch_num: int) -> bool | None:
+    source_paths = cycle_source_paths(agent_uid, batch_num)
+    if source_paths is None:
+        return None
+    return bool(source_paths)
+
+
+def cycle_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
     snapshot = load_git_state_snapshot(agent_uid, batch_num)
     if snapshot is None or snapshot.get("available") is not True:
         return None
@@ -298,7 +305,7 @@ def cycle_has_source_changes(agent_uid: str, batch_num: int) -> bool | None:
         if isinstance(path, str) and path.strip()
     }
 
-    cycle_paths = set()
+    cycle_paths: set[str] = set()
     cycle_paths.update(current_status_paths - base_status_paths)
 
     if isinstance(base_head, str) and base_head and isinstance(current_head, str) and current_head:
@@ -311,7 +318,32 @@ def cycle_has_source_changes(agent_uid: str, batch_num: int) -> bool | None:
             if path.strip()
         )
 
-    return any(is_source_path(path) for path in cycle_paths)
+    return {path for path in cycle_paths if is_source_path(path)}
+
+
+def cycle_committed_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
+    snapshot = load_git_state_snapshot(agent_uid, batch_num)
+    if snapshot is None or snapshot.get("available") is not True:
+        return None
+
+    base_head = snapshot.get("head")
+    current_snapshot = capture_git_state_snapshot()
+    if current_snapshot.get("available") is not True:
+        return None
+
+    current_head = current_snapshot.get("head")
+    if not (isinstance(base_head, str) and base_head and isinstance(current_head, str) and current_head):
+        return set()
+
+    diff_proc = run_git(["diff", "--name-only", f"{base_head}..{current_head}"])
+    if diff_proc.returncode != 0:
+        return None
+
+    return {
+        path.strip()
+        for path in diff_proc.stdout.splitlines()
+        if path.strip() and is_source_path(path.strip())
+    }
 
 
 def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str, str | bool | None]:
@@ -321,6 +353,23 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
             "required": False,
             "ok": True,
             "reason": "no source changes detected in the cycle",
+            "remote_head": None,
+        }
+
+    committed_source_paths = cycle_committed_source_paths(agent_uid, batch_num)
+    if committed_source_paths is None:
+        return {
+            "required": False,
+            "ok": True,
+            "reason": "no committed source changes detected in the cycle",
+            "remote_head": None,
+        }
+
+    if not committed_source_paths:
+        return {
+            "required": False,
+            "ok": True,
+            "reason": "no committed source changes detected in the cycle",
             "remote_head": None,
         }
 
@@ -339,11 +388,11 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
         for path in current_snapshot.get("status_paths", [])
         if isinstance(path, str) and path.strip()
     }
-    if any(is_source_path(path) for path in current_status_paths):
+    if any(path in committed_source_paths for path in current_status_paths):
         return {
             "required": True,
             "ok": False,
-            "reason": "source changes are still present in the worktree; commit and push them first",
+            "reason": "cycle-owned source changes are still present in the worktree; commit and push them first",
             "remote_head": None,
         }
 
@@ -725,7 +774,8 @@ def main() -> int:
 
         # Scrutinize not-needed markings on high-value required items.
         not_needed_violations: list[tuple[str, str]] = []
-        source_changes_present = cycle_has_source_changes(agent_uid, latest_batch)
+        committed_source_paths = cycle_committed_source_paths(agent_uid, latest_batch)
+        source_changes_present = None if committed_source_paths is None else bool(committed_source_paths)
         push_status = cycle_source_change_push_status(agent_uid, latest_batch)
         for path in checklist_paths:
             not_needed_violations.extend(

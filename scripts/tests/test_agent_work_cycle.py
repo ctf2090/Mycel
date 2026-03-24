@@ -566,6 +566,8 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             + "\n# source change\n",
             encoding="utf-8",
         )
+        self.run_git("add", "scripts/agent_timestamp.py")
+        self.run_git("commit", "-m", "committed source change")
         self.set_checklist_state(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
             "workflow.files-changed-summary",
@@ -664,6 +666,82 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.run_git("add", "scripts/agent_timestamp.py")
         self.run_git("commit", "-m", "pushed source change")
         self.run_git("push", "origin", "HEAD:main")
+        self.set_checklist_state(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
+            "workflow.files-changed-summary",
+            "X",
+            "Include a files-changed summary when source changes land",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("source_push_required: true", proc.stdout)
+        self.assertIn("source_push_ok: true", proc.stdout)
+        self.assertIn("HEAD is reachable from origin/main", proc.stdout)
+
+    def test_end_allows_foreign_uncommitted_source_changes_without_files_changed_summary(self) -> None:
+        self.write_agents_md()
+        self.init_git_repo()
+        self.init_origin_main_remote()
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        (self.root / "scripts" / "agent_timestamp.py").write_text(
+            (self.root / "scripts" / "agent_timestamp.py").read_text(encoding="utf-8")
+            + "\n# foreign dirty source change\n",
+            encoding="utf-8",
+        )
+        self.set_checklist_state(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
+            "workflow.files-changed-summary",
+            "-",
+            "Include a files-changed summary when source changes land",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("scrutinized_not_needed_violations: 0", proc.stdout)
+        self.assertIn("source_push_required: false", proc.stdout)
+        self.assertIn("no committed source changes detected in the cycle", proc.stdout)
+
+    def test_end_ignores_foreign_uncommitted_source_changes_after_pushed_source_cycle(self) -> None:
+        self.write_agents_md()
+        self.init_git_repo()
+        self.init_origin_main_remote()
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        (self.root / "scripts" / "agent_timestamp.py").write_text(
+            (self.root / "scripts" / "agent_timestamp.py").read_text(encoding="utf-8")
+            + "\n# pushed source change\n",
+            encoding="utf-8",
+        )
+        self.run_git("add", "scripts/agent_timestamp.py")
+        self.run_git("commit", "-m", "pushed source change")
+        self.run_git("push", "origin", "HEAD:main")
+
+        (self.root / "scripts" / "agent_registry.py").write_text(
+            (self.root / "scripts" / "agent_registry.py").read_text(encoding="utf-8")
+            + "\n# foreign dirty source change\n",
+            encoding="utf-8",
+        )
+
         self.set_checklist_state(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
             "workflow.files-changed-summary",
