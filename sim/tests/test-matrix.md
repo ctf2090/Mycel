@@ -62,16 +62,25 @@ families below.
 
 | Simulator case | Product-layer counterpart | Coverage status |
 |---|---|---|
+| `view-sync-without-capability` | `sync_pull_json_rejects_view_announce_without_advertised_capability` | both layers |
+| `snapshot-sync-without-capability` | `sync_pull_json_rejects_snapshot_offer_without_advertised_capability` | both layers |
+| `session-messages-after-bye` | `sync_pull_json_rejects_messages_after_bye` | both layers |
 | `session-bye-before-hello` | `sync_pull_json_rejects_bye_before_hello` | both layers |
 | `session-snapshot-offer-before-hello` | `sync_pull_json_rejects_snapshot_offer_before_hello` | both layers |
 | `session-view-announce-before-hello` | `sync_pull_json_rejects_view_announce_before_hello` | both layers |
 | `session-manifest-before-hello` | `sync_pull_json_rejects_manifest_before_hello` | both layers |
 | `session-heads-before-hello` | `sync_pull_json_rejects_heads_before_hello` | both layers |
+| `session-duplicate-hello` | `sync_pull_json_rejects_duplicate_hello` | both layers |
 | `session-want-before-hello` | `sync_pull_json_rejects_want_before_hello` | both layers |
 | `session-want-before-manifest` | `sync_pull_json_rejects_want_before_manifest_or_heads` | both layers |
 | `session-snapshot-want-before-manifest` | `sync_pull_json_snapshot_offer_before_manifest_does_not_unlock_want` | both layers |
 | `session-view-announce-want-before-manifest` | `sync_pull_json_view_announce_before_manifest_does_not_unlock_want` | both layers |
 | `session-object-before-manifest` | `sync_pull_json_rejects_unrequested_object_before_manifest_or_heads` | both layers |
+| `session-stale-root-want-after-heads-replace` | `sync_pull_json_rejects_stale_root_want_after_heads_replace` | both layers |
+| `session-stale-root-object-after-heads-replace` | `sync_pull_json_rejects_stale_root_object_after_heads_replace` | both layers |
+| `session-stale-dependency-object-after-heads-replace` | `sync_pull_json_rejects_stale_dependency_object_after_heads_replace` | both layers |
+| `session-stale-snapshot-want-after-heads-replace` | `sync_pull_json_rejects_stale_snapshot_want_after_heads_replace` | both layers |
+| `session-stale-view-want-after-heads-replace` | `sync_pull_json_rejects_stale_view_want_after_heads_replace` | both layers |
 | `reject-hash-mismatch` | `sync_pull_json_rejects_invalid_object_hash_without_storing_objects` | both layers |
 | `reject-signature-mismatch` | `sync_pull_json_rejects_invalid_wire_signature_without_storing_objects` | both layers |
 
