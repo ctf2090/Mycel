@@ -73,4 +73,5 @@ Legend:
 1. Read [`ROADMAP.md`](../ROADMAP.md) for build order and milestone intent.
 2. Read [`IMPLEMENTATION-CHECKLIST.en.md`](../IMPLEMENTATION-CHECKLIST.en.md) for section-by-section closure items.
 3. Read [`DEV-SETUP.md`](./DEV-SETUP.md) if you are starting from a fresh environment or onboarding a new agent.
-4. Use [`progress.html`](../pages/progress.html) for the public visual summary.
+4. Read [`GITHUB-ADOPTION-PLAN.md`](./GITHUB-ADOPTION-PLAN.md) for repo workflow and security-adoption status, including the enabled GitHub CodeQL default setup and the already-fixed first workflow-permissions findings.
+5. Use [`progress.html`](../pages/progress.html) for the public visual summary.
