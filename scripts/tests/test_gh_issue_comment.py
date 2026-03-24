@@ -33,8 +33,17 @@ class GhIssueCommentTest(unittest.TestCase):
             check=False,
         )
 
-    def test_comment_prefers_gh_token_agent_when_present(self) -> None:
-        with mock.patch.dict(os.environ, {"GH_TOKEN": "user-token", "GH_TOKEN_AGENT": "agent-token"}, clear=False):
+    def test_comment_keeps_gh_token_when_it_is_already_the_agent_identity(self) -> None:
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "agent-token", "GH_TOKEN_USER": "user-token"}, clear=False):
+            with mock.patch.object(subprocess, "run") as run_mock:
+                run_mock.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+                gh_issue_comment.run_gh(["gh", "issue", "comment", "12", "--body-file", "-"], body="hello")
+
+        used_env = run_mock.call_args.kwargs["env"]
+        self.assertEqual("agent-token", used_env["GH_TOKEN"])
+
+    def test_comment_falls_back_to_legacy_gh_token_agent_when_present(self) -> None:
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "", "GH_TOKEN_AGENT": "agent-token"}, clear=False):
             with mock.patch.object(subprocess, "run") as run_mock:
                 run_mock.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
                 gh_issue_comment.run_gh(["gh", "issue", "comment", "12", "--body-file", "-"], body="hello")

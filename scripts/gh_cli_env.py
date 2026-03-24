@@ -8,7 +8,17 @@ from typing import Mapping
 
 def preferred_gh_env(base_env: Mapping[str, str] | None = None) -> dict[str, str]:
     env = dict(base_env or os.environ)
-    agent_token = env.get("GH_TOKEN_AGENT", "").strip()
+    # Repo-local default: GH_TOKEN is the agent identity. Keep a legacy
+    # fallback for older shells that may still export GH_TOKEN_AGENT.
+    agent_token = env.get("GH_TOKEN", "").strip() or env.get("GH_TOKEN_AGENT", "").strip()
     if agent_token:
         env["GH_TOKEN"] = agent_token
+    return env
+
+
+def preferred_user_gh_env(base_env: Mapping[str, str] | None = None) -> dict[str, str]:
+    env = dict(base_env or os.environ)
+    user_token = env.get("GH_TOKEN_USER", "").strip()
+    if user_token:
+        env["GH_TOKEN"] = user_token
     return env
