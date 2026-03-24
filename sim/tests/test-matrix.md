@@ -8,6 +8,14 @@
 - `incremental-sync`: reader already has genesis revision, receives follow-up revision via HEADS-based incremental sync
   Reference JSON: `sim/tests/incremental-sync.example.json`
 
+### Product-Layer Positive Notes
+
+| Simulator case | Product-layer counterpart | Coverage status |
+|---|---|---|
+| `first-sync-empty-reader` | `sync_peer_store_json_runs_first_time_sync_into_local_store` | both layers |
+| `three-peer-consistency` | no dedicated `apps/mycel-cli/tests` multi-reader counterpart yet | simulator-only topology proof |
+| `incremental-sync` | `sync_pull_json_replays_incremental_transcript_into_existing_store` | both layers |
+
 ## Negative
 
 - `reject-hash-mismatch`: reject invalid object body hash
@@ -133,6 +141,12 @@ Product-layer-only note:
 
 - `four-reader-multi-doc`: four readers each start empty and converge on a two-document verified object set from a single seed
   Reference JSON: `sim/tests/four-reader-multi-doc.example.json`
+
+### Product-Layer Scalability Notes
+
+| Simulator case | Product-layer counterpart | Coverage status |
+|---|---|---|
+| `four-reader-multi-doc` | no dedicated `apps/mycel-cli/tests` four-reader multi-document counterpart yet | simulator-only topology proof |
 
 ## Production Replication
 
