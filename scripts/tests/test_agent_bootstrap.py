@@ -140,7 +140,8 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("next_actions:", proc.stdout)
         self.assertIn("deferred_reads:", proc.stdout)
         self.assertIn("wait for the concrete doc task", proc.stdout)
-        self.assertIn("review open pull requests", proc.stdout)
+        self.assertIn("review open Dependabot pull requests first", proc.stdout)
+        self.assertIn("review open human-authored product pull requests", proc.stdout)
         self.assertNotIn("latest completed CI result", proc.stdout)
 
     def test_json_output_returns_combined_payload(self) -> None:

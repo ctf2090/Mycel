@@ -14,7 +14,7 @@ Suggested per-agent copy path:
 
 - Confirm the registry state and active peers before taking documentation or planning scope. <!-- item-id: doc.startup.registry-state -->
 - Review the latest open same-role handoff when one exists and include it in the bootstrap next-work items. <!-- item-id: doc.startup.review-same-role-handoff -->
-- Review open pull requests and include PR review as one of the bootstrap next-work items when it could affect doc follow-up. <!-- item-id: doc.startup.review-open-prs -->
+- Review open pull requests and distinguish Dependabot dependency-update PRs from human-authored product PRs when choosing bootstrap next-work items. <!-- item-id: doc.startup.review-open-prs -->
 
 ## Work Cycle Workflow
 

@@ -326,7 +326,8 @@ def next_actions_for_role(role: str) -> list[str]:
     if role == "doc":
         return [
             "wait for the concrete doc task before running planning-sync mailbox scans or scripts/check-plan-refresh.sh",
-            "review open pull requests before choosing the first doc follow-up item",
+            "review open Dependabot pull requests first to assess dependency-update doc or checklist impact",
+            "review open human-authored product pull requests before choosing the first doc follow-up item",
         ]
     return []
 
