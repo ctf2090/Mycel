@@ -7,6 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from scripts.gh_cli_env import preferred_gh_env
+except ImportError:  # pragma: no cover - direct script execution path
+    from gh_cli_env import preferred_gh_env
+
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -94,6 +99,7 @@ def run_gh(args: list[str], *, body: str | None = None) -> None:
     proc = subprocess.run(
         args,
         cwd=ROOT_DIR,
+        env=preferred_gh_env(),
         text=True,
         input=body,
         capture_output=True,

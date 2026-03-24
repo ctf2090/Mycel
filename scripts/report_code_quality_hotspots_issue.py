@@ -10,6 +10,11 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
+try:
+    from scripts.gh_cli_env import preferred_gh_env
+except ImportError:  # pragma: no cover - direct script execution path
+    from gh_cli_env import preferred_gh_env
+
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_TITLE = "Code Quality Hotspots"
@@ -90,6 +95,7 @@ def run_cmd(args: list[str] | tuple[str, ...], *, input_text: str | None = None)
     proc = subprocess.run(
         list(args),
         cwd=ROOT_DIR,
+        env=preferred_gh_env(),
         text=True,
         input=input_text,
         capture_output=True,

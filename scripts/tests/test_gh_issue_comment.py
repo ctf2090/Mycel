@@ -3,6 +3,7 @@ import unittest
 from argparse import Namespace
 from pathlib import Path
 from unittest import mock
+import os
 
 import scripts.gh_issue_comment as gh_issue_comment
 
@@ -25,11 +26,21 @@ class GhIssueCommentTest(unittest.TestCase):
         run_mock.assert_called_once_with(
             ["gh", "issue", "comment", "12", "--body-file", "-"],
             cwd=gh_issue_comment.ROOT_DIR,
+            env=mock.ANY,
             text=True,
             input="hello\n`markdown`\n",
             capture_output=True,
             check=False,
         )
+
+    def test_comment_prefers_gh_token_agent_when_present(self) -> None:
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "user-token", "GH_TOKEN_AGENT": "agent-token"}, clear=False):
+            with mock.patch.object(subprocess, "run") as run_mock:
+                run_mock.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+                gh_issue_comment.run_gh(["gh", "issue", "comment", "12", "--body-file", "-"], body="hello")
+
+        used_env = run_mock.call_args.kwargs["env"]
+        self.assertEqual("agent-token", used_env["GH_TOKEN"])
 
     def test_read_body_prefers_explicit_body(self) -> None:
         args = Namespace(body="inline", body_file="-", no_comment=False, require_body=True)

@@ -1,9 +1,24 @@
+import os
 import unittest
+from unittest import mock
 
 from scripts import report_code_quality_hotspots_issue as report
 
 
 class ReportCodeQualityHotspotsIssueTest(unittest.TestCase):
+    def test_run_cmd_prefers_gh_token_agent_when_present(self) -> None:
+        recorded: dict[str, object] = {}
+
+        def fake_run(args, **kwargs):
+            recorded["env"] = kwargs["env"]
+            return report.subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "user-token", "GH_TOKEN_AGENT": "agent-token"}, clear=False):
+            with mock.patch.object(report.subprocess, "run", side_effect=fake_run):
+                self.assertEqual("ok", report.run_cmd(["gh", "issue", "list"]))
+
+        self.assertEqual("agent-token", recorded["env"]["GH_TOKEN"])
+
     def test_list_matching_issues_accepts_legacy_title(self) -> None:
         args = report.parse_args.__globals__["argparse"].Namespace(
             repo=None,
