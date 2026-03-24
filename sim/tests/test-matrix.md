@@ -50,6 +50,8 @@
   Reference JSON: `sim/tests/session-stale-dependency-object-after-heads-replace.example.json`
 - `session-stale-snapshot-want-after-heads-replace`: reject a stale snapshot `WANT` after `HEADS replace=true` withdraws the old root set that previously made the snapshot reachable
   Reference JSON: `sim/tests/session-stale-snapshot-want-after-heads-replace.example.json`
+- `session-stale-view-want-after-heads-replace`: reject a stale view `WANT` after `HEADS replace=true` withdraws the old root set that previously made the announced view reachable
+  Reference JSON: `sim/tests/session-stale-view-want-after-heads-replace.example.json`
 
 ## Recovery
 
