@@ -2076,6 +2076,63 @@ fn signature_mismatch_run_produces_fault_plan_and_fail_result() {
 }
 
 #[test]
+fn object_id_mismatch_run_produces_fault_plan_and_fail_result() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/object-id-mismatch.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    assert_eq!(summary["seed_source"], "derived");
+    assert_eq!(summary["rejected_object_count"], 1);
+
+    let fault_plan = summary["fault_plan"]
+        .as_array()
+        .expect("fault_plan should be an array");
+    assert_eq!(fault_plan.len(), 1);
+    assert_eq!(fault_plan[0]["fault"], "object-id-mismatch");
+
+    let report = load_report(&summary);
+    let events = report["events"]
+        .as_array()
+        .expect("events should be an array");
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
+    assert!(
+        events.iter().any(|entry| entry["action"] == "inject-fault"),
+        "expected inject-fault event in report"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|entry| entry["action"] == "reject-object-set"),
+        "expected reject-object-set event in report"
+    );
+    assert!(
+        failures.iter().any(|entry| {
+            entry["description"]
+                .as_str()
+                .is_some_and(|description| description.contains("Reader rejected planned fault"))
+        }),
+        "expected reader rejection failure in report"
+    );
+
+    let validation = validate_generated_report(&summary);
+    assert_eq!(validation["report_count"], 1);
+}
+
+#[test]
 fn three_peer_consistency_run_text_reports_human_summary() {
     let _guard = sim_run_lock();
     let output = run_sim(&[

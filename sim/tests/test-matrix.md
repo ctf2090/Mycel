@@ -20,6 +20,8 @@
 
 - `reject-hash-mismatch`: reject invalid object body hash
   Reference JSON: `sim/tests/hash-mismatch.example.json`
+- `reject-object-id-mismatch`: reject an object whose payload-derived `object_id` does not match the wire envelope claim
+  Reference JSON: `sim/tests/object-id-mismatch.example.json`
 - `reject-signature-mismatch`: reject invalid object or wire signature
   Reference JSON: `sim/tests/signature-mismatch.example.json`
 - `view-sync-without-capability`: reject VIEW_ANNOUNCE when the seed omitted the required `view-sync` capability
@@ -102,6 +104,7 @@ families below.
 | `session-stale-snapshot-want-after-heads-replace` | `sync_pull_json_rejects_stale_snapshot_want_after_heads_replace` | both layers |
 | `session-stale-view-want-after-heads-replace` | `sync_pull_json_rejects_stale_view_want_after_heads_replace` | both layers |
 | `reject-hash-mismatch` | `sync_pull_json_rejects_invalid_object_hash_without_storing_objects` | both layers |
+| `reject-object-id-mismatch` | `sync_pull_json_reports_object_id_mismatch_without_storing_objects` | both layers |
 | `reject-signature-mismatch` | `sync_pull_json_rejects_invalid_wire_signature_without_storing_objects` | both layers |
 
 ## Recovery

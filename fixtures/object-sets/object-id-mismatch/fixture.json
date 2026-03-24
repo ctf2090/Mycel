@@ -1,0 +1,12 @@
+{
+  "$schema": "../fixture.schema.json",
+  "fixture_id": "object-id-mismatch",
+  "description": "Negative fixture where one advertised object payload derives a different object_id than the envelope claims",
+  "seed_peer": "peer-fault",
+  "reader_peers": ["peer-reader-a"],
+  "fault_peer": "peer-fault",
+  "expected_outcomes": [
+    "object-rejected-object-id-mismatch",
+    "no-invalid-index-write"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "./topology.schema.json",
+  "topology_id": "object-id-mismatch",
+  "description": "One fault source and two readers exercise deterministic object_id mismatch ordering",
+  "fixture_set": "fixtures/object-sets/object-id-mismatch",
+  "execution_mode": "single-process",
+  "peers": [
+    {
+      "node_id": "node:peer-fault",
+      "role": "seed",
+      "bootstrap_peers": [],
+      "endpoint": "local:peer-fault"
+    },
+    {
+      "node_id": "node:peer-reader-a",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-fault"],
+      "endpoint": "local:peer-reader-a"
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "role": "reader",
+      "bootstrap_peers": ["node:peer-fault"],
+      "endpoint": "local:peer-reader-b"
+    }
+  ],
+  "expected_outcomes": [
+    "object-rejected-object-id-mismatch",
+    "no-invalid-index-write"
+  ],
+  "notes": [
+    "Use this topology to observe deterministic fault ordering for object_id mismatch handling."
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "./test-case.schema.json",
+  "test_id": "object-id-mismatch",
+  "description": "Reader peers should deterministically reject the injected object_id mismatch according to the fault plan.",
+  "category": "negative",
+  "topology": "sim/topologies/object-id-mismatch.example.json",
+  "fixture_set": "fixtures/object-sets/object-id-mismatch",
+  "execution_mode": "single-process",
+  "expected_result": "fail",
+  "expected_outcomes": [
+    "object-rejected-object-id-mismatch",
+    "no-invalid-index-write"
+  ],
+  "assertions": [
+    {
+      "assertion_id": "fault-plan-present",
+      "description": "The generated report exposes a deterministic non-empty fault plan.",
+      "severity": "error"
+    },
+    {
+      "assertion_id": "object-rejected-object-id-mismatch",
+      "description": "At least one reader rejects the planned object_id mismatch injection.",
+      "severity": "error"
+    }
+  ],
+  "notes": [
+    "Use this to inspect how deterministic seed ordering drives negative object_id mismatch injection."
+  ]
+}

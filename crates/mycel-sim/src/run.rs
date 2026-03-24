@@ -272,10 +272,11 @@ fn simulate_report(
     deterministic_seed: &str,
     fault_plan: &[FaultPlanEntry],
 ) -> Result<Report, String> {
-    let has_faults = fixture
-        .expected_outcomes
-        .iter()
-        .any(|outcome| outcome.contains("hash-mismatch") || outcome.contains("signature"));
+    let has_faults = fixture.expected_outcomes.iter().any(|outcome| {
+        outcome.contains("hash-mismatch")
+            || outcome.contains("object-id-mismatch")
+            || outcome.contains("signature")
+    });
     if has_faults {
         return simulate_fault_report(test_case, topology, fixture, deterministic_seed, fault_plan);
     }
@@ -1163,6 +1164,10 @@ fn simulate_fault_report(
         .expected_outcomes
         .iter()
         .any(|outcome| outcome.contains("hash-mismatch"));
+    let has_object_id_failure = fixture
+        .expected_outcomes
+        .iter()
+        .any(|outcome| outcome.contains("object-id-mismatch"));
     let has_signature_failure = fixture
         .expected_outcomes
         .iter()
@@ -1292,7 +1297,7 @@ fn simulate_fault_report(
                     )),
                 );
             }
-        } else if has_hash_failure || has_signature_failure {
+        } else if has_hash_failure || has_object_id_failure || has_signature_failure {
             if is_reader && (!fault_plan.is_empty() && !peer_targets_faults.is_empty()) {
                 report_peer.rejected_object_ids = rejected_object_ids.clone();
                 report_peer.notes.push(
@@ -1461,11 +1466,11 @@ fn build_verified_object_ids(fixture: &Fixture) -> Vec<String> {
 fn build_rejected_object_ids(fixture: &Fixture) -> Vec<String> {
     let mut object_ids = BTreeSet::new();
 
-    if fixture
-        .expected_outcomes
-        .iter()
-        .any(|outcome| outcome.contains("hash-mismatch") || outcome.contains("signature"))
-    {
+    if fixture.expected_outcomes.iter().any(|outcome| {
+        outcome.contains("hash-mismatch")
+            || outcome.contains("object-id-mismatch")
+            || outcome.contains("signature")
+    }) {
         object_ids.insert(format!("obj:{}:rejected", fixture.fixture_id));
     }
 
@@ -3094,6 +3099,9 @@ fn collect_fault_modes(fixture: &Fixture) -> Vec<String> {
     for outcome in &fixture.expected_outcomes {
         if outcome.contains("hash-mismatch") {
             modes.insert("hash-mismatch".to_owned());
+        }
+        if outcome.contains("object-id-mismatch") {
+            modes.insert("object-id-mismatch".to_owned());
         }
         if outcome.contains("signature") {
             modes.insert("signature-mismatch".to_owned());
