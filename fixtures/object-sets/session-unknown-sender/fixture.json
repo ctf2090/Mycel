@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-unknown-sender",
+    "description": "Seed mutates the opening HELLO to come from an unregistered sender so the reader rejects the transcript immediately",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-unknown-sender-test"
+        }
+    ],
+    "expected_outcomes": [
+        "unknown-sender-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "unknown-sender"
+    },
+    "notes": [
+        "Simulator rewrites the first HELLO to use an impostor sender identity and re-signs it.",
+        "The reader should fail before session establishment because the wire sender is not registered in the peer directory."
+    ]
+}

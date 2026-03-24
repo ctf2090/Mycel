@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-hello-node-id-mismatch",
+    "description": "Seed mutates HELLO so payload node_id disagrees with the envelope sender identity",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-hello-node-id-mismatch-test"
+        }
+    ],
+    "expected_outcomes": [
+        "hello-node-id-mismatch-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "hello-node-id-mismatch"
+    },
+    "notes": [
+        "Simulator rewrites the opening HELLO payload node_id while leaving the envelope sender unchanged, then re-signs the message.",
+        "The reader should reject HELLO because the payload node_id must equal the envelope from field."
+    ]
+}

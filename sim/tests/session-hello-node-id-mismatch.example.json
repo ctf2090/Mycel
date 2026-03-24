@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-hello-node-id-mismatch",
+    "description": "A reader should fail sync when the seed opens the wire session with a HELLO whose payload node_id mismatches the envelope sender.",
+    "category": "negative",
+    "topology": "sim/topologies/session-hello-node-id-mismatch.example.json",
+    "fixture_set": "fixtures/object-sets/session-hello-node-id-mismatch",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "hello-node-id-mismatch-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "hello-node-id-mismatch-rejected",
+            "description": "Reader rejects the opening HELLO because payload node_id must equal the envelope sender.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the HELLO sender-identity mismatch.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with direct sender-validation coverage for HELLO node_id mismatch rejection.",
+        "The harness rewrites the generated HELLO payload node_id before replay."
+    ]
+}

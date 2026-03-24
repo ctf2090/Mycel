@@ -1883,12 +1883,14 @@ fn inject_session_fault(
         "bye-before-hello" => inject_bye_before_hello_fault(transcript, signing_key),
         "duplicate-hello" => inject_duplicate_hello_fault(transcript, signing_key),
         "heads-before-hello" => inject_heads_before_hello_fault(transcript, signing_key),
+        "hello-node-id-mismatch" => inject_hello_node_id_mismatch_fault(transcript, signing_key),
         "manifest-before-hello" => inject_manifest_before_hello_fault(transcript),
         "messages-after-bye" => inject_messages_after_bye_fault(transcript, signing_key),
         "object-before-manifest" => inject_object_before_manifest_fault(transcript),
         "snapshot-offer-before-hello" => {
             inject_snapshot_offer_before_hello_fault(transcript, signing_key)
         }
+        "unknown-sender" => inject_unknown_sender_fault(transcript, signing_key),
         "stale-object-want-after-heads-replace" => {
             inject_stale_object_want_after_heads_replace_fault(transcript, signing_key)
         }
@@ -1967,6 +1969,59 @@ fn inject_bye_before_hello_fault(
         }),
     )?;
     transcript.messages.insert(hello_index, bye);
+    Ok(())
+}
+
+fn inject_unknown_sender_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| "transcript is missing HELLO for unknown-sender injection".to_owned())?;
+    let hello = transcript.messages.get_mut(hello_index).ok_or_else(|| {
+        "HELLO message missing at computed index for unknown-sender injection".to_owned()
+    })?;
+    let impostor = "node:peer-impostor";
+    hello["from"] = Value::String(impostor.to_owned());
+    let payload = hello
+        .get_mut("payload")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| {
+            "HELLO message is missing payload for unknown-sender injection".to_owned()
+        })?;
+    payload.insert("node_id".to_owned(), Value::String(impostor.to_owned()));
+    resign_wire_message(hello, signing_key)?;
+    Ok(())
+}
+
+fn inject_hello_node_id_mismatch_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let hello_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("HELLO"))
+        .ok_or_else(|| {
+            "transcript is missing HELLO for hello-node-id-mismatch injection".to_owned()
+        })?;
+    let hello = transcript.messages.get_mut(hello_index).ok_or_else(|| {
+        "HELLO message missing at computed index for hello-node-id-mismatch injection".to_owned()
+    })?;
+    let payload = hello
+        .get_mut("payload")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| {
+            "HELLO message is missing payload for hello-node-id-mismatch injection".to_owned()
+        })?;
+    payload.insert(
+        "node_id".to_owned(),
+        Value::String("node:peer-reader-a".to_owned()),
+    );
+    resign_wire_message(hello, signing_key)?;
     Ok(())
 }
 

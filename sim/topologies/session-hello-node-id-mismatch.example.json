@@ -1,0 +1,31 @@
+{
+    "$schema": "./topology.schema.json",
+    "topology_id": "session-hello-node-id-mismatch",
+    "description": "Seed emits a HELLO whose payload node_id mismatches the envelope sender so the reader rejects session establishment",
+    "fixture_set": "fixtures/object-sets/session-hello-node-id-mismatch",
+    "execution_mode": "single-process",
+    "peers": [
+        {
+            "node_id": "node:peer-seed",
+            "role": "seed",
+            "bootstrap_peers": [],
+            "endpoint": "local:peer-seed"
+        },
+        {
+            "node_id": "node:peer-reader-a",
+            "role": "reader",
+            "bootstrap_peers": [
+                "node:peer-seed"
+            ],
+            "endpoint": "local:peer-reader-a"
+        }
+    ],
+    "expected_outcomes": [
+        "hello-node-id-mismatch-rejected",
+        "no-invalid-index-write"
+    ],
+    "notes": [
+        "Session-level negative interop proof for HELLO sender-identity mismatch handling.",
+        "The simulator injects the fault into an otherwise normal peer-store-generated transcript."
+    ]
+}

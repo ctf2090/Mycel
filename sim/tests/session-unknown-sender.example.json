@@ -1,0 +1,30 @@
+{
+    "$schema": "./test-case.schema.json",
+    "test_id": "session-unknown-sender",
+    "description": "A reader should fail sync when the seed opens the wire session from an unregistered sender identity.",
+    "category": "negative",
+    "topology": "sim/topologies/session-unknown-sender.example.json",
+    "fixture_set": "fixtures/object-sets/session-unknown-sender",
+    "execution_mode": "single-process",
+    "expected_result": "fail",
+    "expected_outcomes": [
+        "unknown-sender-rejected",
+        "no-invalid-index-write"
+    ],
+    "assertions": [
+        {
+            "assertion_id": "unknown-sender-rejected",
+            "description": "Reader rejects the opening HELLO because the wire sender is not registered.",
+            "severity": "error"
+        },
+        {
+            "assertion_id": "no-invalid-index-write",
+            "description": "Reader does not write a manifest or verified object set after the unknown-sender violation.",
+            "severity": "error"
+        }
+    ],
+    "notes": [
+        "Extends the simulator matrix with direct sender-validation coverage for unknown sender rejection.",
+        "The harness rewrites the generated HELLO to use an impostor sender identity before replay."
+    ]
+}

@@ -30,6 +30,10 @@
   Reference JSON: `sim/tests/session-messages-after-bye.example.json`
 - `session-bye-before-hello`: reject a sync transcript that emits `BYE` before the seed establishes the session with `HELLO`
   Reference JSON: `sim/tests/session-bye-before-hello.example.json`
+- `session-unknown-sender`: reject a sync transcript whose opening `HELLO` uses an unregistered sender identity
+  Reference JSON: `sim/tests/session-unknown-sender.example.json`
+- `session-hello-node-id-mismatch`: reject a sync transcript whose opening `HELLO` payload `node_id` mismatches the envelope sender identity
+  Reference JSON: `sim/tests/session-hello-node-id-mismatch.example.json`
 - `session-snapshot-offer-before-hello`: reject a sync transcript that emits `SNAPSHOT_OFFER` before the seed establishes the session with `HELLO`
   Reference JSON: `sim/tests/session-snapshot-offer-before-hello.example.json`
 - `session-snapshot-want-before-manifest`: reject a sync transcript that emits `WANT` for an offered snapshot before `MANIFEST` or `HEADS` establishes accepted sync roots
@@ -76,6 +80,8 @@ families below.
 | `snapshot-sync-without-capability` | `sync_pull_json_rejects_snapshot_offer_without_advertised_capability` | both layers |
 | `session-messages-after-bye` | `sync_pull_json_rejects_messages_after_bye` | both layers |
 | `session-bye-before-hello` | `sync_pull_json_rejects_bye_before_hello` | both layers |
+| `session-unknown-sender` | `sync_pull_json_rejects_unknown_sender` | both layers |
+| `session-hello-node-id-mismatch` | `sync_pull_json_rejects_hello_node_id_mismatch` | both layers |
 | `session-snapshot-offer-before-hello` | `sync_pull_json_rejects_snapshot_offer_before_hello` | both layers |
 | `session-view-announce-before-hello` | `sync_pull_json_rejects_view_announce_before_hello` | both layers |
 | `session-manifest-before-hello` | `sync_pull_json_rejects_manifest_before_hello` | both layers |
@@ -100,13 +106,6 @@ Product-layer-only note:
 - `sync_pull_json_allows_error_before_hello_but_still_requires_sync_messages`
   covers `ERROR` before `HELLO`; the simulator matrix does not currently define
   a dedicated `session-error-before-hello` case.
-- `sync_pull_json_rejects_unknown_sender` covers direct unknown-sender rejection
-  at the CLI transcript layer; the simulator matrix does not currently define a
-  dedicated `session-unknown-sender` case.
-- `sync_pull_json_rejects_hello_node_id_mismatch` covers direct `HELLO`
-  sender-identity mismatch rejection at the CLI transcript layer; the
-  simulator matrix does not currently define a dedicated
-  `session-hello-node-id-mismatch` case.
 
 ## Recovery
 

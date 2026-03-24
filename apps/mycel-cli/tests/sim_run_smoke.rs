@@ -1080,6 +1080,115 @@ fn sim_run_rejects_duplicate_hello() {
 }
 
 #[test]
+fn sim_run_rejects_unknown_sender() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/session-unknown-sender.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    let outcomes = summary["matched_expected_outcomes"]
+        .as_array()
+        .expect("matched_expected_outcomes should be an array");
+    assert!(
+        outcomes
+            .iter()
+            .any(|entry| entry == "unknown-sender-rejected"),
+        "expected unknown-sender outcome, stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let report = load_report(&summary);
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
+    assert!(
+        failures.iter().any(|entry| {
+            entry["description"].as_str().is_some_and(|description| {
+                description.contains("unknown wire sender 'node:peer-impostor'")
+            })
+        }),
+        "expected unknown-sender error in report failures, report: {report}"
+    );
+    let reader = report["peers"]
+        .as_array()
+        .expect("peers should be an array")
+        .iter()
+        .find(|peer| peer["node_id"] == "node:peer-reader-a")
+        .expect("expected reader peer in report");
+    assert!(
+        reader["verified_object_ids"]
+            .as_array()
+            .is_some_and(|verified| verified.is_empty()),
+        "expected no verified objects after unknown-sender rejection, report: {report}"
+    );
+}
+
+#[test]
+fn sim_run_rejects_hello_node_id_mismatch() {
+    let _guard = sim_run_lock();
+    let output = run_sim(&[
+        "sim",
+        "run",
+        "sim/tests/session-hello-node-id-mismatch.example.json",
+        "--json",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "expected success, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let summary = parse_json_stdout(&output);
+    assert_eq!(summary["result"], "fail");
+    let outcomes = summary["matched_expected_outcomes"]
+        .as_array()
+        .expect("matched_expected_outcomes should be an array");
+    assert!(
+        outcomes
+            .iter()
+            .any(|entry| entry == "hello-node-id-mismatch-rejected"),
+        "expected hello-node-id-mismatch outcome, stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let report = load_report(&summary);
+    let failures = report["failures"]
+        .as_array()
+        .expect("failures should be an array");
+    assert!(
+        failures.iter().any(|entry| entry["description"]
+            .as_str()
+            .is_some_and(|description| description
+                .contains("wire HELLO payload 'node_id' must equal envelope 'from'"))),
+        "expected HELLO node_id mismatch error in report failures, report: {report}"
+    );
+    let reader = report["peers"]
+        .as_array()
+        .expect("peers should be an array")
+        .iter()
+        .find(|peer| peer["node_id"] == "node:peer-reader-a")
+        .expect("expected reader peer in report");
+    assert!(
+        reader["verified_object_ids"]
+            .as_array()
+            .is_some_and(|verified| verified.is_empty()),
+        "expected no verified objects after HELLO node_id mismatch rejection, report: {report}"
+    );
+}
+
+#[test]
 fn sim_run_rejects_manifest_before_hello() {
     let _guard = sim_run_lock();
     let output = run_sim(&[
