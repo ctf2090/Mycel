@@ -1,0 +1,25 @@
+{
+    "$schema": "../fixture.schema.json",
+    "fixture_id": "session-unadvertised-object-want-after-manifest",
+    "description": "Seed injects WANT for an unadvertised object after MANIFEST so the reader rejects the transcript as outside accepted sync roots",
+    "seed_peer": "peer-seed",
+    "reader_peers": [
+        "peer-reader-a"
+    ],
+    "documents": [
+        {
+            "doc_id": "doc:session-unadvertised-object-want-after-manifest-test"
+        }
+    ],
+    "expected_outcomes": [
+        "unadvertised-object-want-after-manifest-rejected",
+        "no-invalid-index-write"
+    ],
+    "metadata": {
+        "session_fault": "unadvertised-object-want-after-manifest"
+    },
+    "notes": [
+        "Simulator injects WANT immediately after MANIFEST, but targets an object that the accepted sync roots do not advertise as reachable.",
+        "The transcript should fail on the standard accepted-sync-roots reachability rule before any object verification or store writes happen."
+    ]
+}

@@ -1928,6 +1928,9 @@ fn inject_session_fault(
         "unadvertised-revision-want-after-manifest" => {
             inject_unadvertised_revision_want_after_manifest_fault(transcript, signing_key)
         }
+        "unadvertised-object-want-after-manifest" => {
+            inject_unadvertised_object_want_after_manifest_fault(transcript, signing_key)
+        }
         "want-before-manifest" => inject_want_before_manifest_fault(transcript, signing_key),
         "want-before-hello" => inject_want_before_hello_fault(transcript, signing_key),
         other => Err(format!("unsupported session fault '{other}'")),
@@ -2769,6 +2772,31 @@ fn inject_unadvertised_revision_want_after_manifest_fault(
         "msg:peer-sync-fault-want-0004",
         json!({
             "objects": ["rev:missing"]
+        }),
+    )?;
+    transcript.messages.insert(manifest_index + 1, want);
+    Ok(())
+}
+
+fn inject_unadvertised_object_want_after_manifest_fault(
+    transcript: &mut mycel_core::sync::SyncPullTranscript,
+    signing_key: &ed25519_dalek::SigningKey,
+) -> Result<(), String> {
+    let manifest_index = transcript
+        .messages
+        .iter()
+        .position(|message| message.get("type").and_then(Value::as_str) == Some("MANIFEST"))
+        .ok_or_else(|| {
+            "transcript is missing MANIFEST for unadvertised-object-want-after-manifest injection"
+                .to_owned()
+        })?;
+    let want = signed_sim_wire_message(
+        signing_key,
+        &transcript.peer.node_id,
+        "WANT",
+        "msg:peer-sync-fault-want-0005",
+        json!({
+            "objects": ["patch:missing"]
         }),
     )?;
     transcript.messages.insert(manifest_index + 1, want);
