@@ -50,15 +50,17 @@
           rebuild proof，以及 richer metadata multi-variant rebuild/reporting proof 都已落地；因此现在的
           active lane 转向更广的 <code>M3</code> governance persistence、更完整的 governance
           tooling、reader-facing profile ergonomics，以及最后的独立 dual-role 收尾，再加上剩余的
-          <code>M4</code> session/capability/error-path interop proof；而
-          <code>HEADS</code> 先于 <code>MANIFEST</code> 建立 sync roots，以及
-          <code>HEADS replace=true</code> 后的 stale root/dependency 与 stale snapshot <code>WANT</code>
-          rejection 也都已有 proof。
+          <code>M4</code> session/capability/error-path interop proof；而更广的
+          pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating、
+          <code>HEADS</code> 先于 <code>MANIFEST</code> 建立 sync roots、
+          <code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object
+          <code>WANT</code> rejection、unadvertised <code>WANT</code>、unrequested
+          <code>OBJECT</code>，以及 missing-<code>BYE</code> warning handling 也都已有 proof。
         </p>
         <ol class="lane-list">
           <li>维持 <code>M2</code> 在当前窄版 replay/storage/rebuild 范围内的已关闭状态，并以 richer mixed content/metadata competing-branch rebuild/reporting proof 作为基线。</li>
           <li>在 accepted-head inspect/render、更清楚的 available-profile 和 profile-error feedback、editor-admission-aware profile base、bounded viewer score surfaces、初始 governance inspect/list/publish/current surfaces，以及 persisted governance relationship 与 current-governance summaries 之上，谨慎扩展 <code>M3</code> 的 reader-plus-governance workflows，同时把更广的 governance persistence、更完整的 governance tooling、超出当前初步打磨的 profile ergonomics，以及最后的独立 dual-role 收尾明确保留下来。</li>
-          <li>让 <code>M4</code> 保持窄范围；现在 sender-validation、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency 与 stale snapshot <code>WANT</code> rejection、explicit <code>ERROR</code>-only、unreachable <code>WANT</code> 与 messages-after-<code>BYE</code> faults 也都已有 proof，接下来把 peer-store sync proof 往剩余的 session/capability/error-path interop closure 收敛。</li>
+          <li>让 <code>M4</code> 保持窄范围；现在 sender-validation、更广的 pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection、unadvertised <code>WANT</code>、unrequested <code>OBJECT</code>、<code>ERROR</code>-before-<code>HELLO</code> acceptance、explicit <code>ERROR</code>-only、unreachable <code>WANT</code>，以及 messages-after-<code>BYE</code> / missing-<code>BYE</code> coverage 也都已有 proof，接下来把 peer-store sync proof 往剩余的 session/capability/error-path interop closure 收敛。</li>
         </ol>
       </header>
 
@@ -118,10 +120,12 @@
               <li>Peer-store 的 first-time / incremental sync proof</li>
               <li>Capability-gated 的 <code>SNAPSHOT_OFFER</code> / <code>VIEW_ANNOUNCE</code></li>
               <li>localhost multi-process、re-sync idempotency、depth-N catchup 与 partial-doc selective sync proofs</li>
-              <li><code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup，以及 <code>HEADS replace=true</code> 后的 stale root/dependency 与 stale snapshot <code>WANT</code> rejection</li>
+              <li>更广的 pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating</li>
+              <li><code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup，以及 <code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection</li>
+              <li>unadvertised <code>WANT</code> 与 unrequested <code>OBJECT</code> rejection</li>
               <li>unknown-sender 与 HELLO sender-identity mismatch rejection</li>
-              <li>explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection proof</li>
-              <li>messages-after-BYE simulator proof</li>
+              <li><code>ERROR</code>-before-<code>HELLO</code> acceptance，以及 explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection proof</li>
+              <li>messages-after-<code>BYE</code> rejection 与 missing-<code>BYE</code> warning proof</li>
               <li>剩余工作是更广的 session/capability/error-path interop proof</li>
             </ul>
           </article>
@@ -193,13 +197,13 @@
               <td data-label="Area">7. Wire Protocol</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Canonical wire-envelope parsing、field validation、RFC 3339 checks、minimal-message payload validation、sender checks、session sequencing/head tracking、reachability gating、store-backed bootstrap、<code>OBJECT</code> body verification、capability-gated optional-message handling、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency 与 stale snapshot <code>WANT</code> rejection、unknown-sender 与 HELLO sender-identity mismatch rejection、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection proof、messages-after-BYE simulator proof，以及最小 peer-store sync driver 都已存在于 <code>mycel-core</code>；主要剩余 interop 工作是更广的 session/capability/error-path proof。</td>
+              <td data-label="Current read">Canonical wire-envelope parsing、field validation、RFC 3339 checks、minimal-message payload validation、sender checks、session sequencing/head tracking、reachability gating、store-backed bootstrap、<code>OBJECT</code> body verification、capability-gated optional-message handling、更广的 pre-<code>HELLO</code>、pre-root 与 pre-<code>MANIFEST</code> gating、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection、unadvertised <code>WANT</code> 与 unrequested <code>OBJECT</code> rejection、unknown-sender 与 HELLO sender-identity mismatch rejection、<code>ERROR</code>-before-<code>HELLO</code> acceptance、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection proof、messages-after-<code>BYE</code> 与 missing-<code>BYE</code> warning proof，以及最小 peer-store sync driver 都已存在于 <code>mycel-core</code>；主要剩余 interop 工作是更广的 session/capability/error-path proof。</td>
             </tr>
             <tr>
               <td data-label="Area">8. Sync Workflow</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Peer-store 驱动的 first-time 与 incremental sync 现在已通过 <code>mycel-core</code>、CLI 与 simulator positive-path coverage 证明 shared verify/store flow，并覆盖 snapshot-assisted catch-up、announced-view fetching、localhost multi-process proof、re-sync idempotency、depth-N incremental catchup、partial-doc selective sync、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency 与 stale snapshot <code>WANT</code> rejection、unknown-sender 与 HELLO sender-identity mismatch rejection、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection，以及 messages-after-BYE rejection；剩余工作是更广的 session/capability/error-path proof。</td>
+              <td data-label="Current read">Peer-store 驱动的 first-time 与 incremental sync 现在已通过 <code>mycel-core</code>、CLI 与 simulator positive-path coverage 证明 shared verify/store flow，并覆盖 snapshot-assisted catch-up、announced-view fetching、localhost multi-process proof、re-sync idempotency、depth-N incremental catchup、partial-doc selective sync、更广的 pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection、unadvertised <code>WANT</code> 与 unrequested <code>OBJECT</code> rejection、unknown-sender 与 HELLO sender-identity mismatch rejection、<code>ERROR</code>-before-<code>HELLO</code> acceptance、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection，以及 messages-after-<code>BYE</code> 与 missing-<code>BYE</code> warning handling；剩余工作是更广的 session/capability/error-path proof。</td>
             </tr>
             <tr>
               <td data-label="Area">9. Views and Head Selection</td>
@@ -217,13 +221,13 @@
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3 / M4</td>
-              <td data-label="Current read">Verification、authoring、保守型 merge authoring、editor-admission-aware reader inspection/render、governance inspect/list/publish/current、persisted governance index query surfaces、在 <code>view inspect</code> / <code>view list</code> 里可见的 persisted governance relationship summaries、transcript-backed <code>sync pull</code>，以及内部 <code>sync peer-store</code> 都已存在，并包含 optional snapshot/view flows、localhost multi-process proof、re-sync idempotency、depth-N catchup、partial-doc selective sync、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency 与 stale snapshot <code>WANT</code> rejection、unknown-sender 与 HELLO sender-identity mismatch rejection、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection，以及 messages-after-BYE rejection；剩余的 <code>M4</code> gap 是更广的 session/capability/error-path interop proof。</td>
+              <td data-label="Current read">Verification、authoring、保守型 merge authoring、editor-admission-aware reader inspection/render、governance inspect/list/publish/current、persisted governance index query surfaces、在 <code>view inspect</code> / <code>view list</code> 里可见的 persisted governance relationship summaries、transcript-backed <code>sync pull</code>，以及内部 <code>sync peer-store</code> 都已存在，并包含 optional snapshot/view flows、localhost multi-process proof、re-sync idempotency、depth-N catchup、partial-doc selective sync、更广的 pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection、unadvertised <code>WANT</code> 与 unrequested <code>OBJECT</code> rejection、unknown-sender 与 HELLO sender-identity mismatch rejection、<code>ERROR</code>-before-<code>HELLO</code> acceptance、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> rejection，以及 messages-after-<code>BYE</code> 与 missing-<code>BYE</code> warning handling；剩余的 <code>M4</code> gap 是更广的 session/capability/error-path interop proof。</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M2 / M4</td>
-              <td data-label="Current read">Fixture isolation、reproducibility、更严格的 parser/replay smoke coverage、直接的 wire-envelope/signature/session tests、peer-store first-time / incremental sync proofs、optional-message coverage、localhost multi-process proof、re-sync idempotency coverage、depth-N incremental catchup coverage、partial-doc selective sync coverage、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 setup coverage、<code>HEADS replace=true</code> 后 stale root/dependency 与 stale snapshot <code>WANT</code> rejection 的 coverage、unknown-sender 与 HELLO sender-identity mismatch coverage、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> coverage，以及 messages-after-BYE coverage 都已存在，但更广的 session/capability/error-path cases 仍未完成。</td>
+              <td data-label="Current read">Fixture isolation、reproducibility、更严格的 parser/replay smoke coverage、直接的 wire-envelope/signature/session tests、peer-store first-time / incremental sync proofs、optional-message coverage、localhost multi-process proof、re-sync idempotency coverage、depth-N incremental catchup coverage、partial-doc selective sync coverage、更广的 pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating coverage、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 setup coverage、<code>HEADS replace=true</code> 后 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection 的 coverage、unadvertised <code>WANT</code> 与 unrequested <code>OBJECT</code> coverage、unknown-sender 与 HELLO sender-identity mismatch coverage、<code>ERROR</code>-before-<code>HELLO</code> acceptance coverage、explicit <code>ERROR</code>-only 与 unreachable <code>WANT</code> coverage，以及 messages-after-<code>BYE</code> 与 missing-<code>BYE</code> warning coverage 都已存在，但更广的 session/capability/error-path cases 仍未完成。</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>

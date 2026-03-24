@@ -52,14 +52,16 @@
           now centers on broader <code>M3</code> governance persistence, richer governance
           tooling, reader-facing profile ergonomics, and final independent dual-role closure,
           plus the remaining <code>M4</code> session/capability/error-path interop proof now that
-          <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup and stale root/dependency
-          plus stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code>
-          are also covered.
+          broader pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating,
+          <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale
+          root/dependency plus stale snapshot and stale object <code>WANT</code> rejection after
+          <code>HEADS replace=true</code>, unadvertised <code>WANT</code>, unrequested
+          <code>OBJECT</code>, and missing-<code>BYE</code> warning handling are also covered.
         </p>
         <ol class="lane-list">
           <li>Keep <code>M2</code> closed at the current narrow replay/storage/rebuild scope now that the richer mixed content/metadata competing-branch rebuild/reporting proof is landed.</li>
           <li>Expand <code>M3</code> reader-plus-governance workflows carefully on top of accepted-head inspection, render, clearer available-profile and profile-error feedback, editor-admission-aware profile base, bounded viewer score surfaces, initial governance inspect/list/publish/current surfaces, and persisted governance relationship plus current-governance summaries, while keeping broader governance persistence, richer governance tooling, profile ergonomics beyond this initial polish, and final independent dual-role closure explicit.</li>
-          <li>Keep <code>M4</code> narrow while peer-store sync proof grows toward the remaining session/capability/error-path interop closure now that sender-validation, <code>HEADS</code>-before-<code>MANIFEST</code> setup, stale root/dependency plus stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code>, explicit <code>ERROR</code>-only, unreachable <code>WANT</code>, and messages-after-<code>BYE</code> faults are also covered.</li>
+          <li>Keep <code>M4</code> narrow while peer-store sync proof grows toward the remaining session/capability/error-path interop closure now that sender-validation, broader pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating, <code>HEADS</code>-before-<code>MANIFEST</code> setup, stale root/dependency plus stale snapshot and stale object <code>WANT</code> rejection after <code>HEADS replace=true</code>, unadvertised <code>WANT</code>, unrequested <code>OBJECT</code>, <code>ERROR</code>-before-<code>HELLO</code> acceptance, explicit <code>ERROR</code>-only, unreachable <code>WANT</code>, and messages-after-<code>BYE</code> / missing-<code>BYE</code> coverage are also covered.</li>
         </ol>
       </header>
 
@@ -120,10 +122,12 @@
               <li>Peer-store first-time and incremental sync proof</li>
               <li>Capability-gated <code>SNAPSHOT_OFFER</code> / <code>VIEW_ANNOUNCE</code></li>
               <li>Localhost multi-process, re-sync idempotency, depth-N catchup, and partial-doc selective sync proofs</li>
-              <li><code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup plus stale root/dependency and stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code></li>
+              <li>Broader pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating</li>
+              <li><code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup plus stale root/dependency, stale snapshot, and stale object <code>WANT</code> rejection after <code>HEADS replace=true</code></li>
+              <li>Unadvertised <code>WANT</code> and unrequested <code>OBJECT</code> rejection</li>
               <li>Unknown-sender and HELLO sender-identity mismatch rejection</li>
-              <li>Explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection proof</li>
-              <li>Messages-after-BYE simulator proof</li>
+              <li><code>ERROR</code>-before-<code>HELLO</code> acceptance plus explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection proof</li>
+              <li>Messages-after-<code>BYE</code> rejection plus missing-<code>BYE</code> warning proof</li>
               <li>Remaining work is broader session/capability/error-path interop proof</li>
             </ul>
           </article>
@@ -196,13 +200,13 @@
               <td data-label="Area">7. Wire Protocol</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Canonical wire-envelope parsing, field validation, RFC 3339 checks, minimal-message payload validation, sender checks, session sequencing/head tracking, reachability gating, store-backed bootstrap, <code>OBJECT</code> body verification, capability-gated optional-message handling, <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale root/dependency and stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code>, unknown-sender and HELLO sender-identity mismatch rejection, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection proof, a messages-after-BYE simulator proof, and a minimal peer-store sync driver now exist in <code>mycel-core</code>; the main remaining interop work is broader session/capability/error-path proof.</td>
+              <td data-label="Current read">Canonical wire-envelope parsing, field validation, RFC 3339 checks, minimal-message payload validation, sender checks, session sequencing/head tracking, reachability gating, store-backed bootstrap, <code>OBJECT</code> body verification, capability-gated optional-message handling, broader pre-<code>HELLO</code>, pre-root, and pre-<code>MANIFEST</code> gating, <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale root/dependency plus stale snapshot and stale object <code>WANT</code> rejection after <code>HEADS replace=true</code>, unadvertised <code>WANT</code> and unrequested <code>OBJECT</code> rejection, unknown-sender and HELLO sender-identity mismatch rejection, <code>ERROR</code>-before-<code>HELLO</code> acceptance, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection proof, messages-after-<code>BYE</code> plus missing-<code>BYE</code> warning proof, and a minimal peer-store sync driver now exist in <code>mycel-core</code>; the main remaining interop work is broader session/capability/error-path proof.</td>
             </tr>
             <tr>
               <td data-label="Area">8. Sync Workflow</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M4</td>
-              <td data-label="Current read">Peer-store-driven first-time and incremental sync now prove shared verify/store flows through <code>mycel-core</code>, the CLI, and simulator positive-path coverage, including snapshot-assisted catch-up, announced-view fetching, localhost multi-process proof, re-sync idempotency, depth-N incremental catchup, partial-doc selective sync, <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale root/dependency and stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code>, unknown-sender and HELLO sender-identity mismatch rejection, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection, and messages-after-BYE rejection; remaining work is broader session/capability/error-path proof.</td>
+              <td data-label="Current read">Peer-store-driven first-time and incremental sync now prove shared verify/store flows through <code>mycel-core</code>, the CLI, and simulator positive-path coverage, including snapshot-assisted catch-up, announced-view fetching, localhost multi-process proof, re-sync idempotency, depth-N incremental catchup, partial-doc selective sync, broader pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating, <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale root/dependency plus stale snapshot and stale object <code>WANT</code> rejection after <code>HEADS replace=true</code>, unadvertised <code>WANT</code> and unrequested <code>OBJECT</code> rejection, unknown-sender and HELLO sender-identity mismatch rejection, <code>ERROR</code>-before-<code>HELLO</code> acceptance, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection, and messages-after-<code>BYE</code> plus missing-<code>BYE</code> warning handling; remaining work is broader session/capability/error-path proof.</td>
             </tr>
             <tr>
               <td data-label="Area">9. Views and Head Selection</td>
@@ -220,13 +224,13 @@
               <td data-label="Area">11. CLI or API Surface</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M2 / M3 / M4</td>
-              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish/current, persisted governance index query surfaces, persisted governance relationship summaries in <code>view inspect</code> / <code>view list</code>, transcript-backed <code>sync pull</code>, and internal <code>sync peer-store</code> all exist, including optional snapshot/view flows, localhost multi-process proof, re-sync idempotency, depth-N catchup, partial-doc selective sync, <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale root/dependency and stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code>, unknown-sender and HELLO sender-identity mismatch rejection, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection, and messages-after-BYE rejection; the remaining <code>M4</code> gap is broader session/capability/error-path interop proof.</td>
+              <td data-label="Current read">Verification, authoring, conservative merge authoring, editor-admission-aware reader inspection/render, governance inspect/list/publish/current, persisted governance index query surfaces, persisted governance relationship summaries in <code>view inspect</code> / <code>view list</code>, transcript-backed <code>sync pull</code>, and internal <code>sync peer-store</code> all exist, including optional snapshot/view flows, localhost multi-process proof, re-sync idempotency, depth-N catchup, partial-doc selective sync, broader pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating, <code>HEADS</code>-before-<code>MANIFEST</code> sync-root setup, stale root/dependency plus stale snapshot and stale object <code>WANT</code> rejection after <code>HEADS replace=true</code>, unadvertised <code>WANT</code> and unrequested <code>OBJECT</code> rejection, unknown-sender and HELLO sender-identity mismatch rejection, <code>ERROR</code>-before-<code>HELLO</code> acceptance, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> rejection, and messages-after-<code>BYE</code> plus missing-<code>BYE</code> warning handling; the remaining <code>M4</code> gap is broader session/capability/error-path interop proof.</td>
             </tr>
             <tr>
               <td data-label="Area">12. Interop Test Minimum</td>
               <td data-label="Status">Partial</td>
               <td data-label="Milestone">M1 / M2 / M4</td>
-              <td data-label="Current read">Fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, peer-store first-time / incremental sync proofs, optional-message coverage, localhost multi-process proof, re-sync idempotency coverage, depth-N incremental catchup coverage, partial-doc selective sync coverage, <code>HEADS</code>-before-<code>MANIFEST</code> setup coverage, stale root/dependency and stale snapshot <code>WANT</code> rejection after <code>HEADS replace=true</code> coverage, unknown-sender and HELLO sender-identity mismatch coverage, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> coverage, and messages-after-BYE coverage exist, but broader session/capability/error-path cases are still open.</td>
+              <td data-label="Current read">Fixture isolation, reproducibility, stricter parser/replay smoke coverage, direct wire-envelope/signature/session tests, peer-store first-time / incremental sync proofs, optional-message coverage, localhost multi-process proof, re-sync idempotency coverage, depth-N incremental catchup coverage, partial-doc selective sync coverage, broader pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating coverage, <code>HEADS</code>-before-<code>MANIFEST</code> setup coverage, stale root/dependency plus stale snapshot and stale object <code>WANT</code> rejection after <code>HEADS replace=true</code> coverage, unadvertised <code>WANT</code> and unrequested <code>OBJECT</code> coverage, unknown-sender and HELLO sender-identity mismatch coverage, <code>ERROR</code>-before-<code>HELLO</code> acceptance coverage, explicit <code>ERROR</code>-only and unreachable <code>WANT</code> coverage, and messages-after-<code>BYE</code> plus missing-<code>BYE</code> warning coverage exist, but broader session/capability/error-path cases are still open.</td>
             </tr>
             <tr>
               <td data-label="Area">13. Ready-to-Build Gate</td>
