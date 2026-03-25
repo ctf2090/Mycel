@@ -1010,7 +1010,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             encoding="utf-8",
         )
         self.run_git("add", "scripts/agent_timestamp.py")
-        self.run_git("commit", "-m", "committed source change")
+        self.commit_as_agent(agent_uid, "committed source change")
         self.set_checklist_state(
             f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
             "workflow.files-changed-summary",
@@ -1244,6 +1244,42 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("source_push_ok: true", proc.stdout)
         self.assertIn(
             "latest cycle-owned source commit is reachable from origin/main",
+            proc.stdout,
+        )
+
+    def test_end_allows_files_changed_summary_not_needed_when_only_foreign_commits_advance_head(self) -> None:
+        self.write_agents_md()
+        self.init_git_repo()
+        agent_uid = self.prepare_second_batch(role="coding")
+        self.write_mailbox(
+            agent_uid,
+            """# Mailbox for agt_coding
+
+## Work Continuation Handoff
+
+- Status: open
+""",
+        )
+        (self.root / "scripts" / "agent_registry.py").write_text(
+            (self.root / "scripts" / "agent_registry.py").read_text(encoding="utf-8")
+            + "\n# foreign committed source change\n",
+            encoding="utf-8",
+        )
+        self.run_git("add", "scripts/agent_registry.py")
+        self.run_git("commit", "-m", "foreign local source change")
+        self.set_checklist_state(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-2.md",
+            "workflow.files-changed-summary",
+            "-",
+            "Include a files-changed summary when source changes land",
+        )
+
+        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper", check=False)
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn("scrutinized_not_needed_violations: 0", proc.stdout)
+        self.assertIn(
+            "source_push_reason: no cycle-owned source commits detected; foreign local commits do not block closeout",
             proc.stdout,
         )
 

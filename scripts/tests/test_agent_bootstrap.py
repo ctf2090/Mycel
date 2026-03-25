@@ -52,6 +52,16 @@ class AgentBootstrapCliTest(unittest.TestCase):
 
 ## New chat bootstrap
 - Scan the repo root <!-- item-id: bootstrap.repo-layout -->
+- Read dev setup status when present <!-- item-id: bootstrap.read-dev-setup-status -->
+- Skip repeated dev setup checks when status is ready <!-- item-id: bootstrap.skip-dev-setup-when-ready -->
+- Refresh dev setup status when it is missing or not ready <!-- item-id: bootstrap.refresh-dev-setup-when-needed -->
+- Use the dev setup template when refreshing local status <!-- item-id: bootstrap.dev-setup-template -->
+- Read the role checklist entrypoint <!-- item-id: bootstrap.read-role-checklists -->
+- Read the agent registry docs and local registry <!-- item-id: bootstrap.read-agent-registry -->
+- Start bootstrap immediately after the user assigns a role <!-- item-id: bootstrap.no-confirm-after-role-read -->
+- Auto-claim a role when the user leaves it unspecified <!-- item-id: bootstrap.claim-auto -->
+- Claim a fresh agent for each new chat <!-- item-id: bootstrap.claim-fresh-agent-for-new-chat -->
+- Review the latest same-role handoff when one exists <!-- item-id: bootstrap.review-latest-same-role-handoff -->
 
 ## Work Cycle Workflow
 - Begin the work cycle <!-- item-id: workflow.touch-work-cycle -->
@@ -73,7 +83,22 @@ class AgentBootstrapCliTest(unittest.TestCase):
 """,
             encoding="utf-8",
         )
+        (self.root / ".agent-local" / "dev-setup-status.md").write_text(
+            """# Dev Setup Status
+
+- Status: ready
+""",
+            encoding="utf-8",
+        )
         (self.root / "docs" / "ROLE-CHECKLISTS").mkdir(parents=True, exist_ok=True)
+        (self.root / "docs" / "AGENT-REGISTRY.md").write_text(
+            "# Agent Registry Protocol\n",
+            encoding="utf-8",
+        )
+        (self.root / "docs" / "ROLE-CHECKLISTS" / "README.md").write_text(
+            "# Role Checklists\n",
+            encoding="utf-8",
+        )
         (self.root / "docs" / "ROLE-CHECKLISTS" / "doc.md").write_text(
             """# Doc Role Checklist
 
@@ -125,6 +150,36 @@ class AgentBootstrapCliTest(unittest.TestCase):
         if check and proc.returncode != 0:
             self.fail(f"command failed {args}: {proc.stderr or proc.stdout}")
         return proc
+
+    def set_checklist_state(self, relative_path: str, item_id: str, state: str, label: str) -> None:
+        path = self.root / relative_path
+        content = path.read_text(encoding="utf-8")
+        new = f"- [{state}] {label} <!-- item-id: {item_id} -->"
+        for current_state in (" ", "X", "-", "!"):
+            old = f"- [{current_state}] {label} <!-- item-id: {item_id} -->"
+            if old in content:
+                path.write_text(content.replace(old, new), encoding="utf-8")
+                return
+        self.fail(f"missing checklist item {item_id} in {relative_path}")
+
+    def mark_workcycle_defaults(self, relative_path: str) -> None:
+        states = [
+            ("bootstrap.git-status", "Run git status", "X"),
+            ("workflow.install-needed-tools", "Install additional tools if needed", "-"),
+            ("workflow.runtime-preflight-before-verification", "Run runtime preflight before verification", "-"),
+            ("workflow.reply-with-plan-and-status", "Reply with a short plan", "-"),
+            ("workflow.timestamped-commentary", "Use the exact emitted timestamp line", "X"),
+            ("workflow.no-double-touch-finish", "Avoid double-touching the registry", "X"),
+            ("workflow.files-changed-summary", "Include a files-changed summary when source changes land", "-"),
+            ("workflow.final-after-work-line-before-next-items", "Put the after-work line before next-stage options", "X"),
+            ("workflow.next-stage-options", "Offer next-stage options", "X"),
+            ("workflow.next-stage-highest-value-first", "Highest-value option first", "X"),
+            ("workflow.next-stage-numbered-options", "Use numbered options", "X"),
+            ("workflow.next-stage-roadmap-location", "Include roadmap location when relevant", "-"),
+            ("workflow.next-stage-clarifying-questions", "Ask short clarifying questions when needed", "-"),
+        ]
+        for item_id, label, state in states:
+            self.set_checklist_state(relative_path, item_id, state, label)
 
     def test_text_output_combines_claim_start_begin_and_git_status(self) -> None:
         proc = self.run_cli("doc", "--scope", "fast-bootstrap", "--model-id", "test-model")
@@ -294,6 +349,37 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("Handoff source role: `coding`", checklist_text)
         self.assertIn("Handoff scope: `restore-sync-gap`", checklist_text)
         self.assertIn("re-run the sync proof after wiring the stored root fixture", checklist_text)
+
+    def test_bootstrap_marks_completed_bootstrap_items_for_clean_first_closeout(self) -> None:
+        proc = self.run_cli("--json", "coding", "--scope", "clean-closeout", "--model-id", "test-model")
+        payload = json.loads(proc.stdout)
+
+        bootstrap_path = self.root / payload["bootstrap_output"]
+        bootstrap_text = bootstrap_path.read_text(encoding="utf-8")
+        self.assertIn("- [X] Scan the repo root <!-- item-id: bootstrap.repo-layout -->", bootstrap_text)
+        self.assertIn("- [X] Read dev setup status when present <!-- item-id: bootstrap.read-dev-setup-status -->", bootstrap_text)
+        self.assertIn("- [X] Skip repeated dev setup checks when status is ready <!-- item-id: bootstrap.skip-dev-setup-when-ready -->", bootstrap_text)
+        self.assertIn("- [-] Refresh dev setup status when it is missing or not ready <!-- item-id: bootstrap.refresh-dev-setup-when-needed -->", bootstrap_text)
+        self.assertIn("- [X] Read the role checklist entrypoint <!-- item-id: bootstrap.read-role-checklists -->", bootstrap_text)
+        self.assertIn("- [X] Read the agent registry docs and local registry <!-- item-id: bootstrap.read-agent-registry -->", bootstrap_text)
+        self.assertIn("- [X] Start bootstrap immediately after the user assigns a role <!-- item-id: bootstrap.no-confirm-after-role-read -->", bootstrap_text)
+        self.assertIn("- [-] Auto-claim a role when the user leaves it unspecified <!-- item-id: bootstrap.claim-auto -->", bootstrap_text)
+        self.assertIn("- [X] Claim a fresh agent for each new chat <!-- item-id: bootstrap.claim-fresh-agent-for-new-chat -->", bootstrap_text)
+        self.assertIn("- [-] Review the latest same-role handoff when one exists <!-- item-id: bootstrap.review-latest-same-role-handoff -->", bootstrap_text)
+
+        workcycle_rel = payload["workcycle_output"]
+        self.mark_workcycle_defaults(workcycle_rel)
+        end = subprocess.run(
+            [str(self.root / "scripts" / "agent_work_cycle.py"), "end", payload["agent_uid"]],
+            cwd=self.root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(0, end.returncode, end.stderr or end.stdout)
+        self.assertIn("unchecked_items: 0", end.stdout)
+        self.assertNotIn("unchecked_in:", end.stdout)
 
 
 if __name__ == "__main__":

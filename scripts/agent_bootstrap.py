@@ -11,6 +11,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from item_id_checklist_mark import ItemIdChecklistMarkError, update_checklist_items
+
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_SCRIPT = ROOT_DIR / "scripts" / "agent_registry.py"
@@ -61,6 +63,12 @@ class Section:
 
 class BootstrapError(Exception):
     pass
+
+
+def read_text_if_exists(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
@@ -129,6 +137,15 @@ def resolve_repo_path(path_value: str) -> Path:
     if not path.is_absolute():
         path = ROOT_DIR / path
     return path
+
+
+def set_checklist_item_states(checklist_path: Path, updates: list[tuple[str, str]]) -> None:
+    if not checklist_path.exists() or not updates:
+        return
+    try:
+        update_checklist_items(checklist_path, updates)
+    except ItemIdChecklistMarkError as exc:
+        raise BootstrapError(str(exc)) from exc
 
 
 def parse_key_value_lines(output: str) -> dict[str, str]:
@@ -395,7 +412,74 @@ def persist_same_role_handoff_review(bootstrap_checklist_path: Path, same_role_h
     return True
 
 
+def scan_root_layout() -> list[str]:
+    return sorted(entry.name for entry in ROOT_DIR.iterdir())
+
+
+def dev_setup_status_updates() -> list[tuple[str, str]]:
+    status_path = ROOT_DIR / ".agent-local" / "dev-setup-status.md"
+    text = read_text_if_exists(status_path)
+    if text is None:
+        return [
+            ("bootstrap.read-dev-setup-status", "not-needed"),
+            ("bootstrap.skip-dev-setup-when-ready", "not-needed"),
+        ]
+
+    updates: list[tuple[str, str]] = [("bootstrap.read-dev-setup-status", "checked")]
+    if "- Status: ready" in text:
+        updates.extend(
+            [
+                ("bootstrap.skip-dev-setup-when-ready", "checked"),
+                ("bootstrap.refresh-dev-setup-when-needed", "not-needed"),
+                ("bootstrap.dev-setup-template", "not-needed"),
+            ]
+        )
+    return updates
+
+
+def record_bootstrap_checklist_progress(
+    bootstrap_checklist_path: Path,
+    *,
+    role_arg: str,
+    same_role_handoff: dict[str, Any] | None,
+) -> None:
+    updates: list[tuple[str, str]] = [("bootstrap.repo-layout", "checked")]
+
+    if read_text_if_exists(ROOT_DIR / "docs" / "ROLE-CHECKLISTS" / "README.md") is not None:
+        updates.append(("bootstrap.read-role-checklists", "checked"))
+
+    registry_doc = read_text_if_exists(ROOT_DIR / "docs" / "AGENT-REGISTRY.md")
+    registry_json = read_text_if_exists(ROOT_DIR / ".agent-local" / "agents.json")
+    if registry_doc is not None and registry_json is not None:
+        updates.append(("bootstrap.read-agent-registry", "checked"))
+
+    updates.extend(dev_setup_status_updates())
+    updates.append(("bootstrap.claim-fresh-agent-for-new-chat", "checked"))
+    updates.append(
+        (
+            "bootstrap.no-confirm-after-role-read",
+            "checked" if role_arg != "auto" else "not-needed",
+        )
+    )
+    updates.append(
+        (
+            "bootstrap.claim-auto",
+            "checked" if role_arg == "auto" else "not-needed",
+        )
+    )
+    updates.append(
+        (
+            "bootstrap.review-latest-same-role-handoff",
+            "checked" if same_role_handoff is not None else "not-needed",
+        )
+    )
+    set_checklist_item_states(bootstrap_checklist_path, updates)
+
+
 def build_result(args: argparse.Namespace) -> dict[str, Any]:
+    scan_root_layout()
+    read_text_if_exists(ROOT_DIR / "docs" / "ROLE-CHECKLISTS" / "README.md")
+    read_text_if_exists(ROOT_DIR / "docs" / "AGENT-REGISTRY.md")
     claim_payload = run_registry_json(
         "claim", args.role, "--scope", args.scope, "--assigned-by", args.assigned_by, "--model-id", args.model_id
     )
@@ -423,9 +507,15 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
     bootstrap_output = start_payload.get("bootstrap_output")
     persisted_handoff_review = False
     if isinstance(bootstrap_output, str) and bootstrap_output.strip():
+        bootstrap_checklist_path = resolve_repo_path(bootstrap_output)
         persisted_handoff_review = persist_same_role_handoff_review(
-            resolve_repo_path(bootstrap_output),
+            bootstrap_checklist_path,
             same_role_handoff,
+        )
+        record_bootstrap_checklist_progress(
+            bootstrap_checklist_path,
+            role_arg=args.role,
+            same_role_handoff=same_role_handoff,
         )
 
     result: dict[str, Any] = {

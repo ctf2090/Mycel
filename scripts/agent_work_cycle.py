@@ -583,6 +583,26 @@ def cycle_committed_source_paths(agent_uid: str, batch_num: int) -> set[str] | N
     }
 
 
+def cycle_owned_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
+    owned_commits = cycle_owned_commit_refs(agent_uid, batch_num)
+    if owned_commits is None:
+        return None
+    if not owned_commits:
+        return set()
+
+    owned_paths: set[str] = set()
+    for commit_ref in owned_commits:
+        diff_proc = run_git(["diff-tree", "--no-commit-id", "--name-only", "-r", commit_ref])
+        if diff_proc.returncode != 0:
+            return None
+        owned_paths.update(
+            path.strip()
+            for path in diff_proc.stdout.splitlines()
+            if path.strip() and is_source_path(path.strip())
+        )
+    return owned_paths
+
+
 def cycle_owned_commit_refs(agent_uid: str, batch_num: int) -> list[str] | None:
     snapshot = load_git_state_snapshot(agent_uid, batch_num)
     if snapshot is None or snapshot.get("available") is not True:
@@ -1102,8 +1122,8 @@ def main() -> int:
 
         # Scrutinize not-needed markings on high-value required items.
         not_needed_violations: list[tuple[str, str]] = []
-        committed_source_paths = cycle_committed_source_paths(agent_uid, latest_batch)
-        source_changes_present = None if committed_source_paths is None else bool(committed_source_paths)
+        owned_source_paths = cycle_owned_source_paths(agent_uid, latest_batch)
+        source_changes_present = None if owned_source_paths is None else bool(owned_source_paths)
         push_status = cycle_source_change_push_status(agent_uid, latest_batch)
         for path in checklist_paths:
             not_needed_violations.extend(
