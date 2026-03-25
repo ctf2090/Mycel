@@ -54,6 +54,10 @@ SCOPE_PATTERN = re.compile(r"^- Scope:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SOURCE_AGENT_PATTERN = re.compile(r"^- Source agent:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SOURCE_ROLE_PATTERN = re.compile(r"^- Source role:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 NEXT_STEP_PATTERN = re.compile(r"^- Next suggested step:\s*(.*?)(?=^-\s|\Z)", re.MULTILINE | re.DOTALL)
+COMPACTION_ABORT_MARKERS = (
+    "Compact context detected in the current chat thread before work started",
+    "Compaction event detected at ",
+)
 LATEST_CI_GH_FIELDS = [
     "databaseId",
     "status",
@@ -331,6 +335,7 @@ def extract_latest_open_handoff(mailbox_path: Path, *, role: str) -> dict[str, A
             "source_agent": match_group(SOURCE_AGENT_PATTERN, section.body),
             "source_role": match_group(SOURCE_ROLE_PATTERN, section.body),
             "next_suggested_step": next_steps,
+            "body": section.body,
         }
         sort_key = (
             int(parsed_date.timestamp()) if parsed_date is not None else -1,
@@ -343,6 +348,13 @@ def extract_latest_open_handoff(mailbox_path: Path, *, role: str) -> dict[str, A
     return candidates[0][1]
 
 
+def is_compaction_abort_handoff(handoff: dict[str, Any]) -> bool:
+    body = handoff.get("body")
+    if not isinstance(body, str) or not body.strip():
+        return False
+    return any(marker in body for marker in COMPACTION_ABORT_MARKERS)
+
+
 def latest_same_role_handoff(registry: dict[str, Any], *, role: str, current_agent_uid: str) -> dict[str, Any] | None:
     agents = registry.get("agents")
     if not isinstance(agents, list):
@@ -353,6 +365,8 @@ def latest_same_role_handoff(registry: dict[str, Any], *, role: str, current_age
             continue
         if entry.get("role") != role:
             continue
+        if entry.get("status") == "active":
+            continue
         agent_uid = entry.get("agent_uid")
         if not isinstance(agent_uid, str) or not agent_uid.strip() or agent_uid == current_agent_uid:
             continue
@@ -361,6 +375,8 @@ def latest_same_role_handoff(registry: dict[str, Any], *, role: str, current_age
             continue
         handoff = extract_latest_open_handoff(resolve_mailbox_path(mailbox_value), role=role)
         if handoff is None:
+            continue
+        if is_compaction_abort_handoff(handoff):
             continue
         display_id = current_or_last_display_id(entry) or agent_uid
         date_text = handoff.get("date")
