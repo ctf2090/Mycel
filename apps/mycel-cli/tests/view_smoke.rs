@@ -434,7 +434,7 @@ fn view_list_json_supports_sorting_time_windows_and_grouped_summaries() {
 
     let publish_a1 = publish_view(&path_a1, &store_root);
     let publish_b1 = publish_view(&path_b1, &store_root);
-    let _publish_a2 = publish_view(&path_a2, &store_root);
+    let publish_a2 = publish_view(&path_a2, &store_root);
 
     let output = run_mycel(&[
         "view",
@@ -467,6 +467,22 @@ fn view_list_json_supports_sorting_time_windows_and_grouped_summaries() {
     assert_eq!(json["records"][1]["timestamp"], 20);
     assert_eq!(json["records"][0]["view_id"], view_b1["view_id"]);
     assert_eq!(json["records"][1]["view_id"], view_a2["view_id"]);
+    assert_eq!(
+        json["records"][0]["current_profile_view_id"],
+        view_b1["view_id"]
+    );
+    assert_eq!(
+        json["records"][1]["current_profile_view_id"],
+        view_a2["view_id"]
+    );
+    assert_eq!(
+        json["records"][1]["current_profile_document_view_ids"]["doc:alpha"],
+        view_a2["view_id"]
+    );
+    assert_eq!(
+        json["records"][1]["current_profile_document_view_ids"]["doc:beta"],
+        view_a1["view_id"]
+    );
 
     let groups = json["groups"]
         .as_array()
@@ -536,6 +552,48 @@ fn view_list_json_supports_sorting_time_windows_and_grouped_summaries() {
     assert_eq!(by_profile_only_json["record_count"], 2);
     assert_eq!(by_profile_only_json["records"][0]["timestamp"], 20);
     assert_eq!(by_profile_only_json["records"][1]["timestamp"], 10);
+    assert_eq!(
+        by_profile_only_json["records"][0]["current_profile_view_id"],
+        publish_a2["view_id"]
+    );
+    assert_eq!(
+        by_profile_only_json["records"][0]["current_profile_document_view_ids"]["doc:alpha"],
+        publish_a2["view_id"]
+    );
+    assert_eq!(
+        by_profile_only_json["records"][0]["current_profile_document_view_ids"]["doc:beta"],
+        view_a1["view_id"]
+    );
+
+    let by_profile_only_text = run_mycel(&[
+        "view",
+        "list",
+        "--store-root",
+        &store_root,
+        "--profile-id",
+        publish_a1["profile_id"]
+            .as_str()
+            .expect("profile id should exist"),
+        "--sort",
+        "profile-id",
+    ]);
+    assert_success(&by_profile_only_text);
+    assert_stdout_contains(
+        &by_profile_only_text,
+        &format!(
+            "  current profile view id: {}",
+            publish_a2["view_id"]
+                .as_str()
+                .expect("view a2 id should exist")
+        ),
+    );
+    assert_stdout_contains(
+        &by_profile_only_text,
+        &format!(
+            "  current profile document view: doc:beta -> {}",
+            view_a1["view_id"].as_str().expect("view a1 id should exist")
+        ),
+    );
 
     let by_view_id = run_mycel(&[
         "view",

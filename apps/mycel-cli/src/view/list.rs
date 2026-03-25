@@ -40,6 +40,8 @@ pub(super) struct ViewListRecord {
     maintainer_view_ids: Vec<String>,
     profile_view_ids: Vec<String>,
     document_view_ids: BTreeMap<String, Vec<String>>,
+    current_profile_view_id: Option<String>,
+    current_profile_document_view_ids: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -161,6 +163,18 @@ fn print_view_list_text(summary: &ViewListSummary) -> i32 {
             record.profile_view_ids.len(),
             record.document_view_ids.len()
         );
+        if let Some(current_profile_view_id) = &record.current_profile_view_id {
+            println!("  current profile view id: {current_profile_view_id}");
+        }
+        if !record.current_profile_document_view_ids.is_empty() {
+            println!(
+                "  current profile document view count: {}",
+                record.current_profile_document_view_ids.len()
+            );
+            for (doc_id, current_view_id) in &record.current_profile_document_view_ids {
+                println!("  current profile document view: {doc_id} -> {current_view_id}");
+            }
+        }
     }
     for grouped in &summary.groups {
         println!("group summary: {}", grouped.group_by.as_str());
@@ -288,6 +302,22 @@ pub(super) fn handle(args: ViewListCliArgs) -> Result<i32, CliError> {
             .cloned()
             .unwrap_or_default();
         let document_view_ids = related_document_view_ids(&manifest, &record.documents);
+        let (current_profile_view_id, current_profile_document_view_ids) = manifest
+            .current_governance
+            .get(&record.profile_id)
+            .map(|current| {
+                (
+                    Some(current.current_view_id.clone()),
+                    current
+                        .current_documents
+                        .iter()
+                        .map(|(doc_id, current_document)| {
+                            (doc_id.clone(), current_document.view_id.clone())
+                        })
+                        .collect(),
+                )
+            })
+            .unwrap_or_else(|| (None, BTreeMap::new()));
         summary.records.push(ViewListRecord {
             view_id: record.view_id,
             maintainer: record.maintainer,
@@ -297,6 +327,8 @@ pub(super) fn handle(args: ViewListCliArgs) -> Result<i32, CliError> {
             maintainer_view_ids,
             profile_view_ids,
             document_view_ids,
+            current_profile_view_id,
+            current_profile_document_view_ids,
         });
     }
 
