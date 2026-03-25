@@ -6,12 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import re
 from pathlib import Path
 from typing import Any
 
 
 CODEX_HOME = Path.home() / ".codex"
-DEFAULT_STATE_DB = CODEX_HOME / "state_5.sqlite"
 DEFAULT_SESSIONS_DIR = CODEX_HOME / "sessions"
 
 
@@ -105,6 +105,19 @@ def load_latest_turn_context(sessions_dir: Path, cwd: str) -> dict[str, Any]:
     return latest
 
 
+def discover_state_db(codex_home: Path) -> Path:
+    candidates: list[tuple[int, Path]] = []
+    for path in codex_home.glob("state_*.sqlite"):
+        match = re.fullmatch(r"state_(\d+)\.sqlite", path.name)
+        if match is None:
+            continue
+        candidates.append((int(match.group(1)), path))
+    if not candidates:
+        raise SystemExit(f"Could not find any state_*.sqlite under {codex_home}.")
+    candidates.sort(key=lambda item: (item[0], item[1].name))
+    return candidates[-1][1]
+
+
 def load_thread_row(state_db: Path, thread_id: str) -> dict[str, Any] | None:
     query = """
         SELECT id, cwd, model, reasoning_effort, updated_at
@@ -121,12 +134,13 @@ def main() -> int:
     args = parse_args()
     codex_home = Path(args.codex_home).expanduser()
     sessions_dir = codex_home / "sessions"
-    state_db = codex_home / "state_5.sqlite"
+    state_db = discover_state_db(codex_home)
     turn = load_latest_turn_context(sessions_dir, args.cwd)
     thread = load_thread_row(state_db, turn["thread_id"])
 
     result = {
         "cwd": args.cwd,
+        "state_db": str(state_db),
         "thread_id": turn["thread_id"],
         "turn_id": turn["turn_id"],
         "session_path": turn["session_path"],
@@ -157,6 +171,7 @@ def main() -> int:
         print(f"MODEL={json.dumps(model)}")
         print(f"EFFORT={json.dumps(effort)}")
         print(f"THREAD_ID={json.dumps(result['thread_id'])}")
+        print(f"STATE_DB={json.dumps(result['state_db'])}")
         return 0
 
     if args.json:
@@ -164,6 +179,7 @@ def main() -> int:
         return 0
 
     print(f"cwd: {result['cwd']}")
+    print(f"state_db: {result['state_db']}")
     print(f"thread_id: {result['thread_id']}")
     print(f"turn_id: {result['turn_id']}")
     print(f"session_path: {result['session_path']}")
