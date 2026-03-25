@@ -229,6 +229,17 @@ def workcycle_token_state_path(agent_uid: str, batch_num: int) -> Path:
     )
 
 
+def workcycle_end_token_state_path(agent_uid: str, batch_num: int) -> Path:
+    return (
+        ROOT_DIR
+        / ".agent-local"
+        / "agents"
+        / agent_uid
+        / "workcycles"
+        / f"token-usage-end-{batch_num}.json"
+    )
+
+
 def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", *args],
@@ -308,6 +319,31 @@ def store_token_usage_snapshot(agent_uid: str, batch_num: int) -> dict[str, obje
 
 def load_token_usage_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:
     path = workcycle_token_state_path(agent_uid, batch_num)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def store_end_token_usage_snapshot_once(agent_uid: str, batch_num: int) -> dict[str, object] | None:
+    path = workcycle_end_token_state_path(agent_uid, batch_num)
+    if path.exists():
+        return load_end_token_usage_snapshot(agent_uid, batch_num)
+
+    snapshot = capture_token_usage_snapshot()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if snapshot is None:
+        path.write_text("null\n", encoding="utf-8")
+    else:
+        path.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return snapshot
+
+
+def load_end_token_usage_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:
+    path = workcycle_end_token_state_path(agent_uid, batch_num)
     if not path.exists():
         return None
     try:
@@ -881,7 +917,7 @@ def main() -> int:
         label = display_id or args.agent_ref
         emit_registry_summary(payload)
         start_token_snapshot = load_token_usage_snapshot(agent_uid, latest_batch)
-        end_token_snapshot = capture_token_usage_snapshot()
+        end_token_snapshot = store_end_token_usage_snapshot_once(agent_uid, latest_batch)
         print(
             build_message(
                 stage,
