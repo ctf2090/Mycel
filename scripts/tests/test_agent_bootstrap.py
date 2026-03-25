@@ -24,6 +24,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
         (self.root / "scripts").mkdir(parents=True, exist_ok=True)
+        (self.root / "bin").mkdir(parents=True, exist_ok=True)
         (self.root / ".agent-local").mkdir(parents=True, exist_ok=True)
         shutil.copy2(SOURCE_BOOTSTRAP, self.root / "scripts" / "agent_bootstrap.py")
         shutil.copy2(SOURCE_WORK_CYCLE, self.root / "scripts" / "agent_work_cycle.py")
@@ -133,6 +134,19 @@ class AgentBootstrapCliTest(unittest.TestCase):
             encoding="utf-8",
         )
         subprocess.run(["git", "init", "-b", "main"], cwd=self.root, check=True, capture_output=True, text=True)
+        self.write_fake_gh(
+            [
+                {
+                    "databaseId": 23539308106,
+                    "status": "completed",
+                    "conclusion": "success",
+                    "workflowName": "CI",
+                    "displayTitle": "bootstrap smoke",
+                    "headSha": "c3e132e17d52e11a5d94bb3dd7d5124972a489bb",
+                    "updatedAt": "2026-03-25T11:46:24Z",
+                }
+            ]
+        )
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -140,6 +154,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
     def run_cli(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         env.pop("CODEX_THREAD_ID", None)
+        env["PATH"] = f"{self.root / 'bin'}:{env.get('PATH', '')}"
         proc = subprocess.run(
             [str(self.root / "scripts" / "agent_bootstrap.py"), *args],
             cwd=self.root,
@@ -150,6 +165,28 @@ class AgentBootstrapCliTest(unittest.TestCase):
         if check and proc.returncode != 0:
             self.fail(f"command failed {args}: {proc.stderr or proc.stdout}")
         return proc
+
+    def write_fake_gh(self, runs: list[dict[str, object]] | None = None, *, exit_code: int = 0, stderr: str = "") -> None:
+        gh_path = self.root / "bin" / "gh"
+        if runs is None:
+            body = "[]"
+        else:
+            body = json.dumps(runs)
+        gh_path.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json\n"
+            "import sys\n"
+            f"EXIT_CODE = {exit_code}\n"
+            f"STDERR = {stderr!r}\n"
+            f"BODY = {body!r}\n"
+            "if EXIT_CODE != 0:\n"
+            "    if STDERR:\n"
+            "        sys.stderr.write(STDERR)\n"
+            "    raise SystemExit(EXIT_CODE)\n"
+            "print(BODY)\n",
+            encoding="utf-8",
+        )
+        gh_path.chmod(0o755)
 
     def set_checklist_state(self, relative_path: str, item_id: str, state: str, label: str) -> None:
         path = self.root / relative_path
@@ -241,12 +278,19 @@ class AgentBootstrapCliTest(unittest.TestCase):
             payload["fast_path_steps"],
         )
         self.assertIn(
-            "check the latest completed CI result for the previous push before implementation work",
+            "use the latest completed CI result above as the baseline before choosing the next implementation slice",
             payload["next_actions"],
         )
         self.assertIn(
             "full mailbox scans unless the chat is resuming, taking over, or working an overlapping coding scope",
             payload["deferred_reads"],
+        )
+        self.assertEqual("completed", payload["latest_completed_ci"]["status"])
+        self.assertEqual("CI", payload["latest_completed_ci"]["workflowName"])
+        self.assertEqual("success", payload["latest_completed_ci"]["conclusion"])
+        self.assertEqual(
+            "use the latest completed CI result above as the baseline before choosing the next implementation slice",
+            payload["next_actions"][0],
         )
 
     def test_model_id_appears_in_timestamp_and_claimed_agent_label(self) -> None:
@@ -272,9 +316,26 @@ class AgentBootstrapCliTest(unittest.TestCase):
         )
         self.assertIn("next_actions:", proc.stdout)
         self.assertIn("deferred_reads:", proc.stdout)
+        self.assertIn("latest_completed_ci:", proc.stdout)
+        self.assertIn("workflowName: CI", proc.stdout)
+        self.assertIn("conclusion: success", proc.stdout)
         self.assertNotIn("bootstrap_output:", proc.stdout)
         self.assertNotIn("mailbox_link:", proc.stdout)
         self.assertNotIn("fast_path_steps:", proc.stdout)
+
+    def test_bootstrap_reports_unavailable_ci_lookup_without_failing(self) -> None:
+        self.write_fake_gh(exit_code=1, stderr="gh unavailable\n")
+
+        proc = self.run_cli("--json", "delivery", "--scope", "ci-baseline", "--model-id", "test-model")
+        payload = json.loads(proc.stdout)
+
+        self.assertEqual("delivery", payload["role"])
+        self.assertEqual("unavailable", payload["latest_completed_ci"]["status"])
+        self.assertIn("gh unavailable", payload["latest_completed_ci"]["message"])
+        self.assertEqual(
+            "re-run the latest completed CI lookup before delivery follow-up because bootstrap could not confirm it",
+            payload["next_actions"][0],
+        )
 
     def test_bootstrap_appends_latest_same_role_handoff_review_to_next_actions(self) -> None:
         mailbox_dir = self.root / ".agent-local" / "mailboxes"

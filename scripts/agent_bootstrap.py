@@ -52,6 +52,15 @@ SCOPE_PATTERN = re.compile(r"^- Scope:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SOURCE_AGENT_PATTERN = re.compile(r"^- Source agent:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SOURCE_ROLE_PATTERN = re.compile(r"^- Source role:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 NEXT_STEP_PATTERN = re.compile(r"^- Next suggested step:\s*(.*?)(?=^-\s|\Z)", re.MULTILINE | re.DOTALL)
+LATEST_CI_GH_FIELDS = [
+    "databaseId",
+    "status",
+    "conclusion",
+    "workflowName",
+    "displayTitle",
+    "headSha",
+    "updatedAt",
+]
 
 
 class Section:
@@ -117,6 +126,17 @@ def run_json_command(command: list[str]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise BootstrapError(f"expected JSON object output from {' '.join(command)}")
     return payload
+
+
+def run_json_array_command(command: list[str]) -> list[dict[str, Any]]:
+    stdout = run_command(command)
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise BootstrapError(f"expected JSON output from {' '.join(command)}") from exc
+    if not isinstance(payload, list):
+        raise BootstrapError(f"expected JSON array output from {' '.join(command)}")
+    return [item for item in payload if isinstance(item, dict)]
 
 
 def run_registry_json(*args: str) -> dict[str, Any]:
@@ -331,15 +351,72 @@ def deferred_reads_for_role(role: str) -> list[str]:
     return DEFERRED_READS_COMMON + DEFERRED_READS_BY_ROLE.get(role, [])
 
 
-def next_actions_for_role(role: str) -> list[str]:
+def lookup_latest_completed_ci(role: str) -> dict[str, Any] | None:
+    if role not in {"coding", "delivery"}:
+        return None
+    fields = ",".join(LATEST_CI_GH_FIELDS)
+    command = [
+        "gh",
+        "run",
+        "list",
+        "--branch",
+        "main",
+        "--limit",
+        "5",
+        "--json",
+        fields,
+    ]
+    try:
+        runs = run_json_array_command(command)
+    except BootstrapError as exc:
+        return {
+            "checked": False,
+            "status": "unavailable",
+            "message": str(exc),
+        }
+
+    for run in runs:
+        if run.get("status") != "completed":
+            continue
+        return {
+            "checked": True,
+            "status": "completed",
+            "databaseId": run.get("databaseId"),
+            "workflowName": run.get("workflowName"),
+            "displayTitle": run.get("displayTitle"),
+            "conclusion": run.get("conclusion"),
+            "headSha": run.get("headSha"),
+            "updatedAt": run.get("updatedAt"),
+        }
+
+    return {
+        "checked": False,
+        "status": "missing",
+        "message": "no completed GitHub Actions runs found on main",
+    }
+
+
+def next_actions_for_role(role: str, latest_ci: dict[str, Any] | None) -> list[str]:
     if role == "coding":
+        latest_ci_status = latest_ci.get("status") if isinstance(latest_ci, dict) else None
+        ci_action = (
+            "re-run the latest completed CI lookup before implementation work because bootstrap could not confirm it"
+            if latest_ci_status in {"unavailable", "missing"}
+            else "use the latest completed CI result above as the baseline before choosing the next implementation slice"
+        )
         return [
-            "check the latest completed CI result for the previous push before implementation work",
+            ci_action,
             "defer mailbox scans unless the scope overlaps existing coding work, recovery, or takeover",
         ]
     if role == "delivery":
+        latest_ci_status = latest_ci.get("status") if isinstance(latest_ci, dict) else None
+        ci_action = (
+            "re-run the latest completed CI lookup before delivery follow-up because bootstrap could not confirm it"
+            if latest_ci_status in {"unavailable", "missing"}
+            else "use the latest completed CI result above as the baseline before triaging delivery work"
+        )
         return [
-            "check the latest completed CI result for the previous push before triaging delivery work",
+            ci_action,
             "defer broad roadmap/checklist reading unless the active delivery scope needs doc follow-up",
         ]
     if role == "doc":
@@ -499,8 +576,9 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
     if not isinstance(role, str) or not role.strip():
         raise BootstrapError("claim did not return role")
 
+    latest_completed_ci = lookup_latest_completed_ci(role)
     same_role_handoff = latest_same_role_handoff(registry, role=role, current_agent_uid=agent_uid)
-    next_actions = next_actions_for_role(role)
+    next_actions = next_actions_for_role(role, latest_completed_ci)
     handoff_action = handoff_review_action(role, same_role_handoff)
     if handoff_action is not None:
         next_actions.append(handoff_action)
@@ -542,6 +620,7 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "startup_mode": "fresh-chat-fast-path",
         "fast_path_steps": fast_path_steps_for_role(role),
         "deferred_reads": deferred_reads_for_role(role),
+        "latest_completed_ci": latest_completed_ci,
         "next_actions": next_actions,
         "latest_same_role_handoff": same_role_handoff,
         "latest_same_role_handoff_persisted": persisted_handoff_review,
@@ -567,6 +646,20 @@ def print_concise_text_result(result: dict[str, Any]) -> None:
     print("repo_status:")
     for line in result.get("repo_status", []):
         print(f"  {line}")
+
+    latest_completed_ci = result.get("latest_completed_ci")
+    if isinstance(latest_completed_ci, dict):
+        print("latest_completed_ci:")
+        if latest_completed_ci.get("status") == "completed":
+            for key in ["workflowName", "displayTitle", "conclusion", "headSha", "updatedAt", "databaseId"]:
+                value = latest_completed_ci.get(key)
+                if value is not None:
+                    print(f"  {key}: {value}")
+        else:
+            print(f"  status: {latest_completed_ci.get('status')}")
+            message = latest_completed_ci.get("message")
+            if message is not None:
+                print(f"  message: {message}")
 
     closeout_command = result.get("closeout_command")
     if closeout_command:
@@ -623,6 +716,15 @@ def print_text_result(result: dict[str, Any], *, concise: bool = False) -> None:
     print("repo_status:")
     for line in result.get("repo_status", []):
         print(f"  {line}")
+
+    latest_completed_ci = result.get("latest_completed_ci")
+    if isinstance(latest_completed_ci, dict):
+        print("latest_completed_ci:")
+        for key in ["status", "workflowName", "displayTitle", "conclusion", "headSha", "updatedAt", "databaseId", "message"]:
+            value = latest_completed_ci.get(key)
+            if value is None:
+                continue
+            print(f"  {key}: {value}")
 
     fast_path_steps = result.get("fast_path_steps", [])
     if fast_path_steps:
