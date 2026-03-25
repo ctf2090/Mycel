@@ -80,15 +80,15 @@ rustup component add clippy --toolchain stable
 
 - `scripts/check-dev-env.py` 用来获取 repo-local 的环境与验证结果
 - `scripts/update-dev-setup-status.py` 用来更新本地 readiness record（就绪记录）
-- `scripts/check-runtime-preflight.sh` 用来在特定测试或验证命令前检查当前 shell session
+- `scripts/check-runtime-preflight.py` 用来在特定测试或验证命令前检查当前 shell session
 
 只有当记录内容已覆盖当前 workspace 需要的工具与验证面时，才把它视为有效的 `Status: ready`。
 
 `Status: ready` 不保证当前 shell session 的 `PATH` 与辅助工具已经满足你接下来要执行的那条验证命令。对于像 `cargo test ... | grep ...` 这类依赖额外 shell 工具的命令，先做一次轻量 runtime preflight：
 
 ```bash
-scripts/check-runtime-preflight.sh
-scripts/check-runtime-preflight.sh --require grep --require tail
+scripts/check-runtime-preflight.py
+scripts/check-runtime-preflight.py --require grep --require tail
 ```
 
 如果缺少命令，或后续命令出现 `126`、`127` 这类退出码，应先视为环境阻塞，而不是直接判定为产品失败。

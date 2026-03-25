@@ -2,13 +2,14 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCE_SCRIPT = REPO_ROOT / "scripts" / "check-runtime-preflight.sh"
+SOURCE_SCRIPT = REPO_ROOT / "scripts" / "check-runtime-preflight.py"
 
 
 class CheckRuntimePreflightCliTest(unittest.TestCase):
@@ -16,8 +17,8 @@ class CheckRuntimePreflightCliTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
         (self.root / "scripts").mkdir(parents=True, exist_ok=True)
-        shutil.copy2(SOURCE_SCRIPT, self.root / "scripts" / "check-runtime-preflight.sh")
-        (self.root / "scripts" / "check-runtime-preflight.sh").chmod(0o755)
+        shutil.copy2(SOURCE_SCRIPT, self.root / "scripts" / "check-runtime-preflight.py")
+        (self.root / "scripts" / "check-runtime-preflight.py").chmod(0o755)
         self.bin_dir = self.root / "bin"
         self.bin_dir.mkdir()
 
@@ -34,7 +35,7 @@ class CheckRuntimePreflightCliTest(unittest.TestCase):
         if env:
             merged_env.update(env)
         return subprocess.run(
-            ["/bin/bash", str(self.root / "scripts" / "check-runtime-preflight.sh"), *args],
+            [sys.executable, str(self.root / "scripts" / "check-runtime-preflight.py"), *args],
             cwd=self.root,
             text=True,
             capture_output=True,
