@@ -30,6 +30,10 @@ def parse_args() -> argparse.Namespace:
         help="Codex home directory. Defaults to ~/.codex.",
     )
     parser.add_argument(
+        "--thread-id",
+        help="Specific thread_id to inspect. If omitted, use the latest thread matching --cwd.",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=20,
@@ -39,6 +43,11 @@ def parse_args() -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Emit JSON instead of a table.",
+    )
+    parser.add_argument(
+        "--full-numbers",
+        action="store_true",
+        help="Render full token counts instead of compact K units.",
     )
     return parser.parse_args()
 
@@ -70,6 +79,15 @@ def find_latest_rollout_path(sessions_dir: Path, cwd: str) -> Path:
             f"Could not find any rollout JSONL under {sessions_dir} for cwd {cwd!r}."
         )
     return latest_path
+
+
+def find_rollout_path_by_thread_id(sessions_dir: Path, thread_id: str) -> Path:
+    matches = sorted(sessions_dir.rglob(f"rollout-*{thread_id}.jsonl"))
+    if not matches:
+        raise SystemExit(
+            f"Could not find any rollout JSONL under {sessions_dir} for thread_id {thread_id!r}."
+        )
+    return matches[-1]
 
 
 def load_usage_rows(rollout_path: Path) -> list[dict[str, Any]]:
@@ -110,7 +128,17 @@ def format_int(value: int) -> str:
     return f"{value:,}"
 
 
-def render_table(rows: list[dict[str, Any]], rollout_path: Path) -> str:
+def format_compact_k(value: int) -> str:
+    return f"{value / 1000:.1f}K"
+
+
+def format_value(value: int, full_numbers: bool) -> str:
+    if full_numbers:
+        return format_int(value)
+    return format_compact_k(value)
+
+
+def render_table(rows: list[dict[str, Any]], rollout_path: Path, full_numbers: bool) -> str:
     headers = [
         "timestamp",
         "input",
@@ -125,12 +153,12 @@ def render_table(rows: list[dict[str, Any]], rollout_path: Path) -> str:
         body.append(
             [
                 str(row["timestamp"]),
-                format_int(row["input_tokens"]),
-                format_int(row["cached_input_tokens"]),
-                format_int(row["output_tokens"]),
-                format_int(row["reasoning_output_tokens"]),
-                format_int(row["total_tokens"]),
-                format_int(row["cumulative_total_tokens"]),
+                format_value(row["input_tokens"], full_numbers),
+                format_value(row["cached_input_tokens"], full_numbers),
+                format_value(row["output_tokens"], full_numbers),
+                format_value(row["reasoning_output_tokens"], full_numbers),
+                format_value(row["total_tokens"], full_numbers),
+                format_value(row["cumulative_total_tokens"], full_numbers),
             ]
         )
 
@@ -150,13 +178,19 @@ def render_table(rows: list[dict[str, Any]], rollout_path: Path) -> str:
 def main() -> int:
     args = parse_args()
     codex_home = Path(args.codex_home).expanduser()
-    rollout_path = find_latest_rollout_path(codex_home / "sessions", args.cwd)
+    sessions_dir = codex_home / "sessions"
+    rollout_path = (
+        find_rollout_path_by_thread_id(sessions_dir, args.thread_id)
+        if args.thread_id
+        else find_latest_rollout_path(sessions_dir, args.cwd)
+    )
     rows = load_usage_rows(rollout_path)
     if args.limit > 0:
         rows = rows[-args.limit :]
 
     result = {
         "cwd": args.cwd,
+        "thread_id": args.thread_id,
         "rollout_path": str(rollout_path),
         "row_count": len(rows),
         "rows": rows,
@@ -166,7 +200,7 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=True, indent=2))
         return 0
 
-    print(render_table(rows, rollout_path))
+    print(render_table(rows, rollout_path, args.full_numbers))
     return 0
 
 
