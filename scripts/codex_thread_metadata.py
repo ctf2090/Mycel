@@ -33,6 +33,10 @@ def parse_args() -> argparse.Namespace:
         help="Codex home directory. Defaults to ~/.codex.",
     )
     parser.add_argument(
+        "--state-db",
+        help="Explicit state_*.sqlite path override. Defaults to auto-discovery.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON instead of a human-readable summary.",
@@ -134,7 +138,11 @@ def main() -> int:
     args = parse_args()
     codex_home = Path(args.codex_home).expanduser()
     sessions_dir = codex_home / "sessions"
-    state_db = discover_state_db(codex_home)
+    state_db = (
+        Path(args.state_db).expanduser()
+        if args.state_db is not None
+        else discover_state_db(codex_home)
+    )
     turn = load_latest_turn_context(sessions_dir, args.cwd)
     thread = load_thread_row(state_db, turn["thread_id"])
 

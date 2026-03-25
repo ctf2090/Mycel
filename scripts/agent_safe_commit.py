@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -26,7 +27,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--name", required=True, help="git user.name override for the commit")
     parser.add_argument("--email", required=True, help="git user.email override for the commit")
     parser.add_argument("--agent-id", required=True, help="Agent-Id trailer value for the commit")
-    parser.add_argument("--model-id", required=True, help="Model-Id trailer value for the commit")
+    parser.add_argument(
+        "--model-id",
+        help="deprecated compatibility flag; commit trailers now read Model from codex_thread_metadata.py",
+    )
+    parser.add_argument(
+        "--state-db",
+        help="optional explicit state_*.sqlite path passed through to codex_thread_metadata.py",
+    )
     parser.add_argument("-m", "--message", required=True, help="commit message")
     parser.add_argument(
         "--allow-empty",
@@ -109,10 +117,60 @@ def staged_paths() -> list[str]:
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
+def load_codex_metadata(args: argparse.Namespace) -> tuple[str, str]:
+    cmd = [
+        sys.executable,
+        str(ROOT_DIR / "scripts" / "codex_thread_metadata.py"),
+        "--cwd",
+        str(ROOT_DIR),
+        "--shell",
+    ]
+    if args.state_db:
+        cmd.extend(["--state-db", args.state_db])
+    proc = subprocess.run(
+        cmd,
+        cwd=ROOT_DIR,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        message = proc.stderr.strip() or proc.stdout.strip() or "codex_thread_metadata.py failed"
+        raise AgentSafeCommitError(
+            "could not load commit metadata from codex_thread_metadata.py: " + message
+        )
+
+    values: dict[str, str] = {}
+    for line in proc.stdout.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            parsed = value
+        values[key] = str(parsed)
+
+    model = values.get("MODEL")
+    effort = values.get("EFFORT")
+    if not model or not effort:
+        raise AgentSafeCommitError(
+            "codex_thread_metadata.py did not return MODEL and EFFORT in --shell mode"
+        )
+    return model, effort
+
+
 def create_commit(args: argparse.Namespace, allowed_paths: list[str]) -> str:
+    model, effort = load_codex_metadata(args)
     commit_message = (
         args.message.rstrip()
-        + f"\n\nAgent-Id: {args.agent_id}\nModel-Id: {args.model_id}\n"
+        + (
+            f"\n\nAgent-Id: {args.agent_id}\n"
+            f"Model: {model}\n"
+            f"Reasoning-Effort: {effort}\n"
+        )
     )
     commit_args = [
         "-c",
