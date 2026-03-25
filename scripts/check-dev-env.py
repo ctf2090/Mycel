@@ -215,7 +215,7 @@ def main() -> int:
             )
             run_check(
                 "sim-smoke",
-                ["./sim/negative-validation/smoke.sh", "--summary-only"],
+                ["./sim/negative-validation/smoke.py", "--summary-only"],
                 results,
                 text_mode=not args.json,
             )

@@ -47,10 +47,10 @@ cargo run -p mycel-cli -- validate sim/reports/invalid/unknown-fixture-reference
 Run both the positive and negative validation path in one command:
 
 ```bash
-./sim/negative-validation/smoke.sh
-./sim/negative-validation/smoke.sh --summary-only
-./sim/negative-validation/smoke.sh --case unknown-topology-reference
-./sim/negative-validation/smoke.sh --case missing-seed-source-strict --summary-only
+./sim/negative-validation/smoke.py
+./sim/negative-validation/smoke.py --summary-only
+./sim/negative-validation/smoke.py --case unknown-topology-reference
+./sim/negative-validation/smoke.py --case missing-seed-source-strict --summary-only
 ```
 
 The script now ends with a short per-case summary so we can confirm the outcome without re-reading every JSON block.
@@ -62,7 +62,7 @@ Use `--case <name>` when we want to run one case in isolation.
 GitHub Actions now runs this script as part of the main CI workflow:
 
 ```bash
-./sim/negative-validation/smoke.sh --summary-only
+./sim/negative-validation/smoke.py --summary-only
 ```
 
 The CI job currently runs:
@@ -70,7 +70,7 @@ The CI job currently runs:
 - `cargo fmt --all --check`
 - `cargo check`
 - `cargo test --workspace`
-- `./sim/negative-validation/smoke.sh --summary-only`
+- `./sim/negative-validation/smoke.py --summary-only`
 
 Some of the smoke coverage now also exists as Rust integration tests under:
 

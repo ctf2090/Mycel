@@ -83,7 +83,7 @@ Delivery default commands:
 2. `gh run view <run-id>`
 3. `gh run view <run-id> --log-failed`
 4. `sed -n '1,220p' .github/workflows/ci.yml` or `sed -n '1,220p' .github/workflows/pages.yml`
-5. narrow local repro such as `cargo fmt --all --check`, `cargo check`, `cargo test --workspace`, `./sim/negative-validation/smoke.sh --summary-only`, or `npm run lint:pages`
+5. narrow local repro such as `cargo fmt --all --check`, `cargo check`, `cargo test --workspace`, `./sim/negative-validation/smoke.py --summary-only`, or `npm run lint:pages`
 
 Use `doc` when the main output is syncing planning or explanatory docs after behavior is already settled.
 

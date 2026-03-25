@@ -57,10 +57,10 @@ cargo run -p mycel-cli -- validate --json
 Run the smoke check for both paths together:
 
 ```bash
-./sim/negative-validation/smoke.sh
-./sim/negative-validation/smoke.sh --summary-only
-./sim/negative-validation/smoke.sh --case unknown-fixture-reference
-./sim/negative-validation/smoke.sh --case missing-seed-source-strict --summary-only
+./sim/negative-validation/smoke.py
+./sim/negative-validation/smoke.py --summary-only
+./sim/negative-validation/smoke.py --case unknown-fixture-reference
+./sim/negative-validation/smoke.py --case missing-seed-source-strict --summary-only
 ```
 
 The smoke script currently covers:

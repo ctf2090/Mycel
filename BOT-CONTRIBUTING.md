@@ -166,7 +166,7 @@ cargo test -p mycel-cli
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
 cargo run -p mycel-cli -- object inspect <path> --json
 cargo run -p mycel-cli -- object verify <path> --json
-./sim/negative-validation/smoke.sh --summary-only
+./sim/negative-validation/smoke.py --summary-only
 ```
 
 Prefer adding or updating tests close to the shared core instead of relying only on CLI-level coverage.

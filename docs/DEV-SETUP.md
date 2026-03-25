@@ -131,7 +131,7 @@ cargo test -p mycel-core
 cargo test -p mycel-cli
 cargo run -p mycel-cli -- info
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
-./sim/negative-validation/smoke.sh --summary-only
+./sim/negative-validation/smoke.py --summary-only
 ```
 
 These commands confirm:
@@ -152,7 +152,7 @@ Treat setup as complete if all of the following are true:
 - `cargo test -p mycel-cli` succeeds
 - `mycel-cli -- info` runs from the repo root
 - fixture validation succeeds on `fixtures/object-sets/minimal-valid/fixture.json`
-- `./sim/negative-validation/smoke.sh --summary-only` succeeds
+- `./sim/negative-validation/smoke.py --summary-only` succeeds
 
 The repo-local shortcut for the full pass is `scripts/check-dev-env.py`.
 

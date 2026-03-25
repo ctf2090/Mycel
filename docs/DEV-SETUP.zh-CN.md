@@ -134,7 +134,7 @@ cargo test -p mycel-core
 cargo test -p mycel-cli
 cargo run -p mycel-cli -- info
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
-./sim/negative-validation/smoke.sh --summary-only
+./sim/negative-validation/smoke.py --summary-only
 ```
 
 这些命令分别确认：
@@ -155,7 +155,7 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 - `cargo test -p mycel-cli` 成功
 - `mycel-cli -- info` 能在仓库根目录执行
 - `fixtures/object-sets/minimal-valid/fixture.json` 能成功验证
-- `./sim/negative-validation/smoke.sh --summary-only` 成功
+- `./sim/negative-validation/smoke.py --summary-only` 成功
 
 完整 setup 验证也可以直接用 `scripts/check-dev-env.py`。
 

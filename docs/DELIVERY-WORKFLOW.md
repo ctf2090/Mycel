@@ -127,7 +127,7 @@ For the `CI` workflow, the default local repro ladder is:
 cargo fmt --all --check
 cargo check
 cargo test --workspace
-./sim/negative-validation/smoke.sh --summary-only
+./sim/negative-validation/smoke.py --summary-only
 ```
 
 For the `Pages` workflow, the default local repro is:
