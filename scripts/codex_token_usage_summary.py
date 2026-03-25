@@ -137,6 +137,7 @@ def load_usage_rows(rollout_path: Path) -> list[dict[str, Any]]:
                 "reasoning_output_tokens": int(last.get("reasoning_output_tokens", 0)),
                 "total_tokens": int(last.get("total_tokens", 0)),
                 "cumulative_total_tokens": int(total.get("total_tokens", 0)),
+                "model_context_window": int(info.get("model_context_window", 0)),
             }
         )
     return rows
@@ -176,6 +177,7 @@ def load_latest_usage_snapshot(
         "cached_input_tokens": int(row["cached_input_tokens"]),
         "output_tokens": int(row["output_tokens"]),
         "reasoning_output_tokens": int(row["reasoning_output_tokens"]),
+        "model_context_window": int(row["model_context_window"]),
     }
 
 

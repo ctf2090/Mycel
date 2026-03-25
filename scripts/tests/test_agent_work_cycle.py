@@ -218,6 +218,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         *,
         cwd: str | None = None,
         totals: list[tuple[str, int, int]],
+        model_context_window: int = 258400,
     ) -> None:
         rollout_dir = self.root / ".codex" / "sessions" / "2026" / "03" / "25"
         rollout_dir.mkdir(parents=True, exist_ok=True)
@@ -260,6 +261,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
                                     "reasoning_output_tokens": 0,
                                     "total_tokens": cumulative_total,
                                 },
+                                "model_context_window": model_context_window,
                             },
                         },
                     }
@@ -537,7 +539,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(0, proc.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | cycle est. on thread: 45.0K tok",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 45K (this workcycle), thread usage: 45K/258K",
             proc.stdout,
         )
 
@@ -585,7 +587,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         )
         self.assertEqual(0, first_end.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | cycle est. on thread: 45.0K tok",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 45K (this workcycle), thread usage: 45K/258K",
             first_end.stdout,
         )
 
@@ -607,7 +609,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         )
         self.assertEqual(0, second_end.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | cycle est. on thread: 45.0K tok",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 45K (this workcycle), thread usage: 45K/258K",
             second_end.stdout,
         )
         self.assertNotIn("98,000 tok", second_end.stdout)
@@ -657,7 +659,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(0, proc.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | cycle est. on thread: 1,197.6K tok",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 1,198K (this workcycle), thread usage: 45K/258K",
             proc.stdout,
         )
 

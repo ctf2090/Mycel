@@ -357,10 +357,10 @@ def format_token_count(value: int) -> str:
     return f"{value:,} tok"
 
 
-def format_compact_token_count(value: int) -> str:
+def format_ui_token_usage(value: int) -> str:
     if value < 1000:
-        return format_token_count(value)
-    return f"{value / 1000:,.1f}K tok"
+        return f"{value} tok"
+    return f"{round(value / 1000):,}K"
 
 
 def before_work_token_usage_field(snapshot: dict[str, object] | None) -> str | None:
@@ -396,10 +396,23 @@ def estimate_cycle_token_spend(
 def after_work_token_usage_field(
     start_snapshot: dict[str, object] | None, end_snapshot: dict[str, object] | None
 ) -> str | None:
+    parts: list[str] = []
+
     estimated = estimate_cycle_token_spend(start_snapshot, end_snapshot)
-    if estimated is None:
+    if estimated is not None:
+        parts.append(f"token spent: {format_ui_token_usage(estimated)} (this workcycle)")
+
+    if end_snapshot is not None:
+        input_tokens = end_snapshot.get("input_tokens")
+        context_window = end_snapshot.get("model_context_window")
+        if isinstance(input_tokens, int) and input_tokens >= 0 and isinstance(context_window, int) and context_window > 0:
+            parts.append(
+                f"thread usage: {format_ui_token_usage(input_tokens)}/{format_ui_token_usage(context_window)}"
+            )
+
+    if not parts:
         return None
-    return f"cycle est. on thread: {format_compact_token_count(estimated)}"
+    return ", ".join(parts)
 
 
 def load_git_state_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:
