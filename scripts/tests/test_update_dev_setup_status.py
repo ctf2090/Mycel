@@ -23,7 +23,7 @@ class UpdateDevSetupStatusCliTest(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def write_checker(self, script_body: str) -> None:
-        path = self.root / "scripts" / "check-dev-env.sh"
+        path = self.root / "scripts" / "check-dev-env.py"
         path.write_text(script_body, encoding="utf-8")
         path.chmod(0o755)
 
@@ -66,7 +66,7 @@ class UpdateDevSetupStatusCliTest(unittest.TestCase):
         self.assertEqual("ready", payload["status"])
         self.assertIn("- Status: ready", content)
         self.assertIn("- Checked by: doc-6", content)
-        self.assertIn("`scripts/check-dev-env.sh --full --json` (passed)", content)
+        self.assertIn("`scripts/check-dev-env.py --full --json` (passed)", content)
         self.assertIn("| fmt | passed | `cargo fmt --all --check` |", content)
 
     def test_writes_not_ready_file_when_full_validation_fails(self) -> None:

@@ -12,7 +12,7 @@ from typing import Any
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-CHECK_DEV_ENV = ROOT_DIR / "scripts" / "check-dev-env.sh"
+CHECK_DEV_ENV = ROOT_DIR / "scripts" / "check-dev-env.py"
 DEFAULT_OUTPUT = ROOT_DIR / ".agent-local" / "dev-setup-status.md"
 AGENT_LOCAL_DIR = (ROOT_DIR / ".agent-local").resolve()
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
@@ -24,7 +24,7 @@ class DevSetupStatusError(Exception):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Write the local dev-setup readiness file from scripts/check-dev-env.sh results."
+        description="Write the local dev-setup readiness file from scripts/check-dev-env.py results."
     )
     parser.add_argument(
         "--actor",
@@ -42,10 +42,10 @@ def parse_args() -> argparse.Namespace:
 
 def run_check(*, full: bool) -> dict[str, Any]:
     command = [str(CHECK_DEV_ENV), "--json"]
-    command_label = "scripts/check-dev-env.sh --json"
+    command_label = "scripts/check-dev-env.py --json"
     if full:
         command = [str(CHECK_DEV_ENV), "--full", "--json"]
-        command_label = "scripts/check-dev-env.sh --full --json"
+        command_label = "scripts/check-dev-env.py --full --json"
 
     proc = subprocess.run(command, cwd=ROOT_DIR, text=True, capture_output=True, check=False)
     stdout = proc.stdout.strip()

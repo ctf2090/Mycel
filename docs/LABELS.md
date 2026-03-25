@@ -8,8 +8,8 @@ Use these labels together with:
 
 - [BOT-CONTRIBUTING.md](../BOT-CONTRIBUTING.md)
 - [`.github/ISSUE_TEMPLATE/ai_ready_task.yml`](../.github/ISSUE_TEMPLATE/ai_ready_task.yml)
-- [`scripts/sync-labels.sh`](../scripts/sync-labels.sh)
-- [`scripts/check-labels.sh`](../scripts/check-labels.sh)
+- [`scripts/sync-labels.py`](../scripts/sync-labels.py)
+- [`scripts/check-labels.py`](../scripts/check-labels.py)
 
 ## Source of Truth
 
@@ -19,8 +19,8 @@ The repo-tracked source for custom bot/task labels is:
 
 Sync and verify with:
 
-- `scripts/sync-labels.sh` for syncing tracked labels
-- `scripts/check-labels.sh` for verifying tracked labels against GitHub
+- `scripts/sync-labels.py` for syncing tracked labels
+- `scripts/check-labels.py` for verifying tracked labels against GitHub
 
 ## Label Meanings
 

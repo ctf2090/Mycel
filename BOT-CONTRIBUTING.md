@@ -15,8 +15,8 @@ Use it together with:
 - [docs/LABELS.md](./docs/LABELS.md) for label meanings and recommended combinations
 - [docs/MULTI-AGENT-COORDINATION.md](./docs/MULTI-AGENT-COORDINATION.md) for parallel issue ownership, file boundaries, and push discipline
 - [docs/PLANNING-SYNC-PLAN.md](./docs/PLANNING-SYNC-PLAN.md) for keeping roadmap, checklist, issues, and Pages summaries aligned
-- [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) to apply tracked labels back to GitHub
-- [`scripts/check-labels.sh`](./scripts/check-labels.sh) to verify GitHub labels still match the tracked set
+- [`scripts/sync-labels.py`](./scripts/sync-labels.py) to apply tracked labels back to GitHub
+- [`scripts/check-labels.py`](./scripts/check-labels.py) to verify GitHub labels still match the tracked set
 - [`scripts/check-plan-refresh.py`](./scripts/check-plan-refresh.py) to check whether planning-surface refresh is due
 
 ## Agent Onboarding
@@ -27,8 +27,8 @@ If you are starting fresh in this repo, use this order:
 2. Read [ROADMAP.md](./ROADMAP.md) and [IMPLEMENTATION-CHECKLIST.en.md](./IMPLEMENTATION-CHECKLIST.en.md) for build order and closure targets.
 3. Read [PROTOCOL.en.md](./PROTOCOL.en.md) and [WIRE-PROTOCOL.en.md](./WIRE-PROTOCOL.en.md) before changing protocol-facing behavior.
 4. Read [`.github/labels.yml`](./.github/labels.yml) and [docs/LABELS.md](./docs/LABELS.md) before creating or triaging bot-ready issues.
-5. Run [`scripts/sync-labels.sh`](./scripts/sync-labels.sh) only if GitHub labels need to be applied or refreshed.
-6. Run [`scripts/check-labels.sh`](./scripts/check-labels.sh) if you need to verify that the tracked labels still match GitHub.
+5. Run [`scripts/sync-labels.py`](./scripts/sync-labels.py) only if GitHub labels need to be applied or refreshed.
+6. Run [`scripts/check-labels.py`](./scripts/check-labels.py) if you need to verify that the tracked labels still match GitHub.
 7. Run [`scripts/check-plan-refresh.py`](./scripts/check-plan-refresh.py) before or after a work batch if planning-surface cadence may be due.
 8. Use [`.github/ISSUE_TEMPLATE/ai_ready_task.yml`](./.github/ISSUE_TEMPLATE/ai_ready_task.yml) and [docs/PROGRESS.md](./docs/PROGRESS.md) when shaping or selecting work.
 
@@ -37,7 +37,7 @@ This keeps scope, labels, and task shape aligned before implementation work star
 If you need a machine-readable environment gate before starting work, use:
 
 ```bash
-scripts/check-dev-env.sh --json
+scripts/check-dev-env.py --json
 ```
 
 If `.agent-local/dev-setup-status.md` already exists and says `Status: ready`, a new chat can use that local record instead of repeating the same bootstrap setup checks. Use [`.agent-local/DEV-SETUP-STATUS.example.md`](./.agent-local/DEV-SETUP-STATUS.example.md) as the format reference when the local file needs to be created or refreshed.

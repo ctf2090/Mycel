@@ -51,7 +51,7 @@ rustup component add rustfmt --toolchain stable
 rustup component add clippy --toolchain stable
 ```
 
-如果想用 repo 內建的單一工具檢查，也可以直接用 `scripts/check-dev-env.sh`。
+如果想用 repo 內建的單一工具檢查，也可以直接用 `scripts/check-dev-env.py`。
 
 ## 1.1 給新 chat 的本地 Ready 檔
 
@@ -78,7 +78,7 @@ rustup component add clippy --toolchain stable
 
 建議使用以下工具產生內容：
 
-- `scripts/check-dev-env.sh` 用來取得 repo-local 的環境與驗證結果
+- `scripts/check-dev-env.py` 用來取得 repo-local 的環境與驗證結果
 - `scripts/update-dev-setup-status.py` 用來更新本地 readiness record（就緒紀錄）
 - `scripts/check-runtime-preflight.sh` 用來在特定測試或驗證命令前檢查目前 shell session
 
@@ -154,7 +154,7 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 - `fixtures/object-sets/minimal-valid/fixture.json` 可成功驗證
 - `./sim/negative-validation/smoke.sh --summary-only` 成功
 
-完整 setup 驗證也可以直接用 `scripts/check-dev-env.sh`。
+完整 setup 驗證也可以直接用 `scripts/check-dev-env.py`。
 
 ## 6. 常見工作規則
 
@@ -174,8 +174,8 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 實用的 repo-local 工具：
 
-- `scripts/check-dev-env.sh` 用來做環境驗證
-- `scripts/check-labels.sh` 用來核對 tracked labels
+- `scripts/check-dev-env.py` 用來做環境驗證
+- `scripts/check-labels.py` 用來核對 tracked labels
 - `scripts/check-plan-refresh.py` 用來檢查 planning refresh cadence（規劃同步節奏）
 
 ## 8. 如果你是新的 AI Agent

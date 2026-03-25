@@ -51,7 +51,7 @@ rustup component add rustfmt --toolchain stable
 rustup component add clippy --toolchain stable
 ```
 
-Use `scripts/check-dev-env.sh` as the repo-local environment checker when you want the workspace's standard setup validation in one tool.
+Use `scripts/check-dev-env.py` as the repo-local environment checker when you want the workspace's standard setup validation in one tool.
 
 ## 1.1 Local Ready File For New Chats
 
@@ -78,7 +78,7 @@ The local status file should at minimum record:
 
 Recommended tools for populating the file:
 
-- `scripts/check-dev-env.sh` to gather the repo-local environment and validation result
+- `scripts/check-dev-env.py` to gather the repo-local environment and validation result
 - `scripts/update-dev-setup-status.py` to refresh the local readiness record
 - `scripts/check-runtime-preflight.sh` to verify the current shell session before a specific test or validation command
 
@@ -154,7 +154,7 @@ Treat setup as complete if all of the following are true:
 - fixture validation succeeds on `fixtures/object-sets/minimal-valid/fixture.json`
 - `./sim/negative-validation/smoke.sh --summary-only` succeeds
 
-The repo-local shortcut for the full pass is `scripts/check-dev-env.sh`.
+The repo-local shortcut for the full pass is `scripts/check-dev-env.py`.
 
 ## 6. Common Working Rules
 
@@ -174,8 +174,8 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 Useful repo-local tools:
 
-- `scripts/check-dev-env.sh` for environment validation
-- `scripts/check-labels.sh` for tracked-label verification
+- `scripts/check-dev-env.py` for environment validation
+- `scripts/check-labels.py` for tracked-label verification
 - `scripts/check-plan-refresh.py` for planning-refresh cadence checks
 
 ## 8. If You Are a New AI Agent
