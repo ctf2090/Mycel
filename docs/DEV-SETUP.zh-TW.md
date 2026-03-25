@@ -176,7 +176,7 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 
 - `scripts/check-dev-env.sh` 用來做環境驗證
 - `scripts/check-labels.sh` 用來核對 tracked labels
-- `scripts/check-plan-refresh.sh` 用來檢查 planning refresh cadence（規劃同步節奏）
+- `scripts/check-plan-refresh.py` 用來檢查 planning refresh cadence（規劃同步節奏）
 
 ## 8. 如果你是新的 AI Agent
 

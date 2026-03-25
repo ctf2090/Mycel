@@ -212,7 +212,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
                 "--next-step",
                 "start from docs/PLANNING-SYNC-PLAN.md",
                 "--evidence",
-                "scripts/check-plan-refresh.sh",
+                "scripts/check-plan-refresh.py",
                 "--json",
             ).stdout
         )
@@ -224,7 +224,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertIn("- Source agent: doc-9", mailbox)
         self.assertIn("- Source role: doc", mailbox)
         self.assertIn("  - refresh is due for doc, issue, and web", mailbox)
-        self.assertIn("  - scripts/check-plan-refresh.sh", mailbox)
+        self.assertIn("  - scripts/check-plan-refresh.py", mailbox)
 
     def test_create_delivery_continuation_uses_delivery_template(self) -> None:
         self.write_registry(
@@ -379,7 +379,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
 - Current state:
   - open state remains
 - Evidence:
-  - scripts/check-plan-refresh.sh
+  - scripts/check-plan-refresh.py
 - Next suggested step:
   - continue the batch
 """,

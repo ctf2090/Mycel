@@ -25,7 +25,7 @@ Suggested per-agent copy path:
 
 ## Planning Sync
 
-- Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items. <!-- item-id: doc.plan.run-refresh-check -->
+- Run `scripts/check-plan-refresh.py` after each completed doc work item while preparing next items. <!-- item-id: doc.plan.run-refresh-check -->
 
 ## Boundaries
 

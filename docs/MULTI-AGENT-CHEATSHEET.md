@@ -55,7 +55,7 @@ Mailbox retention:
 
 Doc cadence reminder:
 
-- after each completed doc work item, while preparing next items, `doc` must run `scripts/check-plan-refresh.sh`
+- after each completed doc work item, while preparing next items, `doc` must run `scripts/check-plan-refresh.py`
 - if it reports `due`, add the due planning surfaces as next items and use `docs/PLANNING-SYNC-PLAN.md` as the entry point
 - when `doc` mirrors a summary into a GitHub issue comment or closes an issue with a Markdown note, prefer `scripts/gh_issue_comment.py` over fragile inline shell-quoted `gh issue` text
 

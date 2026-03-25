@@ -334,7 +334,7 @@ The authoritative sync entry point is:
 
 - [PLANNING-SYNC-PLAN.md](./PLANNING-SYNC-PLAN.md)
 
-Use `scripts/check-plan-refresh.sh` to decide whether a planning-surface refresh is due.
+Use `scripts/check-plan-refresh.py` to decide whether a planning-surface refresh is due.
 
 ## 10. Human Review and Control
 

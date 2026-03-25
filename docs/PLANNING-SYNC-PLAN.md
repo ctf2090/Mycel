@@ -254,7 +254,7 @@ Update planning surfaces immediately when:
 
 ### 7.2 Commit-count refresh
 
-Use `scripts/check-plan-refresh.sh` as the planning-refresh cadence checker.
+Use `scripts/check-plan-refresh.py` as the planning-refresh cadence checker.
 
 Ownership:
 

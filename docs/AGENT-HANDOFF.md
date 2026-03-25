@@ -301,7 +301,7 @@ Sequence:
 3. `coding` appends an open entry to its mailbox or the relevant peer mailbox with `planning impact` set to the affected planning surfaces.
 4. `coding` commits and pushes the tracked implementation change.
 5. `coding` checks the latest CI status after the push.
-6. when `doc` finishes its current work item and prepares next items, `doc` must run `scripts/check-plan-refresh.sh`.
+6. when `doc` finishes its current work item and prepares next items, `doc` must run `scripts/check-plan-refresh.py`.
 7. if the script reports `due`, `doc` adds the due planning sync surfaces to the next items, scans the relevant handoff mailboxes, reads the mailbox entry, and follows [`PLANNING-SYNC-PLAN.md`](./PLANNING-SYNC-PLAN.md).
 8. `doc` updates only the planning files justified by the landed change.
 9. `doc` appends a reply or resolution entry with a `Date` line to its mailbox or the relevant peer mailbox, or updates the original planning handoff to `Status: resolved`.

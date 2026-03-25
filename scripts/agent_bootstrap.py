@@ -34,7 +34,7 @@ DEFERRED_READS_BY_ROLE = {
         "broad roadmap/checklist sweeps and mailbox scans unrelated to the active CI/process scope",
     ],
     "doc": [
-        "planning-sync mailbox scans and scripts/check-plan-refresh.sh until the doc work item actually starts",
+        "planning-sync mailbox scans and scripts/check-plan-refresh.py until the doc work item actually starts",
     ],
 }
 ROLE_HANDOFF_HEADINGS = {
@@ -327,7 +327,7 @@ def next_actions_for_role(role: str) -> list[str]:
         ]
     if role == "doc":
         return [
-            "wait for the concrete doc task before running planning-sync mailbox scans or scripts/check-plan-refresh.sh",
+            "wait for the concrete doc task before running planning-sync mailbox scans or scripts/check-plan-refresh.py",
             "review open Dependabot pull requests first to assess dependency-update doc or checklist impact",
             "review open human-authored product pull requests before choosing the first doc follow-up item",
         ]

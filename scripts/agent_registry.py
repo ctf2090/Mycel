@@ -358,7 +358,7 @@ def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
                 checklist_item_line(
                     "role.doc.check-plan-refresh",
                     False,
-                    "Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items.",
+                    "Run `scripts/check-plan-refresh.py` after each completed doc work item while preparing next items.",
                 ),
                 checklist_item_line(
                     "role.doc.use-planning-sync-plan",
@@ -423,7 +423,7 @@ def render_work_checklist(entry: dict[str, Any], *, generated_at: str) -> str:
                 checklist_item_line(
                     "role.coding.skip-plan-refresh",
                     False,
-                    "Do not run `scripts/check-plan-refresh.sh` from a coding task.",
+                    "Do not run `scripts/check-plan-refresh.py` from a coding task.",
                 ),
             ]
         )

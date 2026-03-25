@@ -43,7 +43,7 @@ Fast path:
 - Defer broader reading until task work begins:
   - `coding`: postpone `ROADMAP.md`, wide mailbox scans, and broad repo markdown sweeps until the actual implementation slice needs them
   - `delivery`: postpone broad roadmap/checklist sweeps and mailbox scans unrelated to the active CI/process scope until the delivery task actually starts
-  - `doc`: postpone planning-sync mailbox scans, `scripts/check-plan-refresh.sh`, and broad roadmap/checklist refresh reading until the doc work item actually starts
+  - `doc`: postpone planning-sync mailbox scans, `scripts/check-plan-refresh.py`, and broad roadmap/checklist refresh reading until the doc work item actually starts
 
 Role checklist sources:
 
@@ -65,11 +65,11 @@ Allowed `role` values:
 Role responsibilities:
 
 - `coding`
-  owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push; when work may affect planning surfaces, this role hands the relevant material to `doc` through the registry mailbox and does not run `scripts/check-plan-refresh.sh`
+  owns issue resolution, feature work, local verification, commit/push flow, and CI checks after each push; when work may affect planning surfaces, this role hands the relevant material to `doc` through the registry mailbox and does not run `scripts/check-plan-refresh.py`
 - `delivery`
   owns CI health triage, workflow/process tooling, flaky-test follow-up, merge or release readiness coordination, and the latest completed CI check before delivery-focused work; when delivery work affects planning surfaces or user-facing status, this role hands the relevant material to `doc` through the registry mailbox and routes product-code fixes back to `coding`
 - `doc`
-  owns design-note sync, roadmap/checklist refresh, explanatory docs, planning-surface wording, and the `scripts/check-plan-refresh.sh` cadence check; this role must run that script after each completed doc work item while preparing next items, scans registry mailboxes to collect sync-relevant handoff material, and does not check CI
+  owns design-note sync, roadmap/checklist refresh, explanatory docs, planning-surface wording, and the `scripts/check-plan-refresh.py` cadence check; this role must run that script after each completed doc work item while preparing next items, scans registry mailboxes to collect sync-relevant handoff material, and does not check CI
 
 If the user does not assign any role in a new chat, `claim auto` should choose:
 
@@ -234,7 +234,7 @@ Mailbox usage for `sync doc` / `sync web` / `sync plan` work:
 - before leaving a new open current-state handoff in the same mailbox, the agent should mark any older open current-state handoff for that scope as `superseded`, so the mailbox ends with one latest open current-state handoff; `python3 scripts/mailbox_handoff.py create ...` automates that supersede-and-append step
 - `doc` should scan active, paused, and recently inactive agent mailboxes before any `sync doc`, `sync web`, or `sync plan` batch and use those notes as collection input for roadmap/checklist/progress or Pages refresh work
 - scan order should be: active mailbox paths first, paused mailbox paths second, recently inactive mailbox paths third, and fallback shared mailboxes last
-- mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-plan-refresh.sh`
+- mailbox handoff is the default coordination path for planning-sync material; `coding` should not replace it by running `scripts/check-plan-refresh.py`
 
 Mailbox usage for resumed or takeover coding work:
 
@@ -346,8 +346,8 @@ Planning-sync coordination:
 - `coding` agents should append mailbox handoff notes when they land or discover planning-relevant changes
 - `delivery` agents should append mailbox handoff notes when CI/process work changes release readiness, workflow behavior, or planning-visible team status
 - every role should leave one mailbox handoff entry per completed work cycle so `doc` or a takeover agent can reconstruct the latest state without rereading the full diff first
-- `doc` owns `scripts/check-plan-refresh.sh` and the decision to start a planning-sync batch
-- after each completed doc work item, while preparing next items, `doc` must run `scripts/check-plan-refresh.sh`; if it reports `due`, add the due sync surfaces to the next items and then scan the declared mailboxes for recent handoff material before any `sync doc`, `sync web`, or `sync plan` batch
+- `doc` owns `scripts/check-plan-refresh.py` and the decision to start a planning-sync batch
+- after each completed doc work item, while preparing next items, `doc` must run `scripts/check-plan-refresh.py`; if it reports `due`, add the due sync surfaces to the next items and then scan the declared mailboxes for recent handoff material before any `sync doc`, `sync web`, or `sync plan` batch
 - if a mailbox note follows the recommended template, `doc` may treat it as ready-to-triage input instead of re-deriving the whole change from git history first
 
 If two `coding` agents would touch the same primary file or issue, one must narrow scope or pause before proceeding.

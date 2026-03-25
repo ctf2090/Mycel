@@ -690,7 +690,7 @@ class AgentRegistryCliTest(unittest.TestCase):
             content,
         )
         self.assertIn(
-            "- [ ] Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items. <!-- item-id: role.doc.check-plan-refresh -->",
+            "- [ ] Run `scripts/check-plan-refresh.py` after each completed doc work item while preparing next items. <!-- item-id: role.doc.check-plan-refresh -->",
             content,
         )
         self.assertIn(
@@ -763,7 +763,7 @@ class AgentRegistryCliTest(unittest.TestCase):
 
         self.assertEqual("checked", result["state"])
         self.assertIn(
-            "- [X] Run `scripts/check-plan-refresh.sh` after each completed doc work item while preparing next items. <!-- item-id: role.doc.check-plan-refresh -->",
+            "- [X] Run `scripts/check-plan-refresh.py` after each completed doc work item while preparing next items. <!-- item-id: role.doc.check-plan-refresh -->",
             content,
         )
 

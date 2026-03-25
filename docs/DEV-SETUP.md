@@ -176,7 +176,7 @@ Useful repo-local tools:
 
 - `scripts/check-dev-env.sh` for environment validation
 - `scripts/check-labels.sh` for tracked-label verification
-- `scripts/check-plan-refresh.sh` for planning-refresh cadence checks
+- `scripts/check-plan-refresh.py` for planning-refresh cadence checks
 
 ## 8. If You Are a New AI Agent
 
