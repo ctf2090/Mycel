@@ -51,7 +51,13 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.remote_temp_dir.cleanup()
         self.temp_dir.cleanup()
 
-    def write_fake_codex_thread_metadata(self, *, model: str = "gpt-5.4", effort: str = "medium") -> None:
+    def write_fake_codex_thread_metadata(
+        self,
+        *,
+        model: str = "gpt-5.4",
+        effort: str = "medium",
+        thread_id: str = "019d23a1-c85f-7d53-a4bb-075ea6504302",
+    ) -> None:
         path = self.root / "scripts" / "codex_thread_metadata.py"
         path.write_text(
             "#!/usr/bin/env python3\n"
@@ -59,7 +65,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             "if '--shell' in sys.argv:\n"
             f"    print('MODEL=\"{model}\"')\n"
             f"    print('EFFORT=\"{effort}\"')\n"
-            "    print('THREAD_ID=\"test-thread\"')\n"
+            f"    print('THREAD_ID=\"{thread_id}\"')\n"
             "    print('STATE_DB=\"/tmp/test.sqlite\"')\n"
             "else:\n"
             f"    print('model: {model}')\n"
@@ -263,7 +269,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         cwd: str | None = None,
         totals: list[tuple[str, int, int]],
         model_context_window: int = 258400,
-        include_compaction: bool = False,
+        compaction_event_type: str | None = None,
     ) -> None:
         rollout_dir = self.root / ".codex" / "sessions" / "2026" / "03" / "25"
         rollout_dir.mkdir(parents=True, exist_ok=True)
@@ -312,12 +318,12 @@ class AgentWorkCycleCliTest(unittest.TestCase):
                     }
                 )
             )
-        if include_compaction:
+        if compaction_event_type is not None:
             lines.append(
                 json.dumps(
                     {
                         "timestamp": "2026-03-25T06:26:03.000Z",
-                        "type": "compaction",
+                        "type": compaction_event_type,
                         "encrypted_content": "test-compaction-payload",
                     }
                 )
@@ -508,7 +514,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
     def test_begin_prefers_current_thread_id_over_newer_same_cwd_rollout(self) -> None:
         self.write_agents_md()
-        self.write_fake_codex_thread_metadata()
+        self.write_fake_codex_thread_metadata(thread_id="019d23a1-c85f-7d53-a4bb-075ea6504302")
         self.write_codex_rollout(
             "019d23a1-c85f-7d53-a4bb-075ea6504302",
             totals=[("2026-03-25T06:20:03.000Z", 60135, 887020)],
@@ -538,7 +544,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.write_codex_rollout(
             "019d23a1-c85f-7d53-a4bb-075ea6504302",
             totals=[("2026-03-25T06:20:03.000Z", 60135, 887020)],
-            include_compaction=True,
+            compaction_event_type="compaction",
         )
         claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper", "--model-id", "gpt-5.4")
         agent_uid = claim["agent_uid"]
@@ -565,6 +571,39 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("## Doc Continuation Note", mailbox)
         self.assertIn("Compact context detected in the current chat thread before work started", mailbox)
         self.assertIn("Open a fresh chat for better performance and continue from this handoff.", mailbox)
+
+    def test_begin_aborts_when_compacted_event_is_detected_on_metadata_thread(self) -> None:
+        self.write_agents_md()
+        self.write_fake_codex_thread_metadata(thread_id="019d23a1-c85f-7d53-a4bb-075ea6504302")
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[("2026-03-25T06:20:03.000Z", 60135, 887020)],
+            compaction_event_type="compacted",
+        )
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504303",
+            totals=[("2026-03-25T06:25:03.000Z", 500000, 999999)],
+        )
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper", "--model-id", "gpt-5.4")
+        agent_uid = claim["agent_uid"]
+        self.run_registry("start", agent_uid)
+
+        proc = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504303"},
+            check=False,
+        )
+
+        self.assertEqual(3, proc.returncode)
+        self.assertIn("compact_context_detected: true", proc.stdout)
+        self.assertIn(
+            "compaction_rollout_path: "
+            f"{self.root / '.codex' / 'sessions' / '2026' / '03' / '25' / 'rollout-2026-03-25T06-14-58-019d23a1-c85f-7d53-a4bb-075ea6504302.jsonl'}",
+            proc.stdout,
+        )
 
     def test_end_returns_pending_when_bootstrap_or_workcycle_items_are_unchecked(self) -> None:
         self.write_agents_md()

@@ -224,6 +224,33 @@ def resolve_current_codex_metadata() -> tuple[str | None, str | None]:
     return (values.get("MODEL"), values.get("EFFORT"))
 
 
+def resolve_current_codex_thread_id_from_metadata() -> str | None:
+    if not CODEX_THREAD_METADATA_SCRIPT.exists():
+        return None
+    proc = subprocess.run(
+        [sys.executable, str(CODEX_THREAD_METADATA_SCRIPT), "--shell", "--cwd", str(ROOT_DIR)],
+        cwd=ROOT_DIR,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+
+    for raw_line in proc.stdout.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("THREAD_ID="):
+            continue
+        _, value = line.split("=", 1)
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, str) and parsed.strip():
+            return parsed.strip()
+    return None
+
+
 def set_checklist_item_states(checklist_path: Path, updates: list[tuple[str, str]]) -> None:
     try:
         update_checklist_items(checklist_path, updates)
@@ -332,6 +359,9 @@ def capture_token_usage_snapshot() -> dict[str, object] | None:
 
 
 def resolve_current_codex_thread_id() -> str | None:
+    metadata_thread_id = resolve_current_codex_thread_id_from_metadata()
+    if metadata_thread_id is not None:
+        return metadata_thread_id
     thread_id = os.environ.get("CODEX_THREAD_ID")
     if thread_id is None:
         return None
@@ -380,7 +410,7 @@ def detect_compaction_event(snapshot: dict[str, object] | None) -> dict[str, str
             entry = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if entry.get("type") != "compaction":
+        if entry.get("type") not in {"compaction", "compacted"}:
             continue
         timestamp = entry.get("timestamp")
         if not isinstance(timestamp, str) or not timestamp.strip():
