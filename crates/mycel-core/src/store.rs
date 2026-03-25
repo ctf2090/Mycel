@@ -1427,12 +1427,15 @@ pub fn inspect_current_governance(
     profile_id: &str,
     doc_id: Option<&str>,
 ) -> Result<GovernanceCurrentSummary, StoreRebuildError> {
-    let current_profile = manifest.current_governance.get(profile_id).ok_or_else(|| {
-        StoreRebuildError::new(format!(
-            "profile '{}' was not found in persisted current governance state",
-            profile_id
-        ))
-    })?;
+    let current_profile = match manifest.current_governance.get(profile_id) {
+        Some(current_profile) => current_profile.clone(),
+        None => synthesize_current_governance_profile(manifest, profile_id).ok_or_else(|| {
+            StoreRebuildError::new(format!(
+                "profile '{}' was not found in persisted current governance state",
+                profile_id
+            ))
+        })?,
+    };
 
     let current_profile_document_view_ids = current_profile
         .current_documents
@@ -1441,10 +1444,9 @@ pub fn inspect_current_governance(
         .collect::<BTreeMap<_, _>>();
 
     let current_view_id = match doc_id {
-        Some(doc_id) => current_profile
-            .current_documents
+        Some(doc_id) => current_profile_document_view_ids
             .get(doc_id)
-            .map(|current| current.view_id.clone())
+            .cloned()
             .ok_or_else(|| {
                 StoreRebuildError::new(format!(
                     "document '{}' was not found in persisted current governance state for profile '{}'",
@@ -1493,6 +1495,42 @@ pub fn inspect_current_governance(
             .get(profile_id)
             .cloned()
             .unwrap_or_default(),
+    })
+}
+
+fn synthesize_current_governance_profile(
+    manifest: &StoreIndexManifest,
+    profile_id: &str,
+) -> Option<CurrentGovernanceProfileRecord> {
+    let current_view_id = manifest.latest_profile_views.get(profile_id)?.clone();
+    let current_record = find_view_record(&manifest.view_governance, &current_view_id)?;
+    let current_documents = manifest
+        .latest_document_profile_views
+        .get(profile_id)
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(doc_id, view_id)| {
+            let record = find_view_record(&manifest.view_governance, &view_id)?;
+            let revision_id = record.documents.get(&doc_id)?.clone();
+            Some((
+                doc_id,
+                CurrentGovernanceDocumentRecord {
+                    view_id,
+                    revision_id,
+                    maintainer: record.maintainer.clone(),
+                    timestamp: record.timestamp,
+                },
+            ))
+        })
+        .collect::<Option<BTreeMap<_, _>>>()?;
+
+    Some(CurrentGovernanceProfileRecord {
+        current_view_id,
+        maintainer: current_record.maintainer.clone(),
+        timestamp: current_record.timestamp,
+        documents: current_record.documents.clone(),
+        current_documents,
     })
 }
 

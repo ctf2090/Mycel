@@ -86,15 +86,11 @@ fn publish_view(source_path: &Path, store_root: &str) -> Value {
     parse_json_stdout(&output)
 }
 
-fn rewrite_store_manifest(
-    store_root: &str,
-    update: impl FnOnce(&mut Value),
-) {
+fn rewrite_store_manifest(store_root: &str, update: impl FnOnce(&mut Value)) {
     let manifest_path = Path::new(store_root).join("indexes").join("manifest.json");
-    let mut manifest: Value = serde_json::from_str(
-        &fs::read_to_string(&manifest_path).expect("manifest should read"),
-    )
-    .expect("manifest should parse");
+    let mut manifest: Value =
+        serde_json::from_str(&fs::read_to_string(&manifest_path).expect("manifest should read"))
+            .expect("manifest should parse");
     update(&mut manifest);
     fs::write(
         &manifest_path,
@@ -608,7 +604,9 @@ fn view_list_json_supports_sorting_time_windows_and_grouped_summaries() {
         &by_profile_only_text,
         &format!(
             "  current profile document view: doc:beta -> {}",
-            view_a1["view_id"].as_str().expect("view a1 id should exist")
+            view_a1["view_id"]
+                .as_str()
+                .expect("view a1 id should exist")
         ),
     );
 
@@ -754,7 +752,8 @@ fn view_list_json_supports_limit_latest_per_profile_and_summary_only() {
 }
 
 #[test]
-fn view_list_current_profile_fields_fall_back_to_latest_indexes_when_current_governance_is_missing() {
+fn view_list_current_profile_fields_fall_back_to_latest_indexes_when_current_governance_is_missing()
+{
     let store_dir = create_temp_dir("view-list-current-fallback-store");
     let store_root = path_arg(store_dir.path());
     let init = run_mycel(&["store", "init", &store_root, "--json"]);
@@ -785,8 +784,10 @@ fn view_list_current_profile_fields_fall_back_to_latest_indexes_when_current_gov
         20,
     );
 
-    let (_dir_a1, path_a1) = write_json_file("view-list-current-fallback-a1", "view-a1.json", &view_a1);
-    let (_dir_a2, path_a2) = write_json_file("view-list-current-fallback-a2", "view-a2.json", &view_a2);
+    let (_dir_a1, path_a1) =
+        write_json_file("view-list-current-fallback-a1", "view-a1.json", &view_a1);
+    let (_dir_a2, path_a2) =
+        write_json_file("view-list-current-fallback-a2", "view-a2.json", &view_a2);
 
     let publish_a1 = publish_view(&path_a1, &store_root);
     let publish_a2 = publish_view(&path_a2, &store_root);
@@ -1004,6 +1005,157 @@ fn view_current_json_reports_profile_current_governance_state() {
         })),
         "expected persisted profile-head note in current summary: {current_json}",
     );
+}
+
+#[test]
+fn view_current_profile_falls_back_to_latest_indexes_when_current_governance_is_missing() {
+    let store_dir = create_temp_dir("view-current-profile-fallback-store");
+    let store_root = path_arg(store_dir.path());
+    let init = run_mycel(&["store", "init", &store_root, "--json"]);
+    assert_success(&init);
+
+    let maintainer_a = signing_key(75);
+    let maintainer_b = signing_key(76);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer_a)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+
+    let view_a1 = signed_view(
+        &maintainer_a,
+        &policy,
+        json!({
+            "doc:alpha": "rev:1111111111111111111111111111111111111111111111111111111111111111",
+            "doc:beta": "rev:2222222222222222222222222222222222222222222222222222222222222222"
+        }),
+        10,
+    );
+    let view_a2 = signed_view(
+        &maintainer_b,
+        &policy,
+        json!({
+            "doc:alpha": "rev:3333333333333333333333333333333333333333333333333333333333333333"
+        }),
+        20,
+    );
+
+    let (_dir_a1, path_a1) =
+        write_json_file("view-current-profile-fallback-a1", "view-a1.json", &view_a1);
+    let (_dir_a2, path_a2) =
+        write_json_file("view-current-profile-fallback-a2", "view-a2.json", &view_a2);
+
+    publish_view(&path_a1, &store_root);
+    let publish_a2 = publish_view(&path_a2, &store_root);
+
+    rewrite_store_manifest(&store_root, |manifest| {
+        manifest["current_governance"] = json!({});
+    });
+
+    let current = run_mycel(&[
+        "view",
+        "current",
+        "--store-root",
+        &store_root,
+        "--profile-id",
+        publish_a2["profile_id"]
+            .as_str()
+            .expect("profile id should exist"),
+        "--json",
+    ]);
+    assert_success(&current);
+    let current_json = parse_json_stdout(&current);
+
+    assert_eq!(current_json["status"], "ok");
+    assert_eq!(current_json["current_view_id"], publish_a2["view_id"]);
+    assert_eq!(
+        current_json["profile_current_view_id"],
+        publish_a2["view_id"]
+    );
+    assert_eq!(current_json["timestamp"], json!(20));
+    assert_eq!(current_json["maintainer"], view_a2["maintainer"]);
+    assert_eq!(
+        current_json["current_profile_document_view_ids"]["doc:alpha"],
+        publish_a2["view_id"]
+    );
+    assert_eq!(
+        current_json["current_profile_document_view_ids"]["doc:beta"],
+        view_a1["view_id"]
+    );
+}
+
+#[test]
+fn view_current_doc_scope_falls_back_to_latest_indexes_when_current_governance_is_missing() {
+    let store_dir = create_temp_dir("view-current-doc-fallback-store");
+    let store_root = path_arg(store_dir.path());
+    let init = run_mycel(&["store", "init", &store_root, "--json"]);
+    assert_success(&init);
+
+    let maintainer = signing_key(77);
+    let policy = json!({
+        "accept_keys": [signer_id(&maintainer)],
+        "merge_rule": "manual-reviewed",
+        "preferred_branches": ["main"]
+    });
+
+    let view_a1 = signed_view(
+        &maintainer,
+        &policy,
+        json!({
+            "doc:alpha": "rev:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc:beta": "rev:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }),
+        10,
+    );
+    let view_a2 = signed_view(
+        &maintainer,
+        &policy,
+        json!({
+            "doc:alpha": "rev:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }),
+        20,
+    );
+
+    let (_dir_a1, path_a1) =
+        write_json_file("view-current-doc-fallback-a1", "view-a1.json", &view_a1);
+    let (_dir_a2, path_a2) =
+        write_json_file("view-current-doc-fallback-a2", "view-a2.json", &view_a2);
+
+    let publish_a1 = publish_view(&path_a1, &store_root);
+    let publish_a2 = publish_view(&path_a2, &store_root);
+
+    rewrite_store_manifest(&store_root, |manifest| {
+        manifest["current_governance"] = json!({});
+    });
+
+    let current = run_mycel(&[
+        "view",
+        "current",
+        "--store-root",
+        &store_root,
+        "--profile-id",
+        publish_a2["profile_id"]
+            .as_str()
+            .expect("profile id should exist"),
+        "--doc-id",
+        "doc:beta",
+        "--json",
+    ]);
+    assert_success(&current);
+    let current_json = parse_json_stdout(&current);
+
+    assert_eq!(current_json["status"], "ok");
+    assert_eq!(current_json["current_view_id"], publish_a1["view_id"]);
+    assert_eq!(
+        current_json["profile_current_view_id"],
+        publish_a2["view_id"]
+    );
+    assert_eq!(
+        current_json["current_document_revision_id"],
+        json!("rev:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    );
+    assert_eq!(current_json["maintainer"], view_a1["maintainer"]);
+    assert_eq!(current_json["timestamp"], json!(10));
 }
 
 #[test]
