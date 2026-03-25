@@ -17,6 +17,7 @@ SOURCE_CODEX_TOKEN_USAGE = REPO_ROOT / "scripts" / "codex_token_usage_summary.py
 SOURCE_CHECKLIST_GC = REPO_ROOT / "scripts" / "agent_checklist_gc.py"
 SOURCE_MAILBOX_GC = REPO_ROOT / "scripts" / "mailbox_gc.py"
 SOURCE_MAILBOX_HANDOFF = REPO_ROOT / "scripts" / "mailbox_handoff.py"
+SOURCE_AGENT_GUARD = REPO_ROOT / "scripts" / "agent_guard.py"
 SOURCE_CHECKLIST = REPO_ROOT / "scripts" / "item_id_checklist.py"
 SOURCE_MARKER = REPO_ROOT / "scripts" / "item_id_checklist_mark.py"
 
@@ -35,6 +36,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         shutil.copy2(SOURCE_CHECKLIST_GC, self.root / "scripts" / "agent_checklist_gc.py")
         shutil.copy2(SOURCE_MAILBOX_GC, self.root / "scripts" / "mailbox_gc.py")
         shutil.copy2(SOURCE_MAILBOX_HANDOFF, self.root / "scripts" / "mailbox_handoff.py")
+        shutil.copy2(SOURCE_AGENT_GUARD, self.root / "scripts" / "agent_guard.py")
         shutil.copy2(SOURCE_CHECKLIST, self.root / "scripts" / "item_id_checklist.py")
         shutil.copy2(SOURCE_MARKER, self.root / "scripts" / "item_id_checklist_mark.py")
         (self.root / "scripts" / "agent_work_cycle.py").chmod(0o755)
@@ -44,6 +46,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         (self.root / "scripts" / "agent_checklist_gc.py").chmod(0o755)
         (self.root / "scripts" / "mailbox_gc.py").chmod(0o755)
         (self.root / "scripts" / "mailbox_handoff.py").chmod(0o755)
+        (self.root / "scripts" / "agent_guard.py").chmod(0o755)
         (self.root / "scripts" / "item_id_checklist.py").chmod(0o755)
         (self.root / "scripts" / "item_id_checklist_mark.py").chmod(0o755)
 
@@ -571,6 +574,11 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertIn("## Doc Continuation Note", mailbox)
         self.assertIn("Compact context detected in the current chat thread before work started", mailbox)
         self.assertIn("Open a fresh chat for better performance and continue from this handoff.", mailbox)
+        block_state = json.loads(
+            (self.root / ".agent-local" / "runtime" / "agent-blocks.json").read_text(encoding="utf-8")
+        )
+        self.assertTrue(block_state["blocks"][agent_uid]["blocked"])
+        self.assertEqual("compact_context_detected", block_state["blocks"][agent_uid]["reason"])
 
     def test_begin_aborts_when_compacted_event_is_detected_on_metadata_thread(self) -> None:
         self.write_agents_md()

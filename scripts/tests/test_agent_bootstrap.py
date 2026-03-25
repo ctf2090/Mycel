@@ -16,6 +16,7 @@ SOURCE_CODEX_TOKEN_USAGE = REPO_ROOT / "scripts" / "codex_token_usage_summary.py
 SOURCE_RUNTIME_PREFLIGHT = REPO_ROOT / "scripts" / "check-runtime-preflight.py"
 SOURCE_CHECKLIST_GC = REPO_ROOT / "scripts" / "agent_checklist_gc.py"
 SOURCE_MAILBOX_GC = REPO_ROOT / "scripts" / "mailbox_gc.py"
+SOURCE_AGENT_GUARD = REPO_ROOT / "scripts" / "agent_guard.py"
 SOURCE_CHECKLIST = REPO_ROOT / "scripts" / "item_id_checklist.py"
 SOURCE_MARKER = REPO_ROOT / "scripts" / "item_id_checklist_mark.py"
 
@@ -35,6 +36,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
         shutil.copy2(SOURCE_RUNTIME_PREFLIGHT, self.root / "scripts" / "check-runtime-preflight.py")
         shutil.copy2(SOURCE_CHECKLIST_GC, self.root / "scripts" / "agent_checklist_gc.py")
         shutil.copy2(SOURCE_MAILBOX_GC, self.root / "scripts" / "mailbox_gc.py")
+        shutil.copy2(SOURCE_AGENT_GUARD, self.root / "scripts" / "agent_guard.py")
         shutil.copy2(SOURCE_CHECKLIST, self.root / "scripts" / "item_id_checklist.py")
         shutil.copy2(SOURCE_MARKER, self.root / "scripts" / "item_id_checklist_mark.py")
         for script_name in [
@@ -46,6 +48,7 @@ class AgentBootstrapCliTest(unittest.TestCase):
             "check-runtime-preflight.py",
             "agent_checklist_gc.py",
             "mailbox_gc.py",
+            "agent_guard.py",
             "item_id_checklist.py",
             "item_id_checklist_mark.py",
         ]:

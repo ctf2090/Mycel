@@ -7,6 +7,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_SCRIPT = REPO_ROOT / "scripts" / "agent_safe_commit.py"
 SOURCE_TOKEN_USAGE = REPO_ROOT / "scripts" / "codex_token_usage_summary.py"
+SOURCE_GUARD = REPO_ROOT / "scripts" / "agent_guard.py"
+SOURCE_REGISTRY = REPO_ROOT / "scripts" / "agent_registry.py"
+SOURCE_CHECKLIST = REPO_ROOT / "scripts" / "item_id_checklist.py"
+SOURCE_MARKER = REPO_ROOT / "scripts" / "item_id_checklist_mark.py"
 
 
 class AgentSafeCommitCliTest(unittest.TestCase):
@@ -19,6 +23,22 @@ class AgentSafeCommitCliTest(unittest.TestCase):
         target = scripts_dir / "agent_safe_commit.py"
         target.write_text(SOURCE_SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
         target.chmod(0o755)
+
+        guard = scripts_dir / "agent_guard.py"
+        guard.write_text(SOURCE_GUARD.read_text(encoding="utf-8"), encoding="utf-8")
+        guard.chmod(0o755)
+
+        registry = scripts_dir / "agent_registry.py"
+        registry.write_text(SOURCE_REGISTRY.read_text(encoding="utf-8"), encoding="utf-8")
+        registry.chmod(0o755)
+
+        checklist = scripts_dir / "item_id_checklist.py"
+        checklist.write_text(SOURCE_CHECKLIST.read_text(encoding="utf-8"), encoding="utf-8")
+        checklist.chmod(0o755)
+
+        marker = scripts_dir / "item_id_checklist_mark.py"
+        marker.write_text(SOURCE_MARKER.read_text(encoding="utf-8"), encoding="utf-8")
+        marker.chmod(0o755)
 
         token_usage = scripts_dir / "codex_token_usage_summary.py"
         token_usage.write_text(SOURCE_TOKEN_USAGE.read_text(encoding="utf-8"), encoding="utf-8")
@@ -258,6 +278,77 @@ raise SystemExit(1)
             text=True,
         )
         self.assertNotIn("Token-Spent:", body.stdout)
+
+    def test_rejects_commit_when_agent_is_blocked(self) -> None:
+        doc = self.root / "docs.md"
+        doc.write_text("doc\n", encoding="utf-8")
+        runtime_dir = self.root / ".agent-local" / "runtime"
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        (runtime_dir / "agent-blocks.json").write_text(
+            (
+                "{\n"
+                '  "version": 1,\n'
+                '  "blocks": {\n'
+                '    "agt_test1234": {\n'
+                '      "blocked": true,\n'
+                '      "reason": "compact_context_detected",\n'
+                '      "detected_at": "2026-03-25T15:28:43.925Z",\n'
+                '      "source": "agent_work_cycle.begin",\n'
+                '      "handoff_path": ".agent-local/mailboxes/agt_test1234.md",\n'
+                '      "clear_requires": "new_chat_bootstrap"\n'
+                "    }\n"
+                "  }\n"
+                "}\n"
+            ),
+            encoding="utf-8",
+        )
+        (self.root / ".agent-local" / "agents.json").write_text(
+            (
+                "{\n"
+                '  "version": 2,\n'
+                '  "updated_at": "2026-03-25T12:00:00+0800",\n'
+                '  "agent_count": 1,\n'
+                '  "agents": [\n'
+                "    {\n"
+                '      "agent_uid": "agt_test1234",\n'
+                '      "role": "coding",\n'
+                '      "current_display_id": "coding-1",\n'
+                '      "display_history": [],\n'
+                '      "assigned_by": "user",\n'
+                '      "assigned_at": "2026-03-25T12:00:00+0800",\n'
+                '      "confirmed_by_agent": true,\n'
+                '      "confirmed_at": "2026-03-25T12:00:00+0800",\n'
+                '      "last_touched_at": "2026-03-25T12:00:00+0800",\n'
+                '      "inactive_at": null,\n'
+                '      "paused_at": null,\n'
+                '      "status": "inactive",\n'
+                '      "scope": "guard-test",\n'
+                '      "files": [],\n'
+                '      "mailbox": ".agent-local/mailboxes/agt_test1234.md",\n'
+                '      "recovery_of": null,\n'
+                '      "superseded_by": null\n'
+                "    }\n"
+                "  ]\n"
+                "}\n"
+            ),
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli(
+            "--name",
+            "gpt-5:doc-1",
+            "--email",
+            "agent@example.invalid",
+            "--agent-id",
+            "agt_test1234",
+            "--message",
+            "docs: add docs",
+            "docs.md",
+            check=False,
+        )
+
+        self.assertEqual(10, proc.returncode)
+        self.assertIn("agent execution blocked", proc.stderr)
 
 
 if __name__ == "__main__":

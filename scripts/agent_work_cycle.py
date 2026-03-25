@@ -27,6 +27,7 @@ from item_id_checklist import (
     split_workcycle_checklist_path,
 )
 from item_id_checklist_mark import ItemIdChecklistMarkError, update_checklist_items
+from agent_guard import block_agent
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -463,6 +464,24 @@ def create_compaction_handoff(
         message = proc.stderr.strip() or proc.stdout.strip() or "mailbox_handoff.py create failed"
         raise WorkCycleError(f"could not create compaction handoff: {message}")
     return json.loads(proc.stdout)
+
+
+def record_compaction_block(
+    agent_ref: str,
+    *,
+    scope: str,
+    detection: dict[str, str],
+    handoff_mailbox: str,
+) -> None:
+    block_agent(
+        agent_ref,
+        reason="compact_context_detected",
+        detected_at=detection["timestamp"],
+        source="agent_work_cycle.begin",
+        scope=scope,
+        handoff_path=handoff_mailbox,
+        rollout_path=detection["rollout_path"],
+    )
 
 
 def store_end_token_usage_snapshot_once(agent_uid: str, batch_num: int) -> dict[str, object] | None:
@@ -1125,6 +1144,12 @@ def main() -> int:
                 agent_role=agent_role,
                 scope=args.scope or "compact-context-abort",
                 detection=compaction,
+            )
+            record_compaction_block(
+                agent_uid,
+                scope=args.scope or "compact-context-abort",
+                detection=compaction,
+                handoff_mailbox=handoff["mailbox"],
             )
             finish_payload = run_registry("finish", agent_uid)
             emit_registry_summary(finish_payload)

@@ -10,6 +10,9 @@ import sys
 from pathlib import Path
 
 from codex_token_usage_summary import load_latest_usage_snapshot
+from agent_guard import EXIT_BLOCKED as GUARD_EXIT_BLOCKED
+from agent_guard import EXIT_STATE_ERROR as GUARD_EXIT_STATE_ERROR
+from agent_guard import AgentGuardError, check_agent, format_block_message
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -275,6 +278,10 @@ def main() -> int:
     args = parse_args()
 
     try:
+        guard_result = check_agent(args.agent_id)
+        if guard_result["blocked"]:
+            print(format_block_message(guard_result), file=sys.stderr)
+            return GUARD_EXIT_BLOCKED
         allowed_paths = normalize_paths(args.paths)
         verify_paths_exist(allowed_paths)
 
@@ -307,6 +314,9 @@ def main() -> int:
 
         print(create_commit(args, allowed_paths))
         return 0
+    except AgentGuardError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return GUARD_EXIT_STATE_ERROR
     except AgentSafeCommitError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
