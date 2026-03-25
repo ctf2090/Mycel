@@ -840,6 +840,23 @@ fn view_current_json_reports_profile_current_governance_state() {
         current_json["current_documents"][1]["current_revision_id"],
         json!("rev:2222222222222222222222222222222222222222222222222222222222222222")
     );
+    assert_eq!(
+        current_json["profile_heads"]["doc:alpha"],
+        json!([
+            "rev:1111111111111111111111111111111111111111111111111111111111111111",
+            "rev:3333333333333333333333333333333333333333333333333333333333333333"
+        ])
+    );
+    assert_eq!(
+        current_json["profile_heads"]["doc:beta"],
+        json!(["rev:2222222222222222222222222222222222222222222222222222222222222222"])
+    );
+    assert!(
+        current_json["notes"].as_array().is_some_and(|notes| notes.iter().any(|note| {
+            note == "profile head IDs come from persisted governance head indexes for the selected profile"
+        })),
+        "expected persisted profile-head note in current summary: {current_json}",
+    );
 }
 
 #[test]
@@ -917,6 +934,17 @@ fn view_current_json_reports_doc_scoped_current_governance_state() {
     assert_eq!(
         current_json["current_documents"][1]["current_view_id"],
         publish_a1["view_id"]
+    );
+    assert_eq!(
+        current_json["profile_heads"]["doc:alpha"],
+        json!([
+            "rev:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "rev:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        ])
+    );
+    assert_eq!(
+        current_json["profile_heads"]["doc:beta"],
+        json!(["rev:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"])
     );
 }
 

@@ -69,6 +69,7 @@ pub struct GovernanceCurrentSummary {
     pub documents: BTreeMap<String, String>,
     pub current_profile_document_view_ids: BTreeMap<String, String>,
     pub current_documents: Vec<GovernanceCurrentDocumentSummary>,
+    pub profile_heads: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -1487,6 +1488,11 @@ pub fn inspect_current_governance(
         documents: selected_record.documents.clone(),
         current_profile_document_view_ids,
         current_documents,
+        profile_heads: manifest
+            .profile_heads
+            .get(profile_id)
+            .cloned()
+            .unwrap_or_default(),
     })
 }
 

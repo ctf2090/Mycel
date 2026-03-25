@@ -32,6 +32,7 @@ struct ViewCurrentSummary {
     documents: BTreeMap<String, String>,
     current_profile_document_view_ids: BTreeMap<String, String>,
     current_documents: Vec<ViewCurrentDocumentSummary>,
+    profile_heads: BTreeMap<String, Vec<String>>,
     notes: Vec<String>,
     errors: Vec<String>,
 }
@@ -52,6 +53,7 @@ impl ViewCurrentSummary {
             documents: BTreeMap::new(),
             current_profile_document_view_ids: BTreeMap::new(),
             current_documents: Vec::new(),
+            profile_heads: BTreeMap::new(),
             notes: Vec::new(),
             errors: Vec::new(),
         }
@@ -109,6 +111,10 @@ fn print_view_current_text(summary: &ViewCurrentSummary) -> i32 {
             current.maintainer,
             current.timestamp
         );
+    }
+    println!("profile head doc count: {}", summary.profile_heads.len());
+    for (doc_id, revision_ids) in &summary.profile_heads {
+        println!("profile heads: {doc_id} -> {}", revision_ids.join(", "));
     }
     println!("document count: {}", summary.documents.len());
     for (doc_id, revision_id) in &summary.documents {
@@ -187,6 +193,7 @@ pub(super) fn handle(args: ViewCurrentCliArgs) -> Result<i32, CliError> {
                     timestamp: current.timestamp,
                 })
                 .collect();
+            summary.profile_heads = current.profile_heads;
         }
         Err(error) => {
             summary.push_error(error.to_string());
@@ -194,6 +201,10 @@ pub(super) fn handle(args: ViewCurrentCliArgs) -> Result<i32, CliError> {
     }
     summary.notes.push(
         "current governance state is read from persisted governance summaries instead of replaying all stored views"
+            .to_string(),
+    );
+    summary.notes.push(
+        "profile head IDs come from persisted governance head indexes for the selected profile"
             .to_string(),
     );
     if doc_id.is_some() {
