@@ -926,5 +926,5 @@ mod authoring;
 mod manual;
 #[path = "store_author_smoke/structural.rs"]
 mod structural;
-#[path = "store_author_smoke/variants.rs"]
+#[path = "store_author_smoke/variants/mod.rs"]
 mod variants;
