@@ -2,7 +2,7 @@
 
 - Status: open
 - Date: 2026-03-14 14:00 UTC+8
-- Source agent: delivery-1
+- Source agent: delivery-1 (agt_delivery1234/gpt-5.4/medium)
 - Source role: delivery
 - Scope: ci-flake-triage
 - Current state:

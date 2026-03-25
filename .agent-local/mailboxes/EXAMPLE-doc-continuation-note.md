@@ -8,7 +8,7 @@ Do not treat it as a live agent mailbox.
 
 - Status: open
 - Date: 2026-03-13 17:18 UTC+8
-- Source agent: doc-3
+- Source agent: doc-3 (agt_doc1234/gpt-5.4/medium)
 - Source role: doc
 - Scope: repo-rg-scan
 - Current state:

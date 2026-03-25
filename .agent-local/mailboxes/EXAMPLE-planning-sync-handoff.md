@@ -8,7 +8,7 @@ Do not treat it as a live agent mailbox.
 
 - Status: open
 - Date: 2026-03-12 11:30 UTC+8
-- Source agent: coding-2
+- Source agent: coding-2 (agt_coding1234/gpt-5.4/medium)
 - Source role: coding
 - Scope: accepted-head render editor admission
 - Files changed:

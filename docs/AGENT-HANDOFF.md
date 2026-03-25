@@ -172,7 +172,7 @@ Copyable doc continuation template:
 
 - Status: open
 - Date: 2026-03-13 17:18 UTC+8
-- Source agent: doc-3
+- Source agent: doc-3 (agt_doc1234/gpt-5.4/medium)
 - Scope: <scope>
 - Current state:
   - <what was confirmed or refreshed in this cycle>
@@ -195,7 +195,7 @@ Copyable delivery continuation template:
 
 - Status: open
 - Date: 2026-03-14 14:00 UTC+8
-- Source agent: delivery-1
+- Source agent: delivery-1 (agt_delivery1234/gpt-5.4/medium)
 - Scope: <scope>
 - Current state:
   - <what CI/process state was confirmed in this cycle>
@@ -236,7 +236,7 @@ Copyable continuation template:
 
 - Status: open
 - Date: 2026-03-12 22:30 UTC+8
-- Source agent: coding-2
+- Source agent: coding-2 (agt_coding1234/gpt-5.4/medium)
 - Scope: <scope>
 - Files changed:
   - `<path>`
