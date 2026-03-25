@@ -34,12 +34,11 @@ Fast path:
 
 - `scripts/agent_bootstrap.py` is the preferred thin wrapper when a new chat wants the repo-standard claim/begin-work-cycle bootstrap in one call.
 - The wrapper does not replace reading [`AGENTS.md`](../AGENTS.md) or local overlays first; it only reduces command round-trips after those inputs are loaded.
-- Use this default 5-step startup sequence for a fresh chat unless recovery, takeover, or a direct user request needs more upfront context:
-  1. scan the repo root with `ls`
-  2. read `AGENTS-LOCAL.md` if it exists, then read `.agent-local/dev-setup-status.md`
-  3. read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md), then inspect [`docs/AGENT-REGISTRY.md`](./AGENT-REGISTRY.md) and `.agent-local/agents.json`
-  4. run `scripts/agent_bootstrap.py <role> --model-id <model_id>` or `scripts/agent_bootstrap.py auto --model-id <model_id>`
-  5. if the claimed role is `coding` or `delivery`, check the latest completed CI result for the previous push before starting implementation or delivery follow-up
+- For the shared startup sequence, treat [`AGENTS.md`](../AGENTS.md) as the canonical source of truth.
+- In this file, keep only the registry-specific additions to that shared bootstrap flow:
+  1. inspect [`docs/AGENT-REGISTRY.md`](./AGENT-REGISTRY.md) and `.agent-local/agents.json`
+  2. use `scripts/agent_bootstrap.py <role> --model-id <model_id>` or `scripts/agent_bootstrap.py auto --model-id <model_id>` as the preferred claim/begin wrapper
+  3. use the registry mailbox and display-id / agent-uid model defined here for coordination and recovery
 - Defer broader reading until task work begins:
   - `coding`: postpone `ROADMAP.md`, wide mailbox scans, and broad repo markdown sweeps until the actual implementation slice needs them
   - `delivery`: postpone broad roadmap/checklist sweeps and mailbox scans unrelated to the active CI/process scope until the delivery task actually starts
@@ -49,8 +48,7 @@ Role checklist sources:
 
 - before starting role-specific checklist work, read [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md)
 - canonical role checklist sources live in [`docs/ROLE-CHECKLISTS/coding.md`](./ROLE-CHECKLISTS/coding.md), [`docs/ROLE-CHECKLISTS/delivery.md`](./ROLE-CHECKLISTS/delivery.md), and [`docs/ROLE-CHECKLISTS/doc.md`](./ROLE-CHECKLISTS/doc.md)
-- per-agent checklist copies should live under `.agent-local/agents/<agent_uid>/checklists/`
-- current role checklist section names should align with `New chat bootstrap` and `Work Cycle Workflow`
+- per-agent checklist copy locations and shared naming conventions are defined in [`docs/ROLE-CHECKLISTS/README.md`](./ROLE-CHECKLISTS/README.md)
 
 ## Role Model
 
@@ -306,16 +304,16 @@ No agent may start tracked work until all of the following are true:
 
 Recommended startup sequence:
 
-1. read `AGENTS.md`, `AGENTS-LOCAL.md` if it exists locally, and `.agent-local/dev-setup-status.md`
-2. scan the repo root with `ls`
-3. read `docs/ROLE-CHECKLISTS/README.md`, then read `docs/AGENT-REGISTRY.md` and `.agent-local/agents.json`
-4. if the user assigned a role, prefer `scripts/agent_bootstrap.py <role> --model-id <model_id>`; otherwise prefer `scripts/agent_bootstrap.py auto --model-id <model_id>`
-5. immediately tell the user which role was claimed for this chat
-6. begin the chat with `<display-id> | <scope-label>`
-7. when the first concrete task arrives, use the work-cycle tool to begin tracked work
-8. before implementation or delivery follow-up work, if the role is `coding` or `delivery`, check the latest completed CI status from the previous push
-9. only when the scope overlaps existing coding work, recovery, or takeover, run `npm run handoffs:inactive-coding` and inspect the relevant mailbox before continuing
-10. if a personalized task list would help, use the registry tool to materialize one after the bootstrap flow is complete
+Follow the shared startup sequence in [`AGENTS.md`](../AGENTS.md).
+
+Registry-specific startup additions:
+
+1. read `docs/AGENT-REGISTRY.md` and `.agent-local/agents.json`
+2. prefer `scripts/agent_bootstrap.py <role> --model-id <model_id>` or `scripts/agent_bootstrap.py auto --model-id <model_id>` for the claim/begin wrapper
+3. immediately tell the user which role was claimed for this chat
+4. begin the chat with `<display-id> | <scope-label>`
+5. only when the scope overlaps existing coding work, recovery, or takeover, inspect the relevant mailbox before continuing
+6. if a personalized task list would help, use the registry tool to materialize one after the bootstrap flow is complete
 
 Keep startup output narrow:
 
@@ -327,19 +325,19 @@ Keep startup output narrow:
 
 ## Workflow
 
+For shared per-cycle workflow rules, treat [`AGENTS.md`](../AGENTS.md) as the
+canonical source.
+
+Registry-specific workflow additions:
+
 1. before starting work, read `.agent-local/agents.json`
 2. confirm the current scopes and active peers
 3. use the mailbox declared in the registry for coordination
-4. before each user-command work cycle, prefer `python3 scripts/agent_work_cycle.py begin <agent_ref>`; it advances the work cycle together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
-5. before ending that completed work cycle, append or update one mailbox handoff entry in the agent's declared mailbox so the latest state for the cycle is captured
-6. after that command's work is complete, prefer `python3 scripts/agent_work_cycle.py end <agent_ref>`; it closes the work cycle together with the canonical timestamp line, and that exact line should be visible in user-facing commentary
-7. do not immediately follow `scripts/agent_work_cycle.py` with a separate manual registry lifecycle step for the same work cycle
-8. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py` and paste the emitted line directly; do not hand-write, reformat, or replace it with dual-timezone text
-9. normal progress updates should not add hand-written date or time prefixes; reserve timestamps for the canonical before/after lines
-10. when longer-lived coordination changes are needed, use the registry tool to pause or stop the tracked agent state
-11. when an agent wants a refreshable task list, use the registry tool to materialize one; by default it writes `.agent-local/agents/<agent_uid>/work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
-12. to update one checklist line quickly from automation or a terminal command, use the registry tool's checklist-marking support
-13. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
+4. if you need only the timestamp line without the registry change, use `scripts/agent_timestamp.py` and paste the emitted line directly; do not hand-write, reformat, or replace it with dual-timezone text
+5. when longer-lived coordination changes are needed, use the registry tool to pause or stop the tracked agent state
+6. when an agent wants a refreshable task list, use the registry tool to materialize one; by default it writes `.agent-local/agents/<agent_uid>/work-checklist.md` with Markdown `[X]` / `[ ]` items plus stable hidden `item-id` markers
+7. to update one checklist line quickly from automation or a terminal command, use the registry tool's checklist-marking support
+8. treat `paused` as a medium-term parking state, not an indefinite one; if the work should live longer than the paused lease, plan for a later `takeover` or close it as `done`
 
 Planning-sync coordination:
 

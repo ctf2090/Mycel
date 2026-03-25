@@ -3,12 +3,8 @@
 Status: canonical source for `coding` role work
 
 Use this tracked file as the source for a per-agent checklist copy. Do not mark
-progress in this file directly.
-
-Suggested per-agent copy path:
-
-- `.agent-local/agents/<agent_uid>/checklists/ROLE-coding-bootstrap-checklist.md`
-- `.agent-local/agents/<agent_uid>/checklists/ROLE-coding-workcycle-checklist-<n>.md`
+progress in this file directly. For the standard per-agent copy path pattern,
+see [`README.md`](./README.md).
 
 ## New chat bootstrap
 
