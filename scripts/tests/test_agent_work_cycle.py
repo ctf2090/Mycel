@@ -48,13 +48,23 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.remote_temp_dir.cleanup()
         self.temp_dir.cleanup()
 
-    def run_cli(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    def build_env(self, extra_env: dict[str, str] | None = None) -> dict[str, str]:
+        env = dict(os.environ)
+        env.pop("CODEX_THREAD_ID", None)
+        env["HOME"] = str(self.root)
+        if extra_env:
+            env.update(extra_env)
+        return env
+
+    def run_cli(
+        self, *args: str, check: bool = True, extra_env: dict[str, str] | None = None
+    ) -> subprocess.CompletedProcess[str]:
         proc = subprocess.run(
             [str(self.root / "scripts" / "agent_work_cycle.py"), *args],
             cwd=self.root,
             text=True,
             capture_output=True,
-            env={**os.environ, "HOME": str(self.root)},
+            env=self.build_env(extra_env),
         )
         if check and proc.returncode != 0:
             self.fail(f"command failed {args}: {proc.stderr or proc.stdout}")
@@ -67,7 +77,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             text=True,
             capture_output=True,
             check=True,
-            env={**os.environ, "HOME": str(self.root)},
+            env=self.build_env(),
         )
         return json.loads(proc.stdout)
 
@@ -77,7 +87,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             cwd=self.root,
             text=True,
             capture_output=True,
-            env={**os.environ, "HOME": str(self.root)},
+            env=self.build_env(),
         )
         if check and proc.returncode != 0:
             self.fail(f"git command failed {args}: {proc.stderr or proc.stdout}")
@@ -431,12 +441,43 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         agent_uid = claim["agent_uid"]
         self.run_registry("start", agent_uid)
 
-        proc = self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
+        proc = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
 
         self.assertIn(
-            f"Before work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | last turn: 60,135 tok",
+            f"Before work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | last thread turn: 60,135 tok",
             proc.stdout,
         )
+
+    def test_begin_prefers_current_thread_id_over_newer_same_cwd_rollout(self) -> None:
+        self.write_agents_md()
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[("2026-03-25T06:20:03.000Z", 60135, 887020)],
+        )
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504303",
+            totals=[("2026-03-25T06:25:03.000Z", 500000, 999999)],
+        )
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper", "--model-id", "gpt-5.4")
+        agent_uid = claim["agent_uid"]
+        self.run_registry("start", agent_uid)
+
+        proc = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+
+        self.assertIn("last thread turn: 60,135 tok", proc.stdout)
+        self.assertNotIn("500,000 tok", proc.stdout)
 
     def test_end_returns_pending_when_bootstrap_or_workcycle_items_are_unchecked(self) -> None:
         self.write_agents_md()
@@ -466,7 +507,13 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             "- [X] Bootstrap one <!-- item-id: bootstrap.one -->",
         )
 
-        begin = self.run_cli("begin", agent_uid, "--scope", "timestamp-wrapper")
+        begin = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
         self.assertEqual(0, begin.returncode)
         self.write_codex_rollout(
             "019d23a1-c85f-7d53-a4bb-075ea6504302",
@@ -480,11 +527,17 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             mailbox_state=None,
         )
 
-        proc = self.run_cli("end", agent_uid, "--scope", "timestamp-wrapper")
+        proc = self.run_cli(
+            "end",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
 
         self.assertEqual(0, proc.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | this turn est.: 45,000 tok",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | cycle est. on thread: 45,000 tok",
             proc.stdout,
         )
 

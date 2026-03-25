@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -112,11 +113,14 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def run_cli(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        env.pop("CODEX_THREAD_ID", None)
         proc = subprocess.run(
             [str(self.root / "scripts" / "agent_bootstrap.py"), *args],
             cwd=self.root,
             text=True,
             capture_output=True,
+            env=env,
         )
         if check and proc.returncode != 0:
             self.fail(f"command failed {args}: {proc.stderr or proc.stdout}")

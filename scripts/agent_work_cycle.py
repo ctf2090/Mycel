@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -277,10 +278,21 @@ def store_git_state_snapshot(agent_uid: str, batch_num: int) -> None:
 
 
 def capture_token_usage_snapshot() -> dict[str, object] | None:
-    snapshot = load_latest_usage_snapshot(cwd=str(ROOT_DIR))
+    snapshot = load_latest_usage_snapshot(
+        cwd=str(ROOT_DIR),
+        thread_id=resolve_current_codex_thread_id(),
+    )
     if snapshot is None:
         return None
     return snapshot
+
+
+def resolve_current_codex_thread_id() -> str | None:
+    thread_id = os.environ.get("CODEX_THREAD_ID")
+    if thread_id is None:
+        return None
+    normalized = thread_id.strip()
+    return normalized or None
 
 
 def store_token_usage_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:
@@ -315,7 +327,7 @@ def before_work_token_usage_field(snapshot: dict[str, object] | None) -> str | N
     total = snapshot.get("last_turn_total_tokens")
     if not isinstance(total, int):
         return None
-    return f"last turn: {format_token_count(total)}"
+    return f"last thread turn: {format_token_count(total)}"
 
 
 def estimate_cycle_token_spend(
@@ -345,7 +357,7 @@ def after_work_token_usage_field(
     estimated = estimate_cycle_token_spend(start_snapshot, end_snapshot)
     if estimated is None:
         return None
-    return f"this turn est.: {format_token_count(estimated)}"
+    return f"cycle est. on thread: {format_token_count(estimated)}"
 
 
 def load_git_state_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:

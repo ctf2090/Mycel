@@ -86,13 +86,13 @@ class AgentTimestampCliTest(unittest.TestCase):
             "--scope",
             "token sync",
             "--token-usage",
-            "last turn: 60,135 tok",
+            "last thread turn: 60,135 tok",
             "--now",
             "2026-03-25T06:20:03Z",
         )
 
         self.assertEqual(
-            "[2026-03-25 14:20:03 UTC+8] Before work | doc-8 (agt_f48f55a7/gpt-5.4) | token sync | last turn: 60,135 tok",
+            "[2026-03-25 14:20:03 UTC+8] Before work | doc-8 (agt_f48f55a7/gpt-5.4) | token sync | last thread turn: 60,135 tok",
             proc.stdout.strip(),
         )
 
