@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,7 @@ from agent_registry import (
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
+CODEX_THREAD_METADATA_SCRIPT = ROOT_DIR / "scripts" / "codex_thread_metadata.py"
 
 
 class MailboxHandoffError(Exception):
@@ -104,6 +106,49 @@ OPEN_HANDOFF_HEADING_SLOTS = {
 def human_timestamp(now: datetime | None = None) -> str:
     current = now or datetime.now(timezone.utc)
     return current.astimezone(TAIPEI_TIMEZONE).replace(microsecond=0).strftime("%Y-%m-%d %H:%M UTC+8")
+
+
+def format_agent_label(
+    display_id: str,
+    agent_uid: str,
+    *,
+    model_id: str | None = None,
+    reasoning_effort: str | None = None,
+) -> str:
+    parts = [agent_uid]
+    if model_id:
+        parts.append(model_id)
+    if reasoning_effort:
+        parts.append(reasoning_effort)
+    return f"{display_id} ({'/'.join(parts)})"
+
+
+def resolve_current_codex_metadata() -> tuple[str | None, str | None]:
+    if not CODEX_THREAD_METADATA_SCRIPT.exists():
+        return (None, None)
+    proc = subprocess.run(
+        [sys.executable, str(CODEX_THREAD_METADATA_SCRIPT), "--shell", "--cwd", str(ROOT_DIR)],
+        cwd=ROOT_DIR,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return (None, None)
+
+    values: dict[str, str] = {}
+    for raw_line in proc.stdout.splitlines():
+        line = raw_line.strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, str) and parsed.strip():
+            values[key] = parsed.strip()
+    return (values.get("MODEL"), values.get("EFFORT"))
 
 
 def parse_args() -> argparse.Namespace:
@@ -382,7 +427,19 @@ def create_entry(args: argparse.Namespace) -> dict[str, object]:
         raise MailboxHandoffError(str(exc)) from exc
 
     template = TEMPLATES[args.template]
-    source_agent = args.source_agent.strip() if args.source_agent else display_id
+    current_model, current_effort = resolve_current_codex_metadata()
+    entry_model = entry.get("model_id")
+    fallback_model = entry_model.strip() if isinstance(entry_model, str) and entry_model.strip() else None
+    source_agent = (
+        args.source_agent.strip()
+        if args.source_agent
+        else format_agent_label(
+            display_id,
+            agent_uid,
+            model_id=current_model or fallback_model,
+            reasoning_effort=current_effort,
+        )
+    )
     source_role = require_non_empty_str(entry, "role", agent_uid)
     date_text = human_timestamp()
     entry_text = render_entry(

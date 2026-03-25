@@ -31,6 +31,23 @@ class MailboxHandoffCliTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
 
+    def write_fake_codex_thread_metadata(self, *, model: str = "gpt-5.4", effort: str = "medium") -> None:
+        path = self.root / "scripts" / "codex_thread_metadata.py"
+        path.write_text(
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            "if '--shell' in sys.argv:\n"
+            f"    print('MODEL=\"{model}\"')\n"
+            f"    print('EFFORT=\"{effort}\"')\n"
+            "    print('THREAD_ID=\"test-thread\"')\n"
+            "    print('STATE_DB=\"/tmp/test.sqlite\"')\n"
+            "else:\n"
+            f"    print('model: {model}')\n"
+            f"    print('effort: {effort}')\n",
+            encoding="utf-8",
+        )
+        path.chmod(0o755)
+
     def run_cli(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
         proc = subprocess.run(
             [str(self.root / "scripts" / "mailbox_handoff.py"), *args],
@@ -76,11 +93,13 @@ class MailboxHandoffCliTest(unittest.TestCase):
             "scope": "mailbox-handoff-test",
             "files": [],
             "mailbox": f".agent-local/mailboxes/{agent_uid}.md",
+            "model_id": "gpt-5-codex",
             "recovery_of": None,
             "superseded_by": None,
         }
 
     def test_create_work_continuation_supersedes_existing_open_entry(self) -> None:
+        self.write_fake_codex_thread_metadata()
         self.write_registry(
             {
                 "version": 2,
@@ -191,6 +210,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertIn("use --current-state, --next-step, and optionally --notes", proc.stderr)
 
     def test_create_doc_continuation_uses_doc_template(self) -> None:
+        self.write_fake_codex_thread_metadata()
         self.write_registry(
             {
                 "version": 2,
@@ -221,12 +241,13 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual("Doc Continuation Note", payload["entry_heading"])
         self.assertEqual("open", payload["status"])
         self.assertIn("## Doc Continuation Note", mailbox)
-        self.assertIn("- Source agent: doc-9", mailbox)
+        self.assertIn("- Source agent: doc-9 (agt_doc/gpt-5.4/medium)", mailbox)
         self.assertIn("- Source role: doc", mailbox)
         self.assertIn("  - refresh is due for doc, issue, and web", mailbox)
         self.assertIn("  - scripts/check-plan-refresh.py", mailbox)
 
     def test_create_delivery_continuation_uses_delivery_template(self) -> None:
+        self.write_fake_codex_thread_metadata()
         self.write_registry(
             {
                 "version": 2,
@@ -259,12 +280,13 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual("Delivery Continuation Note", payload["entry_heading"])
         self.assertEqual("open", payload["status"])
         self.assertIn("## Delivery Continuation Note", mailbox)
-        self.assertIn("- Source agent: delivery-2", mailbox)
+        self.assertIn("- Source agent: delivery-2 (agt_delivery/gpt-5.4/medium)", mailbox)
         self.assertIn("- Source role: delivery", mailbox)
         self.assertIn("  - latest completed CI is failing in pages lint", mailbox)
         self.assertIn("  - awaiting log retention confirmation", mailbox)
 
     def test_create_planning_sync_keeps_open_same_role_handoff(self) -> None:
+        self.write_fake_codex_thread_metadata()
         self.write_registry(
             {
                 "version": 2,
@@ -314,6 +336,7 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertIn("- Source role: coding", mailbox)
 
     def test_create_planning_sync_supersedes_existing_open_cross_role_entry_only(self) -> None:
+        self.write_fake_codex_thread_metadata()
         self.write_registry(
             {
                 "version": 2,
@@ -356,6 +379,34 @@ class MailboxHandoffCliTest(unittest.TestCase):
         self.assertEqual(2, mailbox.count("- Status: open"))
         self.assertEqual(1, mailbox.count("- Status: superseded"))
         self.assertIn("- Scope: new-planning-follow-up", mailbox)
+
+    def test_create_uses_registry_model_when_thread_metadata_is_unavailable(self) -> None:
+        self.write_registry(
+            {
+                "version": 2,
+                "updated_at": "2026-03-13T10:00:00+0800",
+                "agent_count": 1,
+                "agents": [self.registry_entry(agent_uid="agt_doc", role="doc", display_id="doc-9")],
+            }
+        )
+
+        payload = json.loads(
+            self.run_cli(
+                "create",
+                "agt_doc",
+                "doc-continuation",
+                "--scope",
+                "fallback-source-agent",
+                "--current-state",
+                "doc fallback state",
+                "--next-step",
+                "continue from fallback",
+                "--json",
+            ).stdout
+        )
+
+        mailbox = (self.root / payload["mailbox"]).read_text(encoding="utf-8")
+        self.assertIn("- Source agent: doc-9 (agt_doc/gpt-5-codex)", mailbox)
 
     def test_planning_resolution_does_not_close_existing_open_entry(self) -> None:
         self.write_registry(
