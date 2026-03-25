@@ -40,6 +40,55 @@ For the user's follow-up observation:
 - the thread later reached about `44K`
 - this matches later rollout rows such as `44,160` and `44,947`
 
+## Pre-Boot Split Before Batch 1
+
+The batch-1 start snapshot was `33,370`, so the thread had already accumulated
+about `33.4K` input tokens before the bootstrap work cycle formally began.
+
+That number should not be read as "the pre-boot Markdown alone cost 33K". A
+better rough split is:
+
+- user-supplied starting context: about `15.8K`
+- assistant and tool-driven pre-bootstrap buildup: about `17.6K`
+
+This split comes from the rollout rows observed before the batch-1 start
+snapshot:
+
+- `15,809` at the first captured row, which is the best available estimate for
+  the initial user-provided context load
+- `33,370` at the batch-1 start snapshot
+- therefore `33,370 - 15,809 = 17,561` of additional input tokens were added
+  before batch 1 began
+
+In practice, that means the pre-bootstrap thread state was roughly:
+
+### A. User-supplied starting context: about `15.8K`
+
+This bucket mostly reflects content already present in the thread before the
+bootstrap sequence really got moving, such as:
+
+- the pasted `AGENTS.md instructions`
+- environment metadata
+- IDE context
+- the short `boot coding` request
+
+### B. Assistant and tool-driven pre-bootstrap buildup: about `17.6K`
+
+This bucket reflects the assistant's own startup work before the formal
+batch-1 begin snapshot:
+
+- an early kickoff / planning increment of about `1.5K`
+- the large bootstrap document-intake increment of about `12.6K`
+- another roughly `3.4K` from bootstrap helpers, handoff lookup, and related
+  pre-begin coordination
+
+So the most accurate short answer is:
+
+- not "pre-boot Markdown alone = 33K"
+- but "the thread had about 33K loaded before batch 1, and about half of that
+  came from the user's starting context while the other half came from the
+  assistant's pre-bootstrap setup work"
+
 ## Ranking To About 44K
 
 The following ranking estimates the largest token consumers from the beginning
