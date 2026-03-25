@@ -75,6 +75,8 @@ raise SystemExit(1)
         agent_id: str,
         *,
         batch_num: int,
+        start_input: int,
+        end_input: int,
         start_total: int,
         end_total: int,
         thread_id: str = "thread-test",
@@ -85,6 +87,7 @@ raise SystemExit(1)
             (
                 "{\n"
                 f'  "thread_id": "{thread_id}",\n'
+                f'  "input_tokens": {start_input},\n'
                 f'  "cumulative_total_tokens": {start_total}\n'
                 "}\n"
             ),
@@ -94,6 +97,7 @@ raise SystemExit(1)
             (
                 "{\n"
                 f'  "thread_id": "{thread_id}",\n'
+                f'  "input_tokens": {end_input},\n'
                 f'  "cumulative_total_tokens": {end_total}\n'
                 "}\n"
             ),
@@ -108,8 +112,10 @@ raise SystemExit(1)
         self.write_workcycle_token_snapshots(
             "agt_test1234",
             batch_num=7,
+            start_input=100000,
+            end_input=145000,
             start_total=100000,
-            end_total=145000,
+            end_total=2100000,
         )
 
         proc = self.run_cli(

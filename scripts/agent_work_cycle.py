@@ -370,8 +370,8 @@ def estimate_cycle_token_spend(
         return None
     start_thread = start_snapshot.get("thread_id")
     end_thread = end_snapshot.get("thread_id")
-    start_total = start_snapshot.get("cumulative_total_tokens")
-    end_total = end_snapshot.get("cumulative_total_tokens")
+    start_total = start_snapshot.get("input_tokens")
+    end_total = end_snapshot.get("input_tokens")
     if not (
         isinstance(start_thread, str)
         and isinstance(end_thread, str)
@@ -390,8 +390,8 @@ def after_work_token_usage_field(
     parts: list[str] = []
 
     estimated = estimate_cycle_token_spend(start_snapshot, end_snapshot)
-    if estimated is not None:
-        parts.append(f"token spent: {format_ui_token_usage(estimated)} (this workcycle)")
+    if estimated is not None and estimated > 0:
+        parts.append(f"token spent: {format_ui_token_usage(estimated)} (this workcycle, est.)")
 
     if end_snapshot is not None:
         input_tokens = end_snapshot.get("input_tokens")

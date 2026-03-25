@@ -541,7 +541,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(0, proc.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 45K (this workcycle), thread usage: 45K/258K",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | thread usage: 45K/258K",
             proc.stdout,
         )
 
@@ -589,7 +589,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         )
         self.assertEqual(0, first_end.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 45K (this workcycle), thread usage: 45K/258K",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | thread usage: 45K/258K",
             first_end.stdout,
         )
 
@@ -611,7 +611,7 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         )
         self.assertEqual(0, second_end.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 45K (this workcycle), thread usage: 45K/258K",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | thread usage: 45K/258K",
             second_end.stdout,
         )
         self.assertNotIn("98,000 tok", second_end.stdout)
@@ -661,7 +661,56 @@ class AgentWorkCycleCliTest(unittest.TestCase):
 
         self.assertEqual(0, proc.returncode)
         self.assertIn(
-            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 1,198K (this workcycle), thread usage: 45K/258K",
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | thread usage: 45K/258K",
+            proc.stdout,
+        )
+
+    def test_after_work_estimates_token_spent_from_ui_usage_delta(self) -> None:
+        self.write_agents_md()
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[("2026-03-25T06:20:03.000Z", 100000, 887020)],
+        )
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper", "--model-id", "gpt-5.4")
+        agent_uid = claim["agent_uid"]
+        start = self.run_registry("start", agent_uid)
+        self.replace_in_file(
+            start["bootstrap_output"],
+            "- [ ] Bootstrap one <!-- item-id: bootstrap.one -->",
+            "- [X] Bootstrap one <!-- item-id: bootstrap.one -->",
+        )
+
+        begin = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+        self.assertEqual(0, begin.returncode)
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[
+                ("2026-03-25T06:20:03.000Z", 100000, 887020),
+                ("2026-03-25T06:25:03.000Z", 150000, 2084574),
+            ],
+        )
+        self.mark_workcycle_defaults(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md",
+            mailbox_state=None,
+        )
+
+        proc = self.run_cli(
+            "end",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn(
+            f"After work | doc-1 ({agent_uid}/gpt-5.4) | timestamp-wrapper | token spent: 50K (this workcycle, est.), thread usage: 150K/258K",
             proc.stdout,
         )
 

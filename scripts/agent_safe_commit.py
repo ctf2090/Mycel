@@ -216,7 +216,7 @@ def estimate_token_spent(agent_id: str) -> int | None:
         return None
 
     thread_id = start_snapshot.get("thread_id")
-    start_total = start_snapshot.get("cumulative_total_tokens")
+    start_total = start_snapshot.get("input_tokens")
     if not isinstance(thread_id, str) or not thread_id.strip() or not isinstance(start_total, int):
         return None
 
@@ -227,7 +227,7 @@ def estimate_token_spent(agent_id: str) -> int | None:
         return None
 
     end_thread = end_snapshot.get("thread_id")
-    end_total = end_snapshot.get("cumulative_total_tokens")
+    end_total = end_snapshot.get("input_tokens")
     if not isinstance(end_thread, str) or end_thread != thread_id or not isinstance(end_total, int):
         return None
     if end_total < start_total:
