@@ -37,6 +37,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Emit JSON instead of a human-readable summary.",
     )
+    parser.add_argument(
+        "--current",
+        action="store_true",
+        help="Emit a one-line summary: <model> <effort> <thread_id>.",
+    )
+    parser.add_argument(
+        "--latest-thread-id-only",
+        action="store_true",
+        help="Emit only the latest matching thread_id.",
+    )
     return parser.parse_args()
 
 
@@ -123,6 +133,20 @@ def main() -> int:
         if thread is None
         else thread.get("reasoning_effort"),
     }
+
+    if args.latest_thread_id_only:
+        print(result["thread_id"])
+        return 0
+
+    if args.current:
+        model = result["thread_model"] or result["session_model"] or "unknown-model"
+        effort = (
+            result["thread_reasoning_effort"]
+            or result["session_effort"]
+            or "unknown-effort"
+        )
+        print(f"{model} {effort} {result['thread_id']}")
+        return 0
 
     if args.json:
         print(json.dumps(result, ensure_ascii=True, indent=2))
