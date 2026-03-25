@@ -40,6 +40,15 @@ def parse_args() -> argparse.Namespace:
         help="Maximum number of recent token_count rows to print.",
     )
     parser.add_argument(
+        "--last-turn",
+        action="store_true",
+        help=(
+            "Emit only the latest completed token_count row for the selected "
+            "thread. When --thread-id is omitted, resolve the current thread "
+            "from the latest rollout matching --cwd."
+        ),
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON instead of a table.",
@@ -124,6 +133,16 @@ def load_usage_rows(rollout_path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def select_rows(
+    rows: list[dict[str, Any]], limit: int, last_turn: bool
+) -> list[dict[str, Any]]:
+    if last_turn:
+        return rows[-1:] if rows else []
+    if limit > 0:
+        return rows[-limit:]
+    return rows
+
+
 def format_int(value: int) -> str:
     return f"{value:,}"
 
@@ -185,13 +204,17 @@ def main() -> int:
         else find_latest_rollout_path(sessions_dir, args.cwd)
     )
     rows = load_usage_rows(rollout_path)
-    if args.limit > 0:
-        rows = rows[-args.limit :]
+    rows = select_rows(rows, args.limit, args.last_turn)
 
     result = {
         "cwd": args.cwd,
-        "thread_id": args.thread_id,
+        "thread_id": (
+            args.thread_id
+            if args.thread_id
+            else "-".join(rollout_path.stem.rsplit("-", 5)[-5:])
+        ),
         "rollout_path": str(rollout_path),
+        "last_turn": args.last_turn,
         "row_count": len(rows),
         "rows": rows,
     }
