@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use ed25519_dalek::SigningKey;
+use insta::assert_json_snapshot;
 use mycel_core::author::signer_id;
 use serde_json::{json, Value};
 
@@ -118,17 +119,15 @@ fn store_ingest_json_writes_verified_objects_into_store_layout() {
 
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
-    assert_eq!(json["verified_object_count"], 2);
-    assert_eq!(json["written_object_count"], 2);
-    assert_eq!(json["existing_object_count"], 0);
-    assert_eq!(json["skipped_object_count"], 0);
-    assert_eq!(json["indexed_object_count"], 2);
-    assert!(
-        json["index_manifest_path"]
-            .as_str()
-            .is_some_and(|path| path.ends_with("/indexes/manifest.json")),
-        "expected persisted manifest path, stdout: {}",
-        stdout_text(&output)
+    assert_json_snapshot!(
+        "store_ingest_json_writes_verified_objects_into_store_layout",
+        json,
+        {
+            ".index_manifest_path" => "[index_manifest_path]",
+            ".source" => "[source]",
+            ".store_root" => "[store_root]",
+            ".stored_objects[].path" => "[stored_object_path]",
+        }
     );
 
     let patch_hash = patch["patch_id"]
@@ -304,7 +303,16 @@ fn store_ingest_preserves_local_policy_file_and_keeps_it_out_of_manifest() {
 
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
-    assert_eq!(json["verified_object_count"], 3);
+    assert_json_snapshot!(
+        "store_ingest_preserves_local_policy_file_and_keeps_it_out_of_manifest",
+        json,
+        {
+            ".index_manifest_path" => "[index_manifest_path]",
+            ".source" => "[source]",
+            ".store_root" => "[store_root]",
+            ".stored_objects[].path" => "[stored_object_path]",
+        }
+    );
     let manifest_path = store_root.join("indexes").join("manifest.json");
     let manifest: Value =
         serde_json::from_str(&fs::read_to_string(&manifest_path).expect("manifest should read"))

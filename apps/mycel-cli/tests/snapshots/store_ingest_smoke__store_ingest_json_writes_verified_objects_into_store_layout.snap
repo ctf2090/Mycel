@@ -1,0 +1,31 @@
+---
+source: apps/mycel-cli/tests/store_ingest_smoke.rs
+expression: json
+---
+{
+  "discovered_file_count": 2,
+  "errors": [],
+  "existing_object_count": 0,
+  "identified_object_count": 2,
+  "index_manifest_path": "[index_manifest_path]",
+  "indexed_object_count": 2,
+  "notes": [],
+  "skipped_object_count": 0,
+  "source": "[source]",
+  "status": "ok",
+  "store_root": "[store_root]",
+  "stored_objects": [
+    {
+      "object_id": "patch:5587f179d6e2f702701f2c57188710fa14b599e1496fea3e764f0b527e386649",
+      "object_type": "patch",
+      "path": "[stored_object_path]"
+    },
+    {
+      "object_id": "rev:722d2331a9f5896ce6bb4794be7cdfefd53c8785711b2767eedbee089cf837c0",
+      "object_type": "revision",
+      "path": "[stored_object_path]"
+    }
+  ],
+  "verified_object_count": 2,
+  "written_object_count": 2
+}
