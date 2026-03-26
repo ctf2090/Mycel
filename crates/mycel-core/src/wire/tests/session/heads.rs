@@ -30,7 +30,9 @@ fn wire_session_accepts_heads_before_manifest_and_unlocks_want() {
     );
     let want = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&heads)
         .expect("HEADS should verify before MANIFEST");
@@ -59,7 +61,9 @@ fn wire_session_records_manifest_heads() {
     let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
     let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -100,11 +104,15 @@ fn wire_session_merges_incremental_heads_updates() {
         false,
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
-    session.verify_incoming(&heads).expect("HEADS should verify");
+    session
+        .verify_incoming(&heads)
+        .expect("HEADS should verify");
 
     let state = session
         .peer_session("node:alpha")
@@ -140,11 +148,15 @@ fn wire_session_replaces_heads_when_replace_is_true() {
         true,
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
-    session.verify_incoming(&heads).expect("HEADS should verify");
+    session
+        .verify_incoming(&heads)
+        .expect("HEADS should verify");
 
     let state = session
         .peer_session("node:alpha")
@@ -197,7 +209,9 @@ fn wire_session_rejects_stale_dependency_want_after_heads_replace() {
     );
     let request_stale_patch = signed_want_message(&signing_key, "node:alpha", &[patch_id.as_str()]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&initial_heads)
         .expect("initial HEADS should verify");
@@ -250,14 +264,18 @@ fn wire_session_rejects_stale_root_revision_want_after_heads_replace() {
     );
     let request_stale_revision = signed_want_message(&signing_key, "node:alpha", &[revision_id]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&initial_heads)
         .expect("initial HEADS should verify");
     session
         .verify_incoming(&replacement_heads)
         .expect("replacement HEADS should verify");
-    let error = session.verify_incoming(&request_stale_revision).unwrap_err();
+    let error = session
+        .verify_incoming(&request_stale_revision)
+        .unwrap_err();
 
     assert_eq!(
         error,
@@ -283,7 +301,9 @@ fn wire_session_snapshot_offer_before_manifest_still_requires_head_context_for_w
         signed_snapshot_offer_message(&signing_key, "node:alpha", "snap:test-offer");
     let want = signed_want_message(&signing_key, "node:alpha", &["snap:test-offer"]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&snapshot_offer)
         .expect("SNAPSHOT_OFFER should verify before MANIFEST");
@@ -316,7 +336,9 @@ fn wire_session_view_announce_before_manifest_still_requires_head_context_for_wa
         signed_view_announce_message(&signing_key, "node:alpha", "view:test-announce");
     let want = signed_want_message(&signing_key, "node:alpha", &["view:test-announce"]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&view_announce)
         .expect("VIEW_ANNOUNCE should verify before MANIFEST");
@@ -342,7 +364,9 @@ fn wire_session_rejects_want_before_head_context() {
     let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
     let want = signed_want_message(&signing_key, "node:alpha", &["patch:test"]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     let error = session.verify_incoming(&want).unwrap_err();
 
     assert_eq!(
@@ -363,7 +387,9 @@ fn wire_session_rejects_unadvertised_revision_want() {
     let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
     let want = signed_want_message(&signing_key, "node:alpha", &["rev:missing"]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -387,7 +413,9 @@ fn wire_session_rejects_non_revision_want_without_sync_root() {
     let manifest = signed_manifest_message(&signing_key, "node:alpha", "node:alpha");
     let want = signed_want_message(&signing_key, "node:alpha", &["patch:test"]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");

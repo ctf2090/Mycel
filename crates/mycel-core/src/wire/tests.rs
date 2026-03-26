@@ -10,8 +10,6 @@ use super::{
 #[allow(unused_imports)]
 use crate::protocol::recompute_declared_object_identity;
 
-#[path = "tests/support.rs"]
-mod support;
 #[path = "tests/envelope.rs"]
 mod envelope;
 #[path = "tests/object_payload.rs"]
@@ -20,6 +18,8 @@ mod object_payload;
 mod property;
 #[path = "tests/session.rs"]
 mod session;
+#[path = "tests/support/mod.rs"]
+mod support;
 
 #[allow(unused_imports)]
 use support::*;

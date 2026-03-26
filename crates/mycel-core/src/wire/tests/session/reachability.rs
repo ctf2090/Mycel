@@ -40,7 +40,9 @@ fn wire_session_rejects_stale_root_object_after_heads_replace() {
         true,
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&initial_heads)
         .expect("initial HEADS should verify");
@@ -102,7 +104,9 @@ fn wire_session_rejects_stale_dependency_object_after_heads_replace() {
         true,
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&initial_heads)
         .expect("initial HEADS should verify");
@@ -163,7 +167,9 @@ fn wire_session_rejects_follow_on_object_before_root_object_arrives() {
         &[revision_id.as_str(), patch_id.as_str()],
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -209,7 +215,9 @@ fn wire_session_accepts_follow_on_patch_after_reachable_revision_object() {
     let root_want = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
     let follow_on_want = signed_want_message(&signing_key, "node:alpha", &[patch_id.as_str()]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -300,7 +308,9 @@ fn wire_session_expands_reachability_from_known_object_index() {
         &[patch_id.as_str(), base_revision_id.as_str()],
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -374,7 +384,9 @@ fn wire_session_loads_known_verified_object_index_from_store() {
         &[patch_id.as_str(), base_revision_id.as_str()],
     );
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -404,7 +416,9 @@ fn wire_session_rejects_unrequested_object() {
         .expect("signed OBJECT payload should include object_id")
         .to_owned();
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -457,7 +471,9 @@ fn wire_session_rejects_unadvertised_root_object_after_root_want() {
     );
     let root_want = signed_want_message(&signing_key, "node:alpha", &[requested_root_id.as_str()]);
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     session
         .verify_incoming(&manifest)
         .expect("MANIFEST should verify");
@@ -490,7 +506,9 @@ fn wire_session_rejects_unrequested_object_before_manifest() {
         .expect("signed OBJECT payload should include object_id")
         .to_owned();
 
-    session.verify_incoming(&hello).expect("HELLO should verify");
+    session
+        .verify_incoming(&hello)
+        .expect("HELLO should verify");
     let error = session.verify_incoming(&object).unwrap_err();
 
     assert_eq!(
