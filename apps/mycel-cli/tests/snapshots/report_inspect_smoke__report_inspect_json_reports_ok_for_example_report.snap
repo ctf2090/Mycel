@@ -1,0 +1,36 @@
+---
+source: apps/mycel-cli/tests/report_inspect_smoke.rs
+expression: json
+---
+{
+  "deterministic_seed": "three-peer-consistency|three-peer-consistency|minimal-valid|single-process",
+  "errors": [],
+  "event_count": 3,
+  "execution_mode": "single-process",
+  "failure_count": 0,
+  "fault_plan_count": 0,
+  "finished_at": "2026-03-09T16:00:01+08:00",
+  "fixture_id": "minimal-valid",
+  "matched_expected_outcomes": [
+    "sync-success",
+    "matching-object-sets",
+    "matching-replay-results"
+  ],
+  "path": "sim/reports/report.example.json",
+  "peer_count": 2,
+  "rejected_object_count": 0,
+  "result": "pass",
+  "run_id": "run:example-001",
+  "scheduled_peer_order": [
+    "node:peer-reader-a",
+    "node:peer-reader-b",
+    "node:peer-seed"
+  ],
+  "seed_source": "derived",
+  "started_at": "2026-03-09T16:00:00+08:00",
+  "status": "ok",
+  "test_id": "three-peer-consistency",
+  "topology_id": "three-peer-consistency",
+  "validation_status": "ok",
+  "verified_object_count": 1
+}

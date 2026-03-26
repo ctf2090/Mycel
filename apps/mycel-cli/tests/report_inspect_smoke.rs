@@ -1,6 +1,8 @@
 use std::process::Output;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
+use insta::assert_json_snapshot;
+
 mod common;
 
 use common::{
@@ -33,15 +35,7 @@ fn report_inspect_json_reports_ok_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["run_id"], "run:example-001");
-    assert_eq!(json["result"], "pass");
-    assert_eq!(json["peer_count"], 2);
-    assert_eq!(json["event_count"], 3);
-    assert_eq!(json["failure_count"], 0);
-    assert_eq!(json["validation_status"], "ok");
-    assert_eq!(json["seed_source"], "derived");
-    assert_eq!(json["fault_plan_count"], 0);
+    assert_json_snapshot!("report_inspect_json_reports_ok_for_example_report", json);
 }
 
 #[test]
@@ -68,14 +62,10 @@ fn report_inspect_events_json_reports_event_trace_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 3);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 3);
-    assert_eq!(events[0]["action"], "load-fixture");
-    assert_eq!(events[1]["action"], "seed-advertise");
+    assert_json_snapshot!(
+        "report_inspect_events_json_reports_event_trace_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -112,14 +102,10 @@ fn report_inspect_phase_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["phase"], "sync");
-    assert_eq!(events[0]["action"], "seed-advertise");
+    assert_json_snapshot!(
+        "report_inspect_phase_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -175,14 +161,10 @@ fn report_inspect_action_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["action"], "seed-advertise");
-    assert_eq!(events[0]["phase"], "sync");
+    assert_json_snapshot!(
+        "report_inspect_action_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -238,13 +220,10 @@ fn report_inspect_outcome_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 3);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 3);
-    assert!(events.iter().all(|event| event["outcome"] == "ok"));
+    assert_json_snapshot!(
+        "report_inspect_outcome_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -306,14 +285,10 @@ fn report_inspect_step_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["step"], 2);
-    assert_eq!(events[0]["action"], "seed-advertise");
+    assert_json_snapshot!(
+        "report_inspect_step_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -369,14 +344,10 @@ fn report_inspect_step_range_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 2);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0]["step"], 2);
-    assert_eq!(events[1]["step"], 3);
+    assert_json_snapshot!(
+        "report_inspect_step_range_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -436,14 +407,10 @@ fn report_inspect_last_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 2);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0]["step"], 2);
-    assert_eq!(events[1]["step"], 3);
+    assert_json_snapshot!(
+        "report_inspect_last_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -479,13 +446,10 @@ fn report_inspect_last_after_other_filters_keeps_tail_subset() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 2);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0]["step"], 2);
-    assert_eq!(events[1]["step"], 3);
+    assert_json_snapshot!(
+        "report_inspect_last_after_other_filters_keeps_tail_subset",
+        json
+    );
 }
 
 #[test]
@@ -501,14 +465,10 @@ fn report_inspect_first_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 2);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0]["step"], 1);
-    assert_eq!(events[1]["step"], 2);
+    assert_json_snapshot!(
+        "report_inspect_first_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -544,13 +504,10 @@ fn report_inspect_first_after_other_filters_keeps_head_subset() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 2);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0]["step"], 1);
-    assert_eq!(events[1]["step"], 2);
+    assert_json_snapshot!(
+        "report_inspect_first_after_other_filters_keeps_head_subset",
+        json
+    );
 }
 
 #[test]
@@ -566,14 +523,10 @@ fn report_inspect_node_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["status"], "ok");
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["node_id"], "node:peer-seed");
-    assert_eq!(events[0]["action"], "seed-advertise");
+    assert_json_snapshot!(
+        "report_inspect_node_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -591,13 +544,10 @@ fn report_inspect_node_and_step_range_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["node_id"], "node:peer-seed");
-    assert_eq!(events[0]["step"], 2);
+    assert_json_snapshot!(
+        "report_inspect_node_and_step_range_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -615,13 +565,10 @@ fn report_inspect_node_and_step_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["node_id"], "node:peer-seed");
-    assert_eq!(events[0]["step"], 2);
+    assert_json_snapshot!(
+        "report_inspect_node_and_step_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -639,13 +586,10 @@ fn report_inspect_node_and_outcome_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["node_id"], "node:peer-seed");
-    assert_eq!(events[0]["outcome"], "ok");
+    assert_json_snapshot!(
+        "report_inspect_node_and_outcome_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -663,13 +607,10 @@ fn report_inspect_node_and_action_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["action"], "seed-advertise");
-    assert_eq!(events[0]["node_id"], "node:peer-seed");
+    assert_json_snapshot!(
+        "report_inspect_node_and_action_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -687,13 +628,10 @@ fn report_inspect_node_and_phase_json_filters_events_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["event_count"], 1);
-    let events = json["events"]
-        .as_array()
-        .expect("events should be an array");
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0]["phase"], "sync");
-    assert_eq!(events[0]["node_id"], "node:peer-seed");
+    assert_json_snapshot!(
+        "report_inspect_node_and_phase_json_filters_events_for_example_report",
+        json
+    );
 }
 
 #[test]
@@ -730,11 +668,10 @@ fn report_inspect_full_json_returns_raw_report_for_example_report() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_eq!(json["run_id"], "run:example-001");
-    assert_eq!(json["result"], "pass");
-    assert_eq!(json["summary"]["verified_object_count"], 1);
-    assert_eq!(json["events"][0]["action"], "load-fixture");
-    assert_eq!(json["metadata"]["seed_source"], "derived");
+    assert_json_snapshot!(
+        "report_inspect_full_json_returns_raw_report_for_example_report",
+        json
+    );
 }
 
 #[test]

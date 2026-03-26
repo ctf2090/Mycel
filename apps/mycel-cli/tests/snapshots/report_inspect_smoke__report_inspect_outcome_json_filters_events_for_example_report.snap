@@ -1,0 +1,43 @@
+---
+source: apps/mycel-cli/tests/report_inspect_smoke.rs
+expression: json
+---
+{
+  "errors": [],
+  "event_count": 3,
+  "events": [
+    {
+      "action": "load-fixture",
+      "detail": "Loaded minimal-valid fixture for baseline sync testing.",
+      "node_id": null,
+      "object_ids": [],
+      "outcome": "ok",
+      "phase": "load",
+      "step": 1
+    },
+    {
+      "action": "seed-advertise",
+      "detail": null,
+      "node_id": "node:peer-seed",
+      "object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ],
+      "outcome": "ok",
+      "phase": "sync",
+      "step": 2
+    },
+    {
+      "action": "reader-compare",
+      "detail": "Reader peers converged on the same verified object set and replay result.",
+      "node_id": null,
+      "object_ids": [],
+      "outcome": "ok",
+      "phase": "replay",
+      "step": 3
+    }
+  ],
+  "path": "sim/reports/report.example.json",
+  "result": "pass",
+  "run_id": "run:example-001",
+  "status": "ok"
+}

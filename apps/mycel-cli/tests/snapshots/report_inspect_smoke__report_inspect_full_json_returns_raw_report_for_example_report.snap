@@ -1,0 +1,94 @@
+---
+source: apps/mycel-cli/tests/report_inspect_smoke.rs
+expression: json
+---
+{
+  "$schema": "./report.schema.json",
+  "events": [
+    {
+      "action": "load-fixture",
+      "detail": "Loaded minimal-valid fixture for baseline sync testing.",
+      "node_id": null,
+      "object_ids": [],
+      "outcome": "ok",
+      "phase": "load",
+      "step": 1
+    },
+    {
+      "action": "seed-advertise",
+      "detail": null,
+      "node_id": "node:peer-seed",
+      "object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ],
+      "outcome": "ok",
+      "phase": "sync",
+      "step": 2
+    },
+    {
+      "action": "reader-compare",
+      "detail": "Reader peers converged on the same verified object set and replay result.",
+      "node_id": null,
+      "object_ids": [],
+      "outcome": "ok",
+      "phase": "replay",
+      "step": 3
+    }
+  ],
+  "execution_mode": "single-process",
+  "failures": [],
+  "finished_at": "2026-03-09T16:00:01+08:00",
+  "fixture_id": "minimal-valid",
+  "metadata": {
+    "deterministic": true,
+    "deterministic_seed": "three-peer-consistency|three-peer-consistency|minimal-valid|single-process",
+    "events_per_second": 3.0,
+    "fault_plan": [],
+    "generator": "mycel-cli/sim-run-v0",
+    "ms_per_event": 333.333,
+    "run_duration_ms": 1000,
+    "run_mode": "deterministic-placeholder",
+    "scheduled_peer_order": [
+      "node:peer-reader-a",
+      "node:peer-reader-b",
+      "node:peer-seed"
+    ],
+    "seed_source": "derived",
+    "source_fixture": "fixtures/object-sets/minimal-valid/fixture.json",
+    "source_test_case": "sim/tests/three-peer-consistency.example.json",
+    "source_topology": "sim/topologies/three-peer-consistency.example.json",
+    "timezone": "Asia/Taipei (UTC+8)",
+    "trace_version": "v0",
+    "validation_status": "ok"
+  },
+  "peers": [
+    {
+      "node_id": "node:peer-reader-a",
+      "notes": [],
+      "rejected_object_ids": [],
+      "status": "ok",
+      "verified_object_ids": []
+    },
+    {
+      "node_id": "node:peer-reader-b",
+      "notes": [],
+      "rejected_object_ids": [],
+      "status": "ok",
+      "verified_object_ids": []
+    }
+  ],
+  "result": "pass",
+  "run_id": "run:example-001",
+  "started_at": "2026-03-09T16:00:00+08:00",
+  "summary": {
+    "matched_expected_outcomes": [
+      "sync-success",
+      "matching-object-sets",
+      "matching-replay-results"
+    ],
+    "rejected_object_count": 0,
+    "verified_object_count": 1
+  },
+  "test_id": "three-peer-consistency",
+  "topology_id": "three-peer-consistency"
+}

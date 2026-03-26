@@ -1,0 +1,25 @@
+---
+source: apps/mycel-cli/tests/report_inspect_smoke.rs
+expression: json
+---
+{
+  "errors": [],
+  "event_count": 1,
+  "events": [
+    {
+      "action": "seed-advertise",
+      "detail": null,
+      "node_id": "node:peer-seed",
+      "object_ids": [
+        "obj:doc:sample-minimal:accepted-head"
+      ],
+      "outcome": "ok",
+      "phase": "sync",
+      "step": 2
+    }
+  ],
+  "path": "sim/reports/report.example.json",
+  "result": "pass",
+  "run_id": "run:example-001",
+  "status": "ok"
+}
