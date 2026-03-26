@@ -33,6 +33,40 @@ fn hello_envelope_with(timestamp: &str) -> Value {
     })
 }
 
+fn signed_patch_body_for_wire_tests() -> Value {
+    sign_object_value(
+        &signing_key(),
+        json!({
+            "type": "patch",
+            "version": "mycel/0.1",
+            "patch_id": "patch:placeholder",
+            "doc_id": "doc:test",
+            "base_revision": "rev:genesis-null",
+            "author": "pk:ed25519:placeholder",
+            "timestamp": 1u64,
+            "ops": [],
+            "signature": "sig:placeholder"
+        }),
+        "author",
+        "patch_id",
+        "patch",
+    )
+}
+
+fn valid_object_payload_for_proptests() -> Value {
+    let body = signed_patch_body_for_wire_tests();
+    let identity = recompute_declared_object_identity(&body)
+        .expect("wire proptest patch body identity should recompute");
+    json!({
+        "object_id": identity.object_id,
+        "object_type": "patch",
+        "encoding": "json",
+        "hash_alg": "sha256",
+        "hash": identity.hash,
+        "body": body
+    })
+}
+
 fn valid_wire_timestamp_strategy() -> impl Strategy<Value = String> {
     (
         0u16..=9999,
@@ -153,6 +187,56 @@ proptest! {
         }
 
         prop_assert!(parse_wire_envelope(&value).is_err());
+    }
+
+    #[test]
+    fn validate_wire_object_payload_behavior_rejects_generated_identity_mismatches(
+        mismatch_case in prop_oneof![Just("object_id"), Just("hash")]
+    ) {
+        let mut payload = valid_object_payload_for_proptests();
+        match mismatch_case {
+            "object_id" => payload["object_id"] = Value::String("patch:wrong-object".to_owned()),
+            "hash" => payload["hash"] = Value::String("hash:wrong-hash".to_owned()),
+            _ => unreachable!("mismatch_case strategy produced unexpected discriminator"),
+        }
+
+        let payload_object = payload
+            .as_object()
+            .expect("valid OBJECT payload helper should return an object");
+        prop_assert!(validate_wire_payload(WireMessageType::Object, payload_object).is_ok());
+        prop_assert!(validate_wire_object_payload_behavior(payload_object).is_err());
+    }
+
+    #[test]
+    fn validate_wire_payload_accepts_generated_want_max_items(
+        max_items in any::<u64>()
+    ) {
+        let payload = json!({
+            "objects": ["rev:test"],
+            "max_items": max_items
+        });
+        let payload_object = payload
+            .as_object()
+            .expect("generated WANT payload should be an object");
+        prop_assert!(validate_wire_payload(WireMessageType::Want, payload_object).is_ok());
+    }
+
+    #[test]
+    fn validate_wire_payload_rejects_generated_invalid_want_max_items(
+        invalid_max_items in prop_oneof![
+            any::<i64>().prop_filter("negative integers only", |value| *value < 0).prop_map(Value::from),
+            any::<bool>().prop_map(Value::from),
+            ".*".prop_map(Value::from)
+        ]
+    ) {
+        let payload = json!({
+            "objects": ["rev:test"],
+            "max_items": invalid_max_items
+        });
+        let payload_object = payload
+            .as_object()
+            .expect("generated WANT payload should be an object");
+        prop_assert!(validate_wire_payload(WireMessageType::Want, payload_object).is_err());
     }
 }
 
