@@ -51,6 +51,12 @@ rustup component add rustfmt --toolchain stable
 rustup component add clippy --toolchain stable
 ```
 
+Install `cargo-nextest` when you want the repo's faster workspace-test runner:
+
+```bash
+cargo install cargo-nextest --locked
+```
+
 Use `scripts/check-dev-env.py` as the repo-local environment checker when you want the workspace's standard setup validation in one tool.
 
 ## 1.1 Local Ready File For New Chats
@@ -127,8 +133,9 @@ From the repository root:
 
 ```bash
 cargo fmt --all --check
-cargo test -p mycel-core
-cargo test -p mycel-cli
+cargo nextest run -p mycel-core
+cargo nextest run -p mycel-cli
+cargo test --workspace --doc
 cargo run -p mycel-cli -- info
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
 ./sim/negative-validation/smoke.py --summary-only
@@ -137,8 +144,9 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 These commands confirm:
 
 - formatting is available
-- core tests run
-- CLI tests run
+- core tests run through `cargo-nextest`
+- CLI tests run through `cargo-nextest`
+- doctests still run through `cargo test --doc`
 - repo-local CLI wiring works
 - fixture validation works
 - simulator negative-validation smoke coverage works
@@ -148,8 +156,9 @@ These commands confirm:
 Treat setup as complete if all of the following are true:
 
 - `cargo fmt --all --check` succeeds
-- `cargo test -p mycel-core` succeeds
-- `cargo test -p mycel-cli` succeeds
+- `cargo nextest run -p mycel-core` succeeds
+- `cargo nextest run -p mycel-cli` succeeds
+- `cargo test --workspace --doc` succeeds
 - `mycel-cli -- info` runs from the repo root
 - fixture validation succeeds on `fixtures/object-sets/minimal-valid/fixture.json`
 - `./sim/negative-validation/smoke.py --summary-only` succeeds
@@ -177,6 +186,7 @@ Useful repo-local tools:
 - `scripts/check-dev-env.py` for environment validation
 - `scripts/check-labels.py` for tracked-label verification
 - `scripts/check-plan-refresh.py` for planning-refresh cadence checks
+- `scripts/codespaces_storage_gc.py` for safe dry-run or apply-based Codespaces storage cleanup; see [`CODESPACES-STORAGE-GC.md`](./CODESPACES-STORAGE-GC.md)
 
 ## 8. If You Are a New AI Agent
 

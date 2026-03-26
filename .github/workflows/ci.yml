@@ -55,6 +55,11 @@ jobs:
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
 
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
       - name: Check formatting
         run: cargo fmt --all --check
 
@@ -65,7 +70,10 @@ jobs:
         run: cargo check
 
       - name: Run workspace tests
-        run: cargo test --workspace
+        run: cargo nextest run --workspace
+
+      - name: Run workspace doctests
+        run: cargo test --workspace --doc
 
       - name: Run negative validation smoke
         run: ./sim/negative-validation/smoke.sh --summary-only

@@ -1,0 +1,6 @@
+[test-groups]
+serial-sim-run = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = "binary(sim_run_smoke)"
+test-group = "serial-sim-run"

@@ -126,7 +126,8 @@ For the `CI` workflow, the default local repro ladder is:
 ```bash
 cargo fmt --all --check
 cargo check
-cargo test --workspace
+cargo nextest run --workspace
+cargo test --workspace --doc
 ./sim/negative-validation/smoke.py --summary-only
 ```
 
@@ -166,7 +167,8 @@ Use the first matching rule:
 1. `gh run list` shows the latest completed run is green
    outcome: do not invent a CI problem; move to merge-readiness or blocker
    triage instead
-2. `gh run view --log-failed` points to `cargo fmt`, `cargo check`, `cargo test`,
+2. `gh run view --log-failed` points to `cargo fmt`, `cargo check`, `cargo nextest`,
+   `cargo test --doc`,
    or simulator smoke
    outcome: likely `coding`, unless the root cause is obviously CI-only wiring
 3. `gh run view --log-failed` points to workflow config, runner setup, caching,

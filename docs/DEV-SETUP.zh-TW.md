@@ -51,6 +51,12 @@ rustup component add rustfmt --toolchain stable
 rustup component add clippy --toolchain stable
 ```
 
+如果你想用 repo 目前較快的 workspace test runner，也請安裝 `cargo-nextest`：
+
+```bash
+cargo install cargo-nextest --locked
+```
+
 如果想用 repo 內建的單一工具檢查，也可以直接用 `scripts/check-dev-env.py`。
 
 ## 1.1 給新 chat 的本地 Ready 檔
@@ -127,8 +133,9 @@ git config core.hooksPath .githooks
 
 ```bash
 cargo fmt --all --check
-cargo test -p mycel-core
-cargo test -p mycel-cli
+cargo nextest run -p mycel-core
+cargo nextest run -p mycel-cli
+cargo test --workspace --doc
 cargo run -p mycel-cli -- info
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
 ./sim/negative-validation/smoke.py --summary-only
@@ -137,8 +144,9 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 這些命令分別確認：
 
 - formatting 可用
-- core tests 可跑
-- CLI tests 可跑
+- 透過 `cargo-nextest` 跑 core tests
+- 透過 `cargo-nextest` 跑 CLI tests
+- doctests 仍透過 `cargo test --doc` 跑
 - repo-local CLI wiring 正常
 - fixture validation 正常
 - simulator negative-validation smoke coverage 正常
@@ -148,8 +156,9 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 若以下條件都成立，就可視為 setup 完成：
 
 - `cargo fmt --all --check` 成功
-- `cargo test -p mycel-core` 成功
-- `cargo test -p mycel-cli` 成功
+- `cargo nextest run -p mycel-core` 成功
+- `cargo nextest run -p mycel-cli` 成功
+- `cargo test --workspace --doc` 成功
 - `mycel-cli -- info` 能在 repo root 執行
 - `fixtures/object-sets/minimal-valid/fixture.json` 可成功驗證
 - `./sim/negative-validation/smoke.py --summary-only` 成功
@@ -177,6 +186,7 @@ cargo run -p mycel-cli -- sim run sim/tests/three-peer-consistency.example.json 
 - `scripts/check-dev-env.py` 用來做環境驗證
 - `scripts/check-labels.py` 用來核對 tracked labels
 - `scripts/check-plan-refresh.py` 用來檢查 planning refresh cadence（規劃同步節奏）
+- `scripts/codespaces_storage_gc.py` 用來安全地做 Codespaces 儲存空間清理，支援 dry-run 與 `--apply`；詳見 [`CODESPACES-STORAGE-GC.zh-TW.md`](./CODESPACES-STORAGE-GC.zh-TW.md)
 
 ## 8. 如果你是新的 AI Agent
 
