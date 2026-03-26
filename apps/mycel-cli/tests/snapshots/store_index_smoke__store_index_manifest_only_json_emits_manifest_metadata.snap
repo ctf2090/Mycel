@@ -1,0 +1,12 @@
+---
+source: apps/mycel-cli/tests/store_index_smoke.rs
+expression: json
+---
+{
+  "manifest_path": "[manifest_path]",
+  "object_type_count": 3,
+  "status": "ok",
+  "store_root": "[store_root]",
+  "stored_object_count": 3,
+  "version": "mycel-store-index/0.1"
+}

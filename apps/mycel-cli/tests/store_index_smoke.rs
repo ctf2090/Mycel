@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use ed25519_dalek::SigningKey;
+use insta::assert_json_snapshot;
 use mycel_core::author::signer_id;
 use serde_json::{json, Value};
 
@@ -557,8 +558,6 @@ fn store_index_filters_only_json_emits_query_metadata() {
     let object = json
         .as_object()
         .expect("filters-only output should be a JSON object");
-    assert_eq!(json["filters"]["doc_id"], "doc:index");
-    assert_eq!(json["projection"], "head-only");
     assert!(
         !object.contains_key("doc_revisions"),
         "filters-only output should omit full indexes, stdout: {}",
@@ -568,6 +567,14 @@ fn store_index_filters_only_json_emits_query_metadata() {
         !object.contains_key("profile_heads"),
         "filters-only output should omit profile heads, stdout: {}",
         stdout_text(&output)
+    );
+    assert_json_snapshot!(
+        "store_index_filters_only_json_emits_query_metadata",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 
@@ -587,23 +594,18 @@ fn store_index_counts_only_json_emits_section_counts() {
     let object = json
         .as_object()
         .expect("counts-only output should be a JSON object");
-    assert_eq!(json["stored_object_count"], 3);
-    assert_eq!(json["object_type_index_count"], 3);
-    assert_eq!(json["document_revision_index_count"], 1);
-    assert_eq!(json["revision_parent_index_count"], 1);
-    assert_eq!(json["author_patch_index_count"], 1);
-    assert_eq!(json["view_governance_record_count"], 1);
-    assert_eq!(json["maintainer_view_index_count"], 1);
-    assert_eq!(json["profile_view_index_count"], 1);
-    assert_eq!(json["document_view_index_count"], 1);
-    assert_eq!(json["current_maintainer_governance_count"], 1);
-    assert_eq!(json["current_maintainer_governance_profile_count"], 1);
-    assert_eq!(json["current_maintainer_governance_document_count"], 1);
-    assert_eq!(json["profile_head_index_count"], 1);
     assert!(
         !object.contains_key("object_ids_by_type"),
         "counts-only output should omit full indexes, stdout: {}",
         stdout_text(&output)
+    );
+    assert_json_snapshot!(
+        "store_index_counts_only_json_emits_section_counts",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 
@@ -623,23 +625,18 @@ fn store_index_manifest_only_json_emits_manifest_metadata() {
     let object = json
         .as_object()
         .expect("manifest-only output should be a JSON object");
-    assert_eq!(json["version"], "mycel-store-index/0.1");
-    assert_eq!(json["stored_object_count"], 3);
-    assert_eq!(json["object_type_count"], 3);
-    assert_eq!(
-        json["manifest_path"],
-        fixture
-            .store_dir
-            .path()
-            .join("indexes")
-            .join("manifest.json")
-            .to_string_lossy()
-            .as_ref()
-    );
     assert!(
         !object.contains_key("filters"),
         "manifest-only output should omit query filters, stdout: {}",
         stdout_text(&output)
+    );
+    assert_json_snapshot!(
+        "store_index_manifest_only_json_emits_manifest_metadata",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 

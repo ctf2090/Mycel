@@ -1,0 +1,19 @@
+---
+source: apps/mycel-cli/tests/store_index_smoke.rs
+expression: json
+---
+{
+  "filters": {
+    "author": null,
+    "doc_id": "doc:index",
+    "maintainer": null,
+    "object_type": null,
+    "profile_id": null,
+    "revision_id": null,
+    "view_id": null
+  },
+  "manifest_path": "[manifest_path]",
+  "projection": "head-only",
+  "status": "ok",
+  "store_root": "[store_root]"
+}

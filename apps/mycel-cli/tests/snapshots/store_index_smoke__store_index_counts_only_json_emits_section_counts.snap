@@ -1,0 +1,33 @@
+---
+source: apps/mycel-cli/tests/store_index_smoke.rs
+expression: json
+---
+{
+  "author_patch_index_count": 1,
+  "current_governance_profile_count": 1,
+  "current_maintainer_governance_count": 1,
+  "current_maintainer_governance_document_count": 1,
+  "current_maintainer_governance_profile_count": 1,
+  "document_revision_index_count": 1,
+  "document_view_index_count": 1,
+  "filters": {
+    "author": null,
+    "doc_id": null,
+    "maintainer": null,
+    "object_type": null,
+    "profile_id": null,
+    "revision_id": null,
+    "view_id": null
+  },
+  "maintainer_view_index_count": 1,
+  "manifest_path": "[manifest_path]",
+  "object_type_index_count": 3,
+  "profile_head_index_count": 1,
+  "profile_view_index_count": 1,
+  "projection": null,
+  "revision_parent_index_count": 1,
+  "status": "ok",
+  "store_root": "[store_root]",
+  "stored_object_count": 3,
+  "view_governance_record_count": 1
+}
