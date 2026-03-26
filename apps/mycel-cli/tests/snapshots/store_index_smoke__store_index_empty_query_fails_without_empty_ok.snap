@@ -1,0 +1,47 @@
+---
+source: apps/mycel-cli/tests/store_index_smoke.rs
+expression: json
+---
+{
+  "author_patches": {
+    "pk:ed25519:6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=": [
+      "patch:d24b3852eb287a90eef8f27cbe0c2a5ebcbf7fa3917d5f9fa6b04cf3b106b8fc"
+    ]
+  },
+  "current_governance": {},
+  "current_maintainer_governance": {},
+  "current_maintainer_governance_document_count": 0,
+  "current_maintainer_governance_profile_count": 0,
+  "doc_revisions": {},
+  "document_views": {},
+  "filters": {
+    "author": null,
+    "doc_id": "doc:missing",
+    "maintainer": null,
+    "object_type": null,
+    "profile_id": null,
+    "revision_id": null,
+    "view_id": null
+  },
+  "maintainer_views": {},
+  "manifest_path": "[manifest_path]",
+  "object_ids_by_type": {
+    "patch": [
+      "patch:d24b3852eb287a90eef8f27cbe0c2a5ebcbf7fa3917d5f9fa6b04cf3b106b8fc"
+    ],
+    "revision": [
+      "rev:4bb946a431a7c48d3eb7a3789886dd220c235bfc033c6a9a8c55e263a9364ced"
+    ],
+    "view": [
+      "view:935d17893ae86023597aa4b2aa4c26d8d1d570ee79c2087e2ad54de2fcfa2545"
+    ]
+  },
+  "profile_heads": {},
+  "profile_views": {},
+  "projection": null,
+  "revision_parents": {},
+  "status": "empty",
+  "store_root": "[store_root]",
+  "stored_object_count": 3,
+  "view_governance": []
+}

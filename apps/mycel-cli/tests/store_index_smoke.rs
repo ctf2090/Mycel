@@ -349,67 +349,19 @@ fn store_index_json_filters_common_indexes() {
 
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
-    assert_eq!(json["filters"]["doc_id"], "doc:index");
-    assert_eq!(json["filters"]["author"], signer);
-    assert_eq!(json["filters"]["maintainer"], fixture.signer);
-    assert_eq!(json["filters"]["profile_id"], profile_id);
-    assert_eq!(json["filters"]["object_type"], "patch");
-    assert_eq!(
-        json["object_ids_by_type"]
-            .as_object()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert!(
-        json["object_ids_by_type"]["patch"]
-            .as_array()
-            .is_some_and(|values| values.len() == 1),
-        "expected filtered patch object index, stdout: {}",
-        stdout_text(&output)
-    );
-    assert_eq!(
-        json["doc_revisions"].as_object().map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["author_patches"]
-            .as_object()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["profile_heads"].as_object().map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["maintainer_views"]
-            .as_object()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["profile_views"].as_object().map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["document_views"]
-            .as_object()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["view_governance"]
-            .as_array()
-            .map(|values| values.len()),
-        Some(1)
+    assert_json_snapshot!(
+        "store_index_json_filters_common_indexes",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 
 #[test]
 fn store_index_json_filters_by_revision_and_view() {
     let fixture = build_store_with_view();
-    let signer = fixture.signer.clone();
-    let profile_id = fixture.profile_id.clone();
 
     let output = run_mycel(&[
         "store",
@@ -424,46 +376,13 @@ fn store_index_json_filters_by_revision_and_view() {
 
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
-    assert_eq!(json["filters"]["revision_id"], fixture.revision_id);
-    assert_eq!(json["filters"]["view_id"], fixture.view_id);
-    assert!(
-        json["revision_parents"][fixture.revision_id]
-            .as_array()
-            .is_some_and(|values| values.is_empty()),
-        "expected revision parent entry, stdout: {}",
-        stdout_text(&output)
-    );
-    assert_eq!(
-        json["view_governance"]
-            .as_array()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["maintainer_views"][signer.as_str()]
-            .as_array()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["profile_views"][profile_id.as_str()]
-            .as_array()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(
-        json["document_views"]["doc:index"]
-            .as_array()
-            .map(|values| values.len()),
-        Some(1)
-    );
-    assert_eq!(json["view_governance"][0]["view_id"], fixture.view_id);
-    assert!(
-        json["profile_heads"][profile_id.as_str()]["doc:index"]
-            .as_array()
-            .is_some_and(|values| values.len() == 1),
-        "expected filtered profile head index, stdout: {}",
-        stdout_text(&output)
+    assert_json_snapshot!(
+        "store_index_json_filters_by_revision_and_view",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 
@@ -957,9 +876,13 @@ fn store_index_empty_query_fails_without_empty_ok() {
 
     assert_exit_code(&output, 1);
     let json = assert_json_status(&output, "empty");
-    assert_eq!(
-        json["doc_revisions"].as_object().map(|values| values.len()),
-        Some(0)
+    assert_json_snapshot!(
+        "store_index_empty_query_fails_without_empty_ok",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 
@@ -978,9 +901,13 @@ fn store_index_empty_query_succeeds_with_empty_ok() {
 
     assert_success(&output);
     let json = assert_json_status(&output, "ok");
-    assert_eq!(
-        json["doc_revisions"].as_object().map(|values| values.len()),
-        Some(0)
+    assert_json_snapshot!(
+        "store_index_empty_query_succeeds_with_empty_ok",
+        json,
+        {
+            ".manifest_path" => "[manifest_path]",
+            ".store_root" => "[store_root]",
+        }
     );
 }
 
