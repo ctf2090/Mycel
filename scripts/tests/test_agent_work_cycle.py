@@ -908,6 +908,59 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             proc.stdout,
         )
 
+    def test_end_alerts_when_compaction_detected_after_begin(self) -> None:
+        self.write_agents_md()
+        self.write_fake_codex_thread_metadata()
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[("2026-03-25T06:20:03.000Z", 60135, 887020)],
+        )
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper", "--model-id", "gpt-5.4")
+        agent_uid = claim["agent_uid"]
+        start = self.run_registry("start", agent_uid)
+        self.mark_bootstrap_defaults(start["bootstrap_output"])
+
+        begin = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+        self.assertEqual(0, begin.returncode)
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[
+                ("2026-03-25T06:20:03.000Z", 60135, 887020),
+                ("2026-03-25T06:25:03.000Z", 45000, 932020),
+            ],
+            compaction_event_type="compaction",
+        )
+        self.mark_workcycle_defaults(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md",
+            mailbox_state=None,
+        )
+
+        proc = self.run_cli(
+            "end",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn(
+            f"After work | doc-1 ({agent_uid}/gpt-5.4/medium) | timestamp-wrapper | usage 45K/258K",
+            proc.stdout,
+        )
+        self.assertIn("compact_context_detected_before_after_work: true", proc.stdout)
+        self.assertIn("compaction_timestamp: 2026-03-25T06:26:03.000Z", proc.stdout)
+        self.assertIn(
+            "alert: compact context detected before after-work closeout; open a fresh chat before continuing.",
+            proc.stdout,
+        )
+
     def test_after_work_estimates_token_spent_from_ui_usage_delta(self) -> None:
         self.write_agents_md()
         self.write_fake_codex_thread_metadata()

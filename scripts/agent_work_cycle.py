@@ -407,7 +407,11 @@ def load_token_usage_snapshot(agent_uid: str, batch_num: int) -> dict[str, objec
     return payload if isinstance(payload, dict) else None
 
 
-def detect_compaction_event(snapshot: dict[str, object] | None) -> dict[str, str] | None:
+def detect_compaction_event(
+    snapshot: dict[str, object] | None,
+    *,
+    after_timestamp: str | None = None,
+) -> dict[str, str] | None:
     if snapshot is None:
         return None
     rollout_path_value = snapshot.get("rollout_path")
@@ -431,6 +435,8 @@ def detect_compaction_event(snapshot: dict[str, object] | None) -> dict[str, str
         timestamp = entry.get("timestamp")
         if not isinstance(timestamp, str) or not timestamp.strip():
             timestamp = "unknown"
+        if after_timestamp and timestamp != "unknown" and timestamp <= after_timestamp:
+            continue
         latest = {
             "timestamp": timestamp,
             "rollout_path": str(rollout_path),
@@ -1235,6 +1241,15 @@ def main() -> int:
         emit_registry_summary(payload)
         start_token_snapshot = load_token_usage_snapshot(agent_uid, latest_batch)
         end_token_snapshot = store_end_token_usage_snapshot_once(agent_uid, latest_batch)
+        end_compaction = detect_compaction_event(
+            end_token_snapshot,
+            after_timestamp=(
+                str(start_token_snapshot.get("timestamp"))
+                if isinstance(start_token_snapshot, dict)
+                and isinstance(start_token_snapshot.get("timestamp"), str)
+                else None
+            ),
+        )
         print(
             build_message(
                 stage,
@@ -1248,6 +1263,13 @@ def main() -> int:
                 ),
             )
         )
+        if end_compaction is not None:
+            print("compact_context_detected_before_after_work: true")
+            print(f"compaction_timestamp: {end_compaction['timestamp']}")
+            print(f"compaction_rollout_path: {end_compaction['rollout_path']}")
+            print(
+                "alert: compact context detected before after-work closeout; open a fresh chat before continuing."
+            )
 
         for path in checklist_paths:
             unchecked_by_path[path] = scan_unchecked_items(path)
