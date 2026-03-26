@@ -418,6 +418,17 @@ def detect_compaction_event(
     if not isinstance(rollout_path_value, str) or not rollout_path_value.strip():
         return None
     rollout_path = Path(rollout_path_value)
+    return detect_compaction_event_in_rollout_path(
+        rollout_path,
+        after_timestamp=after_timestamp,
+    )
+
+
+def detect_compaction_event_in_rollout_path(
+    rollout_path: Path,
+    *,
+    after_timestamp: str | None = None,
+) -> dict[str, str] | None:
     if not rollout_path.exists():
         return None
 
@@ -1241,15 +1252,29 @@ def main() -> int:
         emit_registry_summary(payload)
         start_token_snapshot = load_token_usage_snapshot(agent_uid, latest_batch)
         end_token_snapshot = store_end_token_usage_snapshot_once(agent_uid, latest_batch)
-        end_compaction = detect_compaction_event(
-            end_token_snapshot,
-            after_timestamp=(
-                str(start_token_snapshot.get("timestamp"))
-                if isinstance(start_token_snapshot, dict)
-                and isinstance(start_token_snapshot.get("timestamp"), str)
-                else None
-            ),
+        after_timestamp = (
+            str(start_token_snapshot.get("timestamp"))
+            if isinstance(start_token_snapshot, dict)
+            and isinstance(start_token_snapshot.get("timestamp"), str)
+            else None
         )
+        start_rollout_path = (
+            Path(str(start_token_snapshot.get("rollout_path")))
+            if isinstance(start_token_snapshot, dict)
+            and isinstance(start_token_snapshot.get("rollout_path"), str)
+            and str(start_token_snapshot.get("rollout_path")).strip()
+            else None
+        )
+        if start_rollout_path is not None:
+            end_compaction = detect_compaction_event_in_rollout_path(
+                start_rollout_path,
+                after_timestamp=after_timestamp,
+            )
+        else:
+            end_compaction = detect_compaction_event(
+                end_token_snapshot,
+                after_timestamp=after_timestamp,
+            )
         print(
             build_message(
                 stage,
