@@ -51,7 +51,7 @@ rustup component add rustfmt --toolchain stable
 rustup component add clippy --toolchain stable
 ```
 
-如果你想用 repo 目前較快的 workspace test runner，也請安裝 `cargo-nextest`：
+只有在你需要於本機重現 GitHub Actions 測試 runner 時，才安裝 `cargo-nextest`。本地開發預設請使用 `cargo test`，而 `cargo-nextest` 的預設執行位置是 GitHub Actions：
 
 ```bash
 cargo install cargo-nextest --locked
@@ -133,8 +133,8 @@ git config core.hooksPath .githooks
 
 ```bash
 cargo fmt --all --check
-cargo nextest run -p mycel-core
-cargo nextest run -p mycel-cli
+cargo test -p mycel-core
+cargo test -p mycel-cli
 cargo test --workspace --doc
 cargo run -p mycel-cli -- info
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
@@ -144,20 +144,22 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 這些命令分別確認：
 
 - formatting 可用
-- 透過 `cargo-nextest` 跑 core tests
-- 透過 `cargo-nextest` 跑 CLI tests
+- 透過本地預設的 `cargo test` 流程跑 core tests
+- 透過本地預設的 `cargo test` 流程跑 CLI tests
 - doctests 仍透過 `cargo test --doc` 跑
 - repo-local CLI wiring 正常
 - fixture validation 正常
 - simulator negative-validation smoke coverage 正常
+
+如果你是要特別重現 CI 行為，請再手動跑 `cargo nextest run --workspace`，把它視為例外路徑，而不是本地預設流程。
 
 ## 5. 何時算 Setup 完成
 
 若以下條件都成立，就可視為 setup 完成：
 
 - `cargo fmt --all --check` 成功
-- `cargo nextest run -p mycel-core` 成功
-- `cargo nextest run -p mycel-cli` 成功
+- `cargo test -p mycel-core` 成功
+- `cargo test -p mycel-cli` 成功
 - `cargo test --workspace --doc` 成功
 - `mycel-cli -- info` 能在 repo root 執行
 - `fixtures/object-sets/minimal-valid/fixture.json` 可成功驗證

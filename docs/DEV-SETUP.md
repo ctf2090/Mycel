@@ -51,7 +51,7 @@ rustup component add rustfmt --toolchain stable
 rustup component add clippy --toolchain stable
 ```
 
-Install `cargo-nextest` when you want the repo's faster workspace-test runner:
+Install `cargo-nextest` only when you need to reproduce the GitHub Actions test runner locally. Local development defaults to `cargo test`, and GitHub Actions is the default place that runs `cargo-nextest`:
 
 ```bash
 cargo install cargo-nextest --locked
@@ -133,8 +133,8 @@ From the repository root:
 
 ```bash
 cargo fmt --all --check
-cargo nextest run -p mycel-core
-cargo nextest run -p mycel-cli
+cargo test -p mycel-core
+cargo test -p mycel-cli
 cargo test --workspace --doc
 cargo run -p mycel-cli -- info
 cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.json --json
@@ -144,20 +144,22 @@ cargo run -p mycel-cli -- validate fixtures/object-sets/minimal-valid/fixture.js
 These commands confirm:
 
 - formatting is available
-- core tests run through `cargo-nextest`
-- CLI tests run through `cargo-nextest`
+- core tests run through the default local `cargo test` flow
+- CLI tests run through the default local `cargo test` flow
 - doctests still run through `cargo test --doc`
 - repo-local CLI wiring works
 - fixture validation works
 - simulator negative-validation smoke coverage works
+
+When you specifically need CI parity, run `cargo nextest run --workspace` manually and treat that as an exception path rather than the local default.
 
 ## 5. What “Setup Complete” Looks Like
 
 Treat setup as complete if all of the following are true:
 
 - `cargo fmt --all --check` succeeds
-- `cargo nextest run -p mycel-core` succeeds
-- `cargo nextest run -p mycel-cli` succeeds
+- `cargo test -p mycel-core` succeeds
+- `cargo test -p mycel-cli` succeeds
 - `cargo test --workspace --doc` succeeds
 - `mycel-cli -- info` runs from the repo root
 - fixture validation succeeds on `fixtures/object-sets/minimal-valid/fixture.json`
