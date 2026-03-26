@@ -74,8 +74,8 @@ SCRUTINIZED_NOT_NEEDED_ITEMS: dict[str, str] = {
 # scope-consistency checks (a placeholder scope never matches a real scope, so
 # the check would always fail for newly claimed agents).
 PLACEHOLDER_SCOPES: frozenset[str] = frozenset({"pending scope", "", "none", "n/a"})
-NON_SOURCE_PATH_PREFIXES: tuple[str, ...] = (".agent-local/", "docs/", ".git/")
-NON_SOURCE_PATH_SUFFIXES: tuple[str, ...] = (".md", ".pyc")
+NON_CYCLE_TRACKED_PATH_PREFIXES: tuple[str, ...] = (".agent-local/", ".git/")
+NON_CYCLE_TRACKED_PATH_SUFFIXES: tuple[str, ...] = (".pyc",)
 
 
 class WorkCycleError(Exception):
@@ -597,27 +597,27 @@ def load_git_state_snapshot(agent_uid: str, batch_num: int) -> dict[str, object]
     return payload if isinstance(payload, dict) else None
 
 
-def is_source_path(path: str) -> bool:
+def is_cycle_tracked_path(path: str) -> bool:
     normalized = path.strip().replace("\\", "/")
     if not normalized:
         return False
-    if normalized.startswith(NON_SOURCE_PATH_PREFIXES):
+    if normalized.startswith(NON_CYCLE_TRACKED_PATH_PREFIXES):
         return False
     if "/__pycache__/" in f"/{normalized}/":
         return False
-    if normalized.endswith(NON_SOURCE_PATH_SUFFIXES):
+    if normalized.endswith(NON_CYCLE_TRACKED_PATH_SUFFIXES):
         return False
     return True
 
 
 def cycle_has_source_changes(agent_uid: str, batch_num: int) -> bool | None:
-    source_paths = cycle_source_paths(agent_uid, batch_num)
-    if source_paths is None:
+    cycle_paths = cycle_tracked_paths(agent_uid, batch_num)
+    if cycle_paths is None:
         return None
-    return bool(source_paths)
+    return bool(cycle_paths)
 
 
-def cycle_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
+def cycle_tracked_paths(agent_uid: str, batch_num: int) -> set[str] | None:
     snapshot = load_git_state_snapshot(agent_uid, batch_num)
     if snapshot is None or snapshot.get("available") is not True:
         return None
@@ -653,10 +653,10 @@ def cycle_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
             if path.strip()
         )
 
-    return {path for path in cycle_paths if is_source_path(path)}
+    return {path for path in cycle_paths if is_cycle_tracked_path(path)}
 
 
-def cycle_committed_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
+def cycle_committed_tracked_paths(agent_uid: str, batch_num: int) -> set[str] | None:
     snapshot = load_git_state_snapshot(agent_uid, batch_num)
     if snapshot is None or snapshot.get("available") is not True:
         return None
@@ -677,11 +677,11 @@ def cycle_committed_source_paths(agent_uid: str, batch_num: int) -> set[str] | N
     return {
         path.strip()
         for path in diff_proc.stdout.splitlines()
-        if path.strip() and is_source_path(path.strip())
+        if path.strip() and is_cycle_tracked_path(path.strip())
     }
 
 
-def cycle_owned_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
+def cycle_owned_tracked_paths(agent_uid: str, batch_num: int) -> set[str] | None:
     owned_commits = cycle_owned_commit_refs(agent_uid, batch_num)
     if owned_commits is None:
         return None
@@ -696,7 +696,7 @@ def cycle_owned_source_paths(agent_uid: str, batch_num: int) -> set[str] | None:
         owned_paths.update(
             path.strip()
             for path in diff_proc.stdout.splitlines()
-            if path.strip() and is_source_path(path.strip())
+            if path.strip() and is_cycle_tracked_path(path.strip())
         )
     return owned_paths
 
@@ -742,12 +742,12 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
             "remote_head": None,
         }
 
-    committed_source_paths = cycle_committed_source_paths(agent_uid, batch_num)
+    committed_source_paths = cycle_committed_tracked_paths(agent_uid, batch_num)
     if committed_source_paths is None:
         return {
             "required": True,
             "ok": False,
-            "reason": "unable to determine whether cycle source changes were committed",
+            "reason": "unable to determine whether cycle file changes were committed",
             "remote_head": None,
         }
 
@@ -755,7 +755,7 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
         return {
             "required": True,
             "ok": False,
-            "reason": "cycle source changes are still uncommitted; commit and push them first",
+            "reason": "cycle file changes are still uncommitted; commit and push them first",
             "remote_head": None,
         }
 
@@ -771,7 +771,7 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
         return {
             "required": False,
             "ok": True,
-            "reason": "no cycle-owned source commits detected; foreign local commits do not block closeout",
+            "reason": "no cycle-owned tracked-file commits detected; foreign local commits do not block closeout",
             "remote_head": None,
         }
 
@@ -794,7 +794,7 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
         return {
             "required": True,
             "ok": False,
-            "reason": "cycle-owned source changes are still present in the worktree; commit and push them first",
+            "reason": "cycle-owned tracked-file changes are still present in the worktree; commit and push them first",
             "remote_head": None,
         }
 
@@ -1276,7 +1276,7 @@ def main() -> int:
 
         # Scrutinize not-needed markings on high-value required items.
         not_needed_violations: list[tuple[str, str]] = []
-        owned_source_paths = cycle_owned_source_paths(agent_uid, latest_batch)
+        owned_source_paths = cycle_owned_tracked_paths(agent_uid, latest_batch)
         source_changes_present = None if owned_source_paths is None else bool(owned_source_paths)
         push_status = cycle_source_change_push_status(agent_uid, latest_batch)
         for path in checklist_paths:
