@@ -238,6 +238,69 @@ proptest! {
             .expect("generated WANT payload should be an object");
         prop_assert!(validate_wire_payload(WireMessageType::Want, payload_object).is_err());
     }
+
+    #[test]
+    fn validate_wire_payload_rejects_generated_invalid_object_encoding(
+        invalid_encoding in ".*".prop_filter("encoding must differ from json", |value| value != "json")
+    ) {
+        let mut payload = valid_object_payload_for_proptests();
+        payload["encoding"] = Value::String(invalid_encoding);
+
+        let payload_object = payload
+            .as_object()
+            .expect("valid OBJECT payload helper should return an object");
+        prop_assert_eq!(
+            validate_wire_payload(WireMessageType::Object, payload_object).unwrap_err(),
+            "OBJECT payload 'encoding' must equal 'json'"
+        );
+    }
+
+    #[test]
+    fn validate_wire_payload_rejects_generated_non_object_object_body(
+        invalid_body in prop_oneof![
+            any::<bool>().prop_map(Value::from),
+            any::<i64>().prop_map(Value::from),
+            ".*".prop_map(Value::from),
+            prop::collection::vec(any::<u8>(), 0..8).prop_map(|bytes| {
+                Value::Array(bytes.into_iter().map(Value::from).collect())
+            }),
+        ]
+    ) {
+        let mut payload = valid_object_payload_for_proptests();
+        payload["body"] = invalid_body;
+
+        let payload_object = payload
+            .as_object()
+            .expect("valid OBJECT payload helper should return an object");
+        prop_assert_eq!(
+            validate_wire_payload(WireMessageType::Object, payload_object).unwrap_err(),
+            "top-level 'body' must be an object"
+        );
+    }
+
+    #[test]
+    fn validate_wire_object_payload_behavior_rejects_generated_object_type_body_mismatches(
+        mismatched_object_type in prop_oneof![Just("revision"), Just("view")]
+    ) {
+        let mut payload = valid_object_payload_for_proptests();
+        payload["object_type"] = Value::String(mismatched_object_type.to_owned());
+
+        let payload_object = payload
+            .as_object()
+            .expect("valid OBJECT payload helper should return an object");
+        prop_assert!(validate_wire_payload(WireMessageType::Object, payload_object).is_ok());
+
+        let error = validate_wire_object_payload_behavior(payload_object)
+            .expect_err("mismatched object_type should fail OBJECT payload behavior validation");
+        prop_assert!(
+            error.contains("OBJECT body type 'patch' does not match object_type"),
+            "unexpected mismatch error: {error}"
+        );
+        prop_assert!(
+            error.contains(mismatched_object_type),
+            "mismatch error should mention generated object_type, got: {error}"
+        );
+    }
 }
 
 fn signing_key() -> SigningKey {
