@@ -135,7 +135,7 @@ expression: json
     }
   ],
   "errors": [],
-  "input_path": "/workspaces/Mycel/fixtures/head-inspect/minimal-head-selection/bundle.json",
+  "input_path": "[input_path]",
   "maintainer_support": [
     {
       "effective_weight": 1,

@@ -12,7 +12,13 @@ fn head_inspect_json_selects_highest_supported_head() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_json_snapshot!("head_inspect_json_selects_highest_supported_head", json);
+    assert_json_snapshot!(
+        "head_inspect_json_selects_highest_supported_head",
+        json,
+        {
+            ".input_path" => "[input_path]",
+        }
+    );
 }
 
 #[test]
@@ -28,7 +34,13 @@ fn head_inspect_json_resolves_repo_native_fixture_name() {
 
     assert_success(&output);
     let json = parse_json_stdout(&output);
-    assert_json_snapshot!("head_inspect_json_resolves_repo_native_fixture_name", json);
+    assert_json_snapshot!(
+        "head_inspect_json_resolves_repo_native_fixture_name",
+        json,
+        {
+            ".input_path" => "[input_path]",
+        }
+    );
 }
 
 #[test]
@@ -46,7 +58,10 @@ fn head_inspect_json_applies_fixture_backed_viewer_score_channels() {
     let json = parse_json_stdout(&output);
     assert_json_snapshot!(
         "head_inspect_json_applies_fixture_backed_viewer_score_channels",
-        json
+        json,
+        {
+            ".input_path" => "[input_path]",
+        }
     );
 }
 
