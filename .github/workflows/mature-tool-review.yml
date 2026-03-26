@@ -1,0 +1,26 @@
+name: Mature Tool Review
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  mature-tool-review-issue:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 401
+
+      - name: Refresh mature tool review issue every 400 commits
+        run: python3 scripts/report_mature_tool_review_issue.py --threshold 400 --title "Mature Tool Review" --label periodic-review

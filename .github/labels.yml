@@ -20,3 +20,6 @@ labels:
   - name: blocked-by-spec
     color: "d93f0b"
     description: Implementation should wait for a clearer spec or design decision.
+  - name: periodic-review
+    color: "c2e0ff"
+    description: Recurring review issue for checkpoint-based process or tooling evaluation.

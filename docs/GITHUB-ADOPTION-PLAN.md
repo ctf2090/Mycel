@@ -258,6 +258,8 @@ discipline quickly.
 Concrete next implementation tasks for a future work item:
 
 - draft the exact required status checks for `main`
+- keep a recurring `doc`-owned `Mature tool review` issue every `400` commits using [`.github/ISSUE_TEMPLATE/mature_tool_review.yml`](../.github/ISSUE_TEMPLATE/mature_tool_review.yml)
+- use [`docs/MATURE-TOOL-REVIEW-FLOW.md`](./MATURE-TOOL-REVIEW-FLOW.md) as the runbook for collecting evidence, framing tradeoffs, and routing follow-up work
 - decide whether classic branch protection should move to `rulesets`
 - decide whether code owner reviews and admin enforcement should be required
 - refine the first-pass `.github/CODEOWNERS`

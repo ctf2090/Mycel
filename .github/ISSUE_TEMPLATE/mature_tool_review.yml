@@ -1,0 +1,94 @@
+name: Mature tool review
+description: Review whether an existing mature tool or module should replace repeated custom work in Mycel.
+title: "[Review] Mature tool check @ "
+labels:
+  - periodic-review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for the recurring `doc`-role review that checks whether Mycel should adopt an existing mature tool, module, or framework instead of extending repeated custom maintenance.
+
+        Default trigger:
+
+        - run this review every `400` commits
+        - open one issue for the review window rather than one issue per candidate
+        - route implementation follow-up to `coding` or `delivery` only after the review identifies a concrete next step
+  - type: input
+    id: review_window
+    attributes:
+      label: Review window
+      description: Record the commit range, dates, or checkpoint that triggered this periodic review.
+      placeholder: "Example: commits 1201-1600, reviewed on 2026-03-26"
+    validations:
+      required: true
+  - type: textarea
+    id: pain_signals
+    attributes:
+      label: Pain signals from the last review window
+      description: List repeated friction, maintenance hotspots, or duplicated work that suggest a mature tool review is worth doing now.
+      placeholder: |
+        - repeated custom CLI argument wiring across multiple commands
+        - repeated test-matrix boilerplate in several suites
+        - ongoing CI/process maintenance around one homegrown helper
+    validations:
+      required: true
+  - type: textarea
+    id: search_scope
+    attributes:
+      label: Search scope and evidence
+      description: Note which areas were reviewed and what concrete repo evidence informed the scan.
+      placeholder: |
+        Areas reviewed:
+        - CLI
+        - repo scripts
+        - workflow/process tooling
+
+        Evidence:
+        - repeated code paths in ...
+        - recent issue/PR friction in ...
+    validations:
+      required: true
+  - type: textarea
+    id: candidates
+    attributes:
+      label: Candidate mature tools or modules
+      description: List viable candidates only. Include what each one solves, why now, and the main tradeoff.
+      placeholder: |
+        1. clap
+           - solves: reduce repeated custom CLI parsing and help-text wiring
+           - why now: command surface is growing and repeated parsing logic is appearing
+           - tradeoff: migration cost and some API churn in command setup
+
+        2. rstest
+           - solves: reduce repeated test-case boilerplate
+           - why now: validation matrices are expanding across similar cases
+           - tradeoff: extra macro dependency and some readability tradeoff
+    validations:
+      required: true
+  - type: textarea
+    id: not_now
+    attributes:
+      label: Considered but not recommended now
+      description: Capture mature options that were reviewed but should not be adopted yet, and say why.
+      placeholder: |
+        - tool/module:
+          - why not now:
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation and next step
+      description: State whether to do nothing, open a narrower follow-up issue, or schedule a spike.
+      placeholder: |
+        Recommendation:
+        - open one follow-up issue for ...
+
+        Next step owner:
+        - coding
+
+        Verification or success signal:
+        - reduced boilerplate in ...
+    validations:
+      required: true
