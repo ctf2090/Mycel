@@ -1018,6 +1018,19 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             "rollout-2026-03-25T06-14-58-019d23a1-c85f-7d53-a4bb-075ea6504302.jsonl",
             proc.stdout,
         )
+        self.assertIn("thread_switch_detected_before_after_work: true", proc.stdout)
+        self.assertIn(
+            "begin_thread_id: 019d23a1-c85f-7d53-a4bb-075ea6504302",
+            proc.stdout,
+        )
+        self.assertIn(
+            "end_thread_id: 019d23a1-c85f-7d53-a4bb-075ea6504303",
+            proc.stdout,
+        )
+        self.assertIn(
+            "warning: begin/end Codex thread ids differ during after-work closeout; diagnostics may span a thread switch.",
+            proc.stdout,
+        )
 
     def test_after_work_estimates_token_spent_from_ui_usage_delta(self) -> None:
         self.write_agents_md()

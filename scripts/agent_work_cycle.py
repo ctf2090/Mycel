@@ -597,6 +597,27 @@ def after_work_token_usage_field(
     return usage_part or spent_part
 
 
+def thread_switch_diagnostic(
+    start_snapshot: dict[str, object] | None, end_snapshot: dict[str, object] | None
+) -> dict[str, str] | None:
+    if start_snapshot is None or end_snapshot is None:
+        return None
+    start_thread = start_snapshot.get("thread_id")
+    end_thread = end_snapshot.get("thread_id")
+    if not (
+        isinstance(start_thread, str)
+        and start_thread.strip()
+        and isinstance(end_thread, str)
+        and end_thread.strip()
+        and start_thread != end_thread
+    ):
+        return None
+    return {
+        "begin_thread_id": start_thread,
+        "end_thread_id": end_thread,
+    }
+
+
 def load_git_state_snapshot(agent_uid: str, batch_num: int) -> dict[str, object] | None:
     path = workcycle_git_state_path(agent_uid, batch_num)
     if not path.exists():
@@ -1252,6 +1273,9 @@ def main() -> int:
         emit_registry_summary(payload)
         start_token_snapshot = load_token_usage_snapshot(agent_uid, latest_batch)
         end_token_snapshot = store_end_token_usage_snapshot_once(agent_uid, latest_batch)
+        thread_switch = thread_switch_diagnostic(
+            start_token_snapshot, end_token_snapshot
+        )
         after_timestamp = (
             str(start_token_snapshot.get("timestamp"))
             if isinstance(start_token_snapshot, dict)
@@ -1294,6 +1318,13 @@ def main() -> int:
             print(f"compaction_rollout_path: {end_compaction['rollout_path']}")
             print(
                 "alert: compact context detected before after-work closeout; open a fresh chat before continuing."
+            )
+        if thread_switch is not None:
+            print("thread_switch_detected_before_after_work: true")
+            print(f"begin_thread_id: {thread_switch['begin_thread_id']}")
+            print(f"end_thread_id: {thread_switch['end_thread_id']}")
+            print(
+                "warning: begin/end Codex thread ids differ during after-work closeout; diagnostics may span a thread switch."
             )
 
         for path in checklist_paths:
