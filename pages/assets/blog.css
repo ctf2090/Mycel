@@ -131,6 +131,11 @@ body.landing-page.blog-page .article-body h2 {
   margin-bottom: 12px;
 }
 
+body.landing-page.blog-page .article-body p + h2,
+body.landing-page.blog-page .article-body ul + h2 {
+  margin-top: 28px;
+}
+
 body.landing-page.blog-page .post-card p + .meta-row,
 body.landing-page.blog-page .post-card .meta-row + .card-actions {
   margin-top: 14px;
