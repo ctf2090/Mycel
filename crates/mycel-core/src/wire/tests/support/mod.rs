@@ -13,6 +13,7 @@ use crate::replay::{compute_state_hash, DocumentState};
 mod common;
 mod messages;
 mod objects;
+mod session;
 mod strategies;
 
 use common::sign_wire_value;
@@ -29,6 +30,7 @@ pub(super) use objects::{
     signed_object_message, signed_patch_object_message, signed_revision_object_message,
     valid_object_payload_for_proptests,
 };
+pub(super) use session::{patch_revision_graph, registered_session};
 pub(super) use strategies::{
     invalid_canonical_object_id_strategy, invalid_object_type_strategy,
     invalid_wire_timestamp_strategy, valid_wire_timestamp_strategy,

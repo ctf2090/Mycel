@@ -3,34 +3,20 @@ use super::*;
 #[test]
 fn wire_session_rejects_stale_root_object_after_heads_replace() {
     let signing_key = signing_key();
-    let sender_key = sender_public_key(&signing_key);
-    let mut session = WireSession::default();
-    session
-        .register_known_peer("node:alpha", &sender_key)
-        .expect("known peer should register");
-
-    let patch_object = signed_patch_object_message(&signing_key, "node:alpha", "rev:genesis-null");
-    let patch_id = patch_object["payload"]["object_id"]
-        .as_str()
-        .expect("signed patch OBJECT should include object_id")
-        .to_owned();
-    let revision_object =
-        signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
-    let revision_id = revision_object["payload"]["object_id"]
-        .as_str()
-        .expect("signed revision OBJECT should include object_id")
-        .to_owned();
+    let mut session = registered_session(&signing_key, "node:alpha");
+    let graph = patch_revision_graph(&signing_key, "node:alpha", "rev:genesis-null");
 
     let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
     let initial_heads = signed_heads_message(
         &signing_key,
         "node:alpha",
         json!({
-            "doc:test": [revision_id.clone()]
+            "doc:test": [graph.revision_id.clone()]
         }),
         true,
     );
-    let request_revision = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
+    let request_revision =
+        signed_want_message(&signing_key, "node:alpha", &[graph.revision_id.as_str()]);
     let replacement_heads = signed_heads_message(
         &signing_key,
         "node:alpha",
@@ -52,13 +38,13 @@ fn wire_session_rejects_stale_root_object_after_heads_replace() {
     session
         .verify_incoming(&replacement_heads)
         .expect("replacement HEADS should verify");
-    let error = session.verify_incoming(&revision_object).unwrap_err();
+    let error = session.verify_incoming(&graph.revision_object).unwrap_err();
 
     assert_eq!(
         error,
         format!(
             "wire OBJECT '{}' was not requested from 'node:alpha'",
-            revision_id
+            graph.revision_id
         )
     );
 }
@@ -66,35 +52,21 @@ fn wire_session_rejects_stale_root_object_after_heads_replace() {
 #[test]
 fn wire_session_rejects_stale_dependency_object_after_heads_replace() {
     let signing_key = signing_key();
-    let sender_key = sender_public_key(&signing_key);
-    let mut session = WireSession::default();
-    session
-        .register_known_peer("node:alpha", &sender_key)
-        .expect("known peer should register");
-
-    let patch_object = signed_patch_object_message(&signing_key, "node:alpha", "rev:genesis-null");
-    let patch_id = patch_object["payload"]["object_id"]
-        .as_str()
-        .expect("signed patch OBJECT should include object_id")
-        .to_owned();
-    let revision_object =
-        signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
-    let revision_id = revision_object["payload"]["object_id"]
-        .as_str()
-        .expect("signed revision OBJECT should include object_id")
-        .to_owned();
+    let mut session = registered_session(&signing_key, "node:alpha");
+    let graph = patch_revision_graph(&signing_key, "node:alpha", "rev:genesis-null");
 
     let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
     let initial_heads = signed_heads_message(
         &signing_key,
         "node:alpha",
         json!({
-            "doc:test": [revision_id.clone()]
+            "doc:test": [graph.revision_id.clone()]
         }),
         true,
     );
-    let request_revision = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
-    let request_patch = signed_want_message(&signing_key, "node:alpha", &[patch_id.as_str()]);
+    let request_revision =
+        signed_want_message(&signing_key, "node:alpha", &[graph.revision_id.as_str()]);
+    let request_patch = signed_want_message(&signing_key, "node:alpha", &[graph.patch_id.as_str()]);
     let replacement_heads = signed_heads_message(
         &signing_key,
         "node:alpha",
@@ -114,7 +86,7 @@ fn wire_session_rejects_stale_dependency_object_after_heads_replace() {
         .verify_incoming(&request_revision)
         .expect("root revision WANT should verify");
     session
-        .verify_incoming(&revision_object)
+        .verify_incoming(&graph.revision_object)
         .expect("root revision OBJECT should verify");
     session
         .verify_incoming(&request_patch)
@@ -122,13 +94,13 @@ fn wire_session_rejects_stale_dependency_object_after_heads_replace() {
     session
         .verify_incoming(&replacement_heads)
         .expect("replacement HEADS should verify");
-    let error = session.verify_incoming(&patch_object).unwrap_err();
+    let error = session.verify_incoming(&graph.patch_object).unwrap_err();
 
     assert_eq!(
         error,
         format!(
             "wire OBJECT '{}' was not requested from 'node:alpha'",
-            patch_id
+            graph.patch_id
         )
     );
 }
@@ -187,33 +159,20 @@ fn wire_session_rejects_follow_on_object_before_root_object_arrives() {
 #[test]
 fn wire_session_accepts_follow_on_patch_after_reachable_revision_object() {
     let signing_key = signing_key();
-    let sender_key = sender_public_key(&signing_key);
-    let mut session = WireSession::default();
-    session
-        .register_known_peer("node:alpha", &sender_key)
-        .expect("known peer should register");
-    let patch_object = signed_patch_object_message(&signing_key, "node:alpha", "rev:genesis-null");
-    let patch_id = patch_object["payload"]["object_id"]
-        .as_str()
-        .expect("signed patch OBJECT should include object_id")
-        .to_owned();
-    let revision_object =
-        signed_revision_object_message(&signing_key, "node:alpha", &[], &[patch_id.as_str()]);
-    let revision_id = revision_object["payload"]["object_id"]
-        .as_str()
-        .expect("signed revision OBJECT should include object_id")
-        .to_owned();
+    let mut session = registered_session(&signing_key, "node:alpha");
+    let graph = patch_revision_graph(&signing_key, "node:alpha", "rev:genesis-null");
     let hello = signed_hello_message(&signing_key, "node:alpha", "node:alpha");
     let manifest = signed_manifest_message_with_heads(
         &signing_key,
         "node:alpha",
         "node:alpha",
         json!({
-            "doc:test": [revision_id.clone()]
+            "doc:test": [graph.revision_id.clone()]
         }),
     );
-    let root_want = signed_want_message(&signing_key, "node:alpha", &[revision_id.as_str()]);
-    let follow_on_want = signed_want_message(&signing_key, "node:alpha", &[patch_id.as_str()]);
+    let root_want = signed_want_message(&signing_key, "node:alpha", &[graph.revision_id.as_str()]);
+    let follow_on_want =
+        signed_want_message(&signing_key, "node:alpha", &[graph.patch_id.as_str()]);
 
     session
         .verify_incoming(&hello)
@@ -225,19 +184,19 @@ fn wire_session_accepts_follow_on_patch_after_reachable_revision_object() {
         .verify_incoming(&root_want)
         .expect("root WANT should verify");
     let envelope = session
-        .verify_incoming(&revision_object)
+        .verify_incoming(&graph.revision_object)
         .expect("reachable revision OBJECT should verify");
 
     assert_eq!(envelope.message_type(), WireMessageType::Object);
     assert!(session
         .peer_session("node:alpha")
-        .is_some_and(|state| state.reachable_object_ids.contains(&patch_id)));
+        .is_some_and(|state| state.reachable_object_ids.contains(&graph.patch_id)));
 
     session
         .verify_incoming(&follow_on_want)
         .expect("follow-on patch WANT should verify");
     let patch_envelope = session
-        .verify_incoming(&patch_object)
+        .verify_incoming(&graph.patch_object)
         .expect("reachable patch OBJECT should verify");
 
     assert_eq!(patch_envelope.message_type(), WireMessageType::Object);
@@ -249,7 +208,7 @@ fn wire_session_accepts_follow_on_patch_after_reachable_revision_object() {
     );
     assert!(session
         .peer_session("node:alpha")
-        .is_some_and(|state| state.accepted_sync_roots.contains(&revision_id)));
+        .is_some_and(|state| state.accepted_sync_roots.contains(&graph.revision_id)));
 }
 
 #[test]
