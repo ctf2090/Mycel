@@ -128,7 +128,7 @@ body.landing-page.blog-page .meta-panel strong {
 body.landing-page.blog-page .post-card h3,
 body.landing-page.blog-page .article-body h2 {
   font-size: clamp(1.5rem, 2.5vw, 2.1rem);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 body.landing-page.blog-page .article-body p + h2,
