@@ -244,6 +244,7 @@ Themes worth repeating across the series:
 Best next move:
 
 - write post 1 first
+- use [`docs/BLOG-PUBLISHING-PLAN.md`](./BLOG-PUBLISHING-PLAN.md) as the companion note for v1 hosting, URL, and publishing-structure decisions
 
 Why:
 
