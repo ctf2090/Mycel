@@ -80,7 +80,7 @@
             一進來就直接跳到完全沒有脈絡的英文頁面。
           </p>
           <div class="actions">
-            <a class="button primary" href="/Mycel/blog/multi-agent-coding-is-coordination.html">閱讀英文首篇文章</a>
+            <a class="button primary" href="/Mycel/blog/what-actually-manages-agent-workflow.html">閱讀最新英文文章</a>
             <a class="button secondary" href="/Mycel/blog/">英文 Blog Index</a>
           </div>
         </div>
@@ -106,12 +106,27 @@
       <section class="panel section-panel split-panel" aria-labelledby="blog-latest-title-zh-tw">
         <div>
           <p class="section-kicker">目前文章</p>
-          <h2 id="blog-latest-title-zh-tw">先從 framing post 開始</h2>
+          <h2 id="blog-latest-title-zh-tw">現在已經有兩篇英文文章</h2>
           <p>
-            第一篇文章先定義整個系列的主論點：多 agent coding 真正容易失敗的地方，
-            多半不是 task routing 不夠聰明，而是 ownership、handoff 與 stale state 沒有被清楚治理。
+            目前系列先有一篇 framing post，再加上一篇更實作導向的 workflow post。
+            前者定義整個系列的主論點，後者則直接說明我們實際用哪些 repo-native 工具與 scripts 管理 agent workflow。
           </p>
           <div class="post-grid">
+            <article class="post-card">
+              <div class="meta-row">
+                <span class="meta-pill">Agent Coordination Field Notes</span>
+                <span class="meta-pill">Part 2</span>
+                <span class="meta-pill">英文原文</span>
+              </div>
+              <h3>What Actually Manages Agent Workflow: The Repo-Native Scripts We Use</h3>
+              <p>
+                直接整理 Mycel 目前怎麼用 registry、workcycle、mailbox、commit guard、push guard 與 planning refresh scripts，把 agent workflow 變成可檢查、可交接的 repo coordination layer。
+              </p>
+              <div class="card-actions">
+                <a class="button primary" href="/Mycel/blog/what-actually-manages-agent-workflow.html">閱讀文章</a>
+                <a class="button secondary" href="https://github.com/MycelLayer/Mycel/blob/main/docs/blog/2026-04-10.what-actually-manages-agent-workflow.md">開啟 Markdown</a>
+              </div>
+            </article>
             <article class="post-card">
               <div class="meta-row">
                 <span class="meta-pill">Agent Coordination Field Notes</span>
@@ -146,10 +161,10 @@
         </p>
         <ol class="series-list">
           <li>Multi-Agent Coding Is a Coordination Problem, Not Just an Orchestration Problem</li>
+          <li>What Actually Manages Agent Workflow: The Repo-Native Scripts We Use</li>
           <li>Why Chat Memory Is Not a Coordination System</li>
           <li>The Smallest Useful Primitive Is a Registry, Not a Swarm</li>
           <li>Handoffs Should Be First-Class Artifacts</li>
-          <li>Workcycles Beat Vague "In Progress" State</li>
         </ol>
         <div class="footer-link-row">
           <a class="button secondary" href="https://github.com/MycelLayer/Mycel/blob/main/docs/BLOG-PUBLISHING-PLAN.md">發布規劃</a>

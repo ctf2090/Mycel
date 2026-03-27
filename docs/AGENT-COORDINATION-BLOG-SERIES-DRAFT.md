@@ -90,7 +90,19 @@ Why publish first:
 
 - this is the clearest framing hook for the entire series
 
-### 2. Why Chat Memory Is Not a Coordination System
+### 2. What Actually Manages Agent Workflow: The Repo-Native Scripts We Use
+
+Core thesis:
+
+- The practical coordination layer is often a small set of repo-native scripts and files, not one hidden supervisor runtime.
+
+What this article should do:
+
+- explain which concrete scripts and files currently manage bootstrap, registry, workcycle, handoff, Git boundaries, and planning refresh
+- show why explicit executable guardrails beat invisible convention
+- frame the coordination layer as inspectable repository state, not only chat behavior
+
+### 3. Why Chat Memory Is Not a Coordination System
 
 Core thesis:
 
@@ -102,7 +114,7 @@ What this article should do:
 - show how compaction, interruption, and parallel work break assumptions
 - motivate external coordination artifacts
 
-### 3. The Smallest Useful Primitive Is a Registry, Not a Swarm
+### 4. The Smallest Useful Primitive Is a Registry, Not a Swarm
 
 Core thesis:
 
@@ -114,7 +126,7 @@ What this article should do:
 - introduce stable agent UID vs human-friendly display ID
 - argue for explicit state over implicit assumptions
 
-### 4. Handoffs Should Be First-Class Artifacts
+### 5. Handoffs Should Be First-Class Artifacts
 
 Core thesis:
 
@@ -126,7 +138,7 @@ What this article should do:
 - explain why handoff quality matters more than verbose chat logs
 - show the difference between a status note and a continuation artifact
 
-### 5. Workcycles Beat Vague “In Progress” State
+### 6. Workcycles Beat Vague “In Progress” State
 
 Core thesis:
 
@@ -138,7 +150,7 @@ What this article should do:
 - show why begin/end boundaries help with bookkeeping, closeout, and handoff freshness
 - connect lifecycle boundaries to verification discipline
 
-### 6. Git Ownership Is a Coordination Primitive
+### 7. Git Ownership Is a Coordination Primitive
 
 Core thesis:
 
@@ -150,7 +162,7 @@ What this article should do:
 - explain why shared repos need explicit anti-collision rules
 - connect code ownership to handoff and issue boundaries
 
-### 7. Stale-Active Agents Are a Real Operational Failure Mode
+### 8. Stale-Active Agents Are a Real Operational Failure Mode
 
 Core thesis:
 
@@ -162,7 +174,7 @@ What this article should do:
 - explain why this is different from simple crash recovery
 - show why lifecycle state needs external evidence
 
-### 8. Human Control Matters More After the Agents Get Better
+### 9. Human Control Matters More After the Agents Get Better
 
 Core thesis:
 
@@ -174,7 +186,7 @@ What this article should do:
 - explain human role in planning, acceptance criteria, and ambiguity handling
 - position the system as human-led, agent-executed
 
-### 9. What Existing OSS Multi-Agent Stacks Solve, and What They Mostly Do Not
+### 10. What Existing OSS Multi-Agent Stacks Solve, and What They Mostly Do Not
 
 Core thesis:
 
@@ -186,7 +198,7 @@ What this article should do:
 - explain where our stack overlaps with frameworks like AutoGen, CrewAI, LangGraph, Agent Squad, and AgentBase
 - clarify the niche of a Git-native coordination layer
 
-### 10. From Internal Process to Reusable Coordination Layer
+### 11. From Internal Process to Reusable Coordination Layer
 
 Core thesis:
 
@@ -203,14 +215,14 @@ What this article should do:
 If we only write the first three posts soon, use this order:
 
 1. `Multi-Agent Coding Is a Coordination Problem, Not Just an Orchestration Problem`
-2. `Why Chat Memory Is Not a Coordination System`
-3. `Handoffs Should Be First-Class Artifacts`
+2. `What Actually Manages Agent Workflow: The Repo-Native Scripts We Use`
+3. `Why Chat Memory Is Not a Coordination System`
 
 If we want a stronger operations-first arc, use this order:
 
 1. `Multi-Agent Coding Is a Coordination Problem, Not Just an Orchestration Problem`
-2. `Workcycles Beat Vague "In Progress" State`
-3. `Stale-Active Agents Are a Real Operational Failure Mode`
+2. `What Actually Manages Agent Workflow: The Repo-Native Scripts We Use`
+3. `Workcycles Beat Vague "In Progress" State`
 
 ## Suggested Writing Style
 

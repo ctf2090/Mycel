@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What Actually Manages Agent Workflow | Mycel Blog</title>
+    <meta
+      name="description"
+      content="The Mycel agent workflow is managed by repo-native scripts and files that make identity, workcycles, handoffs, Git boundaries, and planning refresh explicit."
+    >
+    <meta name="theme-color" content="#0d6b57">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Mycel">
+    <meta property="og:title" content="What Actually Manages Agent Workflow: The Repo-Native Scripts We Use">
+    <meta
+      property="og:description"
+      content="The Mycel agent workflow is managed by repo-native scripts and files that make identity, workcycles, handoffs, Git boundaries, and planning refresh explicit."
+    >
+    <meta property="og:url" content="https://mycellayer.github.io/Mycel/blog/what-actually-manages-agent-workflow.html">
+    <meta property="og:image" content="https://mycellayer.github.io/Mycel/social-preview.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Mycel blog article about agent workflow tooling">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="What Actually Manages Agent Workflow: The Repo-Native Scripts We Use">
+    <meta
+      name="twitter:description"
+      content="The Mycel agent workflow is managed by repo-native scripts and files that make identity, workcycles, handoffs, Git boundaries, and planning refresh explicit."
+    >
+    <meta name="twitter:image" content="https://mycellayer.github.io/Mycel/social-preview.png">
+    <link rel="stylesheet" href="/Mycel/assets/landing-common.css">
+    <link rel="stylesheet" href="/Mycel/assets/blog.css">
+  </head>
+  <body class="landing-page blog-page">
+    <div class="page">
+      <nav class="nav">
+        <div class="brand"><a href="/Mycel/" aria-label="Back to the Mycel landing page">Mycel</a> / <a href="/Mycel/blog/">Blog</a></div>
+        <div class="nav-links">
+          <a href="https://mycellayer.github.io/Mycel/zh-TW/blog/">繁體中文</a>
+          <a href="https://mycellayer.github.io/Mycel/zh-CN/blog/">简体中文</a>
+          <a href="https://github.com/MycelLayer/Mycel">GitHub</a>
+          <a href="https://github.com/MycelLayer/Mycel/blob/main/README.md">README</a>
+          <a href="/Mycel/docs.html">Docs</a>
+          <a href="/Mycel/blog/" aria-current="page">Blog</a>
+          <a href="/Mycel/progress.html">Progress</a>
+          <a href="/Mycel/support.html">Support</a>
+        </div>
+      </nav>
+
+      <section class="hero" aria-labelledby="post-title">
+        <div class="panel hero-copy">
+          <p class="eyebrow">Agent Coordination Field Notes</p>
+          <h1 id="post-title">What Actually Manages Agent Workflow: The Repo-Native Scripts We Use</h1>
+          <div class="meta-row">
+            <span class="meta-pill">Published 2026-04-10</span>
+            <span class="meta-pill">Part 2</span>
+            <span class="meta-pill">7 min read</span>
+          </div>
+          <p>
+            Our workflow is not managed by a hidden supervisor runtime. It is
+            managed by a small set of repo-native scripts and files that make
+            identity, workcycles, handoffs, Git boundaries, and planning drift
+            visible.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/MycelLayer/Mycel/blob/main/docs/blog/2026-04-10.what-actually-manages-agent-workflow.md">Open Markdown</a>
+            <a class="button secondary" href="/Mycel/blog/">Back to Blog Index</a>
+          </div>
+        </div>
+
+        <div class="panel hero-sidebar">
+          <div class="stats-list">
+            <div class="stats-card">
+              <strong>Core claim</strong>
+              <p>The coordination layer is a set of explicit repo surfaces, not one invisible control loop.</p>
+            </div>
+            <div class="stats-card">
+              <strong>Main tools</strong>
+              <p>Bootstrap, registry, workcycle, mailbox, commit guard, push guard, checklist, and planning-refresh scripts.</p>
+            </div>
+            <div class="stats-card">
+              <strong>Takeaway</strong>
+              <p>Small executable boundaries are often more useful than a larger hidden orchestrator.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="article-layout" aria-labelledby="article-body-title">
+        <article class="panel article-body">
+          <h2 id="article-body-title">Why this question matters</h2>
+          <p>
+            When people ask how we manage multiple coding agents in one
+            repository, they often expect a hidden supervisor runtime that
+            decides who exists, who owns what, and when work is really done.
+          </p>
+          <p>
+            What we actually use is simpler: repo-native scripts, tracked rules,
+            local registry files, mailboxes, and explicit Git boundaries.
+          </p>
+          <p>
+            That choice is deliberate. We want the coordination layer to stay
+            inspectable in the repository instead of trapped inside one long
+            chat or one opaque orchestration service.
+          </p>
+
+          <h2>The main surfaces we rely on</h2>
+          <p>
+            The workflow is built around a few visible surfaces:
+          </p>
+          <ul>
+            <li><code>AGENTS.md</code> and <code>AGENTS-LOCAL.md</code> for shared operating rules</li>
+            <li><code>.agent-local/agents.json</code> for identity, role, and lifecycle state</li>
+            <li><code>.agent-local/mailboxes/*.md</code> for durable handoffs</li>
+            <li><code>.agent-local/agents/&lt;agent_uid&gt;/checklists/</code> for per-agent execution state</li>
+            <li><code>scripts/</code> for the thin tools that update those surfaces</li>
+          </ul>
+          <p>
+            The important point is that a resumed or replacement session can
+            inspect these files and recover enough context to continue safely.
+          </p>
+
+          <h2>Bootstrap and identity</h2>
+          <p>
+            The first coordination question is who this agent is and what role
+            it currently holds. We handle that with
+            <code>scripts/agent_bootstrap.py</code> and
+            <code>scripts/agent_registry.py</code>.
+          </p>
+          <p>
+            Bootstrap is the fast path for claiming a role, recording model
+            metadata, creating checklist copies, and starting the tracked work
+            cycle. The registry owns the durable identity model: stable
+            <code>agent_uid</code>, human-facing <code>display_id</code>, role,
+            scope, mailbox path, and lifecycle state.
+          </p>
+
+          <h2>Workcycles instead of vague progress</h2>
+          <p>
+            We do not treat agent work as one endless in-progress blob. We use
+            <code>scripts/agent_work_cycle.py begin</code> and
+            <code>scripts/agent_work_cycle.py end</code> to give each
+            user-command cycle an explicit boundary.
+          </p>
+          <p>
+            Begin marks the agent active and emits a canonical before-work
+            timestamp. End checks closeout requirements, validates mailbox
+            state, records the after-work timestamp, and refuses a clean finish
+            if important obligations are still missing.
+          </p>
+
+          <h2>Handoffs that survive interruption</h2>
+          <p>
+            Sessions get compacted, disconnected, or resumed later by someone
+            else. That is why continuation context lives in mailbox files and
+            is usually written with <code>scripts/mailbox_handoff.py</code>.
+          </p>
+          <p>
+            A good handoff records current state, scope, evidence, next
+            suggested step, and whether the entry is still open, resolved, or
+            superseded. That is much more reliable than assuming another agent
+            can safely continue from chat memory alone.
+          </p>
+
+          <h2>Git safety is part of the workflow</h2>
+          <p>
+            We also use repo-native scripts to keep Git boundaries aligned with
+            actual work ownership. The key tools are
+            <code>scripts/agent_safe_commit.py</code> and
+            <code>scripts/agent_push.py</code>.
+          </p>
+          <p>
+            The commit helper stages only the allowlisted paths for the work
+            item and adds agent metadata trailers. The push helper lands the
+            specific agent commit instead of pushing a branch by habit. This
+            turns coordination rules into executable guardrails.
+          </p>
+
+          <h2>Checklists and planning refresh</h2>
+          <p>
+            Not every workflow problem is about current file ownership. Some are
+            about planning drift. For that layer we rely on per-agent checklist
+            copies, <code>scripts/item_id_checklist_mark.py</code>, and
+            <code>scripts/check-plan-refresh.py</code>.
+          </p>
+          <p>
+            Those tools help us keep tracked rules, execution state, and
+            planning surfaces aligned without editing the tracked source docs
+            directly or guessing whether doc sync is overdue.
+          </p>
+
+          <h2>The tradeoff</h2>
+          <p>
+            This approach is more explicit than a hidden orchestrator. It asks
+            agents to touch multiple small surfaces, and it makes process more
+            visible.
+          </p>
+          <p>
+            But it also keeps state inspectable, lets the pieces fail
+            independently, and makes it possible to tighten one primitive
+            without rewriting the whole stack.
+          </p>
+
+          <h2>Takeaway</h2>
+          <p>
+            The workflow is not managed by one secret master agent. It is
+            managed by a small repo-native coordination layer: registry for
+            identity, workcycles for lifecycle, mailbox handoffs for
+            continuation, Git guardrails for ownership, and planning checks for
+            drift.
+          </p>
+          <p>
+            That stack is less glamorous than agent hype, but it is much closer
+            to what real multi-agent repository work actually needs.
+          </p>
+        </article>
+
+        <div class="meta-stack">
+          <div class="panel meta-panel">
+            <strong>Series</strong>
+            <p>Agent Coordination Field Notes</p>
+            <p>Part 2 of the opening coordination arc.</p>
+          </div>
+          <div class="panel meta-panel">
+            <strong>Scripts mentioned</strong>
+            <p><code>agent_bootstrap.py</code></p>
+            <p><code>agent_registry.py</code></p>
+            <p><code>agent_work_cycle.py</code></p>
+            <p><code>mailbox_handoff.py</code></p>
+            <p><code>agent_safe_commit.py</code></p>
+            <p><code>agent_push.py</code></p>
+            <p><code>check-plan-refresh.py</code></p>
+          </div>
+          <div class="panel meta-panel">
+            <strong>Related</strong>
+            <p><a href="https://github.com/MycelLayer/Mycel/blob/main/docs/MULTI-AGENT-COORDINATION.md">Coordination docs</a></p>
+            <p><a href="https://github.com/MycelLayer/Mycel/blob/main/docs/AGENT-REGISTRY.md">Registry protocol</a></p>
+            <p><a href="https://github.com/MycelLayer/Mycel/blob/main/docs/AGENT-HANDOFF.md">Handoff guide</a></p>
+          </div>
+          <div class="panel meta-panel">
+            <strong>Previous</strong>
+            <p><a href="/Mycel/blog/multi-agent-coding-is-coordination.html">Multi-Agent Coding Is a Coordination Problem, Not Just an Orchestration Problem</a></p>
+            <div class="footer-link-row">
+              <a class="button secondary" href="/Mycel/blog/">See Blog Index</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        This article is a public explanation layer. For normative repo workflow
+        and planning state, use the repository docs, roadmap, and checklists.
+      </footer>
+    </div>
+  </body>
+</html>
