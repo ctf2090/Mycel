@@ -575,14 +575,23 @@ def estimate_cycle_token_spend(
 
 
 def after_work_token_usage_field(
-    start_snapshot: dict[str, object] | None, end_snapshot: dict[str, object] | None
+    start_snapshot: dict[str, object] | None,
+    end_snapshot: dict[str, object] | None,
+    *,
+    bootstrap_batch: bool = False,
 ) -> str | None:
     usage_part: str | None = None
     spent_part: str | None = None
+    pre_boot_part: str | None = None
 
     estimated = estimate_cycle_token_spend(start_snapshot, end_snapshot)
     if estimated is not None and estimated > 0:
         spent_part = f"+{format_ui_token_usage(estimated)} this cycle est."
+
+    if bootstrap_batch and start_snapshot is not None:
+        start_total = start_snapshot.get("input_tokens")
+        if isinstance(start_total, int) and start_total > 0:
+            pre_boot_part = f"pre-boot +{format_ui_token_usage(start_total)}"
 
     if end_snapshot is not None:
         input_tokens = end_snapshot.get("input_tokens")
@@ -592,9 +601,8 @@ def after_work_token_usage_field(
                 f"usage {format_ui_token_usage(input_tokens)}/{format_ui_token_usage(context_window)}"
             )
 
-    if usage_part and spent_part:
-        return f"{usage_part} | {spent_part}"
-    return usage_part or spent_part
+    parts = [part for part in (usage_part, spent_part, pre_boot_part) if part]
+    return " | ".join(parts) if parts else None
 
 
 def thread_switch_diagnostic(
@@ -773,6 +781,8 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
             "reason": "no source changes detected in the cycle",
             "remote_head": None,
         }
+    remote_name_proc = run_git(["remote", "get-url", "origin"])
+    origin_available = remote_name_proc.returncode == 0
 
     committed_source_paths = cycle_committed_tracked_paths(agent_uid, batch_num)
     if committed_source_paths is None:
@@ -784,6 +794,13 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
         }
 
     if not committed_source_paths:
+        if not origin_available:
+            return {
+                "required": False,
+                "ok": True,
+                "reason": "origin/main push verification unavailable; skipping source push guard",
+                "remote_head": None,
+            }
         return {
             "required": True,
             "ok": False,
@@ -804,6 +821,14 @@ def cycle_source_change_push_status(agent_uid: str, batch_num: int) -> dict[str,
             "required": False,
             "ok": True,
             "reason": "no cycle-owned tracked-file commits detected; foreign local commits do not block closeout",
+            "remote_head": None,
+        }
+
+    if not origin_available:
+        return {
+            "required": False,
+            "ok": True,
+            "reason": "origin/main push verification unavailable; skipping source push guard",
             "remote_head": None,
         }
 
@@ -1308,7 +1333,9 @@ def main() -> int:
                 reasoning_effort=current_effort,
                 scope=args.scope,
                 token_usage=after_work_token_usage_field(
-                    start_token_snapshot, end_token_snapshot
+                    start_token_snapshot,
+                    end_token_snapshot,
+                    bootstrap_batch=bootstrap_batch,
                 ),
             )
         )

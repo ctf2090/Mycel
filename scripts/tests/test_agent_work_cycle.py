@@ -1078,6 +1078,52 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             proc.stdout,
         )
 
+    def test_bootstrap_batch_after_work_reports_pre_boot_usage(self) -> None:
+        self.write_agents_md()
+        self.write_fake_codex_thread_metadata()
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[("2026-03-25T06:20:03.000Z", 50000, 887020)],
+        )
+        claim = self.run_registry("claim", "doc", "--scope", "timestamp-wrapper", "--model-id", "gpt-5.4")
+        agent_uid = claim["agent_uid"]
+        start = self.run_registry("start", agent_uid)
+        self.mark_bootstrap_defaults(start["bootstrap_output"])
+
+        begin = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+        self.assertEqual(0, begin.returncode)
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[
+                ("2026-03-25T06:20:03.000Z", 50000, 887020),
+                ("2026-03-25T06:25:03.000Z", 58000, 932020),
+            ],
+        )
+        self.mark_workcycle_defaults(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md",
+            mailbox_state=None,
+        )
+
+        proc = self.run_cli(
+            "end",
+            agent_uid,
+            "--scope",
+            "timestamp-wrapper",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertIn(
+            f"After work | doc-1 ({agent_uid}/gpt-5.4/medium) | timestamp-wrapper | usage 58K/258K | +8K this cycle est. | pre-boot +50K",
+            proc.stdout,
+        )
+
     def test_end_returns_pending_when_mailbox_has_multiple_open_handoffs(self) -> None:
         agent_uid = self.prepare_second_batch(role="doc")
         self.write_mailbox(
