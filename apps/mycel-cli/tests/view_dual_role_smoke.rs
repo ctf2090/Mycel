@@ -263,13 +263,13 @@ fn persisted_governance_keeps_editor_and_view_roles_independent() {
     );
     assert!(
         store_index_json["current_maintainer_governance"]
-            .get(&signer_id(&shared_dual_role))
+            .get(signer_id(&shared_dual_role))
             .is_some(),
         "shared dual-role maintainer should remain queryable in current maintainer governance",
     );
     assert!(
         store_index_json["current_maintainer_governance"]
-            .get(&signer_id(&maintainer_only))
+            .get(signer_id(&maintainer_only))
             .is_some(),
         "maintainer-only key should remain queryable in current maintainer governance",
     );
