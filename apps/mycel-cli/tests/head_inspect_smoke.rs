@@ -239,6 +239,8 @@ fn build_store_from_objects(objects: &[Value]) -> common::TempDir {
 
 #[path = "head_inspect_smoke/cli.rs"]
 mod cli;
+#[path = "head_inspect_smoke/dual_role.rs"]
+mod dual_role;
 #[path = "head_inspect_smoke/inspect.rs"]
 mod inspect;
 #[path = "head_inspect_smoke/render.rs"]
