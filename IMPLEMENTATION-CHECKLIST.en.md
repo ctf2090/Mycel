@@ -214,10 +214,10 @@ Use this section as the active implementation checklist for the still-open post-
 
 ## 15. `M3` Reader and Governance Follow-Up
 
+- [ ] Close the remaining independent dual-role role-assignment follow-up that still remains after separate admission validation landed.
 - [ ] Add broader governance persistence beyond the current initial reverse-index, relationship summaries, current-governance summaries, and inspect/list/publish surfaces.
 - [ ] Extend governance tooling past the current initial `view inspect` / `view list` / `view publish` workflows.
 - [ ] Keep improving reader profile ergonomics beyond the current available-profile summaries and profile-error feedback.
-- [ ] Close the remaining independent dual-role role-assignment follow-up that still remains after separate admission validation landed.
 
 ## 16. `M4` Wire Sync and Peer Interop Follow-Up
 

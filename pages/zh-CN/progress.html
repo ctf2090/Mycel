@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mycel Progress</title>
+    <title>Mycel 进度</title>
     <meta
       name="description"
       content="Mycel 路线图与 implementation checklist 的公开摘要页。"
@@ -30,7 +30,7 @@
   <body class="progress-page">
     <div class="page">
       <nav class="nav">
-        <div class="brand"><a href="/Mycel/zh-CN/" aria-label="返回 Mycel 简体中文首页">Mycel</a> / Progress</div>
+        <div class="brand"><a href="/Mycel/zh-CN/" aria-label="返回 Mycel 简体中文首页">Mycel</a> / 进度</div>
         <div class="nav-links">
           <a href="https://mycellayer.github.io/Mycel/progress.html">English</a>
           <a href="https://mycellayer.github.io/Mycel/zh-TW/progress.html">繁體中文</a>
@@ -49,9 +49,10 @@
           Mycel 目前仍处在窄版 first-client lane。`M2` 在当前窄版 replay/storage/rebuild 范围内已经完成收口，
           因为 richer mixed content/metadata competing-branch classification、多文档 index-loss 后
           rebuild proof，以及 richer metadata multi-variant rebuild/reporting proof 都已落地；因此现在的
-          active lane 转向更广的 <code>M3</code> governance persistence、更完整的 governance
-          tooling、reader-facing profile ergonomics，以及最后的独立 dual-role 收尾，同时是建立在当前
-          inspect/list/publish 加上 per-document current-governance summaries 基线之上；再加上剩余的
+          active lane 已明确转为 <code>M3</code> / <code>M4</code>。其中 `M3` 最窄的下一个切片是剩余的最终独立
+          dual-role 收尾，之后才是建立在当前 inspect/list/publish 加上 per-document current-governance
+          summaries 基线之上的更广 governance persistence、更完整的 governance tooling，以及
+          reader-facing profile ergonomics；再加上剩余的
           <code>M4</code> session/capability/error-path interop proof，而更广的
           pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating、
           <code>HEADS</code> 先于 <code>MANIFEST</code> 建立 sync roots、
@@ -64,7 +65,7 @@
         </p>
         <ol class="lane-list">
           <li>维持 <code>M2</code> 在当前窄版 replay/storage/rebuild 范围内的已关闭状态，并以 richer mixed content/metadata competing-branch rebuild/reporting proof 作为基线。</li>
-          <li>在 accepted-head inspect/render、更清楚的 available-profile 和 profile-error feedback、editor-admission-aware profile base、bounded viewer score surfaces、初始 governance inspect/list/publish/current surfaces、persisted governance relationship summaries，以及 per-document current-governance summaries 之上，谨慎扩展 <code>M3</code> 的 reader-plus-governance workflows，同时把更广的 governance persistence、更完整的 governance tooling、超出当前初步打磨的 profile ergonomics，以及最后的独立 dual-role 收尾明确保留下来。</li>
+          <li>在 accepted-head inspect/render、更清楚的 available-profile 和 profile-error feedback、editor-admission-aware profile base、bounded viewer score surfaces、初始 governance inspect/list/publish/current surfaces、persisted governance relationship summaries，以及 per-document current-governance summaries 之上，谨慎扩展 <code>M3</code> 的 reader-plus-governance workflows，先收掉剩余的最终独立 dual-role 收尾，同时把更广的 governance persistence、更完整的 governance tooling，以及超出当前初步打磨的 profile ergonomics 明确保留下来。</li>
           <li>让 <code>M4</code> 保持窄范围；现在更广的 pre-<code>HELLO</code> / pre-root / pre-<code>MANIFEST</code> gating、<code>HEADS</code> 先于 <code>MANIFEST</code> 的 sync-root setup、<code>HEADS replace=true</code> 后的 stale root/dependency、stale snapshot 与 stale object <code>WANT</code> rejection、unadvertised <code>WANT</code>、unrequested <code>OBJECT</code>、unknown-sender 与 HELLO sender-identity mismatch rejection、<code>ERROR</code>-before-<code>HELLO</code> acceptance、explicit <code>ERROR</code>-only、unreachable <code>WANT</code>，以及 messages-after-<code>BYE</code> / missing-<code>BYE</code> coverage 都已有 proof，接下来把 peer-store sync proof 往剩余的 session/capability/error-path interop closure 收敛。</li>
         </ol>
       </header>
@@ -112,7 +113,7 @@
               <li>Persisted governance reverse indexes</li>
               <li>在 <code>view inspect</code> / <code>view list</code> 里可见的 persisted governance relationship summaries</li>
               <li>在 <code>view current</code> 里提供的 per-document current-governance summaries</li>
-              <li>剩余工作：更广的 governance persistence、更完整的 governance tooling、超出当前初步打磨的 profile ergonomics，以及最后的独立 dual-role 收尾</li>
+              <li>剩余工作：最后的独立 dual-role 收尾、更广的 governance persistence、更完整的 governance tooling，以及超出当前初步打磨的 profile ergonomics</li>
             </ul>
           </article>
           <article class="card">
@@ -214,7 +215,7 @@
               <td data-label="Area">9. Views and Head Selection</td>
               <td data-label="Status">Mostly done</td>
               <td data-label="Milestone">M3</td>
-              <td data-label="Current read">Deterministic selector core、命名 fixed-profile selection、更清楚的 available-profile summaries 与 profile-error feedback、分开的 editor/view admission-aware inspect/render flows、bounded viewer score channels、在 <code>view inspect</code> / <code>view list</code> 里可见的 persisted governance relationship summaries，以及在 <code>view current</code> 里提供的 per-document current-governance summaries 都已经存在；更广的 governance persistence、更完整的 governance tooling、超出当前初步打磨的 profile ergonomics，以及最后的 independent dual-role role-assignment closure 仍待完成。</td>
+              <td data-label="Current read">Deterministic selector core、命名 fixed-profile selection、更清楚的 available-profile summaries 与 profile-error feedback、分开的 editor/view admission-aware inspect/render flows、bounded viewer score channels、在 <code>view inspect</code> / <code>view list</code> 里可见的 persisted governance relationship summaries，以及在 <code>view current</code> 里提供的 per-document current-governance summaries 都已经存在；剩余的最终独立 dual-role role-assignment closure 是当前最窄的下一个切片，而更广的 governance persistence、更完整的 governance tooling，以及超出当前初步打磨的 profile ergonomics 仍排在后面。</td>
             </tr>
             <tr>
               <td data-label="Area">10. Merge Generation</td>

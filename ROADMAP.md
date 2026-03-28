@@ -1,6 +1,6 @@
 # Mycel Roadmap
 
-Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; `M2` replay/storage/rebuild closure is now landed at the current narrow scope, so the active lane now centers on `M3` / `M4` while broader governance persistence, richer governance tooling, reader-facing profile ergonomics, final independent dual-role closure, and the remaining peer interop session/capability/error-path proof stay open after the current production replication sub-items were completed, the permanent messages-after-BYE rejection plus missing-BYE warning proof landed, the broader pre-`HELLO` / pre-root / pre-`MANIFEST` gating baseline landed, stale root/dependency plus stale snapshot and stale object `WANT` rejection after `HEADS replace=true` landed, unadvertised `WANT` and unrequested `OBJECT` rejection landed, unknown-sender and HELLO sender-identity mismatch rejection landed, `ERROR`-before-`HELLO` acceptance plus explicit `ERROR`-only and unreachable `WANT` fault proofs landed, and per-document current-governance summaries were added to the current M3 baseline; the current open issue queue still matches those remaining `M3` / `M4` gaps
+Status: major progress, refreshed after the implementation checklist was split into a closed `M1` minimal-client gate plus a live post-`M1` follow-up checklist; `M2` replay/storage/rebuild closure is now landed at the current narrow scope, so the active lane now centers on `M3` / `M4` while the narrowest next `M3` slice is the remaining final independent dual-role closure ahead of the broader governance persistence, richer governance tooling, reader-facing profile ergonomics, and the remaining peer interop session/capability/error-path proof that all still stay open after the current production replication sub-items were completed, the permanent messages-after-BYE rejection plus missing-BYE warning proof landed, the broader pre-`HELLO` / pre-root / pre-`MANIFEST` gating baseline landed, stale root/dependency plus stale snapshot and stale object `WANT` rejection after `HEADS replace=true` landed, unadvertised `WANT` and unrequested `OBJECT` rejection landed, unknown-sender and HELLO sender-identity mismatch rejection landed, `ERROR`-before-`HELLO` acceptance plus explicit `ERROR`-only and unreachable `WANT` fault proofs landed, and per-document current-governance summaries were added to the current M3 baseline; the current open issue queue still matches those remaining `M3` / `M4` gaps
 
 This roadmap turns the current README priorities, implementation checklist, and design-note planning guidance into one repo-level build sequence.
 
@@ -39,14 +39,14 @@ The repository does not yet have:
 The current lane is:
 
 1. keep `M2` closed at the current narrow replay/storage/rebuild scope now that the richer mixed content/metadata competing-branch rebuild-and-reporting proof is landed
-2. expand `M3` reader-plus-governance workflows without reopening the closed minimal-client gate while keeping broader governance persistence, richer governance tooling, reader-facing profile ergonomics, and final independent dual-role closure explicit
+2. expand `M3` reader-plus-governance workflows without reopening the closed minimal-client gate, starting with the remaining final independent dual-role closure while keeping broader governance persistence, richer governance tooling, and reader-facing profile ergonomics explicit behind it
 3. advance `M4` from peer-store proof toward the remaining peer-interop session/capability/error-path coverage now that the currently tracked production replication sub-items are proved and the current negative/warning baseline includes permanent messages-after-BYE rejection plus missing-BYE warning handling, broader pre-`HELLO` / pre-root / pre-`MANIFEST` gating, `HEADS`-before-`MANIFEST` sync-root setup, stale root/dependency plus stale snapshot and stale object `WANT` rejection after `HEADS replace=true`, unadvertised `WANT`, unrequested `OBJECT`, sender-validation faults, `ERROR`-before-`HELLO` acceptance, explicit `ERROR`-only failure, and unreachable `WANT` rejection
 
 ### Next
 
 After the narrow core is stable, the next lane is:
 
-1. broader `M3` governance persistence, richer governance tooling, reader-facing profile ergonomics, and final independent dual-role closure on top of the current `view inspect` / `view list` / `view publish`, persisted-relationship summaries, and per-document current-governance summary baseline
+1. the broader `M3` governance persistence, richer governance tooling, and reader-facing profile ergonomics follow-up that remains after the final independent dual-role closure on top of the current `view inspect` / `view list` / `view publish`, persisted-relationship summaries, and per-document current-governance summary baseline
 2. the remaining `M4` session, capability, and error-path interop proof beyond the current positive-path and optional-message set
 3. reader-facing text reconstruction and presentation refinements only after the current governance and interop baselines are more stable
 
@@ -498,7 +498,7 @@ These priorities apply across all phases:
 
 The highest-value near-term work is:
 
-1. keep expanding `M3` with narrow governance-persistence, governance-tooling, profile-ergonomics, and dual-role follow-up slices without reopening the closed minimal-client gate
+1. close the remaining final independent dual-role slice first, then keep expanding `M3` with narrow governance-persistence, governance-tooling, and profile-ergonomics follow-up slices without reopening the closed minimal-client gate
 2. keep strengthening `M4` with additional deterministic session, capability, and error-path interop proofs now that the currently tracked production replication sub-items are landed
 3. continue strengthening interop fixtures and negative tests as each remaining rule or follow-up slice lands
 4. preserve the now-closed `M2` proof surface while future follow-up work lands around it
