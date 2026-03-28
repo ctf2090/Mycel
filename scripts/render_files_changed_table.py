@@ -226,7 +226,10 @@ def render_table(
             delta = f"[{delta}]({diff_path})"
         note = note_overrides[path]
         lines.append(f"| {render_file_cell(path)} | {delta} | {note} |")
-    return "\n".join(lines)
+    # Leave a blank line after the table so later lines that also contain pipe
+    # characters, such as the closeout "After work | ..." timestamp line, stay
+    # outside the Markdown table.
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:

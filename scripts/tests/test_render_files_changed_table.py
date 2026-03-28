@@ -55,6 +55,30 @@ class RenderFilesChangedTableCliTest(unittest.TestCase):
         self.assertIn(f"| [scripts/tool.py]({tool.resolve()}) | +7 / -0 |", proc.stdout)
         self.assertIn("Clarify agent workflow instructions.", proc.stdout)
         self.assertIn("Adjust repo tooling behavior and command output.", proc.stdout)
+        self.assertTrue(
+            proc.stdout.endswith("\n\n"),
+            f"expected trailing blank line after table, got: {proc.stdout!r}",
+        )
+
+    def test_emits_blank_line_after_table_so_following_pipe_text_stays_outside_table(self) -> None:
+        agents = self.root / "AGENTS.md"
+        agents.write_text("rules\n", encoding="utf-8")
+
+        proc = self.run_cli(
+            "--stdin",
+            "--note",
+            "AGENTS.md=Clarify agent workflow instructions.",
+            stdin_text="12\t3\tAGENTS.md\n",
+        )
+
+        rendered = (
+            proc.stdout
+            + "[2026-03-28 23:54:13 UTC+8] After work | coding-3 | usage 146K/258K\n"
+        )
+        self.assertIn(
+            "\n\n[2026-03-28 23:54:13 UTC+8] After work | coding-3 | usage 146K/258K\n",
+            rendered,
+        )
 
     def test_renders_clickable_delta_links_in_stdin_mode_with_diff_key(self) -> None:
         mailbox = self.root / ".agent-local" / "mailboxes" / "agt_test.md"

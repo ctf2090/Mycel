@@ -76,6 +76,10 @@ class RenderFilesChangedFromJsonCliTest(unittest.TestCase):
 
         self.assertIn("[tracked artifact](", proc.stdout)
         self.assertIn("Marked this cycle's mailbox note without shell escaping.", proc.stdout)
+        self.assertTrue(
+            proc.stdout.endswith("\n\n"),
+            f"expected trailing blank line after table, got: {proc.stdout!r}",
+        )
 
     def test_rejects_invalid_json_spec(self) -> None:
         proc = self.run_cli("--diff-key", "json-wrapper", "-", stdin_text="{", check=False)
