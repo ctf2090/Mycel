@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use crate::{emit_error_line, CliError};
 
+use super::shared::load_view_editor_role_summary;
 use super::ViewInspectCliArgs;
 
 #[derive(Debug, Clone, Serialize)]
@@ -17,6 +18,9 @@ struct ViewInspectSummary {
     maintainer: Option<String>,
     profile_id: Option<String>,
     timestamp: Option<u64>,
+    accepted_editor_keys: Vec<String>,
+    maintainer_is_admitted_editor: bool,
+    admitted_editor_only_keys: Vec<String>,
     current_profile_view_id: Option<String>,
     current_profile_document_view_ids: BTreeMap<String, String>,
     documents: BTreeMap<String, String>,
@@ -38,6 +42,9 @@ impl ViewInspectSummary {
             maintainer: None,
             profile_id: None,
             timestamp: None,
+            accepted_editor_keys: Vec::new(),
+            maintainer_is_admitted_editor: false,
+            admitted_editor_only_keys: Vec::new(),
             current_profile_view_id: None,
             current_profile_document_view_ids: BTreeMap::new(),
             documents: BTreeMap::new(),
@@ -72,6 +79,30 @@ fn print_view_inspect_text(summary: &ViewInspectSummary) -> i32 {
     }
     if let Some(timestamp) = summary.timestamp {
         println!("timestamp: {timestamp}");
+    }
+    println!(
+        "accepted editor key count: {}",
+        summary.accepted_editor_keys.len()
+    );
+    if !summary.accepted_editor_keys.is_empty() {
+        println!(
+            "accepted editor keys: {}",
+            summary.accepted_editor_keys.join(", ")
+        );
+    }
+    println!(
+        "maintainer is admitted editor: {}",
+        summary.maintainer_is_admitted_editor
+    );
+    println!(
+        "admitted editor-only key count: {}",
+        summary.admitted_editor_only_keys.len()
+    );
+    if !summary.admitted_editor_only_keys.is_empty() {
+        println!(
+            "admitted editor-only keys: {}",
+            summary.admitted_editor_only_keys.join(", ")
+        );
     }
     if let Some(current_profile_view_id) = &summary.current_profile_view_id {
         println!("current profile view id: {current_profile_view_id}");
@@ -174,6 +205,21 @@ pub(super) fn handle(args: ViewInspectCliArgs) -> Result<i32, CliError> {
     };
     match inspect_governance_view(&manifest, &view_id) {
         Ok(inspection) => {
+            match load_view_editor_role_summary(
+                &store_root,
+                &inspection.view_id,
+                &inspection.maintainer,
+            ) {
+                Ok(editor_roles) => {
+                    summary.accepted_editor_keys = editor_roles.accepted_editor_keys;
+                    summary.maintainer_is_admitted_editor =
+                        editor_roles.maintainer_is_admitted_editor;
+                    summary.admitted_editor_only_keys = editor_roles.admitted_editor_only_keys;
+                }
+                Err(error) => {
+                    summary.push_error(error);
+                }
+            }
             summary.maintainer = Some(inspection.maintainer);
             summary.profile_id = Some(inspection.profile_id);
             summary.timestamp = Some(inspection.timestamp);
@@ -199,6 +245,10 @@ pub(super) fn handle(args: ViewInspectCliArgs) -> Result<i32, CliError> {
     );
     summary.notes.push(
         "current profile governance state comes from persisted governance summaries and latest-view indexes"
+            .to_string(),
+    );
+    summary.notes.push(
+        "accepted editor keys come from the selected persisted view policy so mixed-role and shared-key assignments stay inspectable"
             .to_string(),
     );
 

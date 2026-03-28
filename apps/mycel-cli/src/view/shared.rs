@@ -2,12 +2,56 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use mycel_core::protocol::parse_json_strict;
-use mycel_core::store::{StoreIndexManifest, ViewGovernanceRecord};
+use mycel_core::protocol::{parse_json_strict, parse_view_object};
+use mycel_core::store::{load_stored_object_value, StoreIndexManifest, ViewGovernanceRecord};
 use serde_json::Value;
 
 use super::list::{ViewListGroupBucket, ViewListGroupSummary, ViewListRecord};
 use super::{ViewListFilters, ViewListGroupBy, ViewListSort};
+
+#[derive(Debug, Clone)]
+pub(super) struct ViewEditorRoleSummary {
+    pub accepted_editor_keys: Vec<String>,
+    pub maintainer_is_admitted_editor: bool,
+    pub admitted_editor_only_keys: Vec<String>,
+}
+
+pub(super) fn load_view_editor_role_summary(
+    store_root: &Path,
+    view_id: &str,
+    maintainer: &str,
+) -> Result<ViewEditorRoleSummary, String> {
+    let value = load_stored_object_value(store_root, view_id)
+        .map_err(|error| format!("failed to read stored view '{view_id}': {error}"))?;
+    let view = parse_view_object(&value)
+        .map_err(|error| format!("failed to parse stored view '{view_id}': {error}"))?;
+    let accepted_editor_keys = view
+        .policy
+        .get("accept_keys")
+        .and_then(Value::as_array)
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(Value::as_str)
+                .map(ToOwned::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let maintainer_is_admitted_editor = accepted_editor_keys
+        .iter()
+        .any(|admitted_key| admitted_key == maintainer);
+    let admitted_editor_only_keys = accepted_editor_keys
+        .iter()
+        .filter(|admitted_key| admitted_key.as_str() != maintainer)
+        .cloned()
+        .collect();
+
+    Ok(ViewEditorRoleSummary {
+        accepted_editor_keys,
+        maintainer_is_admitted_editor,
+        admitted_editor_only_keys,
+    })
+}
 
 pub(super) fn find_view_record(
     manifest: &StoreIndexManifest,

@@ -4,6 +4,10 @@ assertion_line: 149
 expression: inspect_json
 ---
 {
+  "accepted_editor_keys": [
+    "pk:ed25519:+kg0FH9uaQw2k+/2EzYEZAPNiuKhTzGzxAc1hWkjlWU="
+  ],
+  "admitted_editor_only_keys": [],
   "current_profile_document_view_ids": {
     "doc:view-publish": "view:d8290d3b418f2d492059ce193377801b00bc830b93c26569673729d27e5f106c"
   },
@@ -18,6 +22,7 @@ expression: inspect_json
   },
   "errors": [],
   "maintainer": "pk:ed25519:+kg0FH9uaQw2k+/2EzYEZAPNiuKhTzGzxAc1hWkjlWU=",
+  "maintainer_is_admitted_editor": true,
   "maintainer_view_ids": [
     "view:d8290d3b418f2d492059ce193377801b00bc830b93c26569673729d27e5f106c"
   ],
@@ -25,7 +30,8 @@ expression: inspect_json
   "notes": [
     "governance inspection is separate from reader-facing accepted-head workflows",
     "related maintainer/profile/document view IDs come from persisted governance indexes",
-    "current profile governance state comes from persisted governance summaries and latest-view indexes"
+    "current profile governance state comes from persisted governance summaries and latest-view indexes",
+    "accepted editor keys come from the selected persisted view policy so mixed-role and shared-key assignments stay inspectable"
   ],
   "profile_heads": {
     "doc:view-publish": [

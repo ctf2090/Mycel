@@ -136,6 +136,26 @@ fn persisted_governance_keeps_editor_and_view_roles_independent() {
         shared_current_json["maintainer"],
         Value::String(signer_id(&shared_dual_role))
     );
+    assert_eq!(
+        shared_current_json["accepted_editor_keys"],
+        json!([signer_id(&shared_dual_role), signer_id(&editor_only)])
+    );
+    assert_eq!(
+        shared_current_json["maintainer_is_admitted_editor"],
+        Value::Bool(true)
+    );
+    assert_eq!(
+        shared_current_json["admitted_editor_only_keys"],
+        json!([signer_id(&editor_only)])
+    );
+    assert_eq!(
+        shared_current_json["current_documents"][0]["accepted_editor_keys"],
+        json!([signer_id(&shared_dual_role), signer_id(&editor_only)])
+    );
+    assert_eq!(
+        shared_current_json["current_documents"][0]["maintainer_is_admitted_editor"],
+        Value::Bool(true)
+    );
 
     let mixed_current = run_mycel(&[
         "view",
@@ -155,6 +175,76 @@ fn persisted_governance_keeps_editor_and_view_roles_independent() {
     assert_eq!(
         mixed_current_json["maintainer"],
         Value::String(signer_id(&maintainer_only))
+    );
+    assert_eq!(
+        mixed_current_json["accepted_editor_keys"],
+        json!([signer_id(&editor_only)])
+    );
+    assert_eq!(
+        mixed_current_json["maintainer_is_admitted_editor"],
+        Value::Bool(false)
+    );
+    assert_eq!(
+        mixed_current_json["admitted_editor_only_keys"],
+        json!([signer_id(&editor_only)])
+    );
+    assert_eq!(
+        mixed_current_json["current_documents"][0]["accepted_editor_keys"],
+        json!([signer_id(&editor_only)])
+    );
+    assert_eq!(
+        mixed_current_json["current_documents"][0]["maintainer_is_admitted_editor"],
+        Value::Bool(false)
+    );
+
+    let shared_inspect = run_mycel(&[
+        "view",
+        "inspect",
+        shared_publish["view_id"]
+            .as_str()
+            .expect("shared view id should exist"),
+        "--store-root",
+        &store_root,
+        "--json",
+    ]);
+    assert_success(&shared_inspect);
+    let shared_inspect_json = parse_json_stdout(&shared_inspect);
+    assert_eq!(
+        shared_inspect_json["accepted_editor_keys"],
+        json!([signer_id(&shared_dual_role), signer_id(&editor_only)])
+    );
+    assert_eq!(
+        shared_inspect_json["maintainer_is_admitted_editor"],
+        Value::Bool(true)
+    );
+    assert_eq!(
+        shared_inspect_json["admitted_editor_only_keys"],
+        json!([signer_id(&editor_only)])
+    );
+
+    let mixed_inspect = run_mycel(&[
+        "view",
+        "inspect",
+        mixed_publish["view_id"]
+            .as_str()
+            .expect("mixed view id should exist"),
+        "--store-root",
+        &store_root,
+        "--json",
+    ]);
+    assert_success(&mixed_inspect);
+    let mixed_inspect_json = parse_json_stdout(&mixed_inspect);
+    assert_eq!(
+        mixed_inspect_json["accepted_editor_keys"],
+        json!([signer_id(&editor_only)])
+    );
+    assert_eq!(
+        mixed_inspect_json["maintainer_is_admitted_editor"],
+        Value::Bool(false)
+    );
+    assert_eq!(
+        mixed_inspect_json["admitted_editor_only_keys"],
+        json!([signer_id(&editor_only)])
     );
 
     let shared_maintainer = run_mycel(&[

@@ -933,6 +933,15 @@ fn view_current_json_reports_profile_current_governance_state() {
     assert_eq!(current_json["timestamp"], json!(20));
     assert_eq!(current_json["maintainer"], view_a2["maintainer"]);
     assert_eq!(
+        current_json["accepted_editor_keys"],
+        json!([signer_id(&maintainer_a)])
+    );
+    assert_eq!(current_json["maintainer_is_admitted_editor"], json!(false));
+    assert_eq!(
+        current_json["admitted_editor_only_keys"],
+        json!([signer_id(&maintainer_a)])
+    );
+    assert_eq!(
         current_json["current_profile_document_view_ids"]["doc:alpha"],
         publish_a2["view_id"]
     );
@@ -953,6 +962,14 @@ fn view_current_json_reports_profile_current_governance_state() {
         json!("rev:3333333333333333333333333333333333333333333333333333333333333333")
     );
     assert_eq!(
+        current_json["current_documents"][0]["accepted_editor_keys"],
+        json!([signer_id(&maintainer_a)])
+    );
+    assert_eq!(
+        current_json["current_documents"][0]["maintainer_is_admitted_editor"],
+        json!(false)
+    );
+    assert_eq!(
         current_json["current_documents"][1]["doc_id"],
         json!("doc:beta")
     );
@@ -963,6 +980,14 @@ fn view_current_json_reports_profile_current_governance_state() {
     assert_eq!(
         current_json["current_documents"][1]["current_revision_id"],
         json!("rev:2222222222222222222222222222222222222222222222222222222222222222")
+    );
+    assert_eq!(
+        current_json["current_documents"][1]["accepted_editor_keys"],
+        json!([signer_id(&maintainer_a)])
+    );
+    assert_eq!(
+        current_json["current_documents"][1]["maintainer_is_admitted_editor"],
+        json!(true)
     );
     assert_eq!(
         current_json["profile_heads"]["doc:alpha"],
@@ -1861,6 +1886,12 @@ fn view_inspect_json_reports_related_governance_indexes() {
         ])
     );
     assert_eq!(inspect_json["timestamp"], json!(10));
+    assert_eq!(
+        inspect_json["accepted_editor_keys"],
+        json!([signer_id(&maintainer_a)])
+    );
+    assert_eq!(inspect_json["maintainer_is_admitted_editor"], json!(true));
+    assert_eq!(inspect_json["admitted_editor_only_keys"], json!([]));
     assert_eq!(
         inspect_json["current_profile_view_id"],
         publish_a2["view_id"]
