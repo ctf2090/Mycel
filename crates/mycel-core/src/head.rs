@@ -170,6 +170,64 @@ pub struct RenderedBlockSummary {
     pub child_count: usize,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct HeadProfileAdmissionSummary {
+    pub mode: String,
+    pub admitted_keys: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HeadProfileViewerScoreSummary {
+    pub enabled: bool,
+    pub mode: ViewerScoreMode,
+    pub bonus_cap: u64,
+    pub penalty_cap: u64,
+    pub signal_weight_cap: u64,
+    pub admission_required: bool,
+    pub min_identity_tier: ViewerIdentityTier,
+    pub min_reputation_band: ViewerReputationBand,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HeadProfileSummary {
+    pub profile_id: Option<String>,
+    pub source: String,
+    pub policy_hash: String,
+    pub effective_selection_time: u64,
+    pub selector_epoch: i64,
+    pub epoch_seconds: u64,
+    pub epoch_zero_timestamp: i64,
+    pub admission_window_epochs: u64,
+    pub min_valid_views_for_admission: u64,
+    pub min_valid_views_per_epoch: u64,
+    pub weight_cap_per_key: u64,
+    pub editor_admission: HeadProfileAdmissionSummary,
+    pub view_admission: HeadProfileAdmissionSummary,
+    pub viewer_score: HeadProfileViewerScoreSummary,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HeadProfileListSummary {
+    pub input_path: PathBuf,
+    pub status: String,
+    pub available_profile_ids: Vec<String>,
+    pub profile_count: usize,
+    pub profiles: Vec<HeadProfileSummary>,
+    pub notes: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HeadProfileInspectSummary {
+    pub input_path: PathBuf,
+    pub status: String,
+    pub requested_profile_id: Option<String>,
+    pub available_profile_ids: Vec<String>,
+    pub profile: Option<HeadProfileSummary>,
+    pub notes: Vec<String>,
+    pub errors: Vec<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct HeadInspectInput {
     #[serde(default)]
@@ -487,6 +545,141 @@ impl HeadRenderSummary {
     }
 }
 
+impl HeadProfileListSummary {
+    fn new(input_path: &Path) -> Self {
+        Self {
+            input_path: input_path.to_path_buf(),
+            status: "ok".to_string(),
+            available_profile_ids: Vec::new(),
+            profile_count: 0,
+            profiles: Vec::new(),
+            notes: Vec::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn is_ok(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    fn push_error(&mut self, message: impl Into<String>) {
+        self.status = "failed".to_string();
+        self.errors.push(message.into());
+    }
+}
+
+impl HeadProfileInspectSummary {
+    fn new(input_path: &Path, requested_profile_id: Option<&str>) -> Self {
+        Self {
+            input_path: input_path.to_path_buf(),
+            status: "ok".to_string(),
+            requested_profile_id: requested_profile_id.map(str::to_string),
+            available_profile_ids: Vec::new(),
+            profile: None,
+            notes: Vec::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn is_ok(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    fn push_error(&mut self, message: impl Into<String>) {
+        self.status = "failed".to_string();
+        self.errors.push(message.into());
+    }
+}
+
+pub fn list_head_profiles_from_path(input_path: &Path) -> HeadProfileListSummary {
+    let (resolved_input_path, input) = match load_head_inspect_input_file(input_path) {
+        Ok(loaded) => loaded,
+        Err(message) => {
+            let mut summary = HeadProfileListSummary::new(input_path);
+            summary.push_error(message);
+            return summary;
+        }
+    };
+
+    let mut summary = HeadProfileListSummary::new(&resolved_input_path);
+    summary.available_profile_ids = collect_available_profile_ids(&input.profiles);
+
+    if input.profile.is_some() && !input.profiles.is_empty() {
+        summary.push_error("head input cannot declare both 'profile' and 'profiles'");
+        return summary;
+    }
+
+    if let Some(profile) = &input.profile {
+        summary.profile_count = 1;
+        summary.profiles.push(summarize_head_profile(None, profile));
+        summary.notes.push(
+            "bundle declares one default fixed reader profile via top-level 'profile'".to_string(),
+        );
+        return summary;
+    }
+
+    if input.profiles.is_empty() {
+        summary.push_error("head input must declare either 'profile' or 'profiles'");
+        return summary;
+    }
+
+    summary.profile_count = input.profiles.len();
+    summary.profiles = input
+        .profiles
+        .iter()
+        .map(|(profile_id, profile)| summarize_head_profile(Some(profile_id.as_str()), profile))
+        .collect();
+    summary.notes.push(format!(
+        "bundle declares {} named fixed reader profile(s)",
+        summary.profile_count
+    ));
+    summary
+}
+
+pub fn inspect_head_profile_from_path(
+    input_path: &Path,
+    requested_profile_id: Option<&str>,
+) -> HeadProfileInspectSummary {
+    let (resolved_input_path, input) = match load_head_inspect_input_file(input_path) {
+        Ok(loaded) => loaded,
+        Err(message) => {
+            let mut summary = HeadProfileInspectSummary::new(input_path, requested_profile_id);
+            summary.push_error(message);
+            return summary;
+        }
+    };
+
+    let mut summary = HeadProfileInspectSummary::new(&resolved_input_path, requested_profile_id);
+    summary.available_profile_ids = collect_available_profile_ids(&input.profiles);
+    let default_profile_present = input.profile.is_some();
+
+    match resolve_head_inspect_profile(&input, requested_profile_id) {
+        Ok((selected_profile_id, profile)) => {
+            let selected_id = if default_profile_present && requested_profile_id.is_none() {
+                None
+            } else {
+                Some(selected_profile_id.as_str())
+            };
+            summary.profile = Some(summarize_head_profile(selected_id, &profile));
+            if let Some(profile_id) = selected_id {
+                summary
+                    .notes
+                    .push(format!("selected named reader profile '{profile_id}'"));
+            } else {
+                summary.notes.push(
+                    "selected the default fixed reader profile from top-level 'profile'"
+                        .to_string(),
+                );
+            }
+        }
+        Err(message) => {
+            summary.push_error(message);
+        }
+    }
+
+    summary
+}
+
 pub fn inspect_heads_from_path(
     input_path: &Path,
     doc_id: &str,
@@ -569,6 +762,15 @@ pub fn render_head_from_path(
     summary
 }
 
+fn load_head_inspect_input_file(input_path: &Path) -> Result<(PathBuf, HeadInspectInput), String> {
+    let resolved_input_path = resolve_head_inspect_input_path(input_path)?;
+    let content = fs::read_to_string(&resolved_input_path)
+        .map_err(|err| format!("failed to read head-inspect input: {err}"))?;
+    let input = parse_json_strict(&content)
+        .map_err(|err| format!("failed to parse head-inspect input JSON: {err}"))?;
+    Ok((resolved_input_path, input))
+}
+
 fn verify_selected_head_for_render(
     selected_head: &str,
     revision_value: &Value,
@@ -589,33 +791,11 @@ fn load_head_inspect_input(
     input_path: &Path,
     doc_id: &str,
 ) -> Result<(PathBuf, HeadInspectInput), Box<HeadInspectSummary>> {
-    let resolved_input_path = match resolve_head_inspect_input_path(input_path) {
-        Ok(path) => path,
-        Err(message) => {
-            let mut summary = HeadInspectSummary::new(input_path, doc_id);
-            summary.push_error(message);
-            return Err(Box::new(summary));
-        }
-    };
-
-    let mut summary = HeadInspectSummary::new(&resolved_input_path, doc_id);
-    let content = match fs::read_to_string(&resolved_input_path) {
-        Ok(content) => content,
-        Err(err) => {
-            summary.push_error(format!("failed to read head-inspect input: {err}"));
-            return Err(Box::new(summary));
-        }
-    };
-
-    let input = match parse_json_strict(&content) {
-        Ok(input) => input,
-        Err(err) => {
-            summary.push_error(format!("failed to parse head-inspect input JSON: {err}"));
-            return Err(Box::new(summary));
-        }
-    };
-
-    Ok((resolved_input_path, input))
+    load_head_inspect_input_file(input_path).map_err(|message| {
+        let mut summary = HeadInspectSummary::new(input_path, doc_id);
+        summary.push_error(message);
+        Box::new(summary)
+    })
 }
 
 fn inspect_heads_from_loaded_input(
@@ -1190,6 +1370,66 @@ fn collect_available_profile_ids(profiles: &BTreeMap<String, HeadInspectProfile>
 
 fn available_profile_ids(profiles: &BTreeMap<String, HeadInspectProfile>) -> String {
     collect_available_profile_ids(profiles).join(", ")
+}
+
+fn summarize_head_profile(
+    profile_id: Option<&str>,
+    profile: &HeadInspectProfile,
+) -> HeadProfileSummary {
+    HeadProfileSummary {
+        profile_id: profile_id.map(str::to_string),
+        source: if profile_id.is_some() {
+            "named".to_string()
+        } else {
+            "default".to_string()
+        },
+        policy_hash: profile.policy_hash.clone(),
+        effective_selection_time: profile.effective_selection_time,
+        selector_epoch: selector_epoch(
+            profile.effective_selection_time,
+            profile.epoch_seconds,
+            profile.epoch_zero_timestamp,
+        ),
+        epoch_seconds: profile.epoch_seconds,
+        epoch_zero_timestamp: profile.epoch_zero_timestamp,
+        admission_window_epochs: profile.admission_window_epochs,
+        min_valid_views_for_admission: profile.min_valid_views_for_admission,
+        min_valid_views_per_epoch: profile.min_valid_views_per_epoch,
+        weight_cap_per_key: profile.weight_cap_per_key,
+        editor_admission: HeadProfileAdmissionSummary {
+            mode: editor_candidate_mode_label(&profile.editor_admission.mode).to_string(),
+            admitted_keys: profile.editor_admission.admitted_keys.clone(),
+        },
+        view_admission: HeadProfileAdmissionSummary {
+            mode: view_maintainer_admission_mode_label(&profile.view_admission.mode).to_string(),
+            admitted_keys: profile.view_admission.admitted_keys.clone(),
+        },
+        viewer_score: HeadProfileViewerScoreSummary {
+            enabled: profile.viewer_score.mode != ViewerScoreMode::Disabled,
+            mode: profile.viewer_score.mode.clone(),
+            bonus_cap: profile.viewer_score.bonus_cap,
+            penalty_cap: profile.viewer_score.penalty_cap,
+            signal_weight_cap: profile.viewer_score.signal_weight_cap,
+            admission_required: profile.viewer_score.admission_required,
+            min_identity_tier: profile.viewer_score.min_identity_tier.clone(),
+            min_reputation_band: profile.viewer_score.min_reputation_band.clone(),
+        },
+    }
+}
+
+fn editor_candidate_mode_label(mode: &EditorCandidateMode) -> &'static str {
+    match mode {
+        EditorCandidateMode::Open => "open",
+        EditorCandidateMode::AdmittedOnly => "admitted-only",
+        EditorCandidateMode::Mixed => "mixed",
+    }
+}
+
+fn view_maintainer_admission_mode_label(mode: &ViewMaintainerAdmissionMode) -> &'static str {
+    match mode {
+        ViewMaintainerAdmissionMode::Open => "open",
+        ViewMaintainerAdmissionMode::AdmittedOnly => "admitted-only",
+    }
 }
 
 fn build_bundle_object_index(

@@ -331,6 +331,48 @@ pub fn assert_head_render_help(stdout: &str) {
     );
 }
 
+pub fn assert_head_profile_list_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel head profile list"),
+        "expected head profile list usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("List fixed reader profiles declared by a head input bundle"),
+        "expected head profile list description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--input"),
+        "expected input flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in help, stdout: {stdout}"
+    );
+}
+
+pub fn assert_head_profile_inspect_help(stdout: &str) {
+    assert!(
+        stdout.contains("Usage: mycel head profile inspect"),
+        "expected head profile inspect usage, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Inspect one fixed reader profile from a head input bundle"),
+        "expected head profile inspect description, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--input"),
+        "expected input flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--profile-id <PROFILE_ID>"),
+        "expected profile-id flag in help, stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("--json"),
+        "expected json flag in help, stdout: {stdout}"
+    );
+}
+
 pub fn assert_view_inspect_help(stdout: &str) {
     assert!(
         stdout.contains("Usage: mycel view inspect"),

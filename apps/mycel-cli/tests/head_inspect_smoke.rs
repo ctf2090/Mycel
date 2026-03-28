@@ -243,6 +243,8 @@ mod cli;
 mod dual_role;
 #[path = "head_inspect_smoke/inspect.rs"]
 mod inspect;
+#[path = "head_inspect_smoke/profile.rs"]
+mod profile;
 #[path = "head_inspect_smoke/render.rs"]
 mod render;
 #[path = "head_inspect_smoke/selector.rs"]
