@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import re
 import shutil
 import sys
+import tempfile
 import uuid
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +28,7 @@ from item_id_checklist_mark import ItemIdChecklistMarkError, apply_updates
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = ROOT_DIR / ".agent-local" / "agents.json"
+REGISTRY_LOCK_PATH = ROOT_DIR / ".agent-local" / "agents.json.lock"
 MAILBOX_DIR = ROOT_DIR / ".agent-local" / "mailboxes"
 AGENT_LOCAL_DIR = ROOT_DIR / ".agent-local"
 DEV_SETUP_STATUS_PATH = AGENT_LOCAL_DIR / "dev-setup-status.md"
@@ -113,9 +117,44 @@ def load_registry(*, allow_missing: bool = False) -> dict[str, Any]:
     return registry
 
 
+@contextmanager
+def registry_lock() -> Any:
+    REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = REGISTRY_LOCK_PATH.open("a+", encoding="utf-8")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+
+
 def save_registry(registry: dict[str, Any]) -> None:
     REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REGISTRY_PATH.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps(registry, indent=2) + "\n"
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=REGISTRY_PATH.parent,
+            prefix=f".{REGISTRY_PATH.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+            temp_path = Path(handle.name)
+        os.replace(temp_path, REGISTRY_PATH)
+        dir_fd = os.open(REGISTRY_PATH.parent, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
 
 
 def resolve_mailbox_path(mailbox_value: str) -> Path:
@@ -1574,7 +1613,8 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        return args.func(args)
+        with registry_lock():
+            return args.func(args)
     except RegistryError as exc:
         print(str(exc), file=sys.stderr)
         return 1

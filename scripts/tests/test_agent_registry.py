@@ -1,7 +1,10 @@
+import fcntl
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -261,6 +264,46 @@ class AgentRegistryCliTest(unittest.TestCase):
         self.assertEqual("delivery-1", claim["display_id"])
         self.assertTrue(claim["agent_uid"].startswith("agt_"))
         self.assertTrue(claim["mailbox"].startswith(".agent-local/mailboxes/"))
+
+    def test_claim_waits_for_registry_lock_before_writing(self) -> None:
+        lock_path = self.root / ".agent-local" / "agents.json.lock"
+        holder = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import fcntl, pathlib, sys, time; "
+                    "path = pathlib.Path(sys.argv[1]); "
+                    "path.parent.mkdir(parents=True, exist_ok=True); "
+                    "handle = path.open('a+', encoding='utf-8'); "
+                    "fcntl.flock(handle.fileno(), fcntl.LOCK_EX); "
+                    "print('locked', flush=True); "
+                    "time.sleep(1.2)"
+                ),
+                str(lock_path),
+            ],
+            cwd=self.root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            self.assertEqual("locked", holder.stdout.readline().strip())
+            started = time.monotonic()
+            claim = json.loads(self.run_cli("claim", "doc", "--scope", "lock-test", "--json").stdout)
+            elapsed = time.monotonic() - started
+        finally:
+            holder.wait(timeout=5)
+            if holder.stdout is not None:
+                holder.stdout.close()
+            if holder.stderr is not None:
+                holder.stderr.close()
+
+        self.assertGreaterEqual(elapsed, 1.0)
+        self.assertEqual("doc", claim["role"])
+        registry = self.read_registry()
+        self.assertEqual(1, registry["agent_count"])
+        self.assertEqual(claim["agent_uid"], registry["agents"][0]["agent_uid"])
 
     def test_work_checklist_for_delivery_includes_delivery_items(self) -> None:
         now = datetime.now(TAIPEI_TZ).replace(microsecond=0)
