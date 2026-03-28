@@ -1,6 +1,6 @@
 # Mycel 路线图
 
-状态：major progress，已在 implementation checklist 拆成已关闭的 `M1` minimal-client gate 与活跃的 post-`M1` follow-up checklist 之后刷新；当前 active lane 已明确转到 `M2` / `M3` / `M4`，而更广的 governance persistence、在 richer mixed content/metadata competing-branch classification 落地后 `M2` 剩余的 replay/store fixture closure 与 reporting/doc alignment follow-up，以及剩余的 peer interop error/session proof 仍未完成；当前规划中的 production replication 子项已补齐
+状态：major progress，已在 implementation checklist 拆成已关闭的 `M1` minimal-client gate 与活跃的 post-`M1` follow-up checklist 之后刷新；当前主线已明确转到 `M3` / `M4`，其中 `M3` 最窄的下一步是剩余的最终独立 dual-role 收尾，之后才是更广的 governance persistence、更完整的 governance tooling、reader-facing profile ergonomics，以及仍处于 design draft 的 viewer / editor-maintainer / view-maintainer 三角色 checks-and-balances 方向；剩余的 peer interop session/capability/error-path proof 也仍未完成，而当前规划中的 production replication 子项已补齐
 
 这份路线图把当前 README 的优先级、implementation checklist 和 design-note 的 planning 指引整理成一份仓库级的构建顺序。
 
@@ -35,16 +35,16 @@
 当前这条 lane 是：
 
 1. 在已经关闭的 `M1` gate 之上，收掉 `M2` replay、rebuild、merge-authoring 和 narrow write path 的剩余收尾；当前焦点已收窄到 richer mixed content/metadata competing-branch classification 落地后的 replay/store fixture closure 与 reporting/doc alignment follow-up
-2. 扩展 `M3` reader-plus-governance workflows，但不要重新打开已经关闭的 minimal-client gate
+2. 扩展 `M3` reader-plus-governance workflows，但不要重新打开已经关闭的 minimal-client gate，先收掉剩余的最终独立 dual-role 收尾，再把更广的 governance persistence、更完整的 governance tooling、reader-facing profile ergonomics，以及仍属 design draft 的 viewer / editor-maintainer / view-maintainer 三角色 checks-and-balances 方向明确保留下来
 3. 在当前规划中的 production replication 子项都已补齐之后，让 `M4` 从 peer-store proof 继续推进到剩余的 peer interop error/session coverage
 
 ### 下一步
 
 当窄版 core 稳定之后，下一条 lane 是：
 
-1. 面向 reader 的 accepted-head 和 governance 工作流
-2. fixed-profile accepted reading
-3. reader-first 的 text reconstruction 和 inspection
+1. 在当前 `view inspect` / `view list` / `view publish`、persisted relationship summaries 与 per-document current-governance summaries 的 baseline 之上，于最终独立 dual-role 收尾之后，补上更广的 `M3` governance persistence、更完整的 governance tooling、reader-facing profile ergonomics，以及仍属 design draft 的三角色 checks-and-balances follow-up
+2. 补上超出当前 positive-path 与 optional-message proof set 的剩余 `M4` session、capability 与 error-path interop proof
+3. 等当前 governance 与 interop baseline 更稳定后，再补 reader-facing 的 text reconstruction 与 presentation 打磨
 
 ### 之后
 
@@ -305,21 +305,28 @@ Implementation anchors：
 
 当前判断：
 
-处于早期 partial progress，现在已经有了从 persisted store state 到 reader inspection 的初始桥接。
+处于早期 partial progress，现在已经有了从 persisted store state 到 reader inspection 的初始桥接，并且已经出现 bounded viewer score surfaces；不过 `M3` 仍然还缺更广的治理持久化、更完整的治理工具面、reader-facing profile ergonomics、最终独立 dual-role 角色指派收尾，以及把仍属 design draft 的 viewer / editor-maintainer / view-maintainer 三角色 checks-and-balances 方向更清楚地反映到路线图上。
 
 当前仓库里已经可以看到：
 
 1. accepted-head inspection
 2. typed arrays 中的 structured decision detail
 3. accepted-head inspection 的 store-backed selector object loading
-4. 围绕 peer、topology、test 和 report 范围的 simulator 与 validation workflows
+4. accepted-head rendering、具名 fixed-profile selection，以及更清楚的 profile 发现与错误反馈
+5. 具备 editor-admission 感知的 inspect/render 行为
+6. `view inspect` / `view list` / `view publish` 这些与 reader-facing `head` commands 分离的治理工作流
+7. persisted governance reverse indexes、relationship summaries，以及 `view current` 中的 per-document current-governance summaries
+8. head inspection 中的 bounded viewer score channels，包括 typed signal summaries、anti-Sybil gating 与 challenge review/freeze pressure
+9. 围绕 peer、topology、test 和 report 范围的 simulator 与 validation workflows
 
 主要剩余缺口：
 
-1. reader text rendering path
-2. fixed-profile reading workflow
-3. governance publication workflow
-4. 更广泛的 governance-state persistence 和专门的 inspection surfaces
+1. 更广泛的 governance-state persistence，超出当前 reverse governance indexes、selector 与 replay inputs
+2. 超出当前 `view` inspection / listing / publication 基线的更完整治理检索与发布 surfaces
+3. 超出当前最小具名 fixed-profile surface 的 reader-facing profile ergonomics
+4. 可在后续与 wire / sync 对齐的 governance-state tooling
+5. mixed-role 与 shared-key case 的最终 editor-maintainer / view-maintainer 独立角色指派收尾
+6. 在路线图层级更清楚表达仍属 design draft 的 viewer / editor-maintainer / view-maintainer 三角色 checks-and-balances 方向，包括 bounded viewer participation 与 proposal / ratification / public objection 的明确分离，但暂不把所有 draft 中的 escalation 或 anti-Sybil 细节直接提升为路线图承诺
 
 Implementation anchors：
 
@@ -453,10 +460,10 @@ Implementation anchors：
 
 近期最高价值的工作是：
 
-1. 收掉 `M2` 最后剩余的 replay/store fixture 与 reporting/doc alignment follow-up，让 richer mixed content/metadata competing-branch classification 落地后的 milestone 描述与 proof surface 一致
-2. 以窄切片继续扩展 `M3`，补上 governance persistence 与 reader-plus-governance 后续工作，同时不要重新打开已关闭的 minimal-client gate
-3. 在当前追踪的 production replication 子项已落地后，继续为 `M4` 补上更多 deterministic 的 session、capability 与 error-path interop proofs
-4. 每当剩余规则或 follow-up slice 落地，就持续补强 interop fixtures 与 negative tests
+1. 先收掉剩余的最终独立 dual-role 切片，再以窄切片继续扩展 `M3` 的 governance persistence、governance tooling、reader-facing profile ergonomics，以及仍属 design draft 的三角色 checks-and-balances follow-up，同时不要重新打开已关闭的 minimal-client gate
+2. 继续为 `M4` 补上更多 deterministic 的 session、capability 与 error-path interop proofs
+3. 每当剩余规则或 follow-up slice 落地，就持续补强 interop fixtures 与 negative tests
+4. 在后续工作继续落地时，保持当前已收口的 `M2` proof surface 不被回归破坏
 
 ## 什么会推动一个 Milestone 前进
 
