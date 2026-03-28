@@ -1071,6 +1071,77 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             self.load_next_work_items_markdown(agent_uid, 1),
         )
 
+    def test_end_skips_english_handoff_items_when_locale_prefers_zh_tw(self) -> None:
+        self.write_agents_md()
+        self.write_agents_local("zh-TW")
+        self.write_fake_codex_thread_metadata()
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[("2026-03-25T06:20:03.000Z", 60135, 887020)],
+        )
+        claim = self.run_registry("claim", "coding", "--scope", "locale-fallback", "--model-id", "gpt-5.4")
+        agent_uid = claim["agent_uid"]
+        start = self.run_registry("start", agent_uid)
+        self.mark_bootstrap_defaults(start["bootstrap_output"])
+
+        begin = self.run_cli(
+            "begin",
+            agent_uid,
+            "--scope",
+            "locale-fallback",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+        self.assertEqual(0, begin.returncode)
+        self.write_codex_rollout(
+            "019d23a1-c85f-7d53-a4bb-075ea6504302",
+            totals=[
+                ("2026-03-25T06:20:03.000Z", 60135, 887020),
+                ("2026-03-25T06:25:03.000Z", 45000, 932020),
+            ],
+        )
+        self.mark_workcycle_defaults(
+            f".agent-local/agents/{agent_uid}/checklists/AGENTS-workcycle-checklist-1.md",
+            mailbox_state=None,
+        )
+        self.write_mailbox(
+            agent_uid,
+            (
+                f"# Mailbox for {agent_uid}\n\n"
+                "## Work Continuation Handoff\n\n"
+                "- Status: open\n"
+                "- Date: 2026-03-25 15:30 UTC+8\n"
+                "- Source agent: coding-1\n"
+                "- Source role: coding\n"
+                "- Scope: locale-fallback\n"
+                "- Current state:\n"
+                "  - origin/main now renders next-work-items in zh-TW by default.\n"
+                "- Next suggested step:\n"
+                "  - If we want fully localized closeouts, emit zh-TW handoff next-step text too.\n"
+                "- Blockers:\n"
+                "  - none\n"
+            ),
+        )
+
+        proc = self.run_cli(
+            "end",
+            agent_uid,
+            "--scope",
+            "locale-fallback",
+            extra_env={"CODEX_THREAD_ID": "019d23a1-c85f-7d53-a4bb-075ea6504302"},
+        )
+
+        self.assertEqual(0, proc.returncode)
+        self.assertEqual(
+            {"compaction_detected": False, "locale": "zh-TW", "role": "coding"},
+            self.load_next_work_items_spec(agent_uid, 1),
+        )
+        self.assertEqual(
+            "1. (最有價值) 檢查 ROADMAP.md，找出最高價值的下一個 coding 工作 取捨: "
+            "和 roadmap 對齊最好，但在開始實作前需要先花一點時間做優先順序判斷 路線圖: ROADMAP.md / next coding slice\n"
+            "2. 檢查最新的 CQH issue，整理高價值工作項目 取捨: 通常比較快能落地，但可能沒有那麼直接貼近主要 roadmap 軌道\n",
+            self.load_next_work_items_markdown(agent_uid, 1),
+        )
+
     def test_after_work_uses_compact_k_format_for_large_cycle_estimates(self) -> None:
         self.write_agents_md()
         self.write_fake_codex_thread_metadata()

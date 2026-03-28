@@ -81,6 +81,8 @@ PLACEHOLDER_SCOPES: frozenset[str] = frozenset({"pending scope", "", "none", "n/
 NON_CYCLE_TRACKED_PATH_PREFIXES: tuple[str, ...] = (".agent-local/", ".git/")
 NON_CYCLE_TRACKED_PATH_SUFFIXES: tuple[str, ...] = (".pyc",)
 PREFERRED_LOCALE_LINE_PATTERN = re.compile(r"`([^`]+)`")
+ASCII_LETTER_PATTERN = re.compile(r"[A-Za-z]")
+CJK_CHARACTER_PATTERN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 
 
 class WorkCycleError(Exception):
@@ -649,6 +651,17 @@ def summarize_handoff_tradeoff(current_state: list[str], *, locale: str) -> str:
     return "most direct continuation from the latest same-role handoff, but it may still need a quick context refresh before implementation"
 
 
+def text_matches_locale(text: str, *, locale: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if locale == "zh-TW":
+        if CJK_CHARACTER_PATTERN.search(stripped):
+            return True
+        return not ASCII_LETTER_PATTERN.search(stripped)
+    return True
+
+
 def build_cycle_specific_next_work_items(
     *,
     scope: str | None,
@@ -663,11 +676,17 @@ def build_cycle_specific_next_work_items(
         next_step_lines = next_steps if isinstance(next_steps, list) else []
         for step in next_step_lines:
             if isinstance(step, str) and step.strip():
+                if not text_matches_locale(step, locale=locale):
+                    continue
                 items.append(
                     {
                         "text": step.strip(),
                         "tradeoff": summarize_handoff_tradeoff(
-                            [line for line in current_state_lines if isinstance(line, str)],
+                            [
+                                line
+                                for line in current_state_lines
+                                if isinstance(line, str) and text_matches_locale(line, locale=locale)
+                            ],
                             locale=locale,
                         ),
                     }
