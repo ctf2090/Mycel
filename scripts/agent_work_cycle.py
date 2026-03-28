@@ -29,6 +29,7 @@ from item_id_checklist import (
 )
 from item_id_checklist_mark import ItemIdChecklistMarkError, update_checklist_items
 from agent_guard import check_agent
+from render_next_work_items import NextWorkItemsError, render_payload as render_next_work_items_payload
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -604,21 +605,42 @@ def workcycle_next_work_items_spec_path(agent_uid: str, batch_num: int) -> Path:
     return AGENT_LOCAL_DIR / "agents" / agent_uid / "workcycles" / f"next-work-items-{batch_num}.json"
 
 
-def write_next_work_items_spec(
+def workcycle_next_work_items_markdown_path(agent_uid: str, batch_num: int) -> Path:
+    return AGENT_LOCAL_DIR / "agents" / agent_uid / "workcycles" / f"next-work-items-{batch_num}.md"
+
+
+def build_next_work_items_payload(
+    *,
+    agent_role: str,
+    compaction_detected: bool,
+) -> dict[str, object]:
+    return {
+        "role": agent_role,
+        "compaction_detected": compaction_detected,
+    }
+
+
+def write_next_work_items_outputs(
     *,
     agent_uid: str,
     batch_num: int,
     agent_role: str,
     compaction_detected: bool,
-) -> Path:
-    path = workcycle_next_work_items_spec_path(agent_uid, batch_num)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "role": agent_role,
-        "compaction_detected": compaction_detected,
-    }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+) -> tuple[Path, Path]:
+    spec_path = workcycle_next_work_items_spec_path(agent_uid, batch_num)
+    markdown_path = workcycle_next_work_items_markdown_path(agent_uid, batch_num)
+    spec_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = build_next_work_items_payload(
+        agent_role=agent_role,
+        compaction_detected=compaction_detected,
+    )
+    spec_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    try:
+        rendered = render_next_work_items_payload(payload)
+    except NextWorkItemsError as exc:
+        raise WorkCycleError(f"failed to render next work items: {exc}") from exc
+    markdown_path.write_text(rendered, encoding="utf-8")
+    return spec_path, markdown_path
 
 
 def format_token_count(value: int) -> str:
@@ -1591,7 +1613,7 @@ def main() -> int:
             )
         if phase_timings is not None:
             phase_timings["token_snapshot_diagnostics"] = round(perf_counter() - started_at, 6)
-        next_work_items_spec = write_next_work_items_spec(
+        next_work_items_spec, next_work_items_markdown = write_next_work_items_outputs(
             agent_uid=agent_uid,
             batch_num=latest_batch,
             agent_role=agent_role,
@@ -1628,9 +1650,14 @@ def main() -> int:
                 "warning: begin/end Codex thread ids differ during after-work closeout; diagnostics may span a thread switch."
             )
         print(f"next_work_items_spec: {next_work_items_spec.relative_to(ROOT_DIR)}")
+        print(f"next_work_items_markdown: {next_work_items_markdown.relative_to(ROOT_DIR)}")
         print(
             "next_work_items_render_command: "
             f"python3 scripts/render_next_work_items.py {next_work_items_spec.relative_to(ROOT_DIR)}"
+        )
+        print(
+            "next_work_items_paste_rule: paste the rendered Markdown verbatim after the After work line; "
+            "edit the JSON spec first if custom options are needed, then rerun the render command."
         )
 
         started_at = perf_counter()

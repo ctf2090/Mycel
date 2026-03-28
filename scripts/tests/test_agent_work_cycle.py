@@ -221,6 +221,10 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         path = self.root / f".agent-local/agents/{agent_uid}/workcycles/next-work-items-{batch_num}.json"
         return json.loads(path.read_text(encoding="utf-8"))
 
+    def load_next_work_items_markdown(self, agent_uid: str, batch_num: int) -> str:
+        path = self.root / f".agent-local/agents/{agent_uid}/workcycles/next-work-items-{batch_num}.md"
+        return path.read_text(encoding="utf-8")
+
     def set_checklist_state(self, relative_path: str, item_id: str, state: str, label: str) -> None:
         path = self.root / relative_path
         content = path.read_text(encoding="utf-8")
@@ -830,12 +834,24 @@ class AgentWorkCycleCliTest(unittest.TestCase):
             proc.stdout,
         )
         self.assertIn(
+            f"next_work_items_markdown: .agent-local/agents/{agent_uid}/workcycles/next-work-items-1.md",
+            proc.stdout,
+        )
+        self.assertIn(
             f"next_work_items_render_command: python3 scripts/render_next_work_items.py .agent-local/agents/{agent_uid}/workcycles/next-work-items-1.json",
             proc.stdout,
         )
+        self.assertIn("next_work_items_paste_rule: paste the rendered Markdown verbatim after the After work line;", proc.stdout)
         self.assertEqual(
             {"compaction_detected": False, "role": "doc"},
             self.load_next_work_items_spec(agent_uid, 1),
+        )
+        self.assertEqual(
+            "1. (最有價值) review the freshest planning or documentation follow-up before choosing the next doc item "
+            "Tradeoff: keeps doc work aligned with current repo state, but it adds a short review step first\n"
+            "2. check whether planning-sync or issue-sync follow-up is due before writing the next doc update "
+            "Tradeoff: helps avoid drift in planning surfaces, but it may defer narrower writing work briefly\n",
+            self.load_next_work_items_markdown(agent_uid, 1),
         )
 
     def test_end_reuses_frozen_end_token_snapshot_on_repeat_closeout(self) -> None:
@@ -1007,6 +1023,15 @@ class AgentWorkCycleCliTest(unittest.TestCase):
         self.assertEqual(
             {"compaction_detected": True, "role": "doc"},
             self.load_next_work_items_spec(agent_uid, 1),
+        )
+        self.assertEqual(
+            "1. (最有價值) compaction detected, we better open a new chat. Tradeoff: safest follow-up after compaction, "
+            "but it pauses immediate work until a fresh chat is open.\n"
+            "2. review the freshest planning or documentation follow-up before choosing the next doc item "
+            "Tradeoff: keeps doc work aligned with current repo state, but it adds a short review step first\n"
+            "3. check whether planning-sync or issue-sync follow-up is due before writing the next doc update "
+            "Tradeoff: helps avoid drift in planning surfaces, but it may defer narrower writing work briefly\n",
+            self.load_next_work_items_markdown(agent_uid, 1),
         )
 
     def test_end_alerts_when_compaction_detected_on_begin_thread_after_thread_switch(self) -> None:

@@ -158,6 +158,10 @@ def build_items(payload: dict[str, object]) -> list[dict[str, str]]:
     return items
 
 
+def render_payload(payload: dict[str, object]) -> str:
+    return render_items(build_items(payload))
+
+
 def render_items(items: list[dict[str, str]]) -> str:
     lines: list[str] = []
     for index, item in enumerate(items, start=1):
@@ -176,11 +180,11 @@ def main() -> int:
     args = parse_args()
     try:
         payload = load_spec(args.spec_path)
-        items = build_items(payload)
+        rendered = render_payload(payload)
     except NextWorkItemsError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(render_items(items), end="")
+    print(rendered, end="")
     return 0
 
 
