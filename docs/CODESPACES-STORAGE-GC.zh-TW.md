@@ -85,6 +85,15 @@ Codespaces storage GC review 至少每 `400` commits 執行一次。
 
 這個工具只會處理這份 allowlist，並略過 symlink、缺少的路徑與非目錄目標。
 
+## 備份注意事項
+
+有些 Codespace 狀態存在 repo 外面；如果我們想保留本機 shell 或 agent 設定，做手動備份時要把這些檔案一起納入。
+
+請明確備份以下檔案：
+
+- `/home/codespace/.codex/skills/boot-agent/agents/openai.yaml`
+- `/home/codespace/.bashrc`
+
 ## 操作備註
 
 - 預設只處理 workspace targets，因為它們最不容易讓人意外，而且通常能回收最多空間。

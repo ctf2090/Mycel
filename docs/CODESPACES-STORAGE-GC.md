@@ -85,6 +85,15 @@ Treat the `400`-commit rule as the stable trigger and the day estimate as a movi
 
 The tool only operates on this allowlist and skips symlinks, missing paths, and non-directory targets.
 
+## Backup Note
+
+Some Codespace state lives outside the repository and should be included in a manual backup when we want to preserve the local shell or agent setup.
+
+Back up these files explicitly:
+
+- `/home/codespace/.codex/skills/boot-agent/agents/openai.yaml`
+- `/home/codespace/.bashrc`
+
 ## Operational Notes
 
 - Workspace targets are the default because they are the least surprising and usually reclaim the most space.
