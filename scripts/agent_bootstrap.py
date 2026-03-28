@@ -459,9 +459,9 @@ def latest_same_role_handoff(registry: dict[str, Any], *, role: str, current_age
 
 def fast_path_steps_for_role(role: str) -> list[str]:
     steps = list(FAST_PATH_STEPS)
-    if role == "delivery":
+    if role in {"coding", "delivery"}:
         steps.append(
-            "check the latest completed CI result for the previous push before delivery work"
+            "check the latest completed CI result for the previous push before implementation or delivery work"
         )
     return steps
 
@@ -471,7 +471,7 @@ def deferred_reads_for_role(role: str) -> list[str]:
 
 
 def lookup_latest_completed_ci(role: str) -> dict[str, Any] | None:
-    if role != "delivery":
+    if role not in {"coding", "delivery"}:
         return None
     fields = ",".join(LATEST_CI_GH_FIELDS)
     command = [
@@ -516,13 +516,18 @@ def lookup_latest_completed_ci(role: str) -> dict[str, Any] | None:
 
 
 def next_actions_for_role(role: str, latest_ci: dict[str, Any] | None) -> list[str]:
+    latest_ci_status = latest_ci.get("status") if isinstance(latest_ci, dict) else None
     if role == "coding":
+        ci_action = (
+            "re-run the latest completed CI lookup before choosing the next implementation slice because bootstrap could not confirm it"
+            if latest_ci_status in {"unavailable", "missing"}
+            else "use the latest completed CI result above as the baseline before choosing the next implementation slice"
+        )
         return [
-            "check the latest completed CI result for the previous push before choosing the next implementation slice",
+            ci_action,
             "defer mailbox scans unless the scope overlaps existing coding work, recovery, or takeover",
         ]
     if role == "delivery":
-        latest_ci_status = latest_ci.get("status") if isinstance(latest_ci, dict) else None
         ci_action = (
             "re-run the latest completed CI lookup before delivery follow-up because bootstrap could not confirm it"
             if latest_ci_status in {"unavailable", "missing"}
@@ -558,6 +563,32 @@ def handoff_review_action(role: str, same_role_handoff: dict[str, Any] | None) -
             f"(role={source_role}) for scope {scope} and consider this follow-up first: {next_step.strip()}"
         )
     return f"review the latest same-role handoff from {display_id} (role={source_role}) for scope {scope} before choosing the first work item"
+
+
+def emit_same_role_handoff_summary(same_role_handoff: dict[str, Any] | None) -> None:
+    if not isinstance(same_role_handoff, dict):
+        return
+    handoff = same_role_handoff.get("handoff")
+    if not isinstance(handoff, dict):
+        return
+
+    display_id = same_role_handoff.get("display_id") or same_role_handoff.get("agent_uid")
+    source_role = handoff.get("source_role") or same_role_handoff.get("role")
+    scope = handoff.get("scope")
+    next_steps = handoff.get("next_suggested_step")
+
+    print("latest_same_role_handoff:")
+    if isinstance(display_id, str) and display_id.strip():
+        print(f"  display_id: {display_id}")
+    if isinstance(source_role, str) and source_role.strip():
+        print(f"  source_role: {source_role}")
+    if isinstance(scope, str) and scope.strip():
+        print(f"  scope: {scope}")
+    if isinstance(next_steps, list):
+        for step in next_steps:
+            if isinstance(step, str) and step.strip():
+                print(f"  next_step: {step.strip()}")
+                break
 
 
 def persist_same_role_handoff_review(bootstrap_checklist_path: Path, same_role_handoff: dict[str, Any] | None) -> bool:
@@ -874,6 +905,8 @@ def print_concise_text_result(result: dict[str, Any]) -> None:
             if message is not None:
                 print(f"  message: {message}")
 
+    emit_same_role_handoff_summary(result.get("latest_same_role_handoff"))
+
     emit_phase_timings(result.get("phase_timings_seconds"))
 
     closeout_command = result.get("closeout_command")
@@ -940,6 +973,8 @@ def print_text_result(result: dict[str, Any], *, concise: bool = False) -> None:
             if value is None:
                 continue
             print(f"  {key}: {value}")
+
+    emit_same_role_handoff_summary(result.get("latest_same_role_handoff"))
 
     emit_phase_timings(result.get("phase_timings_seconds"))
 

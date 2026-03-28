@@ -312,20 +312,22 @@ class AgentBootstrapCliTest(unittest.TestCase):
                 "read AGENTS-LOCAL.md if it exists, then read .agent-local/dev-setup-status.md",
                 "read docs/ROLE-CHECKLISTS/README.md, docs/AGENT-REGISTRY.md, and .agent-local/agents.json",
                 "run scripts/agent_bootstrap.py <role> --model-id <model_id> or scripts/agent_bootstrap.py auto --model-id <model_id>",
+                "check the latest completed CI result for the previous push before implementation or delivery work",
             ],
             payload["fast_path_steps"],
         )
         self.assertIn(
-            "check the latest completed CI result for the previous push before choosing the next implementation slice",
+            "use the latest completed CI result above as the baseline before choosing the next implementation slice",
             payload["next_actions"],
         )
         self.assertIn(
             "full mailbox scans unless the chat is resuming, taking over, or working an overlapping coding scope",
             payload["deferred_reads"],
         )
-        self.assertIsNone(payload["latest_completed_ci"])
+        self.assertEqual("completed", payload["latest_completed_ci"]["status"])
+        self.assertEqual("CI", payload["latest_completed_ci"]["workflowName"])
         self.assertEqual(
-            "check the latest completed CI result for the previous push before choosing the next implementation slice",
+            "use the latest completed CI result above as the baseline before choosing the next implementation slice",
             payload["next_actions"][0],
         )
 
@@ -354,10 +356,11 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("next_actions:", proc.stdout)
         self.assertIn("deferred_reads:", proc.stdout)
         self.assertIn(
-            "check the latest completed CI result for the previous push before choosing the next implementation slice",
+            "use the latest completed CI result above as the baseline before choosing the next implementation slice",
             proc.stdout,
         )
-        self.assertNotIn("latest_completed_ci:", proc.stdout)
+        self.assertIn("latest_completed_ci:", proc.stdout)
+        self.assertIn("workflowName: CI", proc.stdout)
         self.assertNotIn("bootstrap_output:", proc.stdout)
         self.assertNotIn("mailbox_link:", proc.stdout)
         self.assertNotIn("fast_path_steps:", proc.stdout)
@@ -484,6 +487,10 @@ class AgentBootstrapCliTest(unittest.TestCase):
 
         proc = self.run_cli("coding", "--scope", "resume-scan", "--model-id", "test-model", "--concise")
 
+        self.assertIn("latest_same_role_handoff:", proc.stdout)
+        self.assertIn("display_id: coding-7", proc.stdout)
+        self.assertIn("scope: restore-sync-gap", proc.stdout)
+        self.assertIn("next_step: re-run the sync proof after wiring the stored root fixture", proc.stdout)
         self.assertIn("next_actions:", proc.stdout)
         self.assertIn("review the latest same-role handoff from coding-7 (role=coding)", proc.stdout)
         self.assertIn("restore-sync-gap", proc.stdout)
@@ -691,6 +698,21 @@ class AgentBootstrapCliTest(unittest.TestCase):
 
         self.assertIn("next_actions:", proc.stdout)
         self.assertNotIn("review the latest same-role handoff from coding-7", proc.stdout)
+        self.assertNotIn("latest_same_role_handoff:", proc.stdout)
+
+    def test_bootstrap_reports_unavailable_ci_lookup_for_coding_without_failing(self) -> None:
+        self.write_fake_gh(exit_code=1, stderr="gh unavailable\n")
+
+        proc = self.run_cli("--json", "coding", "--scope", "ci-baseline", "--model-id", "test-model")
+        payload = json.loads(proc.stdout)
+
+        self.assertEqual("coding", payload["role"])
+        self.assertEqual("unavailable", payload["latest_completed_ci"]["status"])
+        self.assertIn("gh unavailable", payload["latest_completed_ci"]["message"])
+        self.assertEqual(
+            "re-run the latest completed CI lookup before choosing the next implementation slice because bootstrap could not confirm it",
+            payload["next_actions"][0],
+        )
 
     def test_bootstrap_marks_completed_bootstrap_items_for_clean_first_closeout(self) -> None:
         proc = self.run_cli("--json", "coding", "--scope", "clean-closeout", "--model-id", "test-model")
