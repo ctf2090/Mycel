@@ -260,6 +260,20 @@ def set_checklist_item_states(
         raise BootstrapError(str(exc)) from exc
 
 
+def filter_existing_checklist_updates(
+    checklist_path: Path,
+    updates: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    if not checklist_path.exists():
+        return []
+    text = checklist_path.read_text(encoding="utf-8")
+    return [
+        (item_id, state)
+        for item_id, state in updates
+        if f"<!-- item-id: {item_id} -->" in text
+    ]
+
+
 def parse_key_value_lines(output: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for line in output.splitlines():
@@ -736,6 +750,41 @@ def record_bootstrap_checklist_progress(
     )
 
 
+def record_bootstrap_workcycle_defaults(
+    workcycle_checklist_path: Path,
+    *,
+    role: str,
+    batch_num: str | None,
+) -> None:
+    if batch_num != "1":
+        return
+
+    updates: list[tuple[str, str]] = [
+        ("bootstrap.git-status", "checked"),
+        ("workflow.timestamped-commentary", "checked"),
+        ("workflow.no-double-touch-finish", "checked"),
+        ("workflow.github-issue-update-after-cycle", "not-needed"),
+        ("workflow.files-changed-summary", "not-needed"),
+        ("workflow.final-after-work-line-before-next-items", "checked"),
+        ("workflow.next-stage-options", "checked"),
+        ("workflow.next-stage-highest-value-first", "checked"),
+        ("workflow.next-stage-numbered-options", "checked"),
+        ("workflow.next-stage-roadmap-location", "not-needed"),
+        ("workflow.next-stage-clarifying-questions", "not-needed"),
+    ]
+    if role == "coding":
+        updates.extend(
+            [
+                ("workflow.next-stage-roadmap-review-default", "checked"),
+                ("workflow.next-stage-cqh-review-default", "checked"),
+            ]
+        )
+    set_checklist_item_states(
+        workcycle_checklist_path,
+        filter_existing_checklist_updates(workcycle_checklist_path, updates),
+    )
+
+
 def rollback_bootstrap_agent(agent_uid: str) -> str | None:
     try:
         run_registry_json("finish", agent_uid)
@@ -802,6 +851,7 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         if handoff_action is not None:
             next_actions.append(handoff_action)
         bootstrap_output = start_payload.get("bootstrap_output")
+        workcycle_output = begin_fields.get("workcycle_output")
         persisted_handoff_review = False
         if isinstance(bootstrap_output, str) and bootstrap_output.strip():
             bootstrap_checklist_path = resolve_repo_path(bootstrap_output)
@@ -820,6 +870,15 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
                 role_arg=args.role,
                 same_role_handoff=same_role_handoff,
                 runtime_preflight_ok=runtime_preflight_ok,
+            )
+        if isinstance(workcycle_output, str) and workcycle_output.strip():
+            timed_call(
+                phase_timings,
+                "record_bootstrap_workcycle_defaults",
+                record_bootstrap_workcycle_defaults,
+                resolve_repo_path(workcycle_output),
+                role=role,
+                batch_num=begin_fields.get("batch_num"),
             )
     except Exception as exc:
         cleanup_error = rollback_bootstrap_agent(agent_uid)

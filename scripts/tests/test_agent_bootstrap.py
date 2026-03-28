@@ -733,7 +733,15 @@ class AgentBootstrapCliTest(unittest.TestCase):
         self.assertIn("- [-] Review the latest same-role handoff when one exists <!-- item-id: bootstrap.review-latest-same-role-handoff -->", bootstrap_text)
 
         workcycle_rel = payload["workcycle_output"]
-        self.mark_workcycle_defaults(workcycle_rel)
+        workcycle_text = (self.root / workcycle_rel).read_text(encoding="utf-8")
+        self.assertIn("- [X] Run git status <!-- item-id: bootstrap.git-status -->", workcycle_text)
+        self.assertIn("- [X] Use the exact emitted timestamp line <!-- item-id: workflow.timestamped-commentary -->", workcycle_text)
+        self.assertIn("- [X] Avoid double-touching the registry <!-- item-id: workflow.no-double-touch-finish -->", workcycle_text)
+        self.assertIn("- [-] Include a files-changed summary when source changes land <!-- item-id: workflow.files-changed-summary -->", workcycle_text)
+        self.assertIn("- [X] Put the after-work line before next-stage options <!-- item-id: workflow.final-after-work-line-before-next-items -->", workcycle_text)
+        self.assertIn("- [X] Offer next-stage options <!-- item-id: workflow.next-stage-options -->", workcycle_text)
+        self.assertIn("- [X] Highest-value option first <!-- item-id: workflow.next-stage-highest-value-first -->", workcycle_text)
+        self.assertIn("- [X] Use numbered options <!-- item-id: workflow.next-stage-numbered-options -->", workcycle_text)
         end = subprocess.run(
             [str(self.root / "scripts" / "agent_work_cycle.py"), "end", payload["agent_uid"]],
             cwd=self.root,
