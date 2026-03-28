@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from time import perf_counter
 
 from agent_checklist_gc import (
     DEFAULT_KEEP_WORKCYCLE_BATCHES,
@@ -82,6 +83,29 @@ class WorkCycleError(Exception):
     pass
 
 
+def timed_call(
+    phase_timings: dict[str, float] | None,
+    key: str,
+    func,
+    /,
+    *args,
+    **kwargs,
+):
+    started_at = perf_counter()
+    result = func(*args, **kwargs)
+    if phase_timings is not None:
+        phase_timings[key] = round(perf_counter() - started_at, 6)
+    return result
+
+
+def emit_phase_timings(phase_timings: dict[str, float] | None) -> None:
+    if not phase_timings:
+        return
+    print("phase_timings_seconds:")
+    for key, value in phase_timings.items():
+        print(f"  - {key}={value:.3f}")
+
+
 class WorkCycleArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         if "invalid choice: 'start'" in message:
@@ -149,6 +173,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("stage", choices=["begin", "end"], help="begin or end the current work cycle")
     parser.add_argument("agent_ref", help="agent_uid or current display_id")
     parser.add_argument("--scope", help="scope label to append to the timestamp line")
+    parser.add_argument(
+        "--phase-timings",
+        action="store_true",
+        help="emit phase timing diagnostics for begin/end workflow steps",
+    )
     parser.add_argument(
         "--blocked-closeout",
         action="store_true",
@@ -1182,23 +1211,31 @@ def emit_checklist_gc_summary(result: dict[str, object] | None, *, error: str | 
 
 def main() -> int:
     args = parse_args()
+    phase_timings: dict[str, float] | None = {} if args.phase_timings else None
     registry_command = "touch" if args.stage == "begin" else "finish"
     registry_scope = args.scope if args.stage == "begin" else None
-    payload = run_registry(registry_command, args.agent_ref, scope=registry_scope)
+    payload = timed_call(
+        phase_timings, "registry_transition", run_registry, registry_command, args.agent_ref, scope=registry_scope
+    )
     agent_uid = payload.get("agent_uid") or args.agent_ref
     display_id = payload.get("display_id")
-    agent_role = resolve_agent_role(agent_uid)
-    model_id = resolve_agent_model_id(agent_uid)
-    current_model, current_effort = resolve_current_codex_metadata()
+    agent_role = timed_call(phase_timings, "resolve_agent_role", resolve_agent_role, agent_uid)
+    model_id = timed_call(phase_timings, "resolve_agent_model_id", resolve_agent_model_id, agent_uid)
+    current_model, current_effort = timed_call(
+        phase_timings, "resolve_codex_metadata", resolve_current_codex_metadata
+    )
     label_model = current_model or model_id
-    guard_result = check_agent(agent_uid)
+    guard_result = timed_call(phase_timings, "agent_guard_check", check_agent, agent_uid)
 
     checklist_paths: list[Path] = []
     unchecked_by_path: dict[Path, list[str]] = {}
     bootstrap_batch = False
 
     if args.stage == "begin":
-        checklist_result = materialize_checklist(
+        checklist_result = timed_call(
+            phase_timings,
+            "materialize_workcycle_checklist",
+            materialize_checklist,
             agent_uid=agent_uid,
             display_id=display_id,
             source_path=AGENTS_PATH,
@@ -1214,19 +1251,27 @@ def main() -> int:
             updates.append(("workflow.mailbox-handoff-each-cycle", "not-needed"))
             updates.append(("workflow.install-needed-tools", "not-needed"))
             updates.append(("workflow.reply-with-plan-and-status", "not-needed"))
-        set_checklist_item_states(workcycle_path, updates)
+        timed_call(phase_timings, "mark_begin_checklist_defaults", set_checklist_item_states, workcycle_path, updates)
         batch_num = checklist_result.get("batch_num")
         if isinstance(batch_num, int):
+            started_at = perf_counter()
             store_git_state_snapshot(agent_uid, batch_num)
             begin_token_snapshot = store_token_usage_snapshot(agent_uid, batch_num)
+            if phase_timings is not None:
+                phase_timings["store_begin_snapshots"] = round(perf_counter() - started_at, 6)
         else:
             begin_token_snapshot = None
-        compaction = detect_compaction_event(begin_token_snapshot)
+        compaction = timed_call(
+            phase_timings, "detect_begin_compaction", detect_compaction_event, begin_token_snapshot
+        )
         print(f"workcycle_output: {workcycle_output}")
         role_source = role_checklist_source_path(agent_role)
         role_prefix = split_checklist_prefix_for(role_source)
         if role_prefix is not None and role_source.exists():
-            role_checklist_result = materialize_checklist(
+            role_checklist_result = timed_call(
+                phase_timings,
+                "materialize_role_workcycle_checklist",
+                materialize_checklist,
                 agent_uid=agent_uid,
                 display_id=display_id,
                 source_path=role_source,
@@ -1239,19 +1284,27 @@ def main() -> int:
         if "batch_num" in checklist_result:
             print(f"batch_num: {checklist_result['batch_num']}")
         if compaction is not None:
-            handoff = create_compaction_handoff(
+            handoff = timed_call(
+                phase_timings,
+                "create_compaction_handoff",
+                create_compaction_handoff,
                 agent_uid,
                 agent_role=agent_role,
                 scope=args.scope or "compact-context-abort",
                 detection=compaction,
             )
-            record_compaction_block(
+            timed_call(
+                phase_timings,
+                "record_compaction_block",
+                record_compaction_block,
                 agent_uid,
                 scope=args.scope or "compact-context-abort",
                 detection=compaction,
                 handoff_mailbox=handoff["mailbox"],
             )
-            finish_payload = run_registry("finish", agent_uid)
+            finish_payload = timed_call(
+                phase_timings, "compaction_finish_transition", run_registry, "finish", agent_uid
+            )
             emit_registry_summary(finish_payload)
             print("compact_context_detected: true")
             print(f"compaction_timestamp: {compaction['timestamp']}")
@@ -1260,8 +1313,12 @@ def main() -> int:
             print(
                 "alert: compact context detected, we better open a new chat for better performance, and handoff is ready."
             )
+            emit_phase_timings(phase_timings)
             return COMPACTION_ABORT_EXIT_CODE
-        print(f"closeout_command: python3 scripts/agent_work_cycle.py end {agent_uid}")
+        closeout_command = f"python3 scripts/agent_work_cycle.py end {agent_uid}"
+        if args.phase_timings:
+            closeout_command += " --phase-timings"
+        print(f"closeout_command: {closeout_command}")
     else:
         if guard_result.get("blocked") is True and not args.blocked_closeout:
             raise WorkCycleError(
@@ -1281,7 +1338,13 @@ def main() -> int:
             raise WorkCycleError(f"no workcycle checklist found for {agent_uid}")
 
         workcycle_path = agents_workcycle_checklist_path(agent_uid, latest_batch)
-        set_checklist_item_states(workcycle_path, [("workflow.finish-work-cycle", "checked")])
+        timed_call(
+            phase_timings,
+            "mark_finish_workcycle_item",
+            set_checklist_item_states,
+            workcycle_path,
+            [("workflow.finish-work-cycle", "checked")],
+        )
         checklist_paths.append(workcycle_path)
 
         bootstrap_path = agents_bootstrap_checklist_path(agent_uid)
@@ -1296,6 +1359,7 @@ def main() -> int:
         stage = "after"
         label = display_id or args.agent_ref
         emit_registry_summary(payload)
+        started_at = perf_counter()
         start_token_snapshot = load_token_usage_snapshot(agent_uid, latest_batch)
         end_token_snapshot = store_end_token_usage_snapshot_once(agent_uid, latest_batch)
         thread_switch = thread_switch_diagnostic(
@@ -1324,6 +1388,8 @@ def main() -> int:
                 end_token_snapshot,
                 after_timestamp=after_timestamp,
             )
+        if phase_timings is not None:
+            phase_timings["token_snapshot_diagnostics"] = round(perf_counter() - started_at, 6)
         print(
             build_message(
                 stage,
@@ -1354,11 +1420,15 @@ def main() -> int:
                 "warning: begin/end Codex thread ids differ during after-work closeout; diagnostics may span a thread switch."
             )
 
+        started_at = perf_counter()
         for path in checklist_paths:
             unchecked_by_path[path] = scan_unchecked_items(path)
+        if phase_timings is not None:
+            phase_timings["scan_checklists"] = round(perf_counter() - started_at, 6)
 
         # Scrutinize not-needed markings on high-value required items.
         not_needed_violations: list[tuple[str, str]] = []
+        started_at = perf_counter()
         owned_source_paths = cycle_owned_tracked_paths(agent_uid, latest_batch)
         source_changes_present = None if owned_source_paths is None else bool(owned_source_paths)
         push_status = cycle_source_change_push_status(agent_uid, latest_batch)
@@ -1370,13 +1440,18 @@ def main() -> int:
                     source_changes_present=source_changes_present,
                 )
             )
+        if phase_timings is not None:
+            phase_timings["push_and_not_needed_checks"] = round(perf_counter() - started_at, 6)
 
+        started_at = perf_counter()
         mailbox_path = resolve_agent_mailbox_path(agent_uid)
         open_handoff_lines = scan_open_handoffs(mailbox_path, agent_role=agent_role)
 
         # Scope consistency: registry scope vs open handoff scope.
         registry_scope = resolve_agent_scope(agent_uid)
         handoff_scope = extract_open_handoff_scope(mailbox_path, agent_role=agent_role)
+        if phase_timings is not None:
+            phase_timings["mailbox_and_scope_scan"] = round(perf_counter() - started_at, 6)
 
         emit_checklist_summary(
             checklist_paths=checklist_paths,
@@ -1388,12 +1463,17 @@ def main() -> int:
         emit_scope_consistency_summary(registry_scope=registry_scope, handoff_scope=handoff_scope)
         emit_mailbox_summary(mailbox_path, open_handoff_lines)
         emit_blocked_closeout_summary(guard_result if args.blocked_closeout else None)
-        shared_fallback_records = scan_shared_fallback_mailboxes()
+        shared_fallback_records = timed_call(
+            phase_timings, "shared_fallback_scan", scan_shared_fallback_mailboxes
+        )
         emit_shared_fallback_summary(shared_fallback_records)
         mailbox_gc_result: dict[str, object] | None = None
         mailbox_gc_error: str | None = None
         try:
-            mailbox_gc_result = delete_stale_mailboxes(
+            mailbox_gc_result = timed_call(
+                phase_timings,
+                "mailbox_gc",
+                delete_stale_mailboxes,
                 dry_run=False, min_age_days=DEFAULT_DELETE_AGE_DAYS
             )
         except MailboxGcError as exc:
@@ -1402,13 +1482,17 @@ def main() -> int:
         checklist_gc_result: dict[str, object] | None = None
         checklist_gc_error: str | None = None
         try:
-            checklist_gc_result = prune_agent_checklists(
+            checklist_gc_result = timed_call(
+                phase_timings,
+                "agent_checklist_gc",
+                prune_agent_checklists,
                 dry_run=False,
                 keep_workcycle_batches=DEFAULT_KEEP_WORKCYCLE_BATCHES,
             )
         except AgentChecklistGcError as exc:
             checklist_gc_error = str(exc)
         emit_checklist_gc_summary(checklist_gc_result, error=checklist_gc_error)
+        emit_phase_timings(phase_timings)
 
         same_role_open_count = len(open_handoff_lines["same_role"])
         other_role_open_count = len(open_handoff_lines["other_role"])
@@ -1444,6 +1528,7 @@ def main() -> int:
             scope=args.scope,
         )
     )
+    emit_phase_timings(phase_timings)
     return 0
 
 

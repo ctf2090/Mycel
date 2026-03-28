@@ -9,6 +9,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from item_id_checklist_mark import ItemIdChecklistMarkError, update_checklist_items
@@ -18,6 +19,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_SCRIPT = ROOT_DIR / "scripts" / "agent_registry.py"
 WORK_CYCLE_SCRIPT = ROOT_DIR / "scripts" / "agent_work_cycle.py"
 CODEX_THREAD_METADATA_SCRIPT = ROOT_DIR / "scripts" / "codex_thread_metadata.py"
+MAILBOX_DIR = (ROOT_DIR / ".agent-local" / "mailboxes").resolve()
 FAST_PATH_STEPS = [
     "scan the repo root with ls",
     "read AGENTS-LOCAL.md if it exists, then read .agent-local/dev-setup-status.md",
@@ -80,6 +82,29 @@ class BootstrapError(Exception):
     pass
 
 
+def timed_call(
+    phase_timings: dict[str, float] | None,
+    key: str,
+    func,
+    /,
+    *args,
+    **kwargs,
+):
+    started_at = perf_counter()
+    result = func(*args, **kwargs)
+    if phase_timings is not None:
+        phase_timings[key] = round(perf_counter() - started_at, 6)
+    return result
+
+
+def emit_phase_timings(phase_timings: dict[str, float] | None) -> None:
+    if not phase_timings:
+        return
+    print("phase_timings_seconds:")
+    for key, value in phase_timings.items():
+        print(f"  - {key}={value:.3f}")
+
+
 def read_text_if_exists(path: Path) -> str | None:
     if not path.exists():
         return None
@@ -102,6 +127,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--assigned-by", default="user", help="registry assigned_by value")
     parser.add_argument("--json", action="store_true", help="emit a combined JSON payload")
     parser.add_argument("--model-id", required=True, dest="model_id", help="model identifier to record in the registry and include in timestamp lines")
+    parser.add_argument(
+        "--phase-timings",
+        action="store_true",
+        help="emit phase timing diagnostics for bootstrap steps",
+    )
     parser.add_argument(
         "--concise",
         action="store_true",
@@ -212,11 +242,20 @@ def resolve_repo_path(path_value: str) -> Path:
     return path
 
 
-def set_checklist_item_states(checklist_path: Path, updates: list[tuple[str, str]]) -> None:
+def set_checklist_item_states(
+    checklist_path: Path,
+    updates: list[tuple[str, str]],
+    *,
+    problem_overrides: dict[str, str] | None = None,
+) -> None:
     if not checklist_path.exists() or not updates:
         return
     try:
-        update_checklist_items(checklist_path, updates)
+        update_checklist_items(
+            checklist_path,
+            updates,
+            problem_overrides=problem_overrides,
+        )
     except ItemIdChecklistMarkError as exc:
         raise BootstrapError(str(exc)) from exc
 
@@ -259,6 +298,17 @@ def resolve_mailbox_path(mailbox_value: str) -> Path:
     if not path.is_absolute():
         path = ROOT_DIR / path
     return path
+
+
+def resolve_handoff_mailbox_path(mailbox_value: str) -> Path:
+    mailbox_path = resolve_mailbox_path(mailbox_value).resolve()
+    try:
+        mailbox_path.relative_to(MAILBOX_DIR)
+    except ValueError as exc:
+        raise BootstrapError(
+            f"same-role handoff mailbox outside .agent-local/mailboxes/: {mailbox_value}"
+        ) from exc
+    return mailbox_path
 
 
 def section_chunks(text: str) -> list[Section]:
@@ -373,7 +423,11 @@ def latest_same_role_handoff(registry: dict[str, Any], *, role: str, current_age
         mailbox_value = entry.get("mailbox")
         if not isinstance(mailbox_value, str) or not mailbox_value.strip():
             continue
-        handoff = extract_latest_open_handoff(resolve_mailbox_path(mailbox_value), role=role)
+        try:
+            mailbox_path = resolve_handoff_mailbox_path(mailbox_value)
+        except BootstrapError:
+            continue
+        handoff = extract_latest_open_handoff(mailbox_path, role=role)
         if handoff is None:
             continue
         if is_compaction_abort_handoff(handoff):
@@ -559,6 +613,8 @@ def dev_setup_status_updates() -> list[tuple[str, str]]:
         return [
             ("bootstrap.read-dev-setup-status", "not-needed"),
             ("bootstrap.skip-dev-setup-when-ready", "not-needed"),
+            ("bootstrap.refresh-dev-setup-when-needed", "problem"),
+            ("bootstrap.dev-setup-template", "problem"),
         ]
 
     updates: list[tuple[str, str]] = [("bootstrap.read-dev-setup-status", "checked")]
@@ -570,7 +626,33 @@ def dev_setup_status_updates() -> list[tuple[str, str]]:
                 ("bootstrap.dev-setup-template", "not-needed"),
             ]
         )
+    else:
+        updates.extend(
+            [
+                ("bootstrap.skip-dev-setup-when-ready", "not-needed"),
+                ("bootstrap.refresh-dev-setup-when-needed", "problem"),
+                ("bootstrap.dev-setup-template", "problem"),
+            ]
+        )
     return updates
+
+
+def dev_setup_status_problems() -> dict[str, str]:
+    status_path = ROOT_DIR / ".agent-local" / "dev-setup-status.md"
+    text = read_text_if_exists(status_path)
+    if text is None:
+        problem = "dev-setup-status.md is missing, so bootstrap could not refresh local dev setup state"
+        return {
+            "bootstrap.refresh-dev-setup-when-needed": problem,
+            "bootstrap.dev-setup-template": problem,
+        }
+    if "- Status: ready" in text:
+        return {}
+    problem = "dev-setup-status.md is not marked ready, so bootstrap left dev setup refresh work unresolved"
+    return {
+        "bootstrap.refresh-dev-setup-when-needed": problem,
+        "bootstrap.dev-setup-template": problem,
+    }
 
 
 def record_bootstrap_checklist_progress(
@@ -616,55 +698,107 @@ def record_bootstrap_checklist_progress(
             "checked" if same_role_handoff is not None else "not-needed",
         )
     )
-    set_checklist_item_states(bootstrap_checklist_path, updates)
+    set_checklist_item_states(
+        bootstrap_checklist_path,
+        updates,
+        problem_overrides=dev_setup_status_problems(),
+    )
+
+
+def rollback_bootstrap_agent(agent_uid: str) -> str | None:
+    try:
+        run_registry_json("finish", agent_uid)
+    except BootstrapError as exc:
+        return str(exc)
+    return None
 
 
 def build_result(args: argparse.Namespace) -> dict[str, Any]:
-    scan_root_layout()
+    phase_timings: dict[str, float] | None = {} if args.phase_timings else None
+
+    timed_call(phase_timings, "scan_root_layout", scan_root_layout)
+    started_at = perf_counter()
     read_text_if_exists(ROOT_DIR / "docs" / "ROLE-CHECKLISTS" / "README.md")
     read_text_if_exists(ROOT_DIR / "docs" / "AGENT-REGISTRY.md")
-    runtime_preflight_ok = run_bootstrap_runtime_preflight()
-    claim_payload = run_registry_json(
+    if phase_timings is not None:
+        phase_timings["bootstrap_prereads"] = round(perf_counter() - started_at, 6)
+    runtime_preflight_ok = timed_call(
+        phase_timings, "runtime_preflight", run_bootstrap_runtime_preflight
+    )
+    claim_payload = timed_call(
+        phase_timings,
+        "registry_claim",
+        run_registry_json,
         "claim", args.role, "--scope", args.scope, "--assigned-by", args.assigned_by, "--model-id", args.model_id
     )
     agent_uid = claim_payload.get("agent_uid")
     if not isinstance(agent_uid, str) or not agent_uid.strip():
         raise BootstrapError("claim did not return agent_uid")
 
-    start_payload = run_registry_json("start", agent_uid)
-    begin_output = run_command(
-        [sys.executable, str(WORK_CYCLE_SCRIPT), "begin", agent_uid, "--scope", args.scope]
-    )
-    begin_fields = parse_key_value_lines(begin_output)
-    before_work_line = find_timestamp_line(begin_output)
-    repo_status = run_command(["git", "status", "-sb"]).splitlines()
-    registry = load_registry()
-    role = claim_payload.get("role")
-    if not isinstance(role, str) or not role.strip():
-        raise BootstrapError("claim did not return role")
-    current_model, current_effort = resolve_current_codex_metadata()
-    claimed_model = current_model or args.model_id
+    try:
+        start_payload = timed_call(
+            phase_timings, "registry_start", run_registry_json, "start", agent_uid
+        )
+        begin_command = [sys.executable, str(WORK_CYCLE_SCRIPT), "begin", agent_uid, "--scope", args.scope]
+        if args.phase_timings:
+            begin_command.append("--phase-timings")
+        begin_output = timed_call(phase_timings, "workcycle_begin", run_command, begin_command)
+        begin_fields = parse_key_value_lines(begin_output)
+        before_work_line = find_timestamp_line(begin_output)
+        repo_status = timed_call(phase_timings, "git_status", run_command, ["git", "status", "-sb"]).splitlines()
+        registry = timed_call(phase_timings, "load_registry", load_registry)
+        role = claim_payload.get("role")
+        if not isinstance(role, str) or not role.strip():
+            raise BootstrapError("claim did not return role")
+        current_model, current_effort = timed_call(
+            phase_timings, "resolve_codex_metadata", resolve_current_codex_metadata
+        )
+        claimed_model = current_model or args.model_id
 
-    latest_completed_ci = lookup_latest_completed_ci(role)
-    same_role_handoff = latest_same_role_handoff(registry, role=role, current_agent_uid=agent_uid)
-    next_actions = next_actions_for_role(role, latest_completed_ci)
-    handoff_action = handoff_review_action(role, same_role_handoff)
-    if handoff_action is not None:
-        next_actions.append(handoff_action)
-    bootstrap_output = start_payload.get("bootstrap_output")
-    persisted_handoff_review = False
-    if isinstance(bootstrap_output, str) and bootstrap_output.strip():
-        bootstrap_checklist_path = resolve_repo_path(bootstrap_output)
-        persisted_handoff_review = persist_same_role_handoff_review(
-            bootstrap_checklist_path,
-            same_role_handoff,
+        latest_completed_ci = timed_call(
+            phase_timings, "latest_completed_ci", lookup_latest_completed_ci, role
         )
-        record_bootstrap_checklist_progress(
-            bootstrap_checklist_path,
-            role_arg=args.role,
-            same_role_handoff=same_role_handoff,
-            runtime_preflight_ok=runtime_preflight_ok,
+        same_role_handoff = timed_call(
+            phase_timings,
+            "latest_same_role_handoff",
+            latest_same_role_handoff,
+            registry,
+            role=role,
+            current_agent_uid=agent_uid,
         )
+        next_actions = next_actions_for_role(role, latest_completed_ci)
+        handoff_action = handoff_review_action(role, same_role_handoff)
+        if handoff_action is not None:
+            next_actions.append(handoff_action)
+        bootstrap_output = start_payload.get("bootstrap_output")
+        persisted_handoff_review = False
+        if isinstance(bootstrap_output, str) and bootstrap_output.strip():
+            bootstrap_checklist_path = resolve_repo_path(bootstrap_output)
+            persisted_handoff_review = timed_call(
+                phase_timings,
+                "persist_same_role_handoff_review",
+                persist_same_role_handoff_review,
+                bootstrap_checklist_path,
+                same_role_handoff,
+            )
+            timed_call(
+                phase_timings,
+                "record_bootstrap_checklist_progress",
+                record_bootstrap_checklist_progress,
+                bootstrap_checklist_path,
+                role_arg=args.role,
+                same_role_handoff=same_role_handoff,
+                runtime_preflight_ok=runtime_preflight_ok,
+            )
+    except Exception as exc:
+        cleanup_error = rollback_bootstrap_agent(agent_uid)
+        if cleanup_error is not None:
+            raise BootstrapError(
+                f"{exc}; bootstrap cleanup failed for {agent_uid}: {cleanup_error}"
+            ) from exc
+        if isinstance(exc, BootstrapError):
+            raise
+        raise BootstrapError(str(exc)) from exc
 
     result: dict[str, Any] = {
         "agent_uid": agent_uid,
@@ -680,7 +814,11 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "bootstrap_created": start_payload.get("bootstrap_created"),
         "workcycle_output": begin_fields.get("workcycle_output"),
         "batch_num": begin_fields.get("batch_num"),
-        "closeout_command": begin_fields.get("closeout_command"),
+        "closeout_command": (
+            f"python3 scripts/agent_work_cycle.py end {agent_uid} --phase-timings"
+            if args.phase_timings
+            else begin_fields.get("closeout_command")
+        ),
         "previous_status": begin_fields.get("previous_status"),
         "current_status": begin_fields.get("current_status"),
         "last_touched_at": begin_fields.get("last_touched_at"),
@@ -694,6 +832,7 @@ def build_result(args: argparse.Namespace) -> dict[str, Any]:
         "next_actions": next_actions,
         "latest_same_role_handoff": same_role_handoff,
         "latest_same_role_handoff_persisted": persisted_handoff_review,
+        "phase_timings_seconds": phase_timings,
         "claimed_agent_label": (
             f"{claim_payload.get('display_id')} "
             f"({agent_uid}/{claimed_model}"
@@ -734,6 +873,8 @@ def print_concise_text_result(result: dict[str, Any]) -> None:
             message = latest_completed_ci.get("message")
             if message is not None:
                 print(f"  message: {message}")
+
+    emit_phase_timings(result.get("phase_timings_seconds"))
 
     closeout_command = result.get("closeout_command")
     if closeout_command:
@@ -799,6 +940,8 @@ def print_text_result(result: dict[str, Any], *, concise: bool = False) -> None:
             if value is None:
                 continue
             print(f"  {key}: {value}")
+
+    emit_phase_timings(result.get("phase_timings_seconds"))
 
     fast_path_steps = result.get("fast_path_steps", [])
     if fast_path_steps:

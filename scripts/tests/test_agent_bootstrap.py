@@ -211,6 +211,23 @@ class AgentBootstrapCliTest(unittest.TestCase):
         )
         gh_path.chmod(0o755)
 
+    def write_fake_git(self, *, exit_code: int = 0, stderr: str = "", stdout: str = "") -> None:
+        git_path = self.root / "bin" / "git"
+        git_path.write_text(
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            f"EXIT_CODE = {exit_code}\n"
+            f"STDERR = {stderr!r}\n"
+            f"STDOUT = {stdout!r}\n"
+            "if STDOUT:\n"
+            "    sys.stdout.write(STDOUT)\n"
+            "if STDERR:\n"
+            "    sys.stderr.write(STDERR)\n"
+            "raise SystemExit(EXIT_CODE)\n",
+            encoding="utf-8",
+        )
+        git_path.chmod(0o755)
+
     def set_checklist_state(self, relative_path: str, item_id: str, state: str, label: str) -> None:
         path = self.root / relative_path
         content = path.read_text(encoding="utf-8")
@@ -359,6 +376,53 @@ class AgentBootstrapCliTest(unittest.TestCase):
             payload["next_actions"][0],
         )
 
+    def test_bootstrap_rolls_back_agent_to_inactive_when_post_claim_step_fails(self) -> None:
+        self.write_fake_git(exit_code=1, stderr="git unavailable\n")
+
+        proc = self.run_cli("coding", "--scope", "broken-git", "--model-id", "test-model", check=False)
+
+        self.assertNotEqual(0, proc.returncode)
+        self.assertIn("git unavailable", proc.stderr)
+
+        registry = json.loads((self.root / ".agent-local" / "agents.json").read_text(encoding="utf-8"))
+        self.assertEqual(1, registry["agent_count"])
+        entry = registry["agents"][0]
+        self.assertEqual("inactive", entry["status"])
+        self.assertIsInstance(entry["inactive_at"], str)
+        self.assertTrue(entry["confirmed_by_agent"])
+
+    def test_bootstrap_marks_missing_dev_setup_refresh_items_as_problem(self) -> None:
+        (self.root / ".agent-local" / "dev-setup-status.md").unlink()
+
+        proc = self.run_cli("--json", "coding", "--scope", "missing-dev-setup", "--model-id", "test-model")
+        payload = json.loads(proc.stdout)
+
+        bootstrap_text = (self.root / payload["bootstrap_output"]).read_text(encoding="utf-8")
+        self.assertIn("- [-] Read dev setup status when present <!-- item-id: bootstrap.read-dev-setup-status -->", bootstrap_text)
+        self.assertIn("- [-] Skip repeated dev setup checks when status is ready <!-- item-id: bootstrap.skip-dev-setup-when-ready -->", bootstrap_text)
+        self.assertIn("- [!] Refresh dev setup status when it is missing or not ready <!-- item-id: bootstrap.refresh-dev-setup-when-needed -->", bootstrap_text)
+        self.assertIn("  - Problem: dev-setup-status.md is missing, so bootstrap could not refresh local dev setup state", bootstrap_text)
+        self.assertIn("- [!] Use the dev setup template when refreshing local status <!-- item-id: bootstrap.dev-setup-template -->", bootstrap_text)
+
+    def test_bootstrap_marks_not_ready_dev_setup_refresh_items_as_problem(self) -> None:
+        (self.root / ".agent-local" / "dev-setup-status.md").write_text(
+            """# Dev Setup Status
+
+- Status: blocked
+""",
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli("--json", "coding", "--scope", "not-ready-dev-setup", "--model-id", "test-model")
+        payload = json.loads(proc.stdout)
+
+        bootstrap_text = (self.root / payload["bootstrap_output"]).read_text(encoding="utf-8")
+        self.assertIn("- [X] Read dev setup status when present <!-- item-id: bootstrap.read-dev-setup-status -->", bootstrap_text)
+        self.assertIn("- [-] Skip repeated dev setup checks when status is ready <!-- item-id: bootstrap.skip-dev-setup-when-ready -->", bootstrap_text)
+        self.assertIn("- [!] Refresh dev setup status when it is missing or not ready <!-- item-id: bootstrap.refresh-dev-setup-when-needed -->", bootstrap_text)
+        self.assertIn("  - Problem: dev-setup-status.md is not marked ready, so bootstrap left dev setup refresh work unresolved", bootstrap_text)
+        self.assertIn("- [!] Use the dev setup template when refreshing local status <!-- item-id: bootstrap.dev-setup-template -->", bootstrap_text)
+
     def test_bootstrap_appends_latest_same_role_handoff_review_to_next_actions(self) -> None:
         mailbox_dir = self.root / ".agent-local" / "mailboxes"
         mailbox_dir.mkdir(parents=True, exist_ok=True)
@@ -496,6 +560,69 @@ class AgentBootstrapCliTest(unittest.TestCase):
 
         self.assertIn("next_actions:", proc.stdout)
         self.assertNotIn("review the latest same-role handoff from coding-7", proc.stdout)
+
+    def test_bootstrap_ignores_same_role_handoff_mailbox_outside_mailbox_directory(self) -> None:
+        (self.root / "escaped-mailbox.md").write_text(
+            """# Mailbox for agt_prev
+
+## Work Continuation Handoff
+
+- Status: open
+- Date: 2026-03-24 12:10 UTC+8
+- Source agent: coding-7
+- Source role: coding
+- Scope: escaped-scope
+- Next suggested step:
+  - this text should never be surfaced
+""",
+            encoding="utf-8",
+        )
+        (self.root / ".agent-local" / "agents.json").write_text(
+            json.dumps(
+                {
+                    "version": 2,
+                    "updated_at": "2026-03-24T12:12:00+0800",
+                    "agent_count": 1,
+                    "agents": [
+                        {
+                            "agent_uid": "agt_prev",
+                            "role": "coding",
+                            "current_display_id": None,
+                            "display_history": [
+                                {
+                                    "display_id": "coding-7",
+                                    "assigned_at": "2026-03-24T11:00:00+0800",
+                                    "released_at": "2026-03-24T12:12:00+0800",
+                                    "released_reason": "finished",
+                                }
+                            ],
+                            "assigned_by": "user",
+                            "assigned_at": "2026-03-24T11:00:00+0800",
+                            "confirmed_by_agent": True,
+                            "confirmed_at": "2026-03-24T11:00:10+0800",
+                            "last_touched_at": "2026-03-24T12:12:00+0800",
+                            "inactive_at": "2026-03-24T12:12:00+0800",
+                            "paused_at": None,
+                            "status": "inactive",
+                            "scope": "escaped-scope",
+                            "files": [],
+                            "mailbox": "../escaped-mailbox.md",
+                            "recovery_of": None,
+                            "superseded_by": None,
+                        }
+                    ],
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        proc = self.run_cli("coding", "--scope", "fresh-scope", "--model-id", "test-model", "--concise")
+
+        self.assertIn("next_actions:", proc.stdout)
+        self.assertNotIn("review the latest same-role handoff from coding-7", proc.stdout)
+        self.assertNotIn("this text should never be surfaced", proc.stdout)
 
     def test_bootstrap_ignores_compaction_abort_handoff(self) -> None:
         mailbox_dir = self.root / ".agent-local" / "mailboxes"

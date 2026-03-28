@@ -35,6 +35,12 @@
 - Treat the tracked role checklist sources under [`docs/ROLE-CHECKLISTS/`](docs/ROLE-CHECKLISTS/README.md) as role-specific delta documents; they should add role-specific requirements and avoid restating shared process rules except for a short pointer when needed.
 - When multiple agent-process Markdown files overlap, keep the normative shared rule in the highest-layer document and trim lower-layer documents to the role-specific or system-specific details plus a clear link back here.
 
+## Terminology
+- `work item` means the concrete task the agent is currently trying to complete for the user.
+- `user command cycle` means one end-to-end handling of a user request in the current chat, from `agent_work_cycle.py begin` to `agent_work_cycle.py end`.
+- `bootstrap batch 1` means the first workcycle batch created as part of a fresh-chat bootstrap.
+- `next-stage options` means the concrete follow-up choices offered to the user at the end of a completed work cycle.
+
 ## Communication
 - When replying, assume the agent and user are on the same team; use “we/our” phrasing where appropriate.
 - If the user misuses a technical or product term, correct it plainly and continue the answer using the correct term; do not mirror the incorrect term in the response except when briefly identifying the mistake.
@@ -47,6 +53,13 @@
 - When suggesting a mature module, library, or framework, explain why now is the right time, what problem it solves, and the main tradeoff of adopting it.
 
 ## New chat bootstrap
+- Fresh-chat canonical happy path:
+  - scan the repo root with `ls`
+  - read the small bootstrap inputs needed to determine role, setup status, and registry state
+  - run `scripts/agent_bootstrap.py <role> --model-id <model_id>` or `auto`
+  - if the claimed role is `coding` or `delivery`, check the latest completed CI result for the previous push before starting the next implementation or delivery slice
+  - begin task-specific context gathering only after bootstrap finishes
+  - run `python3 scripts/agent_work_cycle.py end <agent_ref>` after the user command cycle is complete
 - Bootstrap fast path for a fresh chat:
   - scan the repo root with `ls`
   - read `AGENTS-LOCAL.md` if it exists, then read `.agent-local/dev-setup-status.md`
@@ -70,7 +83,7 @@
   - Before starting role-specific checklist work, read [`docs/ROLE-CHECKLISTS/README.md`](docs/ROLE-CHECKLISTS/README.md) as the entry point for canonical role checklist sources and per-agent checklist copy locations. <!-- item-id: bootstrap.read-role-checklists -->
   - For multi-agent startup and role assignment, read [`docs/AGENT-REGISTRY.md`](docs/AGENT-REGISTRY.md) first, then read the local registry file `.agent-local/agents.json`, and use the registry tool for role assignment and startup state. <!-- item-id: bootstrap.read-agent-registry -->
   - Preferred fast path after reading the startup instructions: `scripts/agent_bootstrap.py <role> --model-id <model_id>` to perform the repo-standard bootstrap flow without front-loading broader task research.
-  - If the user has already assigned a role or clearly asked the agent to read `AGENTS.md`, complete the repo-standard bootstrap flow immediately instead of asking for confirmation to start bootstrap. <!-- item-id: bootstrap.no-confirm-after-role-read -->
+  - If the user has already assigned a role, or has explicitly asked to bootstrap/start/claim an agent after reading `AGENTS.md`, complete the repo-standard bootstrap flow immediately instead of asking for confirmation to start bootstrap. A request to inspect, review, quote, or edit `AGENTS.md` by itself is not a bootstrap trigger. <!-- item-id: bootstrap.no-confirm-after-role-read -->
   - If the user did not assign a role for the new chat, use the registry tool to auto-claim a role, then tell the user which role was claimed before moving on to task work. <!-- item-id: bootstrap.claim-auto -->
   - A new chat should claim a fresh agent for itself, even when the role matches an older inactive agent. Only use `resume-check` or `recover` when the same returning chat is resuming its own existing `agent_uid`. <!-- item-id: bootstrap.claim-fresh-agent-for-new-chat -->
   - At the end of bootstrap, read the latest open same-role handoff from another agent when one exists, review it, and include that review as one of the bootstrap next-work items. <!-- item-id: bootstrap.review-latest-same-role-handoff -->
@@ -119,8 +132,9 @@
 - When the tracked checklist source changes and an agent needs to reload its own copy without losing progress, use `scripts/item_id_checklist.py --refresh <existing_checklist_md>` so the tool rewrites that agent-local checklist in place and preserves matching `item-id` states. For `AGENTS.md`, pass `--section bootstrap` or `--section workcycle` with the corresponding existing checklist path. <!-- item-id: checklist.refresh-preserve-state -->
 - Only update checklist state in the agent's own checklist copy unless the source instructions themselves are being intentionally edited.
 
-## .md
-- Read .md from the root folder and its sub-folders, if it exists.
+## Markdown reads
+- Read the Markdown files needed for the current task, the explicit bootstrap flow, or an explicit user request; do not treat the mere existence of `.md` files as a requirement to read them all.
+- When a narrower task can be completed with targeted reads, prefer those targeted reads over broad Markdown sweeps.
 
 ## Scripts
 - Do not inline Python code inside `scripts/*.sh`.
